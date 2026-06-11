@@ -1,0 +1,1 @@
+export const CLINICA_REPOSITORY = Symbol('CLINICA_REPOSITORY');

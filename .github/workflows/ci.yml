@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Type-check & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        working-directory: apps/api
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: apps/api
+        run: npx nest build
+
+      - name: Tests
+        working-directory: apps/api
+        run: npx jest --passWithNoTests

@@ -1,6 +1,6 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Job, Worker } from 'bullmq';
+import { ConnectionOptions, Job, Worker } from 'bullmq';
 import Redis from 'ioredis';
 import { AUDIT_LOG_REPOSITORY } from '../../../auth/auth.constants';
 import { AuditLogRepository } from '../../../auth/application/ports/audit-log.repository';
@@ -31,7 +31,7 @@ export class NotificacaoWorker implements OnModuleInit, OnModuleDestroy {
       {
         connection: new Redis(this.configService.getOrThrow<string>('REDIS_URL'), {
           maxRetriesPerRequest: null,
-        }),
+        }) as unknown as ConnectionOptions,
       },
     );
   }

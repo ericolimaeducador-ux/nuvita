@@ -35,9 +35,9 @@ export class ClinicaMongoRepository implements ClinicaRepository {
       id: object._id.toString(),
       nome: object.nome,
       cnpj: object.cnpj,
-      endereco: object.endereco as Clinica['endereco'],
+      endereco: object.endereco as unknown as Clinica['endereco'],
       plano: object.plano,
-      configuracoes: object.configuracoes as Clinica['configuracoes'],
+      configuracoes: object.configuracoes as unknown as Clinica['configuracoes'],
       ativo: object.ativo,
       criadoEm: object.criadoEm,
     };

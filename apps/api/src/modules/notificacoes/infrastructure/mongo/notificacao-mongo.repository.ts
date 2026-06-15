@@ -98,16 +98,20 @@ export class NotificacaoMongoRepository implements NotificacaoRepository {
   }
 
   async dashboard(filter: NotificacaoDashboardFilter): Promise<NotificacaoDashboardResult> {
-    const query: Record<string, unknown> = { clinicaId: filter.clinicaId };
-    if (filter.status) query.status = filter.status;
-    if (filter.canal) query.canal = filter.canal;
-    if (filter.tipo) query.tipo = filter.tipo;
-    if (filter.inicio || filter.fim) {
-      query.criadoEm = {
-        ...(filter.inicio ? { $gte: filter.inicio } : {}),
-        ...(filter.fim ? { $lte: filter.fim } : {}),
-      };
-    }
+    const query = {
+      clinicaId: filter.clinicaId,
+      ...(filter.status ? { status: filter.status } : {}),
+      ...(filter.canal ? { canal: filter.canal } : {}),
+      ...(filter.tipo ? { tipo: filter.tipo } : {}),
+      ...(filter.inicio || filter.fim
+        ? {
+            criadoEm: {
+              ...(filter.inicio ? { $gte: filter.inicio } : {}),
+              ...(filter.fim ? { $lte: filter.fim } : {}),
+            },
+          }
+        : {}),
+    };
 
     const [statusCounts, canalCounts, recentes] = await Promise.all([
       this.model.aggregate([{ $match: query }, { $group: { _id: '$status', total: { $sum: 1 } } }]).exec(),
@@ -141,9 +145,9 @@ export class NotificacaoMongoRepository implements NotificacaoRepository {
       tipo: object.tipo,
       canal: object.canal,
       status: object.status,
-      conteudo: object.conteudo as Notificacao['conteudo'],
+      conteudo: object.conteudo as unknown as Notificacao['conteudo'],
       tentativas: object.tentativas,
-      erros: object.erros as Notificacao['erros'],
+      erros: object.erros as unknown as Notificacao['erros'],
       criadoEm: object.criadoEm,
       enviadoEm: object.enviadoEm,
     };
@@ -175,7 +179,7 @@ export class NotificacaoPreferenciaMongoRepository implements NotificacaoPrefere
       )
       .exec();
 
-    return this.toEntity(document);
+    return this.toEntity(document!);
   }
 
   private toEntity(document: NotificacaoPreferenciaDocument): PreferenciaNotificacao {

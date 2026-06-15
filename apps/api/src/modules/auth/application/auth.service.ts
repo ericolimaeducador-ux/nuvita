@@ -71,14 +71,12 @@ export class AuthService {
       Number(this.configService.get('BCRYPT_ROUNDS') ?? 12),
     );
 
-    const twoFactor = this.buildTwoFactorSetup(dto.papel, email);
     const user = await this.users.create({
       nome: dto.nome,
       email,
       passwordHash,
-      papel: dto.papel,
-      clinicaId: dto.clinicaId,
-      twoFactorSecret: twoFactor?.base32,
+      papel: Papel.PACIENTE,
+      clinicaId: null,
     });
 
     await this.auditLogs.create({
@@ -92,7 +90,6 @@ export class AuthService {
 
     return {
       user: toPublicUser(user),
-      twoFactorSetup: twoFactor,
     };
   }
 
@@ -203,28 +200,6 @@ export class AuthService {
     }
 
     return payload;
-  }
-
-  private buildTwoFactorSetup(
-    papel: Papel,
-    email: string,
-  ): { required: true; otpauthUrl: string; base32: string } | undefined {
-    if (!exigeTwoFactor(papel)) {
-      return undefined;
-    }
-
-    const issuer = this.configService.get<string>('TOTP_ISSUER') ?? 'Patient SaaS';
-    const secret = speakeasy.generateSecret({
-      issuer,
-      name: `${issuer}:${email}`,
-      length: 32,
-    });
-
-    return {
-      required: true,
-      otpauthUrl: secret.otpauth_url ?? '',
-      base32: secret.base32,
-    };
   }
 
   private assertTwoFactorIfRequired(user: User, token?: string): void {

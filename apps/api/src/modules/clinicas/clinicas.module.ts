@@ -7,6 +7,8 @@ import { AuditLogMongoRepository } from '../auth/infrastructure/mongo/audit-log-
 import { AuditLogMongo, AuditLogSchema } from '../auth/infrastructure/mongo/audit-log.schema';
 import { UserMongoRepository } from '../auth/infrastructure/mongo/user-mongo.repository';
 import { UserMongo, UserSchema } from '../auth/infrastructure/mongo/user.schema';
+import { JwtAuthGuard } from '../auth/presentation/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/presentation/guards/roles.guard';
 import { TenantContextService } from '../../common/tenancy/tenant-context.service';
 import { TenantMiddleware } from '../../common/tenancy/tenant.middleware';
 import { TenantRequiredGuard } from '../../common/tenancy/tenant-required.guard';
@@ -32,6 +34,8 @@ import { ClinicasController } from './presentation/clinicas.controller';
     TenantContextService,
     TenantMiddleware,
     TenantRequiredGuard,
+    JwtAuthGuard,
+    RolesGuard,
     { provide: CLINICA_REPOSITORY, useClass: ClinicaMongoRepository },
     { provide: USER_REPOSITORY, useClass: UserMongoRepository },
     { provide: AUDIT_LOG_REPOSITORY, useClass: AuditLogMongoRepository },

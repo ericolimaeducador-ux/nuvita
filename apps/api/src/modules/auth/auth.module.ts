@@ -16,6 +16,7 @@ import { AuthController } from './presentation/auth.controller';
 import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard';
 import { JwtStrategy } from './presentation/guards/jwt.strategy';
 import { RolesGuard } from './presentation/guards/roles.guard';
+import { SuperAdminGuard } from './presentation/guards/super-admin.guard';
 
 @Module({
   imports: [
@@ -35,10 +36,11 @@ import { RolesGuard } from './presentation/guards/roles.guard';
     JwtStrategy,
     JwtAuthGuard,
     RolesGuard,
+    SuperAdminGuard,
     redisProvider,
     { provide: USER_REPOSITORY, useClass: UserMongoRepository },
     { provide: AUDIT_LOG_REPOSITORY, useClass: AuditLogMongoRepository },
   ],
-  exports: [AuthService, JwtAuthGuard, RolesGuard],
+  exports: [AuthService, JwtAuthGuard, RolesGuard, SuperAdminGuard],
 })
 export class AuthModule {}

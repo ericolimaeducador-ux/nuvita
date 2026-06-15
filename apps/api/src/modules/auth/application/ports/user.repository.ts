@@ -6,7 +6,7 @@ export interface CreateUserInput {
   email: string;
   passwordHash: string;
   papel: Papel;
-  clinicaId?: string;
+  clinicaId?: string | null;
   twoFactorSecret?: string;
 }
 

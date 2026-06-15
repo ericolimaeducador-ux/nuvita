@@ -4,7 +4,7 @@ export interface AuthTokenPayload {
   sub: string;
   email: string;
   papel: Papel;
-  clinicaId?: string;
+  clinicaId?: string | null;
   jti: string;
   typ: 'access' | 'refresh';
 }

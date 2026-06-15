@@ -1,6 +1,13 @@
-import { CanActivate, ExecutionContext, Injectable, SetMetadata } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+  SetMetadata,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { AuthTokenPayload, Papel } from '../../../../../packages/shared/src/auth';
+import { AuthTokenPayload } from '../../../../../packages/shared/src/auth';
 import { TenantContextService } from './tenant-context.service';
 
 export const ALLOW_WITHOUT_TENANT_KEY = 'allowWithoutTenant';
@@ -23,11 +30,26 @@ export class TenantRequiredGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest<{ user?: AuthTokenPayload }>();
-    if (request.user?.papel === Papel.ADMIN && !request.user.clinicaId) {
-      return true;
+    const request = context.switchToHttp().getRequest<{
+      user?: AuthTokenPayload;
+      params?: { clinicaId?: string };
+    }>();
+    const user = request.user;
+
+    if (!user) {
+      throw new UnauthorizedException('Usuario autenticado ausente.');
     }
 
-    return Boolean(this.tenantContext.getClinicaId());
+    if (!user.clinicaId) {
+      throw new ForbiddenException('Usuario sem clinicaId nao pode acessar rota tenantizada.');
+    }
+
+    const routeClinicaId = request.params?.clinicaId;
+    if (routeClinicaId && routeClinicaId !== user.clinicaId) {
+      throw new ForbiddenException('clinicaId da rota nao corresponde ao tenant do token.');
+    }
+
+    this.tenantContext.setClinicaId(user.clinicaId);
+    return true;
   }
 }

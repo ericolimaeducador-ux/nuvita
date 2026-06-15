@@ -28,7 +28,7 @@ export class TenantMiddleware implements NestMiddleware {
       const payload = this.jwtService.verify<AuthTokenPayload>(token, {
         secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
       });
-      return payload.clinicaId;
+      return payload.clinicaId ?? undefined;
     } catch {
       return undefined;
     }

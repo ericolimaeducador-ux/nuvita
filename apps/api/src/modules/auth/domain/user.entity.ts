@@ -6,7 +6,7 @@ export interface User {
   email: string;
   passwordHash: string;
   papel: Papel;
-  clinicaId?: string;
+  clinicaId?: string | null;
   twoFactorSecret?: string;
   ativo: boolean;
   criadoEm: Date;

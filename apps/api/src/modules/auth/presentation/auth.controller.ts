@@ -47,7 +47,6 @@ export class AuthController {
   }
 
   @Post('refresh')
-  @AllowWithoutTenant()
   async refresh(
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,

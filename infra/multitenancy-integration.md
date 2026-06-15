@@ -2,22 +2,25 @@
 
 Register `ClinicasModule` early in the API root module.
 
-To enforce tenant presence globally, register `TenantRequiredGuard` as an `APP_GUARD`:
+To enforce tenant presence globally, register `JwtAuthGuard` before `TenantRequiredGuard` as `APP_GUARD`s:
 
 ```ts
 import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './modules/auth/presentation/guards/jwt-auth.guard';
 import { TenantRequiredGuard } from './common/tenancy/tenant-required.guard';
 
 providers: [
+  { provide: APP_GUARD, useClass: JwtAuthGuard },
   { provide: APP_GUARD, useClass: TenantRequiredGuard },
 ]
 ```
 
-Use `@AllowWithoutTenant()` only for public bootstrap routes such as:
+Use `@AllowWithoutTenant()` only for explicitly public routes:
 
-- `POST /clinicas/onboarding`
+- `POST /auth/register`
 - `POST /auth/login`
-- public webhooks that validate their own signatures
+
+Clinic bootstrap must run through the CLI seed command, protected by `BOOTSTRAP_SECRET`; it must not be exposed as an HTTP route in production.
 
 Indexes added directly to existing schemas:
 

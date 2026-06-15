@@ -1,3 +1,7 @@
+import { ModalidadeAtendimento } from '../../../../../../packages/shared/src/atendimento';
+
+export { ModalidadeAtendimento };
+
 export enum StatusAgendamento {
   AGENDADO = 'agendado',
   CONFIRMADO = 'confirmado',
@@ -12,13 +16,21 @@ export enum TipoAgendamento {
   EXAME = 'exame',
   PROCEDIMENTO = 'procedimento',
   TELECONSULTA = 'teleconsulta',
+  // Enfermagem
+  ATENDIMENTO_ENFERMAGEM = 'atendimento_enfermagem',
+  PROCEDIMENTO_ENFERMAGEM = 'procedimento_enfermagem',
+  // Juridico
+  ATENDIMENTO_JURIDICO = 'atendimento_juridico',
+  AUDIENCIA = 'audiencia',
 }
 
 export interface Agendamento {
   id: string;
   clinicaId: string;
   pacienteId: string;
+  /** Profissional responsavel (medico, enfermeiro ou advogado conforme a modalidade). */
   medicoId: string;
+  modalidade: ModalidadeAtendimento;
   dataHoraInicio: Date;
   dataHoraFim: Date;
   tipo: TipoAgendamento;

@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { StatusSala } from '../../domain/sala-telemedicina.entity';
+import { ModalidadeAtendimento, StatusSala } from '../../domain/sala-telemedicina.entity';
 
 export type SalaTelemedicinaDocument = HydratedDocument<SalaTelemedicinaMongo>;
 
@@ -9,6 +9,7 @@ export class SalaTelemedicinaMongo {
   @Prop({ required: true, index: true }) clinicaId!: string;
   @Prop({ required: true, index: true }) agendamentoId!: string;
   @Prop({ required: true, index: true }) medicoId!: string;
+  @Prop({ required: true, enum: ModalidadeAtendimento, default: ModalidadeAtendimento.MEDICO, index: true }) modalidade!: ModalidadeAtendimento;
   @Prop({ required: true, index: true }) pacienteId!: string;
   @Prop({ required: true, enum: StatusSala, default: StatusSala.AGUARDANDO, index: true }) status!: StatusSala;
   @Prop({ required: true, unique: true, select: false }) tokenMedico!: string;

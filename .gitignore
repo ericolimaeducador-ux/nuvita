@@ -9,3 +9,6 @@ coverage/
 tmp/
 .DS_Store
 Thumbs.db
+
+# Claude Code – configurações locais/pessoais
+.claude/settings.local.json

@@ -1,4 +1,5 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { ModalidadeAtendimento } from '../../domain/sala-telemedicina.entity';
 
 export class CreateSalaDto {
   @IsOptional()
@@ -10,4 +11,8 @@ export class CreateSalaDto {
 
   @IsString()
   pacienteId!: string;
+
+  @IsOptional()
+  @IsEnum(ModalidadeAtendimento)
+  modalidade?: ModalidadeAtendimento;
 }

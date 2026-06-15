@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
-import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
+import { AuthTokenPayload, Papel, PAPEIS_PROFISSIONAIS } from '../../../../../../packages/shared/src/auth';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
@@ -25,25 +25,25 @@ export class AgendamentosController {
   }
 
   @Get()
-  @Roles(Papel.SECRETARIA, Papel.MEDICO, Papel.ADMIN)
+  @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   list(@Query() query: ListAgendamentosQueryDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
     return this.agendamentosService.list(query, this.ctx(req, user));
   }
 
   @Get('bloqueios')
-  @Roles(Papel.MEDICO, Papel.ADMIN, Papel.SECRETARIA)
+  @Roles(...PAPEIS_PROFISSIONAIS, Papel.ADMIN, Papel.SECRETARIA)
   listBloqueios(@Query() query: ListBloqueiosQueryDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
     return this.agendamentosService.listBloqueios(query, this.ctx(req, user));
   }
 
   @Post('bloqueios')
-  @Roles(Papel.MEDICO, Papel.ADMIN)
+  @Roles(...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   createBloqueio(@Body() dto: CreateBloqueioDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
     return this.agendamentosService.createBloqueio(dto, this.ctx(req, user));
   }
 
   @Delete('bloqueios/:id')
-  @Roles(Papel.MEDICO, Papel.ADMIN)
+  @Roles(...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   deleteBloqueio(
     @Param('id') id: string,
     @Query('clinicaId') clinicaId: string | undefined,
@@ -54,7 +54,7 @@ export class AgendamentosController {
   }
 
   @Get(':id')
-  @Roles(Papel.SECRETARIA, Papel.MEDICO, Papel.ADMIN)
+  @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   findOne(
     @Param('id') id: string,
     @Query('clinicaId') clinicaId: string | undefined,
@@ -89,7 +89,7 @@ export class AgendamentosController {
   }
 
   @Patch(':id/concluir')
-  @Roles(Papel.MEDICO, Papel.ADMIN)
+  @Roles(...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   conclude(
     @Param('id') id: string,
     @Query('clinicaId') clinicaId: string | undefined,

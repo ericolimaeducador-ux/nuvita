@@ -1,3 +1,7 @@
+import { ModalidadeAtendimento } from '../../../../../../packages/shared/src/atendimento';
+
+export { ModalidadeAtendimento };
+
 export enum StatusSala {
   AGUARDANDO = 'aguardando',
   EM_ANDAMENTO = 'em_andamento',
@@ -11,7 +15,9 @@ export interface SalaTelemedicina {
   id: string;
   clinicaId: string;
   agendamentoId: string;
+  /** Profissional responsavel (medico, enfermeiro ou advogado conforme a modalidade). */
   medicoId: string;
+  modalidade: ModalidadeAtendimento;
   pacienteId: string;
   status: StatusSala;
   tokenMedico: string;

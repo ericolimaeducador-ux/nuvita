@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model, PipelineStage, Types } from 'mongoose';
 import {
   CreatePacienteInput,
   ListPacientesInput,
@@ -63,7 +63,7 @@ export class PacienteMongoRepository implements PacienteRepository {
     this.applyCursor(query, input.cursor);
 
     const limit = this.normalizeLimit(input.limit);
-    const pipeline: Record<string, unknown>[] = [
+    const pipeline: PipelineStage[] = [
       {
         $search: {
           index: 'pacientes_nome_fonetico',

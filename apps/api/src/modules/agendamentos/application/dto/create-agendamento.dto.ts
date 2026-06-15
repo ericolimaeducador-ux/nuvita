@@ -1,5 +1,5 @@
 import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
-import { TipoAgendamento } from '../../domain/agendamento.entity';
+import { ModalidadeAtendimento, TipoAgendamento } from '../../domain/agendamento.entity';
 
 export class CreateAgendamentoDto {
   @IsString()
@@ -10,6 +10,10 @@ export class CreateAgendamentoDto {
 
   @IsString()
   medicoId!: string;
+
+  @IsOptional()
+  @IsEnum(ModalidadeAtendimento)
+  modalidade?: ModalidadeAtendimento;
 
   @IsDateString()
   dataHoraInicio!: string;

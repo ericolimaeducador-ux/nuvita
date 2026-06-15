@@ -4,7 +4,7 @@ import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
 import { AGENDAMENTO_REPOSITORY } from '../agendamentos.constants';
-import { StatusAgendamento } from '../domain/agendamento.entity';
+import { ModalidadeAtendimento, StatusAgendamento } from '../domain/agendamento.entity';
 import { CancelAgendamentoDto } from './dto/cancel-agendamento.dto';
 import { CreateAgendamentoDto } from './dto/create-agendamento.dto';
 import { CreateBloqueioDto } from './dto/create-bloqueio.dto';
@@ -33,6 +33,7 @@ export class AgendamentosService {
       clinicaId,
       pacienteId: dto.pacienteId,
       medicoId: dto.medicoId,
+      modalidade: dto.modalidade ?? ModalidadeAtendimento.MEDICO,
       dataHoraInicio: new Date(dto.dataHoraInicio),
       dataHoraFim: new Date(dto.dataHoraFim),
       tipo: dto.tipo,
@@ -51,6 +52,7 @@ export class AgendamentosService {
       clinicaId,
       medicoId: query.medicoId,
       pacienteId: query.pacienteId,
+      modalidade: query.modalidade,
       dataInicio: query.dataInicio ? new Date(query.dataInicio) : undefined,
       dataFim: query.dataFim ? new Date(query.dataFim) : undefined,
       status: query.status,
@@ -75,6 +77,7 @@ export class AgendamentosService {
 
     const agendamento = await this.agendamentos.update(resolvedClinicaId, id, {
       medicoId: dto.medicoId,
+      modalidade: dto.modalidade,
       dataHoraInicio: dto.dataHoraInicio ? new Date(dto.dataHoraInicio) : undefined,
       dataHoraFim: dto.dataHoraFim ? new Date(dto.dataHoraFim) : undefined,
       tipo: dto.tipo,

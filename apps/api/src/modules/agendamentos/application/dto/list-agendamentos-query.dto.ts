@@ -1,5 +1,5 @@
 import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
-import { StatusAgendamento } from '../../domain/agendamento.entity';
+import { ModalidadeAtendimento, StatusAgendamento } from '../../domain/agendamento.entity';
 
 export class ListAgendamentosQueryDto {
   @IsOptional()
@@ -13,6 +13,10 @@ export class ListAgendamentosQueryDto {
   @IsOptional()
   @IsString()
   pacienteId?: string;
+
+  @IsOptional()
+  @IsEnum(ModalidadeAtendimento)
+  modalidade?: ModalidadeAtendimento;
 
   @IsOptional()
   @IsDateString()

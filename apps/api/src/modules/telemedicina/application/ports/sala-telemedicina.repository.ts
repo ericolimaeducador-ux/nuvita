@@ -1,9 +1,10 @@
-import { SalaTelemedicina, StatusSala } from '../../domain/sala-telemedicina.entity';
+import { ModalidadeAtendimento, SalaTelemedicina, StatusSala } from '../../domain/sala-telemedicina.entity';
 
 export interface CreateSalaInput {
   clinicaId: string;
   agendamentoId: string;
   medicoId: string;
+  modalidade: ModalidadeAtendimento;
   pacienteId: string;
   tokenMedico: string;
   tokenPaciente: string;

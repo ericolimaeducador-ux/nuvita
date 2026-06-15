@@ -5,7 +5,7 @@ import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
 import { SALA_TELEMEDICINA_REPOSITORY } from '../telemedicina.constants';
-import { SALA_TTL_HORAS, StatusSala } from '../domain/sala-telemedicina.entity';
+import { ModalidadeAtendimento, SALA_TTL_HORAS, StatusSala } from '../domain/sala-telemedicina.entity';
 import { CreateSalaDto } from './dto/create-sala.dto';
 import { SalaTelemedicinaRepository } from './ports/sala-telemedicina.repository';
 
@@ -32,13 +32,14 @@ export class TelemedicinaService {
       clinicaId,
       agendamentoId: dto.agendamentoId,
       medicoId: context.user.sub,
+      modalidade: dto.modalidade ?? ModalidadeAtendimento.MEDICO,
       pacienteId: dto.pacienteId,
       tokenMedico: randomUUID(),
       tokenPaciente: randomUUID(),
       expiresAt,
     });
 
-    await this.audit(AuditEvent.TELEMEDICINE_ROOM_CREATED, context, { clinicaId, salaId: sala.id });
+    await this.audit(AuditEvent.TELEMEDICINE_ROOM_CREATED, context, { clinicaId, salaId: sala.id, modalidade: sala.modalidade });
     return sala;
   }
 

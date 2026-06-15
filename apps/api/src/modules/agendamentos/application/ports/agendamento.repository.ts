@@ -1,9 +1,10 @@
-import { Agendamento, BloqueioAgenda, StatusAgendamento, TipoAgendamento } from '../../domain/agendamento.entity';
+import { Agendamento, BloqueioAgenda, ModalidadeAtendimento, StatusAgendamento, TipoAgendamento } from '../../domain/agendamento.entity';
 
 export interface CreateAgendamentoInput {
   clinicaId: string;
   pacienteId: string;
   medicoId: string;
+  modalidade: ModalidadeAtendimento;
   dataHoraInicio: Date;
   dataHoraFim: Date;
   tipo: TipoAgendamento;
@@ -15,6 +16,7 @@ export interface UpdateAgendamentoInput {
   dataHoraInicio?: Date;
   dataHoraFim?: Date;
   tipo?: TipoAgendamento;
+  modalidade?: ModalidadeAtendimento;
   observacoes?: string;
   medicoId?: string;
 }
@@ -23,6 +25,7 @@ export interface ListAgendamentosInput {
   clinicaId: string;
   medicoId?: string;
   pacienteId?: string;
+  modalidade?: ModalidadeAtendimento;
   dataInicio?: Date;
   dataFim?: Date;
   status?: StatusAgendamento;

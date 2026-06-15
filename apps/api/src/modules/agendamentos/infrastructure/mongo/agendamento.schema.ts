@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { StatusAgendamento, TipoAgendamento } from '../../domain/agendamento.entity';
+import { ModalidadeAtendimento, StatusAgendamento, TipoAgendamento } from '../../domain/agendamento.entity';
 
 export type AgendamentoDocument = HydratedDocument<AgendamentoMongo>;
 
@@ -9,6 +9,7 @@ export class AgendamentoMongo {
   @Prop({ required: true, index: true }) clinicaId!: string;
   @Prop({ required: true, index: true }) pacienteId!: string;
   @Prop({ required: true, index: true }) medicoId!: string;
+  @Prop({ required: true, enum: ModalidadeAtendimento, default: ModalidadeAtendimento.MEDICO, index: true }) modalidade!: ModalidadeAtendimento;
   @Prop({ required: true, index: true }) dataHoraInicio!: Date;
   @Prop({ required: true }) dataHoraFim!: Date;
   @Prop({ required: true, enum: TipoAgendamento }) tipo!: TipoAgendamento;
@@ -26,6 +27,7 @@ AgendamentoSchema.index({ clinicaId: 1, dataHoraInicio: 1 });
 AgendamentoSchema.index({ clinicaId: 1, medicoId: 1, dataHoraInicio: 1 });
 AgendamentoSchema.index({ clinicaId: 1, pacienteId: 1, dataHoraInicio: -1 });
 AgendamentoSchema.index({ clinicaId: 1, status: 1, dataHoraInicio: 1 });
+AgendamentoSchema.index({ clinicaId: 1, modalidade: 1, dataHoraInicio: 1 });
 
 export type BloqueioAgendaDocument = HydratedDocument<BloqueioAgendaMongo>;
 

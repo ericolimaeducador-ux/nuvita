@@ -28,6 +28,7 @@ export class AgendamentoMongoRepository implements AgendamentoRepository {
       clinicaId: input.clinicaId,
       pacienteId: input.pacienteId,
       medicoId: input.medicoId,
+      modalidade: input.modalidade,
       dataHoraInicio: input.dataHoraInicio,
       dataHoraFim: input.dataHoraFim,
       tipo: input.tipo,
@@ -49,6 +50,7 @@ export class AgendamentoMongoRepository implements AgendamentoRepository {
 
     if (input.medicoId) query.medicoId = input.medicoId;
     if (input.pacienteId) query.pacienteId = input.pacienteId;
+    if (input.modalidade) query.modalidade = input.modalidade;
     if (input.status) query.status = input.status;
     if (input.dataInicio || input.dataFim) {
       query.dataHoraInicio = {};
@@ -64,6 +66,7 @@ export class AgendamentoMongoRepository implements AgendamentoRepository {
     const set: Record<string, unknown> = {};
 
     if (input.medicoId !== undefined) set.medicoId = input.medicoId;
+    if (input.modalidade !== undefined) set.modalidade = input.modalidade;
     if (input.dataHoraInicio !== undefined) set.dataHoraInicio = input.dataHoraInicio;
     if (input.dataHoraFim !== undefined) set.dataHoraFim = input.dataHoraFim;
     if (input.tipo !== undefined) set.tipo = input.tipo;
@@ -137,6 +140,7 @@ export class AgendamentoMongoRepository implements AgendamentoRepository {
       clinicaId: obj.clinicaId,
       pacienteId: obj.pacienteId,
       medicoId: obj.medicoId,
+      modalidade: obj.modalidade,
       dataHoraInicio: obj.dataHoraInicio,
       dataHoraFim: obj.dataHoraFim,
       tipo: obj.tipo,

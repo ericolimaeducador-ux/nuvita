@@ -1,0 +1,14 @@
+{
+  "name": "nuvita",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "api:dev": "npm run start:dev --workspace=apps/api",
+    "api:build": "npm run build --workspace=apps/api",
+    "api:start": "npm run start --workspace=apps/api"
+  }
+}

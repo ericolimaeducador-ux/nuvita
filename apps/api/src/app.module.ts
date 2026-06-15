@@ -2,7 +2,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AgendamentosModule } from './modules/agendamentos/agendamentos.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { HealthModule } from './modules/health/health.module';
 import { ClinicasModule } from './modules/clinicas/clinicas.module';
 import { DocumentosModule } from './modules/documentos/documentos.module';
 import { FinanceiroModule } from './modules/financeiro/financeiro.module';
@@ -33,6 +35,8 @@ import { TelemedicinaModule } from './modules/telemedicina/telemedicina.module';
     AgendamentosModule,
     FinanceiroModule,
     TelemedicinaModule,
+    AnalyticsModule,
+    HealthModule,
   ],
 })
 export class AppModule {}

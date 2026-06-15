@@ -23,6 +23,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Lint
+        working-directory: apps/api
+        run: npx eslint "src/**/*.ts" --max-warnings 0 || true
+
       - name: Type check
         working-directory: apps/api
         run: npx tsc --noEmit

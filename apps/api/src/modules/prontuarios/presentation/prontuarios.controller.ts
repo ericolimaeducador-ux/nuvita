@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
+import { AuthTokenPayload, PAPEIS_PROFISSIONAIS } from '../../../../../../packages/shared/src/auth';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
@@ -24,7 +24,7 @@ import { ProntuarioRequestContext, ProntuariosService } from '../application/pro
 
 @Controller('prontuarios')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Papel.MEDICO)
+@Roles(...PAPEIS_PROFISSIONAIS)
 export class ProntuariosController {
   constructor(private readonly prontuariosService: ProntuariosService) {}
 

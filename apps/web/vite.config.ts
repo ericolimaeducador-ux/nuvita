@@ -1,0 +1,50 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { fileURLToPath, URL } from 'node:url';
+
+// Frontend Nuvita. Encaminha as rotas da API NestJS (porta 3000) preservando
+// os mesmos paths — assim o cookie de refresh (httpOnly, path /auth) é mantido.
+//
+// Como algumas rotas do SPA (/pacientes, /prontuarios, ...) coincidem com as da
+// API, o `bypass` distingue pelo header Accept: navegação do navegador (pede
+// text/html) é servida pelo SPA; XHR/fetch do axios (JSON) vai para a API.
+const API_TARGET = process.env.VITE_PROXY_TARGET ?? 'http://localhost:3000';
+const apiProxy = {
+  target: API_TARGET,
+  changeOrigin: true,
+  bypass(req: { url?: string; headers: Record<string, string | string[] | undefined> }) {
+    const accept = String(req.headers.accept ?? '');
+    if (accept.includes('text/html')) {
+      return req.url; // deixa o Vite servir o index.html (rota do SPA)
+    }
+    return undefined; // segue para o proxy da API
+  },
+};
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
+  server: {
+    port: 5173,
+    proxy: {
+      '^/(auth|clinicas|pacientes|agendamentos|prontuarios|documentos|notificacoes)(?=$|[/?])':
+        apiProxy,
+    },
+  },
+  build: {
+    chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          antd: ['antd', '@ant-design/icons'],
+          query: ['@tanstack/react-query', 'axios', 'dayjs'],
+        },
+      },
+    },
+  },
+});

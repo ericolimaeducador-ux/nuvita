@@ -1,0 +1,15 @@
+**/node_modules
+**/dist
+**/.next
+**/coverage
+**/*.log
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.gitignore
+**/.DS_Store
+Thumbs.db
+apps/web/dist
+infra
+README.md

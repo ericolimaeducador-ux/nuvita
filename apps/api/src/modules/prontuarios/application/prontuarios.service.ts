@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac } from 'crypto';
-import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
+import { AuthTokenPayload, ehProfissional } from '../../../../../../packages/shared/src/auth';
 import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
@@ -222,8 +222,9 @@ export class ProntuariosService {
   }
 
   private assertMedico(user: AuthTokenPayload): void {
-    if (user.papel !== Papel.MEDICO) {
-      throw new ForbiddenException('Somente MEDICO acessa conteudo clinico de prontuario.');
+    // Paridade profissional: médico, enfermeiro e advogado acessam o prontuário.
+    if (!ehProfissional(user.papel)) {
+      throw new ForbiddenException('Somente profissionais de atendimento acessam o prontuario.');
     }
   }
 

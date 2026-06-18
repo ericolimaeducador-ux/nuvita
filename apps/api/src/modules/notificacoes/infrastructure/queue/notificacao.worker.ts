@@ -1,5 +1,4 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { ConnectionOptions, Job, Worker } from 'bullmq';
 import Redis from 'ioredis';
 import { AUDIT_LOG_REPOSITORY } from '../../../auth/auth.constants';
@@ -8,6 +7,7 @@ import { AuditEvent } from '../../../auth/domain/audit-event.enum';
 import { NotificacaoDispatcherService } from '../../application/notificacao-dispatcher.service';
 import { NotificacaoRepository } from '../../application/ports/notificacao.repository';
 import { NOTIFICACAO_REPOSITORY, NOTIFICATION_QUEUE_NAME } from '../../notificacoes.constants';
+import { AppConfigService } from '../../../../common/security/config.service';
 
 interface SendJobData {
   notificacaoId: string;
@@ -18,7 +18,7 @@ export class NotificacaoWorker implements OnModuleInit, OnModuleDestroy {
   private worker?: Worker<SendJobData>;
 
   constructor(
-    private readonly configService: ConfigService,
+    private readonly configService: AppConfigService,
     private readonly dispatcher: NotificacaoDispatcherService,
     @Inject(NOTIFICACAO_REPOSITORY) private readonly notificacoes: NotificacaoRepository,
     @Inject(AUDIT_LOG_REPOSITORY) private readonly auditLogs: AuditLogRepository,
@@ -29,7 +29,7 @@ export class NotificacaoWorker implements OnModuleInit, OnModuleDestroy {
       NOTIFICATION_QUEUE_NAME,
       (job) => this.process(job),
       {
-        connection: new Redis(this.configService.getOrThrow<string>('REDIS_URL'), {
+        connection: new Redis(this.configService.getConfig().redisUrl, {
           maxRetriesPerRequest: null,
         }) as unknown as ConnectionOptions,
       },

@@ -15,13 +15,14 @@ import { CurrentUser } from '../../auth/presentation/decorators/current-user.dec
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
+import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
 import { CreatePacienteDto } from '../application/dto/create-paciente.dto';
 import { ListPacientesQueryDto } from '../application/dto/list-pacientes-query.dto';
 import { UpdatePacienteDto } from '../application/dto/update-paciente.dto';
 import { PacientesService, RequestAuditContext } from '../application/pacientes.service';
 
 @Controller('pacientes')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
 export class PacientesController {
   constructor(private readonly pacientesService: PacientesService) {}
 

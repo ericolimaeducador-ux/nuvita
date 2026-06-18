@@ -1,17 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { createCipheriv, createDecipheriv, createHmac, randomBytes } from 'crypto';
+import { AppConfigService } from '../../../../common/security/config.service';
 
 @Injectable()
 export class PacienteCryptoService {
   private readonly encryptionKey: Buffer;
   private readonly hashKey: Buffer;
 
-  constructor(configService: ConfigService) {
-    this.encryptionKey = this.parseKey(configService.getOrThrow<string>('PATIENT_DATA_ENCRYPTION_KEY'));
+  constructor(configService: AppConfigService) {
+    this.encryptionKey = this.parseKey(configService.getConfig().patientDataEncryptionKey);
     this.hashKey = this.parseKey(
-      configService.get<string>('PATIENT_DATA_HASH_KEY') ??
-        configService.getOrThrow<string>('PATIENT_DATA_ENCRYPTION_KEY'),
+      configService.getConfig().patientDataHashKey ?? configService.getConfig().patientDataEncryptionKey,
     );
   }
 

@@ -4,11 +4,12 @@ import { CurrentUser } from '../../auth/presentation/decorators/current-user.dec
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
+import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
 import { AnalyticsService } from '../application/analytics.service';
 import { AnalyticsQueryDto } from '../application/dto/analytics-query.dto';
 
 @Controller('analytics')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
 @Roles(Papel.ADMIN, Papel.SECRETARIA)
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}

@@ -12,3 +12,6 @@ Thumbs.db
 
 # Claude Code – configurações locais/pessoais
 .claude/settings.local.json
+
+# Graphify – artefatos locais (caminhos absolutos, não portáveis)
+.graphify/

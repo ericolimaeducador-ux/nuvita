@@ -4,11 +4,15 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { AppConfigService } from './common/security/config.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.use(helmet({ contentSecurityPolicy: process.env.NODE_ENV === 'production' }));
+  const configService = app.get(AppConfigService);
+  const config = configService.getConfig();
+
+  app.use(helmet({ contentSecurityPolicy: config.nodeEnv === 'production' }));
   app.use(cookieParser());
 
   app.useGlobalPipes(
@@ -20,7 +24,7 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') ?? false,
+    origin: config.corsOrigin,
     credentials: true,
   });
 
@@ -49,7 +53,7 @@ async function bootstrap() {
     });
   }
 
-  const port = Number(process.env.PORT ?? 3000);
+  const port = config.port;
   await app.listen(port);
   console.log(`API rodando em http://localhost:${port}`);
   if (process.env.NODE_ENV !== 'production') {

@@ -4,9 +4,9 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { AppConfigService } from '../../../common/security/config.service';
 import { randomUUID } from 'crypto';
 import * as speakeasy from 'speakeasy';
 import {
@@ -50,7 +50,7 @@ export class AuthService {
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(AUDIT_LOG_REPOSITORY) private readonly auditLogs: AuditLogRepository,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
+    private readonly configService: AppConfigService,
     private readonly loginRateLimiter: LoginRateLimiterService,
     private readonly tokenRevocation: TokenRevocationService,
   ) {}
@@ -68,7 +68,7 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(
       dto.password,
-      Number(this.configService.get('BCRYPT_ROUNDS') ?? 12),
+      this.configService.getConfig().bcryptRounds,
     );
 
     const user = await this.users.create({
@@ -255,14 +255,14 @@ export class AuthService {
       this.jwtService.signAsync(
         { ...basePayload, jti: accessJti, typ: 'access' } satisfies AuthTokenPayload,
         {
-          secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
+          secret: this.configService.getConfig().jwtAccessSecret,
           expiresIn: ACCESS_TOKEN_TTL,
         },
       ),
       this.jwtService.signAsync(
         { ...basePayload, jti: refreshJti, typ: 'refresh' } satisfies AuthTokenPayload,
         {
-          secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+          secret: this.configService.getConfig().jwtRefreshSecret,
           expiresIn: REFRESH_TOKEN_TTL,
         },
       ),
@@ -276,7 +276,7 @@ export class AuthService {
     failIfRevoked = true,
   ): Promise<AuthTokenPayload> {
     const payload = await this.jwtService.verifyAsync<AuthTokenPayload>(refreshToken, {
-      secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+      secret: this.configService.getConfig().jwtRefreshSecret,
     });
 
     if (payload.typ !== 'refresh') {

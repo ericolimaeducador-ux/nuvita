@@ -5,11 +5,12 @@ import { CurrentUser } from '../../auth/presentation/decorators/current-user.dec
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
+import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
 import { TelemedicinaService, RequestAuditContext } from '../application/telemedicina.service';
 import { CreateSalaDto } from '../application/dto/create-sala.dto';
 
 @Controller('telemedicina')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
 export class TelemedicinaController {
   constructor(private readonly telemedicinaService: TelemedicinaService) {}
 

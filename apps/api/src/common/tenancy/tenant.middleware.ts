@@ -1,6 +1,6 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
+import { AppConfigService } from '../security/config.service';
 import { NextFunction, Request, Response } from 'express';
 import { AuthTokenPayload } from '../../../../../packages/shared/src/auth';
 import { TenantContextService } from './tenant-context.service';
@@ -9,7 +9,7 @@ import { TenantContextService } from './tenant-context.service';
 export class TenantMiddleware implements NestMiddleware {
   constructor(
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
+    private readonly configService: AppConfigService,
     private readonly tenantContext: TenantContextService,
   ) {}
 
@@ -26,7 +26,7 @@ export class TenantMiddleware implements NestMiddleware {
 
     try {
       const payload = this.jwtService.verify<AuthTokenPayload>(token, {
-        secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
+        secret: this.configService.getConfig().jwtAccessSecret,
       });
       return payload.clinicaId ?? undefined;
     } catch {
@@ -36,7 +36,7 @@ export class TenantMiddleware implements NestMiddleware {
 
   private extractSubdomain(host?: string): string | undefined {
     if (!host) return undefined;
-    const rootDomain = this.configService.get<string>('APP_ROOT_DOMAIN') ?? 'seuapp.com.br';
+    const rootDomain = this.configService.getConfig().appRootDomain ?? 'seuapp.com.br';
     if (!host.endsWith(rootDomain)) return undefined;
     const subdomain = host.slice(0, -rootDomain.length).replace(/\.$/, '');
     return subdomain || undefined;

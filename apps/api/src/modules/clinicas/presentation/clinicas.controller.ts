@@ -5,6 +5,7 @@ import { CurrentUser } from '../../auth/presentation/decorators/current-user.dec
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
+import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
 import { ClinicAdminContext, ClinicasService } from '../application/clinicas.service';
 import { CreateClinicaUsuarioDto } from '../application/dto/create-clinica-usuario.dto';
 
@@ -13,7 +14,7 @@ export class ClinicasController {
   constructor(private readonly clinicasService: ClinicasService) {}
 
   @Post(':clinicaId/usuarios')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
   @Roles(Papel.ADMIN)
   createUsuario(
     @Param('clinicaId') clinicaId: string,

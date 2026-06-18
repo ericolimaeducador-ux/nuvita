@@ -1,7 +1,7 @@
 import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import * as speakeasy from 'speakeasy';
+import { AppConfigService } from '../../../common/security/config.service';
 import { AuthTokenPayload, exigeTwoFactor, Papel } from '../../../../../../packages/shared/src/auth';
 import { AUDIT_LOG_REPOSITORY, USER_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
@@ -29,7 +29,7 @@ export class ClinicasService {
     @Inject(CLINICA_REPOSITORY) private readonly clinicas: ClinicaRepository,
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(AUDIT_LOG_REPOSITORY) private readonly auditLogs: AuditLogRepository,
-    private readonly configService: ConfigService,
+    private readonly configService: AppConfigService,
   ) {}
 
   async onboard(dto: CreateClinicaDto, context: OnboardingContext): Promise<{
@@ -156,7 +156,7 @@ export class ClinicasService {
   }
 
   private async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, Number(this.configService.get('BCRYPT_ROUNDS') ?? 12));
+    return bcrypt.hash(password, this.configService.getConfig().bcryptRounds);
   }
 
   private buildTwoFactorSetup(
@@ -167,7 +167,7 @@ export class ClinicasService {
       return undefined;
     }
 
-    const issuer = this.configService.get<string>('TOTP_ISSUER') ?? 'Nuvita';
+    const issuer = this.configService.getConfig().totpIssuer;
     const secret = speakeasy.generateSecret({
       issuer,
       name: `${issuer}:${email}`,

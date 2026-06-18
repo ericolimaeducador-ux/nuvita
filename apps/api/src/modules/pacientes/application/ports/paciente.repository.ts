@@ -1,8 +1,7 @@
 import { CursorPaginationInput, CursorPaginationResult } from '../../domain/pagination';
 import { Paciente } from '../../domain/paciente.entity';
 
-export interface CreatePacienteInput
-  extends Omit<Paciente, 'id' | 'ativo' | 'criadoEm' | 'atualizadoEm'> {}
+export type CreatePacienteInput = Omit<Paciente, 'id' | 'ativo' | 'criadoEm' | 'atualizadoEm'>;
 
 export type UpdatePacienteInput = Partial<
   Omit<Paciente, 'id' | 'clinicaId' | 'ativo' | 'criadoEm' | 'atualizadoEm' | 'consentimentoLGPD'>

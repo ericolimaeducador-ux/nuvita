@@ -1,3 +1,4 @@
+import { AppConfigService } from '../../../../common/security/config.service';
 import { PacienteCryptoService } from './paciente-crypto.service';
 
 describe('PacienteCryptoService', () => {
@@ -9,7 +10,7 @@ describe('PacienteCryptoService', () => {
   };
 
   it('encrypts and decrypts patient fields with authenticated encryption', () => {
-    const crypto = new PacienteCryptoService(configService as any);
+    const crypto = new PacienteCryptoService(configService as unknown as AppConfigService);
 
     const encrypted = crypto.encryptString('12345678900');
 
@@ -18,7 +19,7 @@ describe('PacienteCryptoService', () => {
   });
 
   it('normalizes CPF before hashing', () => {
-    const crypto = new PacienteCryptoService(configService as any);
+    const crypto = new PacienteCryptoService(configService as unknown as AppConfigService);
 
     expect(crypto.cpfHash('123.456.789-00')).toBe(crypto.cpfHash('12345678900'));
   });

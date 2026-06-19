@@ -197,7 +197,7 @@ export class AppConfigService {
         gcpProjectId: process.env.GCP_PROJECT_ID!,
         kmsKeyRing: process.env.KMS_KEY_RING || 'nuvita-keyring',
         kmsKey: process.env.KMS_KEY || 'nuvita-master-key',
-        logLevel: (process.env.LOG_LEVEL as any) || 'info',
+        logLevel: (process.env.LOG_LEVEL as AppConfig['logLevel']) || 'info',
       };
 
       this.config = config;
@@ -278,7 +278,7 @@ export class AppConfigService {
       gcpProjectId: process.env.GCP_PROJECT_ID || 'nuvita-499800',
       kmsKeyRing: process.env.KMS_KEY_RING || 'nuvita-keyring',
       kmsKey: process.env.KMS_KEY || 'nuvita-master-key',
-      logLevel: (process.env.LOG_LEVEL || 'debug') as any,
+      logLevel: (process.env.LOG_LEVEL as AppConfig['logLevel']) || 'debug',
     };
 
     this.config = config;

@@ -1,7 +1,10 @@
 import { ConflictException } from '@nestjs/common';
 import { Papel } from '../../../../../../packages/shared/src/auth';
+import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
+import { AppConfigService } from '../../../../common/security/config.service';
 import { Prontuario, TipoAtendimento } from '../domain/prontuario.entity';
+import { Cid10Repository, ProntuarioRepository } from './ports/prontuario.repository';
 import { ProntuariosService } from './prontuarios.service';
 
 describe('ProntuariosService', () => {
@@ -36,10 +39,10 @@ describe('ProntuariosService', () => {
 
   function serviceWith(prontuarios: Record<string, jest.Mock>) {
     return new ProntuariosService(
-      prontuarios as any,
-      { autocomplete: jest.fn() } as any,
-      { create: jest.fn() } as any,
-      { getConfig: () => ({ prontuarioSignatureSecret: 'signature-secret' }) } as any,
+      prontuarios as unknown as ProntuarioRepository,
+      { autocomplete: jest.fn() } as unknown as Cid10Repository,
+      { create: jest.fn() } as unknown as AuditLogRepository,
+      { getConfig: () => ({ prontuarioSignatureSecret: 'signature-secret' }) } as unknown as AppConfigService,
     );
   }
 
@@ -67,10 +70,10 @@ describe('ProntuariosService', () => {
     }));
     const auditLogs = { create: jest.fn() };
     const service = new ProntuariosService(
-      { findById: jest.fn().mockResolvedValue(baseProntuario), sign } as any,
-      { autocomplete: jest.fn() } as any,
-      auditLogs as any,
-      { getConfig: () => ({ prontuarioSignatureSecret: 'signature-secret' }) } as any,
+      { findById: jest.fn().mockResolvedValue(baseProntuario), sign } as unknown as ProntuarioRepository,
+      { autocomplete: jest.fn() } as unknown as Cid10Repository,
+      auditLogs as unknown as AuditLogRepository,
+      { getConfig: () => ({ prontuarioSignatureSecret: 'signature-secret' }) } as unknown as AppConfigService,
     );
 
     await service.sign('prontuario-1', undefined, context);

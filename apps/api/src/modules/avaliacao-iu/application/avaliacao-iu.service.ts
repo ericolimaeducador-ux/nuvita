@@ -70,6 +70,11 @@ export class AvaliacaoIUService {
     return this.repo.listByEnfermeiro(clinicaId, user.sub);
   }
 
+  async contarTotal(user: AuthTokenPayload): Promise<{ total: number }> {
+    const clinicaId = this.resolveClinicaId(user, undefined);
+    return { total: await this.repo.countByClinica(clinicaId) };
+  }
+
   private resolveClinicaId(user: AuthTokenPayload, requested?: string): string {
     if (user.clinicaId) return user.clinicaId;
     if (requested) return requested;

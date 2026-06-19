@@ -6,4 +6,5 @@ export interface AvaliacaoIURepository {
   listByPaciente(clinicaId: string, pacienteId: string): Promise<AvaliacaoIU[]>;
   listByEnfermeiro(clinicaId: string, enfermeiroId: string): Promise<AvaliacaoIU[]>;
   update(clinicaId: string, id: string, data: Partial<AvaliacaoIU>): Promise<AvaliacaoIU | null>;
+  countByClinica(clinicaId: string): Promise<number>;
 }

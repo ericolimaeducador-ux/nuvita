@@ -1,0 +1,946 @@
+import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import dayjs from 'dayjs';
+import {
+  ArrowLeft, ClipboardList, UserCheck, Stethoscope, Scale, Package,
+  Plus, CheckCircle2, Clock, ChevronDown, ChevronUp, Printer,
+} from 'lucide-react';
+import { PageHeader } from '@/components/PageHeader';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  pacientesApi, avaliacaoIUApi, followUpApi, laudoMedicoApi,
+  processoJuridicoApi, entregasApi, produtosApi,
+} from '@/api/resources';
+import { apiErrorMessage } from '@/api/client';
+import { toast } from '@/components/ui/use-toast';
+import { useAuth } from '@/auth/AuthContext';
+import { cn } from '@/lib/utils';
+import {
+  Papel, LocalAtendimento, PerfilCliente, Destreza, TipoIU, EncaminhamentoIU,
+  StatusElegibilidade, StatusProcesso, OrigemEntrega,
+  LOCAL_LABEL, PERFIL_LABEL, DESTREZA_LABEL, TIPO_IU_LABEL, ENCAMINHAMENTO_LABEL,
+  STATUS_ELEGIBILIDADE_LABEL, STATUS_PROCESSO_LABEL, ORIGEM_ENTREGA_LABEL,
+  type AvaliacaoIU, type FollowUp, type LaudoMedico, type ProcessoJuridico, type Entrega, type Produto,
+} from '@/types';
+
+export function FluxoPacientePage() {
+  const { id: pacienteId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const pacienteQ = useQuery({
+    queryKey: ['paciente', pacienteId],
+    queryFn: () => pacientesApi.get(pacienteId!),
+    enabled: !!pacienteId,
+  });
+  const avaliacoesQ = useQuery({
+    queryKey: ['avaliacao-iu', pacienteId],
+    queryFn: () => avaliacaoIUApi.listByPaciente(pacienteId!),
+    enabled: !!pacienteId,
+  });
+  const followupsQ = useQuery({
+    queryKey: ['followup', pacienteId],
+    queryFn: () => followUpApi.listByPaciente(pacienteId!),
+    enabled: !!pacienteId,
+  });
+  const laudosQ = useQuery({
+    queryKey: ['laudo-medico', pacienteId],
+    queryFn: () => laudoMedicoApi.listByPaciente(pacienteId!),
+    enabled: !!pacienteId,
+  });
+  const processosQ = useQuery({
+    queryKey: ['processo-juridico', pacienteId],
+    queryFn: () => processoJuridicoApi.listByPaciente(pacienteId!),
+    enabled: !!pacienteId,
+  });
+  const entregasQ = useQuery({
+    queryKey: ['entregas', pacienteId],
+    queryFn: () => entregasApi.listByPaciente(pacienteId!),
+    enabled: !!pacienteId,
+  });
+  const produtosQ = useQuery({
+    queryKey: ['produtos'],
+    queryFn: () => produtosApi.list(),
+  });
+
+  const paciente = pacienteQ.data;
+  const avaliacoes = avaliacoesQ.data ?? [];
+  const followups = followupsQ.data ?? [];
+  const laudos = laudosQ.data ?? [];
+  const processos = processosQ.data ?? [];
+  const entregas = entregasQ.data ?? [];
+  const produtos = produtosQ.data ?? [];
+
+  if (pacienteQ.isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/fluxo-clinico')}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <PageHeader
+          title={paciente?.nome ?? 'Paciente'}
+          subtitle={`CPF: ${paciente?.cpf ?? '—'} · Fluxo clínico VaPro`}
+        />
+      </div>
+
+      <div className="space-y-4">
+        {/* Passo 1: Avaliação IU */}
+        <Passo
+          numero={1}
+          titulo="Avaliação de Incontinência Urinária"
+          subtitulo="Ficha Hollister VaPro — preenchida pelo enfermeiro na consulta"
+          icon={ClipboardList}
+          concluido={avaliacoes.length > 0}
+          visivel={user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN || !!avaliacoes.length}
+        >
+          <AvaliacaoIUStep
+            pacienteId={pacienteId!}
+            avaliacoes={avaliacoes}
+            produtos={produtos}
+            user={user}
+          />
+        </Passo>
+
+        {/* Passo 2: Follow-up */}
+        <Passo
+          numero={2}
+          titulo="Follow-up de Elegibilidade"
+          subtitulo="Acompanhamento do enfermeiro durante uso do produto"
+          icon={UserCheck}
+          concluido={followups.some((f) => f.statusElegibilidade === StatusElegibilidade.ELEGIVEL)}
+          visivel={avaliacoes.length > 0}
+        >
+          <FollowUpStep
+            pacienteId={pacienteId!}
+            avaliacaoId={avaliacoes[0]?.id}
+            followups={followups}
+            user={user}
+          />
+        </Passo>
+
+        {/* Passo 3: Laudo Médico */}
+        <Passo
+          numero={3}
+          titulo="Laudo Médico"
+          subtitulo="Justificativa médica para solicitação ao SUS"
+          icon={Stethoscope}
+          concluido={laudos.some((l) => !!l.assinado)}
+          visivel={followups.some((f) => f.statusElegibilidade === StatusElegibilidade.ELEGIVEL)}
+        >
+          <LaudoMedicoStep
+            pacienteId={pacienteId!}
+            avaliacaoId={avaliacoes[0]?.id}
+            laudos={laudos}
+            produtos={produtos}
+            user={user}
+          />
+        </Passo>
+
+        {/* Passo 4: Processo Jurídico */}
+        <Passo
+          numero={4}
+          titulo="Processo Jurídico"
+          subtitulo="Advogado monta e acompanha o processo judicial"
+          icon={Scale}
+          concluido={processos.some((p) => p.status === StatusProcesso.GANHO)}
+          visivel={laudos.some((l) => !!l.assinado)}
+        >
+          <ProcessoJuridicoStep
+            pacienteId={pacienteId!}
+            avaliacaoId={avaliacoes[0]?.id}
+            laudoId={laudos[0]?.id}
+            processos={processos}
+            user={user}
+          />
+        </Passo>
+
+        {/* Passo 5: Entregas */}
+        <Passo
+          numero={5}
+          titulo="Entregas"
+          subtitulo="Registro de produtos enviados ao paciente"
+          icon={Package}
+          concluido={entregas.some((e) => e.status === 'entregue')}
+          visivel={processos.length > 0 || laudos.length > 0}
+        >
+          <EntregasStep
+            pacienteId={pacienteId!}
+            processoId={processos[0]?.id}
+            avaliacaoId={avaliacoes[0]?.id}
+            entregas={entregas}
+            produtos={produtos}
+            user={user}
+          />
+        </Passo>
+      </div>
+    </div>
+  );
+}
+
+// ---- Componente de passo ----
+function Passo({
+  numero, titulo, subtitulo, icon: Icon, concluido, visivel, children,
+}: {
+  numero: number; titulo: string; subtitulo: string; icon: React.ElementType;
+  concluido: boolean; visivel: boolean; children: React.ReactNode;
+}) {
+  const [aberto, setAberto] = useState(numero === 1);
+  if (!visivel) return null;
+
+  return (
+    <Card className={cn('border', concluido ? 'border-emerald-500/30' : 'border-white/5')}>
+      <CardHeader
+        className="cursor-pointer select-none"
+        onClick={() => setAberto(!aberto)}
+      >
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            'flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold shrink-0',
+            concluido ? 'bg-emerald-500/20 text-emerald-400' : 'bg-primary/10 text-primary'
+          )}>
+            {concluido ? <CheckCircle2 className="h-4 w-4" /> : numero}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <Icon className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-base">{titulo}</CardTitle>
+              {concluido && <Badge variant="success" className="text-xs">Concluído</Badge>}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">{subtitulo}</p>
+          </div>
+          {aberto ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </div>
+      </CardHeader>
+      {aberto && <CardContent className="pt-0">{children}</CardContent>}
+    </Card>
+  );
+}
+
+// ---- Passo 1: Avaliação IU ----
+function AvaliacaoIUStep({ pacienteId, avaliacoes, produtos, user }: {
+  pacienteId: string; avaliacoes: AvaliacaoIU[]; produtos: Produto[]; user: ReturnType<typeof useAuth>['user'];
+}) {
+  const [open, setOpen] = useState(false);
+  const qc = useQueryClient();
+  const { register, handleSubmit, setValue, watch, reset } = useForm<Record<string, unknown>>();
+
+  const mut = useMutation({
+    mutationFn: (payload: Record<string, unknown>) => avaliacaoIUApi.create(payload),
+    onSuccess: () => {
+      toast.success('Avaliação registrada.');
+      setOpen(false); reset();
+      void qc.invalidateQueries({ queryKey: ['avaliacao-iu', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  const tiposIU = (watch('tiposIU') as TipoIU[] | undefined) ?? [];
+
+  function toggleTipoIU(tipo: TipoIU) {
+    const atual = tiposIU.includes(tipo) ? tiposIU.filter((t) => t !== tipo) : [...tiposIU, tipo];
+    setValue('tiposIU', atual);
+  }
+
+  function onSubmit(v: Record<string, unknown>) {
+    mut.mutate({
+      ...v,
+      pacienteId,
+      clinicaId: user?.clinicaId,
+      tiposIU: tiposIU,
+      dntui: !!v.dntui,
+      miccaoEspontanea: !!v.miccaoEspontanea,
+      realizaCateterismo: !!v.realizaCateterismo,
+      emTratamento: !!v.emTratamento,
+      autorizaPesquisa: !!v.autorizaPesquisa,
+      aceitaInformacoes: !!v.aceitaInformacoes,
+    });
+  }
+
+  const podeNovo = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN;
+
+  return (
+    <div className="space-y-3">
+      {avaliacoes.length === 0 && (
+        <p className="text-sm text-muted-foreground">Nenhuma avaliação registrada ainda.</p>
+      )}
+      {avaliacoes.map((av) => (
+        <div key={av.id} className="rounded-lg border border-white/5 bg-white/2 p-4 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">{dayjs(av.dataAtendimento).format('DD/MM/YYYY')}</span>
+            <Badge variant="outline" className="text-xs">{PERFIL_LABEL[av.perfilCliente]}</Badge>
+            {av.encaminhamento && <Badge variant="outline" className="text-xs">{ENCAMINHAMENTO_LABEL[av.encaminhamento]}</Badge>}
+            <Button size="sm" variant="ghost" className="ml-auto h-7 px-2 text-xs text-muted-foreground" onClick={() => window.open(`/fluxo-clinico/${pacienteId}/avaliacao/${av.id}/imprimir`, '_blank')}>
+              <Printer className="h-3 w-3 mr-1" /> Imprimir ficha
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">Motivo: {av.motivoIU}</p>
+          {av.produtoIndicado && (
+            <p className="text-xs text-primary">
+              Produto indicado: Cód. {av.produtoIndicado.codigo} — {av.produtoIndicado.sexo} {av.produtoIndicado.french}Fr
+            </p>
+          )}
+          {av.outrasIntercorrencias && (
+            <p className="text-xs text-muted-foreground">Intercorrências: {av.outrasIntercorrencias}</p>
+          )}
+        </div>
+      ))}
+
+      {podeNovo && (
+        <Button size="sm" onClick={() => setOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" /> Nova avaliação
+        </Button>
+      )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Ficha de Avaliação — Incontinência Urinária (VaPro Hollister)</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Data do atendimento</Label>
+                <Input type="date" {...register('dataAtendimento', { required: true })} />
+              </div>
+              <div className="space-y-1">
+                <Label>Local</Label>
+                <Select onValueChange={(v) => setValue('local', v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {Object.values(LocalAtendimento).map((l) => (
+                      <SelectItem key={l} value={l}>{LOCAL_LABEL[l]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Plano de saúde</Label>
+                <Input placeholder="Ex: SUS" {...register('planoSaude')} />
+              </div>
+              <div className="space-y-1">
+                <Label>Hospital referência</Label>
+                <Input {...register('hospitalReferencia')} />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Motivo da IU / Diagnóstico</Label>
+              <Input placeholder="Ex: LM T3-T4 pós cirurgia" {...register('motivoIU', { required: true })} />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label>Perfil do cliente</Label>
+                <Select onValueChange={(v) => setValue('perfilCliente', v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {Object.values(PerfilCliente).map((p) => (
+                      <SelectItem key={p} value={p}>{PERFIL_LABEL[p]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Destreza</Label>
+                <Select onValueChange={(v) => setValue('destreza', v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {Object.values(Destreza).map((d) => (
+                      <SelectItem key={d} value={d}>{DESTREZA_LABEL[d]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Início dos sintomas</Label>
+                <Input placeholder="Ex: Junho 2025" {...register('inicioSintomas')} />
+              </div>
+            </div>
+
+            {/* Tipos de IU */}
+            <div className="space-y-2">
+              <Label>Tipo de IU (marque todos aplicáveis)</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.values(TipoIU).map((tipo) => (
+                  <div key={tipo} className="flex items-center gap-2">
+                    <Checkbox
+                      id={tipo}
+                      checked={tiposIU.includes(tipo)}
+                      onCheckedChange={() => toggleTipoIU(tipo)}
+                    />
+                    <Label htmlFor={tipo} className="text-sm cursor-pointer">{TIPO_IU_LABEL[tipo]}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center gap-2">
+                <Checkbox id="miccao" onCheckedChange={(c) => setValue('miccaoEspontanea', !!c)} />
+                <Label htmlFor="miccao" className="cursor-pointer">Micção espontânea</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox id="cateterismo" onCheckedChange={(c) => setValue('realizaCateterismo', !!c)} />
+                <Label htmlFor="cateterismo" className="cursor-pointer">Realiza cateterismo</Label>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label>Cateterismos/dia</Label>
+                <Input type="number" {...register('cateterismosDia', { valueAsNumber: true })} />
+              </div>
+              <div className="space-y-1">
+                <Label>Catéter utilizado</Label>
+                <Input placeholder="Ex: 12Fr convencional" {...register('cateterUtilizado')} />
+              </div>
+              <div className="space-y-1">
+                <Label>Volume drenado</Label>
+                <Input placeholder="Ex: 300-400ml" {...register('volumeDrenadoMl')} />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Outras intercorrências / medicamentos</Label>
+              <Input placeholder="Ex: Doxazosina 2mg 1x/dia" {...register('outrasIntercorrencias')} />
+            </div>
+
+            {/* Produto indicado */}
+            <div className="space-y-2">
+              <Label>Produto VaPro indicado</Label>
+              <Select onValueChange={(v) => {
+                const p = produtos.find((pr) => pr.codigo === Number(v));
+                if (p) setValue('produtoIndicado', { codigo: p.codigo, sexo: p.sexo, french: p.french ?? 0 });
+              }}>
+                <SelectTrigger><SelectValue placeholder="Selecione o catéter" /></SelectTrigger>
+                <SelectContent>
+                  {produtos.map((p) => (
+                    <SelectItem key={p.codigo} value={String(p.codigo)}>
+                      {p.nome} — Cód. {p.codigo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Encaminhamento</Label>
+              <Select onValueChange={(v) => setValue('encaminhamento', v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {Object.values(EncaminhamentoIU).map((e) => (
+                    <SelectItem key={e} value={e}>{ENCAMINHAMENTO_LABEL[e]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>COREN</Label>
+                <Input {...register('coren')} />
+              </div>
+              <div className="space-y-1">
+                <Label>Responsável pelo cateterismo</Label>
+                <Input placeholder="Ex: O próprio" {...register('responsavelCateterismo')} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox id="autoriza" onCheckedChange={(c) => setValue('autorizaPesquisa', !!c)} />
+                <Label htmlFor="autoriza" className="text-sm cursor-pointer">
+                  Paciente autoriza uso de dados para pesquisa (Hollister)
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox id="aceita" onCheckedChange={(c) => setValue('aceitaInformacoes', !!c)} />
+                <Label htmlFor="aceita" className="text-sm cursor-pointer">
+                  Aceita receber informações por e-mail/WhatsApp
+                </Label>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={mut.isPending}>
+                {mut.isPending ? 'Salvando...' : 'Registrar avaliação'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ---- Passo 2: Follow-up ----
+function FollowUpStep({ pacienteId, avaliacaoId, followups, user }: {
+  pacienteId: string; avaliacaoId?: string; followups: FollowUp[]; user: ReturnType<typeof useAuth>['user'];
+}) {
+  const [open, setOpen] = useState(false);
+  const qc = useQueryClient();
+  const { register, handleSubmit, setValue, reset } = useForm<Record<string, unknown>>();
+
+  const mut = useMutation({
+    mutationFn: (payload: Record<string, unknown>) => followUpApi.create(payload),
+    onSuccess: () => {
+      toast.success('Follow-up registrado.');
+      setOpen(false); reset();
+      void qc.invalidateQueries({ queryKey: ['followup', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  const podeNovo = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN;
+
+  return (
+    <div className="space-y-3">
+      {followups.length === 0 && <p className="text-sm text-muted-foreground">Nenhum follow-up registrado.</p>}
+      {followups.map((f) => (
+        <div key={f.id} className="rounded-lg border border-white/5 bg-white/2 p-3 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">{dayjs(f.dataFollowup).format('DD/MM/YYYY')}</span>
+            <StatusBadge value={f.statusElegibilidade} labels={STATUS_ELEGIBILIDADE_LABEL} />
+          </div>
+          <p className="text-xs text-muted-foreground">{f.observacoes}</p>
+          {f.proximoFollowup && (
+            <p className="text-xs flex items-center gap-1 text-muted-foreground">
+              <Clock className="h-3 w-3" /> Próximo: {dayjs(f.proximoFollowup).format('DD/MM/YYYY')}
+            </p>
+          )}
+        </div>
+      ))}
+      {podeNovo && (
+        <Button size="sm" onClick={() => setOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" /> Novo follow-up
+        </Button>
+      )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Registrar Follow-up</DialogTitle></DialogHeader>
+          <form onSubmit={handleSubmit((v) => mut.mutate({ ...v, pacienteId, avaliacaoIuId: avaliacaoId, clinicaId: user?.clinicaId }))} className="space-y-4">
+            <div className="space-y-1">
+              <Label>Data do follow-up</Label>
+              <Input type="date" {...register('dataFollowup', { required: true })} />
+            </div>
+            <div className="space-y-1">
+              <Label>Status de elegibilidade</Label>
+              <Select onValueChange={(v) => setValue('statusElegibilidade', v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {Object.values(StatusElegibilidade).map((s) => (
+                    <SelectItem key={s} value={s}>{STATUS_ELEGIBILIDADE_LABEL[s]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Observações clínicas</Label>
+              <Textarea rows={3} {...register('observacoes', { required: true })} />
+            </div>
+            <div className="space-y-1">
+              <Label>Próximo follow-up (opcional)</Label>
+              <Input type="date" {...register('proximoFollowup')} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={mut.isPending}>{mut.isPending ? 'Salvando...' : 'Registrar'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ---- Passo 3: Laudo Médico ----
+function LaudoMedicoStep({ pacienteId, avaliacaoId, laudos, produtos, user }: {
+  pacienteId: string; avaliacaoId?: string; laudos: LaudoMedico[]; produtos: Produto[]; user: ReturnType<typeof useAuth>['user'];
+}) {
+  const [open, setOpen] = useState(false);
+  const qc = useQueryClient();
+  const { register, handleSubmit, setValue, reset } = useForm<Record<string, unknown>>();
+
+  const mut = useMutation({
+    mutationFn: (payload: Record<string, unknown>) => laudoMedicoApi.create(payload),
+    onSuccess: () => {
+      toast.success('Laudo criado.');
+      setOpen(false); reset();
+      void qc.invalidateQueries({ queryKey: ['laudo-medico', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  const assinarMut = useMutation({
+    mutationFn: (id: string) => laudoMedicoApi.assinar(id),
+    onSuccess: () => {
+      toast.success('Laudo assinado digitalmente.');
+      void qc.invalidateQueries({ queryKey: ['laudo-medico', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  const podeCriar = user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
+
+  return (
+    <div className="space-y-3">
+      {laudos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum laudo registrado.</p>}
+      {laudos.map((l) => (
+        <div key={l.id} className="rounded-lg border border-white/5 bg-white/2 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">{dayjs(l.dataLaudo).format('DD/MM/YYYY')}</span>
+              {l.assinado
+                ? <Badge variant="success" className="text-xs">Assinado</Badge>
+                : <Badge variant="outline" className="text-xs">Rascunho</Badge>}
+            </div>
+            <div className="flex items-center gap-2">
+              {!l.assinado && podeCriar && (
+                <Button size="sm" variant="outline" onClick={() => assinarMut.mutate(l.id)} disabled={assinarMut.isPending}>
+                  Assinar digitalmente
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => window.open(`/fluxo-clinico/${pacienteId}/laudo/${l.id}/imprimir`, '_blank')}>
+                <Printer className="h-3 w-3 mr-1" /> Imprimir
+              </Button>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground line-clamp-2">{l.justificativaMedica}</p>
+          {l.produtosSolicitados.length > 0 && (
+            <p className="text-xs text-primary">
+              Produtos: {l.produtosSolicitados.map((p) => `${p.descricao} (${p.quantidade}x)`).join(', ')}
+            </p>
+          )}
+        </div>
+      ))}
+      {podeCriar && (
+        <Button size="sm" onClick={() => setOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" /> Novo laudo
+        </Button>
+      )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Laudo Médico — Solicitação SUS</DialogTitle></DialogHeader>
+          <form onSubmit={handleSubmit((v) => mut.mutate({
+            ...v, pacienteId, avaliacaoIuId: avaliacaoId, clinicaId: user?.clinicaId,
+            cid10: String(v.cid10 ?? '').split(',').map((s: string) => s.trim()).filter(Boolean),
+            produtosSolicitados: produtos.filter((p) => (v as Record<string, unknown>)[`prod_${p.codigo}`]).map((p) => ({
+              codigo: p.codigo, descricao: p.nome,
+              quantidade: Number((v as Record<string, unknown>)[`qty_${p.codigo}`] ?? 1),
+              unidade: 'unidade', codigoSiafisico: p.codigoSiafisico,
+            })),
+          }))} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Data do laudo</Label>
+                <Input type="date" {...register('dataLaudo', { required: true })} />
+              </div>
+              <div className="space-y-1">
+                <Label>CID-10 (separados por vírgula)</Label>
+                <Input placeholder="G82.2, N31.2" {...register('cid10')} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Justificativa médica</Label>
+              <Textarea rows={4} placeholder="Descreva a condição clínica e necessidade médica..." {...register('justificativaMedica', { required: true })} />
+            </div>
+            <div className="space-y-1">
+              <Label>Fundamento legal</Label>
+              <Textarea rows={2} placeholder="Lei nº 8.080/90, art. 6º — direito à assistência terapêutica integral..." {...register('fundamentoLegal', { required: true })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Produtos solicitados</Label>
+              {produtos.slice(0, 8).map((p) => (
+                <div key={p.codigo} className="flex items-center gap-3">
+                  <Checkbox id={`prod_${p.codigo}`} onCheckedChange={(c) => setValue(`prod_${p.codigo}`, !!c)} />
+                  <Label htmlFor={`prod_${p.codigo}`} className="text-sm flex-1 cursor-pointer">{p.nome}</Label>
+                  <Input type="number" min={1} defaultValue={1} className="w-20" {...register(`qty_${p.codigo}`, { valueAsNumber: true })} />
+                </div>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={mut.isPending}>{mut.isPending ? 'Salvando...' : 'Criar laudo'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ---- Passo 4: Processo Jurídico ----
+function ProcessoJuridicoStep({ pacienteId, avaliacaoId, laudoId, processos, user }: {
+  pacienteId: string; avaliacaoId?: string; laudoId?: string;
+  processos: ProcessoJuridico[]; user: ReturnType<typeof useAuth>['user'];
+}) {
+  const [open, setOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [processoSelecionado, setProcessoSelecionado] = useState<string>('');
+  const qc = useQueryClient();
+  const { register, handleSubmit, reset } = useForm<Record<string, unknown>>();
+  const statusForm = useForm<Record<string, unknown>>();
+
+  const mut = useMutation({
+    mutationFn: (payload: Record<string, unknown>) => processoJuridicoApi.create(payload),
+    onSuccess: () => {
+      toast.success('Processo criado.');
+      setOpen(false); reset();
+      void qc.invalidateQueries({ queryKey: ['processo-juridico', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  const statusMut = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Record<string, unknown> }) =>
+      processoJuridicoApi.updateStatus(id, payload),
+    onSuccess: () => {
+      toast.success('Status atualizado.');
+      setStatusOpen(false);
+      void qc.invalidateQueries({ queryKey: ['processo-juridico', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  const podeCriar = user?.papel === Papel.ADVOGADO || user?.papel === Papel.ADMIN;
+
+  return (
+    <div className="space-y-3">
+      {processos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum processo registrado.</p>}
+      {processos.map((p) => (
+        <div key={p.id} className="rounded-lg border border-white/5 bg-white/2 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {p.numeroProcesso && <span className="text-sm font-medium">{p.numeroProcesso}</span>}
+              <StatusBadge value={p.status} labels={STATUS_PROCESSO_LABEL} />
+            </div>
+            {podeCriar && (
+              <Button size="sm" variant="outline" onClick={() => { setProcessoSelecionado(p.id); setStatusOpen(true); }}>
+                Atualizar status
+              </Button>
+            )}
+          </div>
+          {p.tribunal && <p className="text-xs text-muted-foreground">Tribunal: {p.tribunal}</p>}
+          {p.dataProtocolo && <p className="text-xs text-muted-foreground">Protocolado: {dayjs(p.dataProtocolo).format('DD/MM/YYYY')}</p>}
+          {p.observacoes && <p className="text-xs text-muted-foreground">{p.observacoes}</p>}
+        </div>
+      ))}
+      {podeCriar && (
+        <Button size="sm" onClick={() => setOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" /> Abrir processo
+        </Button>
+      )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Abrir Processo Jurídico</DialogTitle></DialogHeader>
+          <form onSubmit={handleSubmit((v) => mut.mutate({ ...v, pacienteId, avaliacaoIuId: avaliacaoId, laudoMedicoId: laudoId, clinicaId: user?.clinicaId }))} className="space-y-4">
+            <div className="space-y-1">
+              <Label>Observações iniciais</Label>
+              <Textarea rows={3} placeholder="Resumo do caso para abertura do processo..." {...register('observacoes')} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={mut.isPending}>{mut.isPending ? 'Criando...' : 'Abrir processo'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={statusOpen} onOpenChange={setStatusOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Atualizar Status do Processo</DialogTitle></DialogHeader>
+          <form onSubmit={statusForm.handleSubmit((v) => statusMut.mutate({ id: processoSelecionado, payload: v }))} className="space-y-4">
+            <div className="space-y-1">
+              <Label>Novo status</Label>
+              <Select onValueChange={(v) => statusForm.setValue('status', v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {Object.values(StatusProcesso).map((s) => (
+                    <SelectItem key={s} value={s}>{STATUS_PROCESSO_LABEL[s]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Número do processo</Label>
+              <Input placeholder="0000000-00.0000.0.00.0000" {...statusForm.register('numeroProcesso')} />
+            </div>
+            <div className="space-y-1">
+              <Label>Tribunal / Vara</Label>
+              <Input {...statusForm.register('tribunal')} />
+            </div>
+            <div className="space-y-1">
+              <Label>Observações</Label>
+              <Textarea rows={2} {...statusForm.register('observacoes')} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setStatusOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={statusMut.isPending}>{statusMut.isPending ? 'Salvando...' : 'Salvar'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ---- Passo 5: Entregas ----
+function EntregasStep({ pacienteId, processoId, avaliacaoId, entregas, produtos, user }: {
+  pacienteId: string; processoId?: string; avaliacaoId?: string;
+  entregas: Entrega[]; produtos: Produto[]; user: ReturnType<typeof useAuth>['user'];
+}) {
+  const [open, setOpen] = useState(false);
+  const qc = useQueryClient();
+  const { register, handleSubmit, setValue, reset } = useForm<Record<string, unknown>>();
+
+  const mut = useMutation({
+    mutationFn: (payload: Record<string, unknown>) => entregasApi.create(payload),
+    onSuccess: () => {
+      toast.success('Entrega registrada.');
+      setOpen(false); reset();
+      void qc.invalidateQueries({ queryKey: ['entregas', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  const confirmarMut = useMutation({
+    mutationFn: (id: string) => entregasApi.confirmar(id),
+    onSuccess: () => {
+      toast.success('Entrega confirmada.');
+      void qc.invalidateQueries({ queryKey: ['entregas', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  const STATUS_LABEL: Record<string, string> = { pendente: 'Pendente', enviada: 'Enviada', entregue: 'Entregue', devolvida: 'Devolvida' };
+
+  return (
+    <div className="space-y-3">
+      {entregas.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma entrega registrada.</p>}
+      {entregas.map((e) => (
+        <div key={e.id} className="rounded-lg border border-white/5 bg-white/2 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">{dayjs(e.dataEntrega).format('DD/MM/YYYY')}</span>
+              <Badge variant={e.status === 'entregue' ? 'success' : 'outline'} className="text-xs">
+                {STATUS_LABEL[e.status] ?? e.status}
+              </Badge>
+              <span className="text-xs text-muted-foreground">{ORIGEM_ENTREGA_LABEL[e.origem]}</span>
+            </div>
+            {e.status !== 'entregue' && (
+              <Button size="sm" variant="outline" onClick={() => confirmarMut.mutate(e.id)} disabled={confirmarMut.isPending}>
+                Confirmar entrega
+              </Button>
+            )}
+          </div>
+          {e.itens.map((item, i) => (
+            <p key={i} className="text-xs text-muted-foreground">
+              {item.descricao} — {item.quantidade}x — R$ {(item.valorTotalCentavos / 100).toFixed(2)}
+            </p>
+          ))}
+          <p className="text-xs font-medium text-primary">Total: R$ {(e.valorTotalCentavos / 100).toFixed(2)}</p>
+        </div>
+      ))}
+      <Button size="sm" onClick={() => setOpen(true)}>
+        <Plus className="h-4 w-4 mr-1" /> Registrar entrega
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Registrar Entrega de Produtos</DialogTitle></DialogHeader>
+          <form onSubmit={handleSubmit((v) => {
+            const itens = produtos.filter((p) => (v as Record<string, unknown>)[`ent_${p.codigo}`]).map((p) => ({
+              codigo: p.codigo, descricao: p.nome,
+              quantidade: Number((v as Record<string, unknown>)[`entqty_${p.codigo}`] ?? 1),
+              valorUnitarioCentavos: 0, valorTotalCentavos: 0,
+            }));
+            const total = itens.reduce((s, i) => s + i.valorTotalCentavos, 0);
+            mut.mutate({ ...v, pacienteId, processoJuridicoId: processoId, avaliacaoIuId: avaliacaoId, clinicaId: user?.clinicaId, itens, valorTotalCentavos: total });
+          })} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Data da entrega</Label>
+                <Input type="date" {...register('dataEntrega', { required: true })} />
+              </div>
+              <div className="space-y-1">
+                <Label>Origem</Label>
+                <Select onValueChange={(v) => setValue('origem', v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {Object.values(OrigemEntrega).map((o) => (
+                      <SelectItem key={o} value={o}>{ORIGEM_ENTREGA_LABEL[o]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Produtos entregues</Label>
+              {produtos.slice(0, 11).map((p) => (
+                <div key={p.codigo} className="flex items-center gap-3">
+                  <Checkbox id={`ent_${p.codigo}`} onCheckedChange={(c) => setValue(`ent_${p.codigo}`, !!c)} />
+                  <Label htmlFor={`ent_${p.codigo}`} className="text-sm flex-1 cursor-pointer">{p.nome}</Label>
+                  <Input type="number" min={1} defaultValue={1} className="w-20" {...register(`entqty_${p.codigo}`, { valueAsNumber: true })} />
+                </div>
+              ))}
+            </div>
+            <div className="space-y-1">
+              <Label>Nota fiscal</Label>
+              <Input placeholder="NF-e 000000" {...register('notaFiscal')} />
+            </div>
+            <div className="space-y-1">
+              <Label>Observações</Label>
+              <Textarea rows={2} {...register('observacoes')} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={mut.isPending}>{mut.isPending ? 'Salvando...' : 'Registrar entrega'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ---- Helper ----
+function StatusBadge({ value, labels }: { value: string; labels: Record<string, string> }) {
+  const colorMap: Record<string, string> = {
+    em_avaliacao: 'outline',
+    elegivel: 'success',
+    nao_elegivel: 'destructive',
+    em_preparacao: 'outline',
+    protocolado: 'outline',
+    em_andamento: 'outline',
+    ganho: 'success',
+    perdido: 'destructive',
+    arquivado: 'secondary',
+  };
+  return (
+    <Badge variant={(colorMap[value] as 'outline' | 'success' | 'destructive' | 'secondary') ?? 'outline'} className="text-xs">
+      {labels[value] ?? value}
+    </Badge>
+  );
+}

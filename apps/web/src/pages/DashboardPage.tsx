@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
-import { Users, Calendar, CheckCircle, FileText } from 'lucide-react';
+import { Users, Calendar, CheckCircle, FileText, Activity, UserCheck, ClipboardList } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { agendaApi, pacientesApi } from '@/api/resources';
+import { agendaApi, pacientesApi, avaliacaoIUApi, followUpApi } from '@/api/resources';
 import { toItems } from '@/utils';
 import { useAuth } from '@/auth/AuthContext';
 import {
@@ -37,6 +37,16 @@ export function DashboardPage() {
   const pacientesQ = useQuery({
     queryKey: ['pacientes', 'count'],
     queryFn: () => pacientesApi.list({ limit: 1 }),
+  });
+
+  const avaliacaoCountQ = useQuery({
+    queryKey: ['avaliacao-iu', 'count'],
+    queryFn: () => avaliacaoIUApi.count(),
+  });
+
+  const followupResumoQ = useQuery({
+    queryKey: ['followup', 'resumo'],
+    queryFn: () => followUpApi.resumo(),
   });
 
   const agendaHojeQ = useQuery({
@@ -90,6 +100,53 @@ export function DashboardPage() {
         title={`Olá, ${user?.nome ?? user?.email ?? ''}`}
         subtitle={dayjs().format('dddd, DD [de] MMMM [de] YYYY')}
       />
+
+      {/* Pipeline VaPro Widget */}
+      <Card className="mb-6 border-primary/20">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div className="flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm font-semibold">Pipeline VaPro/Hollister</CardTitle>
+          </div>
+          <Link to="/fluxo-clinico" className="text-xs text-primary hover:underline">
+            Ver pipeline completo →
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {avaliacaoCountQ.isLoading || followupResumoQ.isLoading ? (
+            <div className="flex gap-6">
+              {[1,2,3].map((i) => <Skeleton key={i} className="h-16 w-28" />)}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-4">
+              <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <ClipboardList className="h-4 w-4 text-blue-400" />
+                  <span className="text-xs text-blue-400 font-medium">Avaliações</span>
+                </div>
+                <p className="text-2xl font-bold text-blue-300">{avaliacaoCountQ.data?.total ?? 0}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">total de fichas</p>
+              </div>
+              <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <UserCheck className="h-4 w-4 text-yellow-400" />
+                  <span className="text-xs text-yellow-400 font-medium">Em acompanhamento</span>
+                </div>
+                <p className="text-2xl font-bold text-yellow-300">{followupResumoQ.data?.emAvaliacao ?? 0}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">aguardando elegibilidade</p>
+              </div>
+              <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <CheckCircle className="h-4 w-4 text-emerald-400" />
+                  <span className="text-xs text-emerald-400 font-medium">Elegíveis</span>
+                </div>
+                <p className="text-2xl font-bold text-emerald-300">{followupResumoQ.data?.elegivel ?? 0}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">prontos para laudo</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         {stats.map((s) => {

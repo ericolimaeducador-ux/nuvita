@@ -36,6 +36,10 @@ export class AvaliacaoIUMongoRepository implements AvaliacaoIURepository {
     return doc ? this.toEntity(doc) : null;
   }
 
+  async countByClinica(clinicaId: string): Promise<number> {
+    return this.model.countDocuments({ clinicaId });
+  }
+
   private toEntity(doc: Record<string, unknown>): AvaliacaoIU {
     const { _id, ...rest } = doc as Record<string, unknown> & { _id: { toString(): string } };
     return { id: _id.toString(), ...rest } as AvaliacaoIU;

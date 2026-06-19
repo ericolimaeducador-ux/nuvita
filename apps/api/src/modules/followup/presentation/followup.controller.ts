@@ -19,6 +19,12 @@ export class FollowUpController {
     return this.service.create(dto, user);
   }
 
+  @Get('resumo')
+  resumo(@CurrentUser() user: AuthTokenPayload) {
+    const clinicaId = user.clinicaId ?? '';
+    return this.service.resumo(clinicaId);
+  }
+
   @Get()
   listByPaciente(
     @Query('pacienteId') pacienteId: string,

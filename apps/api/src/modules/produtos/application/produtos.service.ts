@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { EmbalagemProduto, Produto, SexoProduto, TipoProduto } from '../domain/produto.entity';
 import { PRODUTO_REPOSITORY } from '../produtos.constants';
 import { ProdutoRepository } from './ports/produto.repository';
@@ -29,8 +29,12 @@ const CATALOGO: Omit<Produto, 'id' | 'criadoEm' | 'atualizadoEm'>[] = [
 ];
 
 @Injectable()
-export class ProdutosService {
+export class ProdutosService implements OnApplicationBootstrap {
   constructor(@Inject(PRODUTO_REPOSITORY) private readonly produtos: ProdutoRepository) {}
+
+  async onApplicationBootstrap(): Promise<void> {
+    await this.seedCatalogo();
+  }
 
   async seedCatalogo(): Promise<void> {
     for (const produto of CATALOGO) {

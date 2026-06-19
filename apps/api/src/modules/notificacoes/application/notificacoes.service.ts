@@ -3,7 +3,7 @@ import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/a
 import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
-import { CanalNotificacao } from '../domain/notificacao.entity';
+import { CanalNotificacao, TipoNotificacao } from '../domain/notificacao.entity';
 import {
   NOTIFICACAO_PREFERENCIA_REPOSITORY,
   NOTIFICACAO_REPOSITORY,
@@ -104,6 +104,22 @@ export class NotificacoesService {
     });
 
     return result;
+  }
+
+  async notificarElegibilidade(clinicaId: string, pacienteId: string, nomePaciente: string): Promise<void> {
+    try {
+      const rendered = this.templates.render(TipoNotificacao.ELEGIBILIDADE_CONFIRMADA, { nome: nomePaciente, hora: '', medico: '', link: '', documento: '' });
+      await this.notificacoes.create({
+        clinicaId,
+        destinatarioId: pacienteId,
+        tipo: TipoNotificacao.ELEGIBILIDADE_CONFIRMADA,
+        canal: CanalNotificacao.EMAIL,
+        conteudo: { ...rendered, destino: 'interno' },
+      });
+      // Not enqueued: internal notification visible no dashboard, sem envio externo
+    } catch {
+      // notification is non-critical
+    }
   }
 
   async updateOptOut(

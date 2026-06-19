@@ -24,6 +24,11 @@ export class AvaliacaoIUController {
     return this.service.listMinha(user);
   }
 
+  @Get('count')
+  contarTotal(@CurrentUser() user: AuthTokenPayload) {
+    return this.service.contarTotal(user);
+  }
+
   @Get()
   listByPaciente(
     @Query('pacienteId') pacienteId: string,

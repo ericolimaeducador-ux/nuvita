@@ -12,6 +12,10 @@ import { NotificacoesPage } from '@/pages/NotificacoesPage';
 import { FinanceiroPage } from '@/pages/FinanceiroPage';
 import { TelemedicinaPage } from '@/pages/TelemedicinaPage';
 import { ClinicaPage } from '@/pages/ClinicaPage';
+import { FluxoClinicoPage } from '@/pages/FluxoClinicoPage';
+import { FluxoPacientePage } from '@/pages/FluxoPacientePage';
+import { LaudoImpressaoPage } from '@/pages/LaudoImpressaoPage';
+import { AvaliacaoImpressaoPage } from '@/pages/AvaliacaoImpressaoPage';
 import { Papel } from '@/types';
 
 export function AppRoutes() {
@@ -39,6 +43,10 @@ export function AppRoutes() {
             }
           >
             <Route path="/telemedicina" element={<TelemedicinaPage />} />
+            <Route path="/fluxo-clinico" element={<FluxoClinicoPage />} />
+            <Route path="/fluxo-clinico/:id" element={<FluxoPacientePage />} />
+            <Route path="/fluxo-clinico/:id/laudo/:laudoId/imprimir" element={<LaudoImpressaoPage />} />
+            <Route path="/fluxo-clinico/:id/avaliacao/:avaliacaoId/imprimir" element={<AvaliacaoImpressaoPage />} />
           </Route>
           <Route element={<ProtectedRoute roles={[Papel.ADMIN]} />}>
             <Route path="/clinica" element={<ClinicaPage />} />

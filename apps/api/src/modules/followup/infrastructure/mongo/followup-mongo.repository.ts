@@ -40,6 +40,10 @@ export class FollowUpMongoRepository implements FollowUpRepository {
     return doc ? this.toEntity(doc) : null;
   }
 
+  async countByStatus(clinicaId: string, status: StatusElegibilidade): Promise<number> {
+    return this.model.countDocuments({ clinicaId, statusElegibilidade: status });
+  }
+
   private toEntity(doc: Record<string, unknown>): FollowUp {
     const { _id, ...rest } = doc as Record<string, unknown> & { _id: { toString(): string } };
     return { id: _id.toString(), ...rest } as FollowUp;

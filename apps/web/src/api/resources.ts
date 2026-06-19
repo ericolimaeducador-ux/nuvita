@@ -1,14 +1,20 @@
 import { api } from './client';
 import type {
   Agendamento,
+  AvaliacaoIU,
   DashboardFinanceiro,
   Documento,
+  Entrega,
+  FollowUp,
+  LaudoMedico,
   Lancamento,
   LoginResponse,
   ModalidadeAtendimento,
   Paciente,
   PageResult,
   Papel,
+  ProcessoJuridico,
+  Produto,
   Prontuario,
   SalaTelemedicina,
   StatusAgendamento,
@@ -202,4 +208,78 @@ export const telemedicinaApi = {
     api.get<SalaTelemedicina>(`/telemedicina/salas/${id}`).then((r) => r.data),
   encerrar: (id: string) =>
     api.patch(`/telemedicina/salas/${id}/encerrar`).then((r) => r.data),
+};
+
+// ---------- Produtos ----------
+export const produtosApi = {
+  list: (tipo?: string) =>
+    api.get<Produto[]>('/produtos', { params: tipo ? { tipo } : {} }).then((r) => r.data),
+  get: (codigo: number) =>
+    api.get<Produto>(`/produtos/${codigo}`).then((r) => r.data),
+};
+
+// ---------- Avaliação IU ----------
+export const avaliacaoIUApi = {
+  create: (payload: Record<string, unknown>) =>
+    api.post<AvaliacaoIU>('/avaliacao-iu', payload).then((r) => r.data),
+  listByPaciente: (pacienteId: string) =>
+    api.get<AvaliacaoIU[]>('/avaliacao-iu', { params: { pacienteId } }).then((r) => r.data),
+  get: (id: string) =>
+    api.get<AvaliacaoIU>(`/avaliacao-iu/${id}`).then((r) => r.data),
+  minhas: () =>
+    api.get<AvaliacaoIU[]>('/avaliacao-iu/minhas').then((r) => r.data),
+  count: () =>
+    api.get<{ total: number }>('/avaliacao-iu/count').then((r) => r.data),
+};
+
+// ---------- Follow-up ----------
+export const followUpApi = {
+  create: (payload: Record<string, unknown>) =>
+    api.post<FollowUp>('/followup', payload).then((r) => r.data),
+  listByPaciente: (pacienteId: string) =>
+    api.get<FollowUp[]>('/followup', { params: { pacienteId } }).then((r) => r.data),
+  listByAvaliacao: (avaliacaoIuId: string) =>
+    api.get<FollowUp[]>(`/followup/avaliacao/${avaliacaoIuId}`).then((r) => r.data),
+  resumo: () =>
+    api.get<{ emAvaliacao: number; elegivel: number; naoElegivel: number }>('/followup/resumo').then((r) => r.data),
+};
+
+// ---------- Laudo Médico ----------
+export const laudoMedicoApi = {
+  create: (payload: Record<string, unknown>) =>
+    api.post<LaudoMedico>('/laudo-medico', payload).then((r) => r.data),
+  listByPaciente: (pacienteId: string) =>
+    api.get<LaudoMedico[]>('/laudo-medico', { params: { pacienteId } }).then((r) => r.data),
+  get: (id: string) =>
+    api.get<LaudoMedico>(`/laudo-medico/${id}`).then((r) => r.data),
+  assinar: (id: string, crm?: string) =>
+    api.post(`/laudo-medico/${id}/assinar`, {}, { params: crm ? { crm } : {} }).then((r) => r.data),
+};
+
+// ---------- Processo Jurídico ----------
+export const processoJuridicoApi = {
+  create: (payload: Record<string, unknown>) =>
+    api.post<ProcessoJuridico>('/processo-juridico', payload).then((r) => r.data),
+  listByPaciente: (pacienteId: string) =>
+    api.get<ProcessoJuridico[]>('/processo-juridico', { params: { pacienteId } }).then((r) => r.data),
+  get: (id: string) =>
+    api.get<ProcessoJuridico>(`/processo-juridico/${id}`).then((r) => r.data),
+  meus: () =>
+    api.get<ProcessoJuridico[]>('/processo-juridico/meus').then((r) => r.data),
+  updateStatus: (id: string, payload: Record<string, unknown>) =>
+    api.patch<ProcessoJuridico>(`/processo-juridico/${id}/status`, payload).then((r) => r.data),
+};
+
+// ---------- Entregas ----------
+export const entregasApi = {
+  create: (payload: Record<string, unknown>) =>
+    api.post<Entrega>('/entregas', payload).then((r) => r.data),
+  listByPaciente: (pacienteId: string) =>
+    api.get<Entrega[]>('/entregas', { params: { pacienteId } }).then((r) => r.data),
+  listByProcesso: (processoId: string) =>
+    api.get<Entrega[]>(`/entregas/processo/${processoId}`).then((r) => r.data),
+  get: (id: string) =>
+    api.get<Entrega>(`/entregas/${id}`).then((r) => r.data),
+  confirmar: (id: string) =>
+    api.post(`/entregas/${id}/confirmar`).then((r) => r.data),
 };

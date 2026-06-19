@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, Calendar, FileText, Folder, Bell, DollarSign,
-  Video, Building2, LogOut, ChevronLeft, ChevronRight,
+  Video, Building2, LogOut, ChevronLeft, ChevronRight, Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -13,6 +13,7 @@ import { useAuth } from '@/auth/AuthContext';
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/pacientes', icon: Users, label: 'Pacientes' },
+  { to: '/fluxo-clinico', icon: Activity, label: 'Fluxo Clínico' },
   { to: '/agenda', icon: Calendar, label: 'Agenda' },
   { to: '/prontuarios', icon: FileText, label: 'Prontuários' },
   { to: '/documentos', icon: Folder, label: 'Documentos' },

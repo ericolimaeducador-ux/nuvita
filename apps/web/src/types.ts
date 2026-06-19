@@ -326,3 +326,243 @@ export interface SalaTelemedicina {
   encerradaEm?: string;
   criadoEm: string;
 }
+
+// ---------- Fluxo Clínico VaPro ----------
+
+export enum LocalAtendimento {
+  RESIDENCIA = 'residencia',
+  HOSPITAL = 'hospital',
+  INST_LONGA_PERMANENCIA = 'inst_longa_permanencia',
+}
+export const LOCAL_LABEL: Record<LocalAtendimento, string> = {
+  [LocalAtendimento.RESIDENCIA]: 'Residência',
+  [LocalAtendimento.HOSPITAL]: 'Hospital',
+  [LocalAtendimento.INST_LONGA_PERMANENCIA]: 'Inst. Longa Permanência',
+};
+
+export enum PerfilCliente {
+  ATIVO = 'ativo',
+  MODERADO = 'moderado',
+  ACAMADO = 'acamado',
+  CADEIRANTE = 'cadeirante',
+}
+export const PERFIL_LABEL: Record<PerfilCliente, string> = {
+  [PerfilCliente.ATIVO]: 'Ativo',
+  [PerfilCliente.MODERADO]: 'Moderado',
+  [PerfilCliente.ACAMADO]: 'Acamado',
+  [PerfilCliente.CADEIRANTE]: 'Cadeirante',
+};
+
+export enum Destreza {
+  PRESERVADA = 'preservada',
+  REDUZIDA = 'reduzida',
+  MUITO_REDUZIDA = 'muito_reduzida',
+}
+export const DESTREZA_LABEL: Record<Destreza, string> = {
+  [Destreza.PRESERVADA]: 'Preservada',
+  [Destreza.REDUZIDA]: 'Reduzida',
+  [Destreza.MUITO_REDUZIDA]: 'Muito reduzida',
+};
+
+export enum TipoIU {
+  ESFORCO = 'esforco',
+  URGENCIA = 'urgencia',
+  MISTA = 'mista',
+  RETENCAO_TRANSBORDAMENTO = 'retencao_transbordamento',
+  CONTINUA = 'continua',
+  INSENSIVEL = 'insensivel',
+  ENURESE_NOTURNA = 'enurese_noturna',
+  COITO = 'coito',
+}
+export const TIPO_IU_LABEL: Record<TipoIU, string> = {
+  [TipoIU.ESFORCO]: 'Esforço',
+  [TipoIU.URGENCIA]: 'Urgência',
+  [TipoIU.MISTA]: 'Mista',
+  [TipoIU.RETENCAO_TRANSBORDAMENTO]: 'Retenção/Transbordamento',
+  [TipoIU.CONTINUA]: 'Contínua',
+  [TipoIU.INSENSIVEL]: 'Insensível',
+  [TipoIU.ENURESE_NOTURNA]: 'Enurese Noturna',
+  [TipoIU.COITO]: 'Coito',
+};
+
+export enum EncaminhamentoIU {
+  POLO_SUS = 'polo_sus',
+  PLANO_SAUDE = 'plano_saude',
+  VAREJO = 'varejo',
+}
+export const ENCAMINHAMENTO_LABEL: Record<EncaminhamentoIU, string> = {
+  [EncaminhamentoIU.POLO_SUS]: 'Pólo SUS',
+  [EncaminhamentoIU.PLANO_SAUDE]: 'Plano de Saúde',
+  [EncaminhamentoIU.VAREJO]: 'Varejo',
+};
+
+export interface AvaliacaoIU {
+  id: string;
+  clinicaId: string;
+  pacienteId: string;
+  enfermeiroId: string;
+  agendamentoId?: string;
+  dataAtendimento: string;
+  local: LocalAtendimento;
+  prescritor?: string;
+  planoSaude?: string;
+  hospitalReferencia?: string;
+  motivoIU: string;
+  inicioSintomas?: string;
+  perfilCliente: PerfilCliente;
+  destreza: Destreza;
+  dntui: boolean;
+  tiposIU: TipoIU[];
+  miccaoEspontanea: boolean;
+  volumeAproximadoMl?: number;
+  realizaCateterismo: boolean;
+  cateterismosDia?: number;
+  cateterUtilizado?: string;
+  ultimaInfeccaoUrinaria?: string;
+  emTratamento: boolean;
+  tratamento?: string;
+  volumeDrenadoMl?: string;
+  outrasIntercorrencias?: string;
+  produtoIndicado?: { codigo: number; sexo: 'feminino' | 'masculino'; french: number };
+  responsavelCateterismo?: string;
+  autorizaPesquisa: boolean;
+  aceitaInformacoes: boolean;
+  emailContato?: string;
+  whatsappContato?: string;
+  coren?: string;
+  encaminhamento?: EncaminhamentoIU;
+  localEncaminhamento?: string;
+  respCuidador?: string;
+  criadoEm: string;
+}
+
+export enum StatusElegibilidade {
+  EM_AVALIACAO = 'em_avaliacao',
+  ELEGIVEL = 'elegivel',
+  NAO_ELEGIVEL = 'nao_elegivel',
+}
+export const STATUS_ELEGIBILIDADE_LABEL: Record<StatusElegibilidade, string> = {
+  [StatusElegibilidade.EM_AVALIACAO]: 'Em avaliação',
+  [StatusElegibilidade.ELEGIVEL]: 'Elegível',
+  [StatusElegibilidade.NAO_ELEGIVEL]: 'Não elegível',
+};
+
+export interface FollowUp {
+  id: string;
+  clinicaId: string;
+  pacienteId: string;
+  avaliacaoIuId: string;
+  enfermeiroId: string;
+  dataFollowup: string;
+  statusElegibilidade: StatusElegibilidade;
+  observacoes: string;
+  proximoFollowup?: string;
+  criadoEm: string;
+}
+
+export interface LaudoMedico {
+  id: string;
+  clinicaId: string;
+  pacienteId: string;
+  medicoId: string;
+  avaliacaoIuId: string;
+  dataLaudo: string;
+  cid10: string[];
+  justificativaMedica: string;
+  fundamentoLegal: string;
+  produtosSolicitados: Array<{ codigo: number; descricao: string; quantidade: number; unidade: string; codigoSiafisico?: number }>;
+  assinado?: { medicoId: string; dataAssinatura: string };
+  criadoEm: string;
+}
+
+export enum StatusProcesso {
+  EM_PREPARACAO = 'em_preparacao',
+  PROTOCOLADO = 'protocolado',
+  EM_ANDAMENTO = 'em_andamento',
+  GANHO = 'ganho',
+  PERDIDO = 'perdido',
+  ARQUIVADO = 'arquivado',
+}
+export const STATUS_PROCESSO_LABEL: Record<StatusProcesso, string> = {
+  [StatusProcesso.EM_PREPARACAO]: 'Em preparação',
+  [StatusProcesso.PROTOCOLADO]: 'Protocolado',
+  [StatusProcesso.EM_ANDAMENTO]: 'Em andamento',
+  [StatusProcesso.GANHO]: 'Ganho',
+  [StatusProcesso.PERDIDO]: 'Perdido',
+  [StatusProcesso.ARQUIVADO]: 'Arquivado',
+};
+
+export interface ProcessoJuridico {
+  id: string;
+  clinicaId: string;
+  pacienteId: string;
+  avaliacaoIuId: string;
+  laudoMedicoId: string;
+  advogadoId: string;
+  status: StatusProcesso;
+  numeroProcesso?: string;
+  tribunal?: string;
+  dataProtocolo?: string;
+  dataDecisao?: string;
+  observacoes?: string;
+  documentos: Array<{ nome: string; url: string; tipo: string; adicionadoEm: string }>;
+  criadoEm: string;
+}
+
+export enum OrigemEntrega {
+  SUS = 'sus',
+  PLANO_SAUDE = 'plano_saude',
+  VAREJO = 'varejo',
+  DOACAO = 'doacao',
+}
+export const ORIGEM_ENTREGA_LABEL: Record<OrigemEntrega, string> = {
+  [OrigemEntrega.SUS]: 'SUS',
+  [OrigemEntrega.PLANO_SAUDE]: 'Plano de Saúde',
+  [OrigemEntrega.VAREJO]: 'Varejo',
+  [OrigemEntrega.DOACAO]: 'Doação',
+};
+
+export enum StatusEntrega {
+  PENDENTE = 'pendente',
+  ENVIADA = 'enviada',
+  ENTREGUE = 'entregue',
+  DEVOLVIDA = 'devolvida',
+}
+export const STATUS_ENTREGA_LABEL: Record<StatusEntrega, string> = {
+  [StatusEntrega.PENDENTE]: 'Pendente',
+  [StatusEntrega.ENVIADA]: 'Enviada',
+  [StatusEntrega.ENTREGUE]: 'Entregue',
+  [StatusEntrega.DEVOLVIDA]: 'Devolvida',
+};
+
+export interface Entrega {
+  id: string;
+  clinicaId: string;
+  pacienteId: string;
+  processoJuridicoId?: string;
+  avaliacaoIuId?: string;
+  responsavelId: string;
+  dataEntrega: string;
+  origem: OrigemEntrega;
+  status: StatusEntrega;
+  itens: Array<{ codigo: number; descricao: string; quantidade: number; valorUnitarioCentavos: number; valorTotalCentavos: number }>;
+  valorTotalCentavos: number;
+  notaFiscal?: string;
+  observacoes?: string;
+  criadoEm: string;
+}
+
+export interface Produto {
+  id: string;
+  codigo: number;
+  nome: string;
+  tipo: string;
+  sexo: string;
+  embalagem: string;
+  french?: number;
+  comprimentoCm?: number;
+  descricaoTecnica: string;
+  descricaoSiafisico?: string;
+  codigoSiafisico?: number;
+  ativo: boolean;
+}

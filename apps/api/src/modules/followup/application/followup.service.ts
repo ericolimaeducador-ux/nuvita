@@ -1,17 +1,27 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
 import { FOLLOWUP_REPOSITORY } from '../followup.constants';
-import { FollowUp } from '../domain/followup.entity';
+import { FollowUp, StatusElegibilidade } from '../domain/followup.entity';
 import { FollowUpRepository } from './ports/followup.repository';
 import { CreateFollowUpDto } from './dto/create-followup.dto';
+import { NotificacoesService } from '../../notificacoes/application/notificacoes.service';
+
+export interface ResumoFollowUp {
+  emAvaliacao: number;
+  elegivel: number;
+  naoElegivel: number;
+}
 
 @Injectable()
 export class FollowUpService {
-  constructor(@Inject(FOLLOWUP_REPOSITORY) private readonly repo: FollowUpRepository) {}
+  constructor(
+    @Inject(FOLLOWUP_REPOSITORY) private readonly repo: FollowUpRepository,
+    @Optional() private readonly notificacoes: NotificacoesService,
+  ) {}
 
   async create(dto: CreateFollowUpDto, user: AuthTokenPayload): Promise<FollowUp> {
     const clinicaId = this.resolveClinicaId(user, dto.clinicaId);
-    return this.repo.create({
+    const followup = await this.repo.create({
       clinicaId,
       pacienteId: dto.pacienteId,
       avaliacaoIuId: dto.avaliacaoIuId,
@@ -21,6 +31,21 @@ export class FollowUpService {
       observacoes: dto.observacoes,
       proximoFollowup: dto.proximoFollowup ? new Date(dto.proximoFollowup) : undefined,
     });
+
+    if (dto.statusElegibilidade === StatusElegibilidade.ELEGIVEL && this.notificacoes) {
+      void this.notificacoes.notificarElegibilidade(clinicaId, dto.pacienteId, 'Paciente');
+    }
+
+    return followup;
+  }
+
+  async resumo(clinicaId: string): Promise<ResumoFollowUp> {
+    const [emAvaliacao, elegivel, naoElegivel] = await Promise.all([
+      this.repo.countByStatus(clinicaId, StatusElegibilidade.EM_AVALIACAO),
+      this.repo.countByStatus(clinicaId, StatusElegibilidade.ELEGIVEL),
+      this.repo.countByStatus(clinicaId, StatusElegibilidade.NAO_ELEGIVEL),
+    ]);
+    return { emAvaliacao, elegivel, naoElegivel };
   }
 
   async listByPaciente(pacienteId: string, clinicaId: string | undefined, user: AuthTokenPayload): Promise<FollowUp[]> {

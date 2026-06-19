@@ -16,6 +16,7 @@ export enum TipoNotificacao {
   CONFIRMACAO_AGENDAMENTO = 'confirmacao_agendamento',
   LINK_TELECONSULTA = 'link_teleconsulta',
   RESULTADO_DISPONIVEL = 'resultado_disponivel',
+  ELEGIBILIDADE_CONFIRMADA = 'elegibilidade_confirmada',
 }
 
 export interface ConteudoNotificacao {

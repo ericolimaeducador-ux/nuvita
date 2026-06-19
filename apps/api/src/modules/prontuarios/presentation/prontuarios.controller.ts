@@ -15,6 +15,7 @@ import { CurrentUser } from '../../auth/presentation/decorators/current-user.dec
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
+import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
 import { Cid10QueryDto } from '../application/dto/cid10-query.dto';
 import { CreateAddendumDto } from '../application/dto/create-addendum.dto';
 import { CreateProntuarioDto } from '../application/dto/create-prontuario.dto';
@@ -23,7 +24,7 @@ import { UpdateProntuarioDto } from '../application/dto/update-prontuario.dto';
 import { ProntuarioRequestContext, ProntuariosService } from '../application/prontuarios.service';
 
 @Controller('prontuarios')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
 @Roles(...PAPEIS_PROFISSIONAIS)
 export class ProntuariosController {
   constructor(private readonly prontuariosService: ProntuariosService) {}

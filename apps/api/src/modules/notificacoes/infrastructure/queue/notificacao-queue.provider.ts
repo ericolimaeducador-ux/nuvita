@@ -1,15 +1,15 @@
 import { Provider } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { ConnectionOptions, Queue } from 'bullmq';
 import Redis from 'ioredis';
 import { NOTIFICACAO_QUEUE, NOTIFICATION_QUEUE_NAME } from '../../notificacoes.constants';
+import { AppConfigService } from '../../../../common/security/config.service';
 
 export const notificacaoQueueProvider: Provider = {
   provide: NOTIFICACAO_QUEUE,
-  inject: [ConfigService],
-  useFactory: (configService: ConfigService) => {
+  inject: [AppConfigService],
+  useFactory: (configService: AppConfigService) => {
     return new Queue(NOTIFICATION_QUEUE_NAME, {
-      connection: new Redis(configService.getOrThrow<string>('REDIS_URL'), {
+      connection: new Redis(configService.getConfig().redisUrl, {
         maxRetriesPerRequest: null,
       }) as unknown as ConnectionOptions,
       defaultJobOptions: {

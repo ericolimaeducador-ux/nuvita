@@ -6,7 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { AppConfigService } from '../../../common/security/config.service';
 import { createHmac } from 'crypto';
 import { AuthTokenPayload, ehProfissional } from '../../../../../../packages/shared/src/auth';
 import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
@@ -32,7 +32,7 @@ export class ProntuariosService {
     @Inject(PRONTUARIO_REPOSITORY) private readonly prontuarios: ProntuarioRepository,
     @Inject(CID10_REPOSITORY) private readonly cid10: Cid10Repository,
     @Inject(AUDIT_LOG_REPOSITORY) private readonly auditLogs: AuditLogRepository,
-    private readonly configService: ConfigService,
+    private readonly configService: AppConfigService,
   ) {}
 
   async create(dto: CreateProntuarioDto, context: ProntuarioRequestContext): Promise<Prontuario> {
@@ -248,8 +248,8 @@ export class ProntuariosService {
 
   private signatureHash(prontuario: Prontuario, medicoId: string, dataAssinatura: Date): string {
     const secret =
-      this.configService.get<string>('PRONTUARIO_SIGNATURE_SECRET') ??
-      this.configService.getOrThrow<string>('JWT_ACCESS_SECRET');
+      this.configService.getConfig().prontuarioSignatureSecret ??
+      this.configService.getConfig().jwtAccessSecret;
     const payload = {
       prontuario: {
         clinicaId: prontuario.clinicaId,

@@ -5,6 +5,7 @@ import { CurrentUser } from '../../auth/presentation/decorators/current-user.dec
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
+import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
 import { FinanceiroService, RequestAuditContext } from '../application/financeiro.service';
 import { CreateLancamentoDto } from '../application/dto/create-lancamento.dto';
 import { FinancialDashboardQueryDto } from '../application/dto/financial-dashboard-query.dto';
@@ -12,7 +13,7 @@ import { ListLancamentosQueryDto } from '../application/dto/list-lancamentos-que
 import { ReceiveLancamentoDto } from '../application/dto/receive-lancamento.dto';
 
 @Controller('financeiro')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
 export class FinanceiroController {
   constructor(private readonly financeiroService: FinanceiroService) {}
 

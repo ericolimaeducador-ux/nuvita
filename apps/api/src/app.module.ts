@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { SecurityModule } from './common/security/security.module';
+import { TenancyModule } from './common/tenancy/tenancy.module';
+import { AppConfigService } from './common/security/config.service';
 import { AgendamentosModule } from './modules/agendamentos/agendamentos.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -19,11 +22,13 @@ import { TelemedicinaModule } from './modules/telemedicina/telemedicina.module';
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
     }),
+    SecurityModule,
+    TenancyModule,
     MongooseModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        uri: config.getOrThrow<string>('MONGODB_URI'),
+      imports: [SecurityModule],
+      inject: [AppConfigService],
+      useFactory: (config: AppConfigService) => ({
+        uri: config.getConfig().mongodbUri,
       }),
     }),
     AuthModule,

@@ -22,3 +22,7 @@ export function idade(dataNascimento?: string): string {
   const anos = Math.floor(diff / (365.25 * 24 * 3600 * 1000));
   return `${anos} anos`;
 }
+
+export function formatBRL(value: number): string {
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}

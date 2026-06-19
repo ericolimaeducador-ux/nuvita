@@ -9,6 +9,8 @@ import { AgendaPage } from '@/pages/AgendaPage';
 import { ProntuariosPage } from '@/pages/ProntuariosPage';
 import { DocumentosPage } from '@/pages/DocumentosPage';
 import { NotificacoesPage } from '@/pages/NotificacoesPage';
+import { FinanceiroPage } from '@/pages/FinanceiroPage';
+import { TelemedicinaPage } from '@/pages/TelemedicinaPage';
 import { ClinicaPage } from '@/pages/ClinicaPage';
 import { Papel } from '@/types';
 
@@ -18,19 +20,32 @@ export function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<DashboardPage />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/pacientes" element={<PacientesPage />} />
           <Route path="/pacientes/:id" element={<PacienteDetailPage />} />
           <Route path="/agenda" element={<AgendaPage />} />
           <Route path="/prontuarios" element={<ProntuariosPage />} />
           <Route path="/documentos" element={<DocumentosPage />} />
           <Route path="/notificacoes" element={<NotificacoesPage />} />
+          <Route element={<ProtectedRoute roles={[Papel.SECRETARIA, Papel.ADMIN]} />}>
+            <Route path="/financeiro" element={<FinanceiroPage />} />
+          </Route>
+          <Route
+            element={
+              <ProtectedRoute
+                roles={[Papel.MEDICO, Papel.ENFERMEIRO, Papel.ADVOGADO, Papel.ADMIN]}
+              />
+            }
+          >
+            <Route path="/telemedicina" element={<TelemedicinaPage />} />
+          </Route>
           <Route element={<ProtectedRoute roles={[Papel.ADMIN]} />}>
             <Route path="/clinica" element={<ClinicaPage />} />
           </Route>
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }

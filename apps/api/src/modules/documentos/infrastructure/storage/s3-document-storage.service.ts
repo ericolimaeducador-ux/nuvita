@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import {
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { AppConfigService } from '../../../../common/security/config.service';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
 import { Readable } from 'stream';
@@ -21,15 +21,15 @@ export class S3DocumentStorageService implements DocumentStorage {
   private readonly client: S3Client;
   private readonly bucket: string;
 
-  constructor(configService: ConfigService) {
-    this.bucket = configService.getOrThrow<string>('DOCUMENT_STORAGE_BUCKET');
+  constructor(configService: AppConfigService) {
+    this.bucket = configService.getConfig().documentStorageBucket;
     this.client = new S3Client({
-      region: configService.get<string>('DOCUMENT_STORAGE_REGION') ?? 'auto',
-      endpoint: configService.get<string>('DOCUMENT_STORAGE_ENDPOINT'),
-      forcePathStyle: configService.get<string>('DOCUMENT_STORAGE_FORCE_PATH_STYLE') === 'true',
+      region: configService.getConfig().documentStorageRegion ?? 'auto',
+      endpoint: configService.getConfig().documentStorageEndpoint,
+      forcePathStyle: configService.getConfig().documentStorageForcePathStyle,
       credentials: {
-        accessKeyId: configService.getOrThrow<string>('DOCUMENT_STORAGE_ACCESS_KEY_ID'),
-        secretAccessKey: configService.getOrThrow<string>('DOCUMENT_STORAGE_SECRET_ACCESS_KEY'),
+        accessKeyId: configService.getConfig().documentStorageAccessKeyId,
+        secretAccessKey: configService.getConfig().documentStorageSecretAccessKey,
       },
     });
   }

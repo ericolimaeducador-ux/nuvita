@@ -1,13 +1,16 @@
 import { api } from './client';
 import type {
   Agendamento,
+  DashboardFinanceiro,
   Documento,
+  Lancamento,
   LoginResponse,
   ModalidadeAtendimento,
   Paciente,
   PageResult,
   Papel,
   Prontuario,
+  SalaTelemedicina,
   StatusAgendamento,
   TipoAgendamento,
   TipoAtendimento,
@@ -139,4 +142,64 @@ export const notificacoesApi = {
   dashboard: () => api.get('/notificacoes/dashboard').then((r) => r.data),
   enviar: (payload: Record<string, unknown>) =>
     api.post('/notificacoes', payload).then((r) => r.data),
+};
+
+// ---------- Financeiro ----------
+export interface ListLancamentosParams {
+  tipo?: string;
+  status?: string;
+  dataInicio?: string;
+  dataFim?: string;
+  cursor?: string;
+  limit?: number;
+}
+
+export interface CreateLancamentoPayload {
+  clinicaId: string;
+  tipo: string;
+  descricao: string;
+  valor: number;
+  formaPagamento?: string;
+  vencimento?: string;
+  pacienteId?: string;
+  agendamentoId?: string;
+  observacoes?: string;
+}
+
+export const financeiroApi = {
+  dashboard: (params?: { dataInicio?: string; dataFim?: string }) =>
+    api.get<DashboardFinanceiro>('/financeiro/dashboard', { params }).then((r) => r.data),
+  list: (params: ListLancamentosParams = {}) =>
+    api
+      .get<PageResult<Lancamento> | Lancamento[]>('/financeiro/lancamentos', { params })
+      .then((r) => r.data),
+  create: (payload: CreateLancamentoPayload) =>
+    api.post<Lancamento>('/financeiro/lancamentos', payload).then((r) => r.data),
+  receber: (id: string, formaPagamento?: string) =>
+    api
+      .patch(`/financeiro/lancamentos/${id}/receber`, { formaPagamento })
+      .then((r) => r.data),
+  cancelar: (id: string) =>
+    api.patch(`/financeiro/lancamentos/${id}/cancelar`).then((r) => r.data),
+};
+
+// ---------- Telemedicina ----------
+export interface CreateSalaPayload {
+  clinicaId: string;
+  agendamentoId: string;
+  pacienteId: string;
+  modalidade: string;
+}
+
+export const telemedicinaApi = {
+  createSala: (payload: CreateSalaPayload) =>
+    api.post<SalaTelemedicina>('/telemedicina/salas', payload).then((r) => r.data),
+  findByAgendamento: (agendamentoId: string) =>
+    api
+      .get<SalaTelemedicina>(`/telemedicina/salas/agendamento/${agendamentoId}`)
+      .then((r) => r.data),
+  findById: (id: string) =>
+    api.get<SalaTelemedicina>(`/telemedicina/salas/${id}`).then((r) => r.data),
+  encerrar: (id: string) =>
+    api.patch(`/telemedicina/salas/${id}/encerrar`).then((r) => r.data),
 };

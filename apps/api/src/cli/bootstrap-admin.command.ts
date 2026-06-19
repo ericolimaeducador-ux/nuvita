@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Command, CommandRunner, Option } from 'nest-commander';
+import { AppConfigService } from '../common/security/config.service';
 import { PlanoClinica } from '../modules/clinicas/domain/clinica.entity';
 import { ClinicasService } from '../modules/clinicas/application/clinicas.service';
 
@@ -24,7 +24,7 @@ interface BootstrapAdminOptions {
 export class BootstrapAdminCommand extends CommandRunner {
   constructor(
     private readonly clinicasService: ClinicasService,
-    private readonly configService: ConfigService,
+    private readonly configService: AppConfigService,
   ) {
     super();
   }
@@ -123,7 +123,7 @@ export class BootstrapAdminCommand extends CommandRunner {
   }
 
   private assertBootstrapSecret(providedSecret: string | undefined): void {
-    const expectedSecret = this.configService.get<string>('BOOTSTRAP_SECRET');
+    const expectedSecret = this.configService.getConfig().bootstrapSecret;
     const secret = providedSecret ?? process.env.BOOTSTRAP_SECRET_INPUT;
 
     if (!expectedSecret || !secret || secret !== expectedSecret) {

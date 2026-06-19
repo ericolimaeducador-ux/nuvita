@@ -5,6 +5,7 @@ import { CurrentUser } from '../../auth/presentation/decorators/current-user.dec
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
+import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
 import { AgendamentosService, RequestAuditContext } from '../application/agendamentos.service';
 import { CancelAgendamentoDto } from '../application/dto/cancel-agendamento.dto';
 import { CreateAgendamentoDto } from '../application/dto/create-agendamento.dto';
@@ -14,7 +15,7 @@ import { ListBloqueiosQueryDto } from '../application/dto/list-bloqueios-query.d
 import { UpdateAgendamentoDto } from '../application/dto/update-agendamento.dto';
 
 @Controller('agendamentos')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
 export class AgendamentosController {
   constructor(private readonly agendamentosService: AgendamentosService) {}
 

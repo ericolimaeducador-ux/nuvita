@@ -1,16 +1,20 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ClinicasModule } from '../modules/clinicas';
 import { BootstrapAdminCommand } from './bootstrap-admin.command';
+import { SecurityModule } from '../common/security/security.module';
+import { AppConfigService } from '../common/security/config.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    SecurityModule,
     MongooseModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        uri: configService.getOrThrow<string>('MONGODB_URI'),
+      imports: [SecurityModule],
+      inject: [AppConfigService],
+      useFactory: (configService: AppConfigService) => ({
+        uri: configService.getConfig().mongodbUri,
       }),
     }),
     ClinicasModule,

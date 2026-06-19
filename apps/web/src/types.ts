@@ -167,6 +167,7 @@ export interface Paciente {
   telefone?: string;
   email?: string;
   endereco?: Endereco;
+  programaVaPro?: boolean;
   ativo?: boolean;
   criadoEm?: string;
 }

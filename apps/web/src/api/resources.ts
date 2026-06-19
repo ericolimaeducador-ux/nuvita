@@ -52,6 +52,7 @@ export interface ListPacientesParams {
   limit?: number;
   incluirInativos?: boolean;
   clinicaId?: string;
+  programaVaPro?: boolean;
 }
 export const pacientesApi = {
   list: (params: ListPacientesParams = {}) =>
@@ -268,6 +269,8 @@ export const processoJuridicoApi = {
     api.get<ProcessoJuridico[]>('/processo-juridico/meus').then((r) => r.data),
   updateStatus: (id: string, payload: Record<string, unknown>) =>
     api.patch<ProcessoJuridico>(`/processo-juridico/${id}/status`, payload).then((r) => r.data),
+  addDocumento: (id: string, payload: { nome: string; url: string; tipo: string }) =>
+    api.post<ProcessoJuridico>(`/processo-juridico/${id}/documento`, payload).then((r) => r.data),
 };
 
 // ---------- Entregas ----------

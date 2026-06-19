@@ -39,6 +39,7 @@ export interface Paciente {
   endereco?: Endereco;
   convenio?: Convenio;
   consentimentoLGPD: ConsentimentoLGPD;
+  programaVaPro?: boolean;
   ativo: boolean;
   criadoEm: Date;
   atualizadoEm: Date;

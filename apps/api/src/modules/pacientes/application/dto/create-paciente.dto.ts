@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEmail,
   IsEnum,
   IsISO8601,
@@ -53,4 +54,8 @@ export class CreatePacienteDto {
   @ValidateNested()
   @Type(() => ConsentimentoLGpdDto)
   consentimentoLGPD!: ConsentimentoLGpdDto;
+
+  @IsOptional()
+  @IsBoolean()
+  programaVaPro?: boolean;
 }

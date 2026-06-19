@@ -16,6 +16,7 @@ import { FluxoClinicoPage } from '@/pages/FluxoClinicoPage';
 import { FluxoPacientePage } from '@/pages/FluxoPacientePage';
 import { LaudoImpressaoPage } from '@/pages/LaudoImpressaoPage';
 import { AvaliacaoImpressaoPage } from '@/pages/AvaliacaoImpressaoPage';
+import { MeusProcessosPage } from '@/pages/MeusProcessosPage';
 import { Papel } from '@/types';
 
 export function AppRoutes() {
@@ -47,6 +48,9 @@ export function AppRoutes() {
             <Route path="/fluxo-clinico/:id" element={<FluxoPacientePage />} />
             <Route path="/fluxo-clinico/:id/laudo/:laudoId/imprimir" element={<LaudoImpressaoPage />} />
             <Route path="/fluxo-clinico/:id/avaliacao/:avaliacaoId/imprimir" element={<AvaliacaoImpressaoPage />} />
+          </Route>
+          <Route element={<ProtectedRoute roles={[Papel.ADVOGADO, Papel.ADMIN]} />}>
+            <Route path="/meus-processos" element={<MeusProcessosPage />} />
           </Route>
           <Route element={<ProtectedRoute roles={[Papel.ADMIN]} />}>
             <Route path="/clinica" element={<ClinicaPage />} />

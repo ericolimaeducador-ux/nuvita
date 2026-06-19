@@ -101,6 +101,7 @@ export function FluxoPacientePage() {
           title={paciente?.nome ?? 'Paciente'}
           subtitle={`CPF: ${paciente?.cpf ?? '—'} · Fluxo clínico VaPro`}
         />
+        <VaProToggle pacienteId={pacienteId!} programaVaPro={!!paciente?.programaVaPro} />
       </div>
 
       <div className="space-y-4">
@@ -700,10 +701,23 @@ function ProcessoJuridicoStep({ pacienteId, avaliacaoId, laudoId, processos, use
 }) {
   const [open, setOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [docOpen, setDocOpen] = useState(false);
   const [processoSelecionado, setProcessoSelecionado] = useState<string>('');
   const qc = useQueryClient();
   const { register, handleSubmit, reset } = useForm<Record<string, unknown>>();
   const statusForm = useForm<Record<string, unknown>>();
+  const docForm = useForm<{ nome: string; url: string; tipo: string }>();
+
+  const addDocMut = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: { nome: string; url: string; tipo: string } }) =>
+      processoJuridicoApi.addDocumento(id, payload),
+    onSuccess: () => {
+      toast.success('Documento adicionado.');
+      setDocOpen(false); docForm.reset();
+      void qc.invalidateQueries({ queryKey: ['processo-juridico', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
 
   const mut = useMutation({
     mutationFn: (payload: Record<string, unknown>) => processoJuridicoApi.create(payload),
@@ -747,6 +761,25 @@ function ProcessoJuridicoStep({ pacienteId, avaliacaoId, laudoId, processos, use
           {p.tribunal && <p className="text-xs text-muted-foreground">Tribunal: {p.tribunal}</p>}
           {p.dataProtocolo && <p className="text-xs text-muted-foreground">Protocolado: {dayjs(p.dataProtocolo).format('DD/MM/YYYY')}</p>}
           {p.observacoes && <p className="text-xs text-muted-foreground">{p.observacoes}</p>}
+          {/* Documentos */}
+          {(p.documentos ?? []).length > 0 && (
+            <div className="mt-2 space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Documentos:</p>
+              {p.documentos.map((d, i) => (
+                <a key={i} href={d.url} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                  {d.nome} <span className="text-muted-foreground">({d.tipo})</span>
+                </a>
+              ))}
+            </div>
+          )}
+          {podeCriar && (
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-muted-foreground mt-1"
+              onClick={() => { setProcessoSelecionado(p.id); setDocOpen(true); }}>
+              <Plus className="h-3 w-3 mr-1" /> Adicionar documento
+            </Button>
+          )}
         </div>
       ))}
       {podeCriar && (
@@ -769,6 +802,30 @@ function ProcessoJuridicoStep({ pacienteId, avaliacaoId, laudoId, processos, use
           </form>
         </DialogContent>
       </Dialog>
+      <Dialog open={docOpen} onOpenChange={setDocOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Adicionar Documento ao Processo</DialogTitle></DialogHeader>
+          <form onSubmit={docForm.handleSubmit((v) => addDocMut.mutate({ id: processoSelecionado, payload: v }))} className="space-y-4">
+            <div className="space-y-1">
+              <Label>Nome do documento</Label>
+              <Input placeholder="Ex: Petição inicial" {...docForm.register('nome', { required: true })} />
+            </div>
+            <div className="space-y-1">
+              <Label>URL (Google Drive, Dropbox, etc.)</Label>
+              <Input placeholder="https://..." {...docForm.register('url', { required: true })} />
+            </div>
+            <div className="space-y-1">
+              <Label>Tipo</Label>
+              <Input placeholder="Ex: petição, procuração, laudo, RG..." {...docForm.register('tipo', { required: true })} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDocOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={addDocMut.isPending}>{addDocMut.isPending ? 'Salvando...' : 'Adicionar'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={statusOpen} onOpenChange={setStatusOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Atualizar Status do Processo</DialogTitle></DialogHeader>
@@ -922,6 +979,31 @@ function EntregasStep({ pacienteId, processoId, avaliacaoId, entregas, produtos,
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// ---- VaPro Toggle ----
+function VaProToggle({ pacienteId, programaVaPro }: { pacienteId: string; programaVaPro: boolean }) {
+  const qc = useQueryClient();
+  const mut = useMutation({
+    mutationFn: (val: boolean) => pacientesApi.update(pacienteId, { programaVaPro: val }),
+    onSuccess: (_, val) => {
+      void qc.invalidateQueries({ queryKey: ['paciente', pacienteId] });
+      void qc.invalidateQueries({ queryKey: ['pacientes-fluxo'] });
+      toast.success(val ? 'Adicionado ao programa VaPro.' : 'Removido do programa VaPro.');
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+  return (
+    <Button
+      size="sm"
+      variant={programaVaPro ? 'default' : 'outline'}
+      className="ml-auto shrink-0"
+      onClick={() => mut.mutate(!programaVaPro)}
+      disabled={mut.isPending}
+    >
+      {programaVaPro ? '✓ Programa VaPro' : '+ Incluir no VaPro'}
+    </Button>
   );
 }
 

@@ -46,6 +46,7 @@ export class PacienteMongoRepository implements PacienteRepository {
 
   async list(input: ListPacientesInput): Promise<CursorPaginationResult<Paciente>> {
     const query = this.baseQuery(input.clinicaId, input.incluirInativos);
+    if (input.programaVaPro !== undefined) query.programaVaPro = input.programaVaPro;
     this.applyCursor(query, input.cursor);
 
     const limit = this.normalizeLimit(input.limit);
@@ -74,7 +75,7 @@ export class PacienteMongoRepository implements PacienteRepository {
           },
         },
       },
-      { $match: query },
+      { $match: { ...query, ...(input.programaVaPro !== undefined ? { programaVaPro: input.programaVaPro } : {}) } },
       { $sort: { criadoEm: -1, _id: -1 } },
       { $limit: limit + 1 },
     ];
@@ -150,6 +151,7 @@ export class PacienteMongoRepository implements PacienteRepository {
     if (input.email !== undefined) update.email = this.encryptOptional(input.email?.toLowerCase());
     if (input.endereco !== undefined) update.endereco = this.encryptJsonOptional(input.endereco);
     if (input.convenio !== undefined) update.convenio = this.encryptJsonOptional(input.convenio);
+    if (input.programaVaPro !== undefined) update.programaVaPro = input.programaVaPro;
 
     return update;
   }
@@ -184,6 +186,7 @@ export class PacienteMongoRepository implements PacienteRepository {
       endereco: this.decryptJsonOptional<Endereco>(object.endereco),
       convenio: this.decryptJsonOptional<Convenio>(object.convenio),
       consentimentoLGPD: object.consentimentoLGPD,
+      programaVaPro: object.programaVaPro ?? false,
       ativo: object.ativo,
       criadoEm: object.criadoEm,
       atualizadoEm: object.atualizadoEm,

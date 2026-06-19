@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { AuthTokenPayload, PAPEIS_PROFISSIONAIS } from '../../../../../../packages/shared/src/auth';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
 import { ProcessoJuridicoService } from '../application/processo-juridico.service';
-import { CreateProcessoJuridicoDto, UpdateStatusProcessoDto } from '../application/dto/create-processo-juridico.dto';
+import { AddDocumentoProcessoDto, CreateProcessoJuridicoDto, UpdateStatusProcessoDto } from '../application/dto/create-processo-juridico.dto';
 
 @Controller('processo-juridico')
 @UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
@@ -40,6 +40,16 @@ export class ProcessoJuridicoController {
     @CurrentUser() user: AuthTokenPayload,
   ) {
     return this.service.findOne(id, clinicaId, user);
+  }
+
+  @Post(':id/documento')
+  addDocumento(
+    @Param('id') id: string,
+    @Body() dto: AddDocumentoProcessoDto,
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+  ) {
+    return this.service.addDocumento(id, dto, clinicaId, user);
   }
 
   @Patch(':id/status')

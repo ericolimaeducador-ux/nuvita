@@ -3,7 +3,7 @@ import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
 import { PROCESSO_JURIDICO_REPOSITORY } from '../processo-juridico.constants';
 import { ProcessoJuridico, StatusProcesso } from '../domain/processo-juridico.entity';
 import { ProcessoJuridicoRepository } from './ports/processo-juridico.repository';
-import { CreateProcessoJuridicoDto, UpdateStatusProcessoDto } from './dto/create-processo-juridico.dto';
+import { AddDocumentoProcessoDto, CreateProcessoJuridicoDto, UpdateStatusProcessoDto } from './dto/create-processo-juridico.dto';
 
 @Injectable()
 export class ProcessoJuridicoService {
@@ -47,6 +47,18 @@ export class ProcessoJuridicoService {
     if (Object.keys(extra).length) await this.repo.update(resolved, id, extra);
 
     const updated = await this.repo.updateStatus(resolved, id, dto.status, dto.observacoes);
+    if (!updated) throw new NotFoundException('Processo não encontrado.');
+    return updated;
+  }
+
+  async addDocumento(id: string, dto: AddDocumentoProcessoDto, clinicaId: string | undefined, user: AuthTokenPayload): Promise<ProcessoJuridico> {
+    const resolved = this.resolveClinicaId(user, clinicaId);
+    const updated = await this.repo.addDocumento(resolved, id, {
+      nome: dto.nome,
+      url: dto.url,
+      tipo: dto.tipo,
+      adicionadoEm: new Date(),
+    });
     if (!updated) throw new NotFoundException('Processo não encontrado.');
     return updated;
   }

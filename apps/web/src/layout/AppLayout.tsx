@@ -1,19 +1,21 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, Calendar, FileText, Folder, Bell, DollarSign,
-  Video, Building2, LogOut, ChevronLeft, ChevronRight, Activity,
+  Video, Building2, LogOut, ChevronLeft, ChevronRight, Activity, Scale,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/auth/AuthContext';
+import { Papel } from '@/types';
 
-const navItems = [
+const navItems: { to: string; icon: React.ElementType; label: string; roles?: Papel[] }[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/pacientes', icon: Users, label: 'Pacientes' },
   { to: '/fluxo-clinico', icon: Activity, label: 'Fluxo Clínico' },
+  { to: '/meus-processos', icon: Scale, label: 'Meus Processos', roles: [Papel.ADVOGADO, Papel.ADMIN] },
   { to: '/agenda', icon: Calendar, label: 'Agenda' },
   { to: '/prontuarios', icon: FileText, label: 'Prontuários' },
   { to: '/documentos', icon: Folder, label: 'Documentos' },
@@ -64,7 +66,7 @@ export function AppLayout() {
 
         {/* Nav */}
         <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
-          {navItems.map(({ to, icon: Icon, label }) => {
+          {navItems.filter(({ roles }) => !roles || (user?.papel && roles.includes(user.papel as Papel))).map(({ to, icon: Icon, label }) => {
             const active = location.pathname === to || location.pathname.startsWith(to + '/');
             return (
               <Link

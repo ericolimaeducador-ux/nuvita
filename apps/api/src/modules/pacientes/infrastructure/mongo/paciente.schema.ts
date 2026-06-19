@@ -53,6 +53,9 @@ export class PacienteMongo {
   @Prop({ required: true, type: ConsentimentoLGPDSchema })
   consentimentoLGPD!: ConsentimentoLGPDMongo;
 
+  @Prop({ default: false, index: true })
+  programaVaPro?: boolean;
+
   @Prop({ default: true, index: true })
   ativo!: boolean;
 

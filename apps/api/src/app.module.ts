@@ -15,6 +15,12 @@ import { NotificacoesModule } from './modules/notificacoes/notificacoes.module';
 import { PacientesModule } from './modules/pacientes/pacientes.module';
 import { ProntuariosModule } from './modules/prontuarios/prontuarios.module';
 import { TelemedicinaModule } from './modules/telemedicina/telemedicina.module';
+import { ProdutosModule } from './modules/produtos/produtos.module';
+import { AvaliacaoIUModule } from './modules/avaliacao-iu/avaliacao-iu.module';
+import { FollowUpModule } from './modules/followup/followup.module';
+import { LaudoMedicoModule } from './modules/laudo-medico/laudo-medico.module';
+import { ProcessoJuridicoModule } from './modules/processo-juridico/processo-juridico.module';
+import { EntregasModule } from './modules/entregas/entregas.module';
 
 @Module({
   imports: [
@@ -42,6 +48,12 @@ import { TelemedicinaModule } from './modules/telemedicina/telemedicina.module';
     TelemedicinaModule,
     AnalyticsModule,
     HealthModule,
+    ProdutosModule,
+    AvaliacaoIUModule,
+    FollowUpModule,
+    LaudoMedicoModule,
+    ProcessoJuridicoModule,
+    EntregasModule,
   ],
 })
 export class AppModule {}

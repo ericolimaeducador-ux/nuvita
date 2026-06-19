@@ -1,30 +1,23 @@
-import type { ReactNode } from 'react';
+import React from 'react';
+import { cn } from '@/lib/utils';
 
-export function PageHeader({
-  title,
-  subtitle,
-  extra,
-}: {
+interface PageHeaderProps {
   title: string;
+  description?: string;
   subtitle?: string;
-  extra?: ReactNode;
-}) {
+  extra?: React.ReactNode;
+  className?: string;
+}
+
+export function PageHeader({ title, description, subtitle, extra, className }: PageHeaderProps) {
+  const desc = description ?? subtitle;
   return (
-    <div
-      className="page-header"
-      style={{
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        gap: 16,
-        flexWrap: 'wrap',
-      }}
-    >
+    <div className={cn('flex items-start justify-between mb-8', className)}>
       <div>
-        <h2>{title}</h2>
-        {subtitle && <div className="sub">{subtitle}</div>}
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">{title}</h1>
+        {desc && <p className="mt-1 text-sm text-muted-foreground">{desc}</p>}
       </div>
-      {extra && <div style={{ display: 'flex', gap: 8 }}>{extra}</div>}
+      {extra && <div className="flex items-center gap-3">{extra}</div>}
     </div>
   );
 }

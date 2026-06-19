@@ -1,246 +1,239 @@
 import { useState } from 'react';
-import {
-  Card,
-  Table,
-  Button,
-  Tag,
-  Modal,
-  Form,
-  Select,
-  Input,
-  DatePicker,
-  App,
-  Divider,
-  AutoComplete,
-} from 'antd';
-import { PlusOutlined, SignatureOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
+import { Plus, PenLine } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import { prontuariosApi, pacientesApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toItems } from '@/utils';
 import { useAuth } from '@/auth/AuthContext';
-import {
-  TipoAtendimento,
-  TIPO_ATENDIMENTO_LABEL,
-  type Prontuario,
-  type Paciente,
-} from '@/types';
+import { toast } from '@/components/ui/use-toast';
+import { TipoAtendimento, TIPO_ATENDIMENTO_LABEL, type Prontuario, type Paciente } from '@/types';
 
 export function ProntuariosPage() {
-  const { message } = App.useApp();
   const qc = useQueryClient();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [form] = Form.useForm();
   const [cidOpts, setCidOpts] = useState<{ value: string; label: string }[]>([]);
+  const [cidSearch, setCidSearch] = useState('');
+  const [cidSelected, setCidSelected] = useState('');
 
-  const listQ = useQuery({
-    queryKey: ['prontuarios'],
-    queryFn: () => prontuariosApi.list(),
-  });
-  const pacientesQ = useQuery({
-    queryKey: ['pacientes', 'select'],
-    queryFn: () => pacientesApi.list({ limit: 100 }),
-  });
+  // Form state
+  const [fPacienteId, setFPacienteId] = useState('');
+  const [fData, setFData] = useState(dayjs().format('YYYY-MM-DDTHH:mm'));
+  const [fTipo, setFTipo] = useState<TipoAtendimento>(TipoAtendimento.CONSULTA);
+  const [fQueixa, setFQueixa] = useState('');
+  const [fHistoria, setFHistoria] = useState('');
+  const [fExame, setFExame] = useState('');
+  const [fAvaliacao, setFAvaliacao] = useState('');
+  const [fConduta, setFConduta] = useState('');
+
+  const listQ = useQuery({ queryKey: ['prontuarios'], queryFn: () => prontuariosApi.list() });
+  const pacientesQ = useQuery({ queryKey: ['pacientes', 'select'], queryFn: () => pacientesApi.list({ limit: 100 }) });
 
   const createMut = useMutation({
     mutationFn: (payload: Record<string, unknown>) => prontuariosApi.create(payload),
     onSuccess: () => {
-      message.success('Prontuário registrado.');
+      toast.success('Prontuário registrado.');
       setOpen(false);
-      form.resetFields();
+      resetForm();
       void qc.invalidateQueries({ queryKey: ['prontuarios'] });
     },
-    onError: (e) => message.error(apiErrorMessage(e)),
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
   const assinarMut = useMutation({
     mutationFn: (id: string) => prontuariosApi.assinar(id),
-    onSuccess: () => {
-      message.success('Prontuário assinado.');
-      void qc.invalidateQueries({ queryKey: ['prontuarios'] });
-    },
-    onError: (e) => message.error(apiErrorMessage(e)),
+    onSuccess: () => { toast.success('Prontuário assinado.'); void qc.invalidateQueries({ queryKey: ['prontuarios'] }); },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
   const prontuarios = toItems<Prontuario>(listQ.data as never);
   const pacientes = toItems<Paciente>(pacientesQ.data as never);
 
   async function buscarCid(q: string) {
+    setCidSearch(q);
     if (!q || q.length < 2) return setCidOpts([]);
     try {
       const r = await prontuariosApi.cid10(q);
-      setCidOpts(
-        (r ?? []).map((c) => ({
-          value: c.codigo,
-          label: `${c.codigo} — ${c.descricao}`,
-        })),
-      );
-    } catch {
-      setCidOpts([]);
-    }
+      setCidOpts((r ?? []).map((c) => ({ value: c.codigo, label: `${c.codigo} — ${c.descricao}` })));
+    } catch { setCidOpts([]); }
+  }
+
+  function resetForm() {
+    setFPacienteId(''); setFData(dayjs().format('YYYY-MM-DDTHH:mm')); setFTipo(TipoAtendimento.CONSULTA);
+    setFQueixa(''); setFHistoria(''); setFExame(''); setFAvaliacao(''); setFConduta('');
+    setCidSearch(''); setCidSelected(''); setCidOpts([]);
   }
 
   function submit() {
-    form.validateFields().then((v) => {
-      createMut.mutate({
-        clinicaId: user?.clinicaId,
-        pacienteId: v.pacienteId,
-        dataAtendimento: dayjs(v.dataAtendimento).toISOString(),
-        tipo: v.tipo,
-        // Campos espelham o SOAP DTO da API (subjetivo.hda, avaliacao com arrays).
-        subjetivo: { queixaPrincipal: v.queixa ?? '', hda: v.historia || undefined },
-        objetivo: { exameFisico: v.exameFisico || undefined },
-        avaliacao: {
-          hipotesesDiagnosticas: v.avaliacao ? [v.avaliacao] : undefined,
-          cid10: v.cid10 ? [v.cid10] : undefined,
-        },
-        plano: { conduta: v.conduta || undefined },
-      });
+    if (!fPacienteId || !fQueixa) { toast.error('Preencha os campos obrigatórios.'); return; }
+    createMut.mutate({
+      clinicaId: user?.clinicaId,
+      pacienteId: fPacienteId,
+      dataAtendimento: dayjs(fData).toISOString(),
+      tipo: fTipo,
+      subjetivo: { queixaPrincipal: fQueixa, hda: fHistoria || undefined },
+      objetivo: { exameFisico: fExame || undefined },
+      avaliacao: { hipotesesDiagnosticas: fAvaliacao ? [fAvaliacao] : undefined, cid10: cidSelected ? [cidSelected] : undefined },
+      plano: { conduta: fConduta || undefined },
     });
   }
 
   return (
-    <>
+    <div className="p-6">
       <PageHeader
         title="Prontuários"
         subtitle="Registros clínicos SOAP com assinatura imutável"
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
-            Novo prontuário
+          <Button onClick={() => setOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Novo prontuário
           </Button>
         }
       />
 
-      <Card variant="borderless">
-        <Table<Prontuario>
-          rowKey="id"
-          loading={listQ.isLoading}
-          dataSource={prontuarios}
-          columns={[
-            {
-              title: 'Data',
-              dataIndex: 'dataAtendimento',
-              render: (v) => (v ? dayjs(v).format('DD/MM/YYYY HH:mm') : '—'),
-            },
-            { title: 'Paciente', dataIndex: 'pacienteId' },
-            {
-              title: 'Tipo',
-              dataIndex: 'tipo',
-              render: (v: TipoAtendimento) => TIPO_ATENDIMENTO_LABEL[v] ?? v,
-            },
-            {
-              title: 'Situação',
-              dataIndex: 'assinado',
-              render: (v) =>
-                v ? <Tag color="green">Assinado</Tag> : <Tag color="gold">Rascunho</Tag>,
-            },
-            {
-              title: '',
-              width: 130,
-              render: (_, r) =>
-                r.assinado ? null : (
-                  <Button
-                    size="small"
-                    icon={<SignatureOutlined />}
-                    loading={assinarMut.isPending}
-                    onClick={() => assinarMut.mutate(r.id)}
-                  >
-                    Assinar
-                  </Button>
-                ),
-            },
-          ]}
-        />
+      <Card>
+        <CardContent className="p-6">
+          {listQ.isLoading ? (
+            <div className="space-y-3">{[1,2,3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Paciente</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Situação</TableHead>
+                  <TableHead className="w-32" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {prontuarios.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell>{p.dataAtendimento ? dayjs(p.dataAtendimento).format('DD/MM/YYYY HH:mm') : '—'}</TableCell>
+                    <TableCell>{p.pacienteId}</TableCell>
+                    <TableCell>{TIPO_ATENDIMENTO_LABEL[p.tipo] ?? p.tipo}</TableCell>
+                    <TableCell>
+                      <Badge variant={p.assinado ? 'success' : 'warning'}>{p.assinado ? 'Assinado' : 'Rascunho'}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {!p.assinado && (
+                        <Button size="sm" variant="outline" disabled={assinarMut.isPending} onClick={() => assinarMut.mutate(p.id)}>
+                          <PenLine className="mr-1 h-3 w-3" /> Assinar
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {prontuarios.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum prontuário encontrado</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
       </Card>
 
-      <Modal
-        title="Novo prontuário (SOAP)"
-        open={open}
-        onCancel={() => setOpen(false)}
-        onOk={submit}
-        okText="Registrar"
-        confirmLoading={createMut.isPending}
-        width={720}
-        destroyOnClose
-      >
-        <Form form={form} layout="vertical" requiredMark="optional">
-          <Form.Item
-            name="pacienteId"
-            label="Paciente"
-            rules={[{ required: true, message: 'Selecione o paciente.' }]}
-          >
-            <Select
-              showSearch
-              optionFilterProp="label"
-              placeholder="Buscar paciente"
-              options={pacientes.map((p) => ({ value: p.id, label: p.nome }))}
-            />
-          </Form.Item>
-          <Form.Item
-            name="dataAtendimento"
-            label="Data do atendimento"
-            rules={[{ required: true, message: 'Informe a data.' }]}
-            initialValue={dayjs()}
-          >
-            <DatePicker
-              showTime={{ format: 'HH:mm' }}
-              format="DD/MM/YYYY HH:mm"
-              style={{ width: '100%' }}
-            />
-          </Form.Item>
-          <Form.Item
-            name="tipo"
-            label="Tipo de atendimento"
-            rules={[{ required: true, message: 'Selecione.' }]}
-            initialValue={TipoAtendimento.CONSULTA}
-          >
-            <Select
-              options={Object.values(TipoAtendimento).map((t) => ({
-                value: t,
-                label: TIPO_ATENDIMENTO_LABEL[t],
-              }))}
-            />
-          </Form.Item>
+      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Novo prontuário (SOAP)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Paciente</Label>
+                <Select value={fPacienteId} onValueChange={setFPacienteId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
+                  <SelectContent>
+                    {pacientes.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pData">Data do atendimento</Label>
+                <Input id="pData" type="datetime-local" value={fData} onChange={(e) => setFData(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo de atendimento</Label>
+              <Select value={fTipo} onValueChange={(v) => setFTipo(v as TipoAtendimento)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.values(TipoAtendimento).map((t) => <SelectItem key={t} value={t}>{TIPO_ATENDIMENTO_LABEL[t]}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <Divider orientation="left">S — Subjetivo</Divider>
-          <Form.Item
-            name="queixa"
-            label="Queixa principal"
-            rules={[{ required: true, message: 'Informe a queixa.' }]}
-          >
-            <Input.TextArea rows={2} />
-          </Form.Item>
-          <Form.Item name="historia" label="História da doença atual">
-            <Input.TextArea rows={2} />
-          </Form.Item>
+            <Separator />
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">S — Subjetivo</p>
+            <div className="space-y-2">
+              <Label htmlFor="queixa">Queixa principal *</Label>
+              <Textarea id="queixa" rows={2} value={fQueixa} onChange={(e) => setFQueixa(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="historia">História da doença atual</Label>
+              <Textarea id="historia" rows={2} value={fHistoria} onChange={(e) => setFHistoria(e.target.value)} />
+            </div>
 
-          <Divider orientation="left">O — Objetivo</Divider>
-          <Form.Item name="exameFisico" label="Exame físico">
-            <Input.TextArea rows={2} />
-          </Form.Item>
+            <Separator />
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">O — Objetivo</p>
+            <div className="space-y-2">
+              <Label htmlFor="exame">Exame físico</Label>
+              <Textarea id="exame" rows={2} value={fExame} onChange={(e) => setFExame(e.target.value)} />
+            </div>
 
-          <Divider orientation="left">A — Avaliação</Divider>
-          <Form.Item name="avaliacao" label="Hipótese diagnóstica">
-            <Input.TextArea rows={2} />
-          </Form.Item>
-          <Form.Item name="cid10" label="CID-10">
-            <AutoComplete
-              options={cidOpts}
-              onSearch={buscarCid}
-              placeholder="Digite para buscar (ex.: J11)"
-              filterOption={false}
-            />
-          </Form.Item>
+            <Separator />
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">A — Avaliação</p>
+            <div className="space-y-2">
+              <Label htmlFor="avaliacao">Hipótese diagnóstica</Label>
+              <Textarea id="avaliacao" rows={2} value={fAvaliacao} onChange={(e) => setFAvaliacao(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cidSearch">CID-10</Label>
+              <Input id="cidSearch" placeholder="Digite para buscar (ex.: J11)" value={cidSearch} onChange={(e) => buscarCid(e.target.value)} />
+              {cidOpts.length > 0 && (
+                <div className="glass rounded-lg p-1 space-y-0.5 max-h-40 overflow-y-auto">
+                  {cidOpts.map((o) => (
+                    <button
+                      key={o.value}
+                      type="button"
+                      className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-white/5 text-foreground"
+                      onClick={() => { setCidSelected(o.value); setCidSearch(o.label); setCidOpts([]); }}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
-          <Divider orientation="left">P — Plano</Divider>
-          <Form.Item name="conduta" label="Conduta">
-            <Input.TextArea rows={2} />
-          </Form.Item>
-        </Form>
-      </Modal>
-    </>
+            <Separator />
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">P — Plano</p>
+            <div className="space-y-2">
+              <Label htmlFor="conduta">Conduta</Label>
+              <Textarea id="conduta" rows={2} value={fConduta} onChange={(e) => setFConduta(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button onClick={submit} disabled={createMut.isPending}>{createMut.isPending ? 'Registrando...' : 'Registrar'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

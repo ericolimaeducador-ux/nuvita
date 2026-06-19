@@ -1,132 +1,117 @@
 import { useState } from 'react';
-import {
-  Card,
-  Button,
-  Modal,
-  Form,
-  Input,
-  Select,
-  Tag,
-  Descriptions,
-  Alert,
-  Space,
-  App,
-  Typography,
-  Popconfirm,
-} from 'antd';
-import {
-  PlusOutlined,
-  SearchOutlined,
-  CopyOutlined,
-  PoweroffOutlined,
-} from '@ant-design/icons';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
+import { Plus, Search, Copy, PowerOff } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { telemedicinaApi, type CreateSalaPayload } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
+import { toast } from '@/components/ui/use-toast';
 import {
   ModalidadeAtendimento,
   MODALIDADE_LABEL,
   StatusSala,
-  STATUS_SALA_COLOR,
   STATUS_SALA_LABEL,
   type SalaTelemedicina,
 } from '@/types';
 
-const { Text } = Typography;
+function salaVariant(s: StatusSala): 'default' | 'success' | 'destructive' | 'secondary' {
+  if (s === StatusSala.AGUARDANDO) return 'default';
+  if (s === StatusSala.EM_ANDAMENTO) return 'success';
+  if (s === StatusSala.EXPIRADA) return 'destructive';
+  return 'secondary';
+}
 
-function SalaCard({
-  sala,
-  onEncerrar,
-  loading,
-}: {
-  sala: SalaTelemedicina;
-  onEncerrar: () => void;
-  loading: boolean;
-}) {
-  const { message } = App.useApp();
-
+function SalaCard({ sala, onEncerrar, loading }: { sala: SalaTelemedicina; onEncerrar: () => void; loading: boolean }) {
   function copiar(token: string) {
     void navigator.clipboard.writeText(token);
-    void message.success('Token copiado.');
+    toast.success('Token copiado.');
   }
 
-  return (
-    <Card
-      title={
-        <Space>
-          Sala de telemedicina
-          <Tag color={STATUS_SALA_COLOR[sala.status as StatusSala]}>
-            {STATUS_SALA_LABEL[sala.status as StatusSala] ?? sala.status}
-          </Tag>
-        </Space>
-      }
-      extra={
-        sala.status === StatusSala.AGUARDANDO || sala.status === StatusSala.EM_ANDAMENTO ? (
-          <Popconfirm
-            title="Encerrar a sala de telemedicina?"
-            onConfirm={onEncerrar}
-            okText="Sim"
-            cancelText="Não"
-          >
-            <Button danger icon={<PoweroffOutlined />} loading={loading}>
-              Encerrar
-            </Button>
-          </Popconfirm>
-        ) : null
-      }
-    >
-      <Descriptions column={1} size="small">
-        <Descriptions.Item label="Modalidade">
-          {MODALIDADE_LABEL[sala.modalidade] ?? sala.modalidade}
-        </Descriptions.Item>
-        <Descriptions.Item label="Criada em">
-          {dayjs(sala.criadoEm).format('DD/MM/YYYY HH:mm')}
-        </Descriptions.Item>
-        <Descriptions.Item label="Expira em">
-          {dayjs(sala.expiresAt).format('DD/MM/YYYY HH:mm')}
-        </Descriptions.Item>
-        {sala.iniciadaEm && (
-          <Descriptions.Item label="Iniciada em">
-            {dayjs(sala.iniciadaEm).format('DD/MM/YYYY HH:mm')}
-          </Descriptions.Item>
-        )}
-      </Descriptions>
+  const ativa = sala.status === StatusSala.AGUARDANDO || sala.status === StatusSala.EM_ANDAMENTO;
 
-      <Card size="small" style={{ marginTop: 16 }} title="Token do profissional">
-        <Space>
-          <Text code copyable={{ text: sala.tokenMedico, icon: <CopyOutlined /> }}>
-            {sala.tokenMedico.slice(0, 20)}…
-          </Text>
-          <Button size="small" onClick={() => copiar(sala.tokenMedico)}>
-            Copiar
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div className="flex items-center gap-2">
+          <CardTitle>Sala de telemedicina</CardTitle>
+          <Badge variant={salaVariant(sala.status as StatusSala)}>
+            {STATUS_SALA_LABEL[sala.status as StatusSala] ?? sala.status}
+          </Badge>
+        </div>
+        {ativa && (
+          <Button variant="destructive" size="sm" disabled={loading} onClick={onEncerrar}>
+            <PowerOff className="mr-2 h-4 w-4" /> Encerrar
           </Button>
-        </Space>
-      </Card>
-      <Card size="small" style={{ marginTop: 8 }} title="Token do paciente">
-        <Space>
-          <Text code copyable={{ text: sala.tokenPaciente, icon: <CopyOutlined /> }}>
-            {sala.tokenPaciente.slice(0, 20)}…
-          </Text>
-          <Button size="small" onClick={() => copiar(sala.tokenPaciente)}>
-            Copiar
-          </Button>
-        </Space>
-      </Card>
+        )}
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p className="text-muted-foreground text-xs">Modalidade</p>
+            <p className="font-medium">{MODALIDADE_LABEL[sala.modalidade as ModalidadeAtendimento] ?? sala.modalidade}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Criada em</p>
+            <p className="font-medium">{dayjs(sala.criadoEm).format('DD/MM/YYYY HH:mm')}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Expira em</p>
+            <p className="font-medium">{dayjs(sala.expiresAt).format('DD/MM/YYYY HH:mm')}</p>
+          </div>
+          {sala.iniciadaEm && (
+            <div>
+              <p className="text-muted-foreground text-xs">Iniciada em</p>
+              <p className="font-medium">{dayjs(sala.iniciadaEm).format('DD/MM/YYYY HH:mm')}</p>
+            </div>
+          )}
+        </div>
+
+        <Separator />
+
+        <div className="space-y-3">
+          <div className="glass rounded-lg p-3">
+            <p className="text-xs text-muted-foreground mb-1">Token do profissional</p>
+            <div className="flex items-center gap-2">
+              <code className="text-xs font-mono text-primary flex-1 truncate">{sala.tokenMedico.slice(0, 24)}…</code>
+              <Button variant="ghost" size="icon" onClick={() => copiar(sala.tokenMedico)}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="glass rounded-lg p-3">
+            <p className="text-xs text-muted-foreground mb-1">Token do paciente</p>
+            <div className="flex items-center gap-2">
+              <code className="text-xs font-mono text-emerald-400 flex-1 truncate">{sala.tokenPaciente.slice(0, 24)}…</code>
+              <Button variant="ghost" size="icon" onClick={() => copiar(sala.tokenPaciente)}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardContent>
     </Card>
   );
 }
 
 export function TelemedicinaPage() {
-  const { message } = App.useApp();
   const { user } = useAuth();
   const [openCreate, setOpenCreate] = useState(false);
-  const [createForm] = Form.useForm();
   const [agendamentoId, setAgendamentoId] = useState('');
   const [buscarId, setBuscarId] = useState('');
   const [sala, setSala] = useState<SalaTelemedicina | null>(null);
+
+  const [fAgId, setFAgId] = useState('');
+  const [fPacId, setFPacId] = useState('');
+  const [fModalidade, setFModalidade] = useState<ModalidadeAtendimento | ''>('');
 
   const buscarQ = useQuery({
     queryKey: ['telemedicina', 'sala', buscarId],
@@ -138,21 +123,18 @@ export function TelemedicinaPage() {
   const createMut = useMutation({
     mutationFn: (payload: CreateSalaPayload) => telemedicinaApi.createSala(payload),
     onSuccess: (data) => {
-      message.success('Sala criada com sucesso.');
-      createForm.resetFields();
+      toast.success('Sala criada com sucesso.');
+      setFAgId(''); setFPacId(''); setFModalidade('');
       setOpenCreate(false);
       setSala(data);
     },
-    onError: (e) => message.error(apiErrorMessage(e)),
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
   const encerrarMut = useMutation({
     mutationFn: (id: string) => telemedicinaApi.encerrar(id),
-    onSuccess: (data) => {
-      message.success('Sala encerrada.');
-      setSala(data as SalaTelemedicina);
-    },
-    onError: (e) => message.error(apiErrorMessage(e)),
+    onSuccess: (data) => { toast.success('Sala encerrada.'); setSala(data as SalaTelemedicina); },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
   function handleBuscar() {
@@ -161,53 +143,45 @@ export function TelemedicinaPage() {
     setBuscarId(agendamentoId.trim());
   }
 
-  function handleCreate(values: Record<string, unknown>) {
-    if (!user?.clinicaId) return;
-    createMut.mutate({
-      clinicaId: user.clinicaId,
-      agendamentoId: values.agendamentoId as string,
-      pacienteId: values.pacienteId as string,
-      modalidade: values.modalidade as string,
-    });
+  function handleCreate() {
+    if (!user?.clinicaId || !fAgId || !fPacId || !fModalidade) { toast.error('Preencha todos os campos.'); return; }
+    createMut.mutate({ clinicaId: user.clinicaId, agendamentoId: fAgId, pacienteId: fPacId, modalidade: fModalidade });
   }
 
   const salaExibida = sala ?? (buscarQ.data as SalaTelemedicina | undefined);
 
   return (
-    <>
+    <div className="p-6">
       <PageHeader
         title="Telemedicina"
         extra={
-          <Button icon={<PlusOutlined />} type="primary" onClick={() => setOpenCreate(true)}>
-            Nova sala
+          <Button onClick={() => setOpenCreate(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Nova sala
           </Button>
         }
       />
 
-      <Card title="Buscar sala por agendamento" style={{ marginBottom: 16 }}>
-        <Space.Compact style={{ width: '100%', maxWidth: 480 }}>
-          <Input
-            placeholder="ID do agendamento"
-            value={agendamentoId}
-            onChange={(e) => setAgendamentoId(e.target.value)}
-            onPressEnter={handleBuscar}
-          />
-          <Button
-            icon={<SearchOutlined />}
-            onClick={handleBuscar}
-            loading={buscarQ.isFetching}
-          >
-            Buscar
-          </Button>
-        </Space.Compact>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base">Buscar sala por agendamento</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2 max-w-md">
+            <Input
+              placeholder="ID do agendamento"
+              value={agendamentoId}
+              onChange={(e) => setAgendamentoId(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleBuscar()}
+            />
+            <Button variant="outline" onClick={handleBuscar} disabled={buscarQ.isFetching}>
+              <Search className="h-4 w-4 mr-2" /> Buscar
+            </Button>
+          </div>
 
-        {buscarQ.isError && (
-          <Alert
-            type="warning"
-            message="Nenhuma sala encontrada para este agendamento."
-            style={{ marginTop: 12 }}
-          />
-        )}
+          {buscarQ.isError && (
+            <p className="mt-3 text-sm text-amber-400">Nenhuma sala encontrada para este agendamento.</p>
+          )}
+        </CardContent>
       </Card>
 
       {salaExibida && (
@@ -218,42 +192,38 @@ export function TelemedicinaPage() {
         />
       )}
 
-      <Modal
-        title="Nova sala de telemedicina"
-        open={openCreate}
-        onCancel={() => { setOpenCreate(false); createForm.resetFields(); }}
-        onOk={() => createForm.submit()}
-        confirmLoading={createMut.isPending}
-        destroyOnClose
-      >
-        <Form form={createForm} layout="vertical" onFinish={handleCreate}>
-          <Form.Item
-            name="agendamentoId"
-            label="ID do agendamento"
-            rules={[{ required: true, message: 'Informe o ID do agendamento' }]}
-          >
-            <Input placeholder="ID do agendamento" />
-          </Form.Item>
-          <Form.Item
-            name="pacienteId"
-            label="ID do paciente"
-            rules={[{ required: true, message: 'Informe o ID do paciente' }]}
-          >
-            <Input placeholder="ID do paciente" />
-          </Form.Item>
-          <Form.Item
-            name="modalidade"
-            label="Modalidade"
-            rules={[{ required: true, message: 'Selecione a modalidade' }]}
-          >
-            <Select>
-              {Object.values(ModalidadeAtendimento).map((m) => (
-                <Select.Option key={m} value={m}>{MODALIDADE_LABEL[m]}</Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-        </Form>
-      </Modal>
-    </>
+      <Dialog open={openCreate} onOpenChange={setOpenCreate}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Nova sala de telemedicina</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="fAgId">ID do agendamento</Label>
+              <Input id="fAgId" placeholder="ID do agendamento" value={fAgId} onChange={(e) => setFAgId(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fPacId">ID do paciente</Label>
+              <Input id="fPacId" placeholder="ID do paciente" value={fPacId} onChange={(e) => setFPacId(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Modalidade</Label>
+              <Select value={fModalidade} onValueChange={(v) => setFModalidade(v as ModalidadeAtendimento)}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {Object.values(ModalidadeAtendimento).map((m) => (
+                    <SelectItem key={m} value={m}>{MODALIDADE_LABEL[m]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenCreate(false)}>Cancelar</Button>
+            <Button onClick={handleCreate} disabled={createMut.isPending}>{createMut.isPending ? 'Criando...' : 'Criar sala'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

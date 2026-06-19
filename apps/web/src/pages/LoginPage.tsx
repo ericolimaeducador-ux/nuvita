@@ -1,13 +1,25 @@
 import { useState } from 'react';
-import { Form, Input, Button, App, Typography, Divider } from 'antd';
-import { LockOutlined, MailOutlined, SafetyOutlined } from '@ant-design/icons';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Mail, Lock, ShieldCheck, Loader2 } from 'lucide-react';
 import { useAuth } from '@/auth/AuthContext';
 import { apiErrorMessage } from '@/api/client';
+import { toast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+const loginSchema = z.object({
+  email: z.string().min(1, 'Informe o e-mail.').email('E-mail inválido.'),
+  password: z.string().min(1, 'Informe a senha.'),
+  totpCode: z.string().optional(),
+});
+type LoginForm = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const { login } = useAuth();
-  const { message } = App.useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
@@ -15,23 +27,23 @@ export function LoginPage() {
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? '/';
 
-  async function onFinish(values: {
-    email: string;
-    password: string;
-    totpCode?: string;
-  }) {
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  async function onSubmit(values: LoginForm) {
     setLoading(true);
     try {
       await login(values.email, values.password, values.totpCode || undefined);
-      message.success('Bem-vindo ao Nuvita.');
+      toast.success('Bem-vindo ao Nuvita.');
       navigate(from, { replace: true });
     } catch (err) {
       const msg = apiErrorMessage(err, 'Não foi possível entrar.');
       if (/2fa|totp|c[óo]digo|two.?factor/i.test(msg)) {
         setNeeds2fa(true);
-        message.warning('Informe o código de verificação (2FA).');
+        toast.info('Informe o código de verificação (2FA).');
       } else {
-        message.error(msg);
+        toast.error('Erro ao entrar', msg);
       }
     } finally {
       setLoading(false);
@@ -39,89 +51,116 @@ export function LoginPage() {
   }
 
   return (
-    <div className="login-shell">
-      <div className="login-hero">
-        <div className="brand-row" style={{ color: '#fff' }}>
-          <span className="brand-mark">N</span> Nuvita
+    <div className="flex h-screen overflow-hidden">
+      {/* Left — hero */}
+      <div className="hidden lg:flex flex-col justify-between w-1/2 bg-gradient-to-br from-blue-900 via-blue-800 to-emerald-900 p-12 relative overflow-hidden">
+        {/* Decorative circles */}
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl" />
+
+        <div className="relative flex items-center gap-3">
+          <div className="relative">
+            <span className="text-3xl font-black text-white">n</span>
+            <span className="absolute -top-1 -right-2 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse" />
+          </div>
+          <span className="text-2xl font-bold text-white">nuvita</span>
         </div>
-        <div>
-          <h1>
+
+        <div className="relative">
+          <h1 className="text-4xl font-black text-white leading-tight mb-4">
             Gestão clínica
             <br />
-            que cuida de quem cuida.
+            <span className="text-emerald-400">que cuida</span> de
+            <br />
+            quem cuida.
           </h1>
-          <p>
-            Prontuário eletrônico, agenda, pacientes e documentos em uma
-            plataforma segura, multi-tenant e em conformidade com a LGPD.
+          <p className="text-blue-200 text-lg leading-relaxed">
+            Prontuário eletrônico, agenda, pacientes e documentos
+            em uma plataforma segura, multi-tenant e em
+            conformidade com a LGPD.
           </p>
         </div>
-        <Typography.Text style={{ color: 'rgba(255,255,255,0.6)' }}>
+
+        <p className="relative text-blue-300/70 text-sm">
           © {new Date().getFullYear()} Nuvita · Plataforma de saúde
-        </Typography.Text>
+        </p>
       </div>
 
-      <div className="login-panel">
-        <div className="login-card">
-          <Typography.Title level={3} style={{ marginBottom: 4 }}>
-            Acessar painel
-          </Typography.Title>
-          <Typography.Text type="secondary">
-            Entre com suas credenciais corporativas.
-          </Typography.Text>
-          <Divider />
-          <Form layout="vertical" onFinish={onFinish} requiredMark={false}>
-            <Form.Item
-              name="email"
-              label="E-mail"
-              rules={[
-                { required: true, message: 'Informe o e-mail.' },
-                { type: 'email', message: 'E-mail inválido.' },
-              ]}
-            >
-              <Input
-                size="large"
-                prefix={<MailOutlined />}
-                placeholder="voce@clinica.com.br"
-                autoComplete="username"
-              />
-            </Form.Item>
-            <Form.Item
-              name="password"
-              label="Senha"
-              rules={[{ required: true, message: 'Informe a senha.' }]}
-            >
-              <Input.Password
-                size="large"
-                prefix={<LockOutlined />}
-                placeholder="••••••••••"
-                autoComplete="current-password"
-              />
-            </Form.Item>
-            {needs2fa && (
-              <Form.Item
-                name="totpCode"
-                label="Código de verificação (2FA)"
-                rules={[{ len: 6, message: '6 dígitos.' }]}
-              >
-                <Input
-                  size="large"
-                  prefix={<SafetyOutlined />}
-                  placeholder="000000"
-                  maxLength={6}
-                  inputMode="numeric"
-                />
-              </Form.Item>
-            )}
-            <Button
-              type="primary"
-              size="large"
-              htmlType="submit"
-              block
-              loading={loading}
-            >
-              Entrar
-            </Button>
-          </Form>
+      {/* Right — form */}
+      <div className="flex-1 flex items-center justify-center p-8 bg-background">
+        <div className="w-full max-w-md">
+          {/* Mobile logo */}
+          <div className="flex items-center gap-2 mb-8 lg:hidden">
+            <div className="relative">
+              <span className="text-2xl font-black text-primary">n</span>
+              <span className="absolute -top-0.5 -right-1.5 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+            </div>
+            <span className="text-xl font-bold text-foreground">nuvita</span>
+          </div>
+
+          <div className="glass rounded-2xl p-8 shadow-2xl">
+            <h2 className="text-2xl font-bold text-foreground mb-1">Acessar painel</h2>
+            <p className="text-muted-foreground text-sm mb-6">Entre com suas credenciais corporativas.</p>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">E-mail</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    className="pl-9"
+                    placeholder="voce@clinica.com.br"
+                    autoComplete="username"
+                    {...register('email')}
+                  />
+                </div>
+                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    className="pl-9"
+                    placeholder="••••••••••"
+                    autoComplete="current-password"
+                    {...register('password')}
+                  />
+                </div>
+                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+              </div>
+
+              {needs2fa && (
+                <div className="space-y-2">
+                  <Label htmlFor="totpCode">Código de verificação (2FA)</Label>
+                  <div className="relative">
+                    <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="totpCode"
+                      className="pl-9"
+                      placeholder="000000"
+                      maxLength={6}
+                      inputMode="numeric"
+                      {...register('totpCode')}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <Button type="submit" className="w-full h-11 text-base mt-2" disabled={loading}>
+                {loading ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando...</>
+                ) : (
+                  'Entrar'
+                )}
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
     </div>

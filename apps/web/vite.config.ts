@@ -31,7 +31,7 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '^/(auth|clinicas|pacientes|agendamentos|prontuarios|documentos|notificacoes)(?=$|[/?])':
+      '^/(auth|clinicas|pacientes|agendamentos|prontuarios|documentos|notificacoes|financeiro|telemedicina)(?=$|[/?])':
         apiProxy,
     },
   },
@@ -41,7 +41,13 @@ export default defineConfig({
       output: {
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
-          antd: ['antd', '@ant-design/icons'],
+          radix: [
+            '@radix-ui/react-dialog', '@radix-ui/react-select', '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-tabs', '@radix-ui/react-avatar', '@radix-ui/react-checkbox',
+            '@radix-ui/react-popover', '@radix-ui/react-separator', '@radix-ui/react-slot',
+            '@radix-ui/react-label', '@radix-ui/react-tooltip',
+          ],
+          motion: ['framer-motion'],
           query: ['@tanstack/react-query', 'axios', 'dayjs'],
         },
       },

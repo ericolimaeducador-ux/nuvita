@@ -214,3 +214,115 @@ export interface Documento {
   status?: string;
   criadoEm?: string;
 }
+
+// ---------- Financeiro ----------
+export enum StatusLancamento {
+  PENDENTE = 'pendente',
+  RECEBIDO = 'recebido',
+  CANCELADO = 'cancelado',
+}
+
+export const STATUS_LANCAMENTO_LABEL: Record<StatusLancamento, string> = {
+  [StatusLancamento.PENDENTE]: 'Pendente',
+  [StatusLancamento.RECEBIDO]: 'Recebido',
+  [StatusLancamento.CANCELADO]: 'Cancelado',
+};
+
+export const STATUS_LANCAMENTO_COLOR: Record<StatusLancamento, string> = {
+  [StatusLancamento.PENDENTE]: 'orange',
+  [StatusLancamento.RECEBIDO]: 'green',
+  [StatusLancamento.CANCELADO]: 'red',
+};
+
+export enum TipoLancamento {
+  RECEITA = 'receita',
+  DESPESA = 'despesa',
+}
+
+export const TIPO_LANCAMENTO_LABEL: Record<TipoLancamento, string> = {
+  [TipoLancamento.RECEITA]: 'Receita',
+  [TipoLancamento.DESPESA]: 'Despesa',
+};
+
+export enum FormaPagamento {
+  DINHEIRO = 'dinheiro',
+  CARTAO_CREDITO = 'cartao_credito',
+  CARTAO_DEBITO = 'cartao_debito',
+  PIX = 'pix',
+  TRANSFERENCIA = 'transferencia',
+  CONVENIO = 'convenio',
+  BOLETO = 'boleto',
+}
+
+export const FORMA_PAGAMENTO_LABEL: Record<FormaPagamento, string> = {
+  [FormaPagamento.DINHEIRO]: 'Dinheiro',
+  [FormaPagamento.CARTAO_CREDITO]: 'Cartão de Crédito',
+  [FormaPagamento.CARTAO_DEBITO]: 'Cartão de Débito',
+  [FormaPagamento.PIX]: 'PIX',
+  [FormaPagamento.TRANSFERENCIA]: 'Transferência',
+  [FormaPagamento.CONVENIO]: 'Convênio',
+  [FormaPagamento.BOLETO]: 'Boleto',
+};
+
+export interface Lancamento {
+  id: string;
+  clinicaId: string;
+  pacienteId?: string;
+  agendamentoId?: string;
+  tipo: TipoLancamento;
+  descricao: string;
+  valor: number;
+  formaPagamento?: FormaPagamento;
+  status: StatusLancamento;
+  vencimento?: string;
+  recebidoEm?: string;
+  observacoes?: string;
+  criadoPor: string;
+  criadoEm: string;
+}
+
+export interface DashboardFinanceiro {
+  totalReceitas: number;
+  totalDespesas: number;
+  totalPendente: number;
+  saldo: number;
+  porFormaPagamento: Array<{ forma: string; total: number; quantidade: number }>;
+}
+
+// ---------- Telemedicina ----------
+export enum StatusSala {
+  AGUARDANDO = 'aguardando',
+  EM_ANDAMENTO = 'em_andamento',
+  ENCERRADA = 'encerrada',
+  EXPIRADA = 'expirada',
+}
+
+export const STATUS_SALA_LABEL: Record<StatusSala, string> = {
+  [StatusSala.AGUARDANDO]: 'Aguardando',
+  [StatusSala.EM_ANDAMENTO]: 'Em andamento',
+  [StatusSala.ENCERRADA]: 'Encerrada',
+  [StatusSala.EXPIRADA]: 'Expirada',
+};
+
+export const STATUS_SALA_COLOR: Record<StatusSala, string> = {
+  [StatusSala.AGUARDANDO]: 'blue',
+  [StatusSala.EM_ANDAMENTO]: 'green',
+  [StatusSala.ENCERRADA]: 'default',
+  [StatusSala.EXPIRADA]: 'red',
+};
+
+export interface SalaTelemedicina {
+  id: string;
+  clinicaId: string;
+  agendamentoId: string;
+  medicoId: string;
+  modalidade: ModalidadeAtendimento;
+  pacienteId: string;
+  status: StatusSala;
+  tokenMedico: string;
+  tokenPaciente: string;
+  expiresAt: string;
+  iniciadaEm?: string;
+  encerradaEm?: string;
+  criadoEm: string;
+}

@@ -1,12 +1,9 @@
-import { Card, Col, Row, Statistic, Skeleton, Alert, Empty, Table } from 'antd';
-import {
-  SendOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  CloseCircleOutlined,
-} from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
+import { Send, CheckCircle, Clock, XCircle, AlertTriangle } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import { notificacoesApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 
@@ -28,77 +25,87 @@ export function NotificacoesPage() {
   const d = q.data ?? {};
 
   const cards = [
-    {
-      title: 'Enviadas',
-      value: d.enviadas ?? 0,
-      icon: <SendOutlined style={{ color: '#0d6e9e' }} />,
-    },
-    {
-      title: 'Entregues',
-      value: d.entregues ?? 0,
-      icon: <CheckCircleOutlined style={{ color: '#16a34a' }} />,
-    },
-    {
-      title: 'Pendentes',
-      value: d.pendentes ?? 0,
-      icon: <ClockCircleOutlined style={{ color: '#d97706' }} />,
-    },
-    {
-      title: 'Falhas',
-      value: d.falhas ?? 0,
-      icon: <CloseCircleOutlined style={{ color: '#dc2626' }} />,
-    },
+    { title: 'Enviadas', value: d.enviadas ?? 0, icon: Send, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+    { title: 'Entregues', value: d.entregues ?? 0, icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+    { title: 'Pendentes', value: d.pendentes ?? 0, icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+    { title: 'Falhas', value: d.falhas ?? 0, icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10' },
   ];
 
   const recentes = Array.isArray(d.recentes) ? d.recentes : [];
 
   return (
-    <>
+    <div className="p-6">
       <PageHeader
         title="Notificações"
         subtitle="Lembretes e comunicações automáticas (fila de processamento)"
       />
 
       {q.isError && (
-        <Alert
-          type="warning"
-          showIcon
-          style={{ marginBottom: 16 }}
-          message="Não foi possível carregar o painel de notificações."
-          description={apiErrorMessage(q.error)}
-        />
+        <div className="flex items-center gap-2 glass rounded-xl p-4 mb-4 text-amber-400 border-amber-500/20">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <p className="text-sm">Não foi possível carregar o painel de notificações. {apiErrorMessage(q.error)}</p>
+        </div>
       )}
 
       {q.isLoading ? (
-        <Skeleton active />
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+          {[1,2,3,4].map((i) => <Skeleton key={i} className="h-24 w-full" />)}
+        </div>
       ) : (
-        <Row gutter={[16, 16]}>
-          {cards.map((c) => (
-            <Col xs={24} sm={12} xl={6} key={c.title}>
-              <Card className="stat-card" variant="borderless">
-                <Statistic title={c.title} value={c.value} prefix={c.icon} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+          {cards.map((c) => {
+            const Icon = c.icon;
+            return (
+              <Card key={c.title}>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-lg ${c.bg}`}>
+                      <Icon className={`h-5 w-5 ${c.color}`} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">{c.title}</p>
+                      <p className="text-2xl font-bold text-foreground">{c.value}</p>
+                    </div>
+                  </div>
+                </CardContent>
               </Card>
-            </Col>
-          ))}
-        </Row>
+            );
+          })}
+        </div>
       )}
 
-      <Card title="Envios recentes" style={{ marginTop: 16 }} variant="borderless">
-        {recentes.length === 0 ? (
-          <Empty description="Sem envios recentes" />
-        ) : (
-          <Table
-            rowKey={(r: Record<string, unknown>) => String(r.id ?? Math.random())}
-            dataSource={recentes}
-            pagination={false}
-            columns={[
-              { title: 'Canal', dataIndex: 'canal' },
-              { title: 'Destino', dataIndex: 'destino' },
-              { title: 'Status', dataIndex: 'status' },
-            ]}
-          />
-        )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Envios recentes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {recentes.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Send className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">Sem envios recentes</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Canal</TableHead>
+                  <TableHead>Destino</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentes.map((r, i) => (
+                  <TableRow key={String(r.id ?? i)}>
+                    <TableCell>{String(r.canal ?? '—')}</TableCell>
+                    <TableCell>{String(r.destino ?? '—')}</TableCell>
+                    <TableCell>{String(r.status ?? '—')}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
       </Card>
-    </>
+    </div>
   );
 }

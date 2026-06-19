@@ -9,6 +9,8 @@ import { AgendaPage } from '@/pages/AgendaPage';
 import { ProntuariosPage } from '@/pages/ProntuariosPage';
 import { DocumentosPage } from '@/pages/DocumentosPage';
 import { NotificacoesPage } from '@/pages/NotificacoesPage';
+import { FinanceiroPage } from '@/pages/FinanceiroPage';
+import { TelemedicinaPage } from '@/pages/TelemedicinaPage';
 import { ClinicaPage } from '@/pages/ClinicaPage';
 import { Papel } from '@/types';
 
@@ -25,6 +27,18 @@ export function AppRoutes() {
           <Route path="/prontuarios" element={<ProntuariosPage />} />
           <Route path="/documentos" element={<DocumentosPage />} />
           <Route path="/notificacoes" element={<NotificacoesPage />} />
+          <Route element={<ProtectedRoute roles={[Papel.SECRETARIA, Papel.ADMIN]} />}>
+            <Route path="/financeiro" element={<FinanceiroPage />} />
+          </Route>
+          <Route
+            element={
+              <ProtectedRoute
+                roles={[Papel.MEDICO, Papel.ENFERMEIRO, Papel.ADVOGADO, Papel.ADMIN]}
+              />
+            }
+          >
+            <Route path="/telemedicina" element={<TelemedicinaPage />} />
+          </Route>
           <Route element={<ProtectedRoute roles={[Papel.ADMIN]} />}>
             <Route path="/clinica" element={<ClinicaPage />} />
           </Route>

@@ -8,6 +8,8 @@ import {
   FolderOpenOutlined,
   BellOutlined,
   BankOutlined,
+  DollarOutlined,
+  VideoCameraOutlined,
   LogoutOutlined,
   UserOutlined,
   MenuFoldOutlined,
@@ -35,6 +37,18 @@ const NAV: NavItem[] = [
   { key: '/prontuarios', icon: <FileTextOutlined />, label: 'Prontuários' },
   { key: '/documentos', icon: <FolderOpenOutlined />, label: 'Documentos' },
   { key: '/notificacoes', icon: <BellOutlined />, label: 'Notificações' },
+  {
+    key: '/financeiro',
+    icon: <DollarOutlined />,
+    label: 'Financeiro',
+    roles: [Papel.SECRETARIA, Papel.ADMIN],
+  },
+  {
+    key: '/telemedicina',
+    icon: <VideoCameraOutlined />,
+    label: 'Telemedicina',
+    roles: [Papel.MEDICO, Papel.ENFERMEIRO, Papel.ADVOGADO, Papel.ADMIN],
+  },
   { key: '/clinica', icon: <BankOutlined />, label: 'Clínica', roles: [Papel.ADMIN] },
 ];
 
@@ -45,6 +59,8 @@ const LABELS: Record<string, string> = {
   prontuarios: 'Prontuários',
   documentos: 'Documentos',
   notificacoes: 'Notificações',
+  financeiro: 'Financeiro',
+  telemedicina: 'Telemedicina',
   clinica: 'Clínica',
 };
 

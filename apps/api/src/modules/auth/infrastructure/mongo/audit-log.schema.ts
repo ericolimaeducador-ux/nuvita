@@ -6,7 +6,7 @@ export type AuditLogDocument = HydratedDocument<AuditLogMongo>;
 
 @Schema({ collection: 'audit_logs', versionKey: false })
 export class AuditLogMongo {
-  @Prop({ required: true, enum: Object.values(AuditEvent), index: true, immutable: true })
+  @Prop({ type: String, required: true, enum: Object.values(AuditEvent), index: true, immutable: true })
   event!: AuditEvent;
 
   @Prop({ index: true, immutable: true })

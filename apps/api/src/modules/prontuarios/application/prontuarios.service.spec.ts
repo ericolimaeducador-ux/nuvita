@@ -2,7 +2,7 @@ import { ConflictException } from '@nestjs/common';
 import { Papel } from '../../../../../../packages/shared/src/auth';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
-import { AppConfigService } from '../../../../common/security/config.service';
+import { AppConfigService } from '../../../common/security/config.service';
 import { Prontuario, TipoAtendimento } from '../domain/prontuario.entity';
 import { Cid10Repository, ProntuarioRepository } from './ports/prontuario.repository';
 import { ProntuariosService } from './prontuarios.service';

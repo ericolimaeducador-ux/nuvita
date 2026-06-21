@@ -567,3 +567,21 @@ export interface Produto {
   codigoSiafisico?: number;
   ativo: boolean;
 }
+
+// ---------- Super Admin ----------
+export interface UsuarioAdmin {
+  id: string;
+  nome: string;
+  email: string;
+  papel: Papel;
+  clinicaId?: string | null;
+  ativo: boolean;
+  criadoEm: string;
+}
+
+export interface ListUsuariosResult {
+  items: UsuarioAdmin[];
+  total: number;
+  skip: number;
+  limit: number;
+}

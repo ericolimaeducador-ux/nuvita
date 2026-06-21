@@ -41,6 +41,6 @@ import { SuperAdminGuard } from './presentation/guards/super-admin.guard';
     { provide: USER_REPOSITORY, useClass: UserMongoRepository },
     { provide: AUDIT_LOG_REPOSITORY, useClass: AuditLogMongoRepository },
   ],
-  exports: [AuthService, JwtAuthGuard, RolesGuard, SuperAdminGuard],
+  exports: [AuthService, JwtAuthGuard, RolesGuard, SuperAdminGuard, USER_REPOSITORY],
 })
 export class AuthModule {}

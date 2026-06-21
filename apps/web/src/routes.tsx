@@ -17,6 +17,7 @@ import { FluxoPacientePage } from '@/pages/FluxoPacientePage';
 import { LaudoImpressaoPage } from '@/pages/LaudoImpressaoPage';
 import { AvaliacaoImpressaoPage } from '@/pages/AvaliacaoImpressaoPage';
 import { MeusProcessosPage } from '@/pages/MeusProcessosPage';
+import { SuperAdminPage } from '@/pages/SuperAdminPage';
 import { Papel } from '@/types';
 
 export function AppRoutes() {
@@ -54,6 +55,9 @@ export function AppRoutes() {
           </Route>
           <Route element={<ProtectedRoute roles={[Papel.ADMIN]} />}>
             <Route path="/clinica" element={<ClinicaPage />} />
+          </Route>
+          <Route element={<ProtectedRoute roles={[Papel.SUPER_ADMIN]} />}>
+            <Route path="/super-admin" element={<SuperAdminPage />} />
           </Route>
         </Route>
       </Route>

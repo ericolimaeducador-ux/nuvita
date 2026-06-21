@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, Calendar, FileText, Folder, Bell, DollarSign,
-  Video, Building2, LogOut, ChevronLeft, ChevronRight, Activity, Scale,
+  Video, Building2, LogOut, ChevronLeft, ChevronRight, Activity, Scale, Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -23,6 +23,7 @@ const navItems: { to: string; icon: React.ElementType; label: string; roles?: Pa
   { to: '/financeiro', icon: DollarSign, label: 'Financeiro' },
   { to: '/telemedicina', icon: Video, label: 'Telemedicina' },
   { to: '/clinica', icon: Building2, label: 'Clínica' },
+  { to: '/super-admin', icon: Shield, label: 'Super Admin', roles: [Papel.SUPER_ADMIN] },
 ];
 
 export function AppLayout() {

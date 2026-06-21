@@ -21,6 +21,7 @@ import { FollowUpModule } from './modules/followup/followup.module';
 import { LaudoMedicoModule } from './modules/laudo-medico/laudo-medico.module';
 import { ProcessoJuridicoModule } from './modules/processo-juridico/processo-juridico.module';
 import { EntregasModule } from './modules/entregas/entregas.module';
+import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { EntregasModule } from './modules/entregas/entregas.module';
     LaudoMedicoModule,
     ProcessoJuridicoModule,
     EntregasModule,
+    SuperAdminModule,
   ],
 })
 export class AppModule {}

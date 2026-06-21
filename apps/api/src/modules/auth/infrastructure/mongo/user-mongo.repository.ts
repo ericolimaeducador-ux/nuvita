@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { CreateUserInput, UserRepository } from '../../application/ports/user.repository';
+import { FilterQuery, Model } from 'mongoose';
+import { CreateUserInput, UpdateUserInput, UserFilters, UserRepository } from '../../application/ports/user.repository';
 import { User } from '../../domain/user.entity';
 import { UserDocument, UserMongo } from './user.schema';
 
@@ -40,6 +40,46 @@ export class UserMongoRepository implements UserRepository {
   async findById(id: string): Promise<User | null> {
     const user = await this.userModel.findById(id).exec();
     return user ? this.toEntity(user) : null;
+  }
+
+  async findAll(filters: UserFilters, skip: number, limit: number): Promise<User[]> {
+    const docs = await this.userModel
+      .find(this.buildQuery(filters))
+      .sort({ criadoEm: -1 })
+      .skip(skip)
+      .limit(limit)
+      .exec();
+    return docs.map((d) => this.toEntity(d));
+  }
+
+  async count(filters: UserFilters): Promise<number> {
+    return this.userModel.countDocuments(this.buildQuery(filters)).exec();
+  }
+
+  async update(id: string, input: UpdateUserInput): Promise<User | null> {
+    const set: Record<string, unknown> = {};
+    if (input.nome !== undefined) set['nome'] = input.nome;
+    if (input.papel !== undefined) set['papel'] = input.papel;
+    if (input.clinicaId !== undefined) set['clinicaId'] = input.clinicaId;
+    if (input.ativo !== undefined) set['ativo'] = input.ativo;
+    if (input.passwordHash !== undefined) set['passwordHash'] = input.passwordHash;
+
+    const doc = await this.userModel
+      .findByIdAndUpdate(id, { $set: set }, { new: true })
+      .exec();
+    return doc ? this.toEntity(doc) : null;
+  }
+
+  private buildQuery(filters: UserFilters): FilterQuery<UserDocument> {
+    const query: FilterQuery<UserDocument> = {};
+    if (filters.papel !== undefined) query['papel'] = filters.papel;
+    if (filters.clinicaId !== undefined) query['clinicaId'] = filters.clinicaId;
+    if (filters.ativo !== undefined) query['ativo'] = filters.ativo;
+    if (filters.search) {
+      const regex = new RegExp(filters.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      query['$or'] = [{ nome: regex }, { email: regex }];
+    }
+    return query;
   }
 
   private toEntity(document: UserDocument): User {

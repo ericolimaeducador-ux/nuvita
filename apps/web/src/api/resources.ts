@@ -8,6 +8,7 @@ import type {
   FollowUp,
   LaudoMedico,
   Lancamento,
+  ListUsuariosResult,
   LoginResponse,
   ModalidadeAtendimento,
   Paciente,
@@ -20,6 +21,7 @@ import type {
   StatusAgendamento,
   TipoAgendamento,
   TipoAtendimento,
+  UsuarioAdmin,
 } from '@/types';
 
 // ---------- Auth ----------
@@ -285,4 +287,42 @@ export const entregasApi = {
     api.get<Entrega>(`/entregas/${id}`).then((r) => r.data),
   confirmar: (id: string) =>
     api.post(`/entregas/${id}/confirmar`).then((r) => r.data),
+};
+
+// ---------- Super Admin ----------
+export interface ListUsersParams {
+  papel?: Papel;
+  clinicaId?: string;
+  ativo?: boolean;
+  search?: string;
+  skip?: number;
+  limit?: number;
+}
+
+export interface UpdateUsuarioPayload {
+  nome?: string;
+  papel?: Papel;
+  clinicaId?: string | null;
+  ativo?: boolean;
+}
+
+export interface CreateAdminUserPayload {
+  nome: string;
+  email: string;
+  password: string;
+  papel: Papel;
+  clinicaId?: string;
+}
+
+export const superAdminApi = {
+  listUsuarios: (params: ListUsersParams = {}) =>
+    api.get<ListUsuariosResult>('/super-admin/usuarios', { params }).then((r) => r.data),
+  getUsuario: (id: string) =>
+    api.get<UsuarioAdmin>(`/super-admin/usuarios/${id}`).then((r) => r.data),
+  createUsuario: (payload: CreateAdminUserPayload) =>
+    api.post<UsuarioAdmin>('/super-admin/usuarios', payload).then((r) => r.data),
+  updateUsuario: (id: string, payload: UpdateUsuarioPayload) =>
+    api.patch<UsuarioAdmin>(`/super-admin/usuarios/${id}`, payload).then((r) => r.data),
+  resetPassword: (id: string, novaSenha: string) =>
+    api.post<{ ok: boolean }>(`/super-admin/usuarios/${id}/reset-password`, { novaSenha }).then((r) => r.data),
 };

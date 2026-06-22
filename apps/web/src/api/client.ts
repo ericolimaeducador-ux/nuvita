@@ -75,10 +75,11 @@ api.interceptors.response.use(
         (original.headers as Record<string, string>).Authorization = `Bearer ${token}`;
         return api(original);
       }
-      // refresh falhou — limpa sessão e manda pro login
+      // refresh falhou — limpa sessão e manda pro login (respeitando o base path)
       setToken(null);
-      if (!location.pathname.startsWith('/login')) {
-        location.assign('/login');
+      const loginPath = `${import.meta.env.BASE_URL}login`.replace(/\/{2,}/g, '/');
+      if (!location.pathname.startsWith(loginPath)) {
+        location.assign(loginPath);
       }
     }
     return Promise.reject(error);

@@ -21,7 +21,10 @@ const apiProxy = {
   },
 };
 
-export default defineConfig({
+// Em produção (GitHub Pages) o site é servido em /<repo>/ — por padrão /nuvita/.
+// Sobrescreva com VITE_BASE (ex.: '/' para domínio próprio). No dev fica em '/'.
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? (process.env.VITE_BASE ?? '/nuvita/') : '/',
   plugins: [react()],
   resolve: {
     alias: {
@@ -53,4 +56,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

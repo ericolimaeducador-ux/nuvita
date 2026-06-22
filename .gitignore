@@ -8,6 +8,9 @@ coverage/
 *.log
 tmp/
 *.tsbuildinfo
+
+# Cloud Run — arquivo de env gerado a partir de apps/api/.env (contém segredos)
+cloudrun.env.yaml
 .DS_Store
 Thumbs.db
 

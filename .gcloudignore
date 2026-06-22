@@ -1,0 +1,16 @@
+# Arquivos que NÃO sobem para o Cloud Build (acelera e evita lixo no build).
+.git
+node_modules
+**/node_modules
+**/dist
+apps/web/dist
+coverage
+.graphify
+*.log
+tmp/
+# Segredos e configs locais nunca devem ir para o build
+.env
+.env.*
+**/.env
+**/.env.*
+cloudrun.env.yaml

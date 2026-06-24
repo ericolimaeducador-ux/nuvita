@@ -44,9 +44,24 @@ Ainda falta:
 Cloud Run usa IPs dinâmicos. Em Atlas → Network Access, libere `0.0.0.0/0`
 (protegido por usuário/senha forte) **ou** configure VPC peering / Private Endpoint.
 
-### 4. APP_ROOT_DOMAIN
-Hoje `localhost`. Se o multi-tenancy por subdomínio for usado em produção, ajuste
-para o domínio real antes do deploy. Para domínio único (GitHub Pages) é inofensivo.
+### 4. APP_ROOT_DOMAIN — ✅ FEITO
+`gen-cloudrun-env.cjs` agora grava `APP_ROOT_DOMAIN=nuvita.app.br` no env de produção.
+
+### 4b. Domínio próprio www.nuvita.app.br + api.nuvita.app.br — DNS pendente (registro.br)
+Config de código já feita: `VITE_BASE=/`, `apps/web/public/CNAME=www.nuvita.app.br`,
+CORS com www/apex, secret `VITE_API_URL=https://api.nuvita.app.br`.
+
+**Falta no registro.br (DNS):**
+- `www` → CNAME `ericolimaeducador-ux.github.io.`  (frontend no Pages)
+- apex `nuvita.app.br` → 4 registros A do GitHub Pages:
+  `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`
+- GitHub → Settings → Pages → Custom domain = `www.nuvita.app.br` (Enforce HTTPS)
+
+**api.nuvita.app.br (após o 1º deploy da API):**
+1. Verificar o domínio no Google (Search Console) — adicionar o TXT que o GCP indicar.
+2. `gcloud run domain-mappings create --service nuvita-api --domain api.nuvita.app.br --region southamerica-east1`
+   (se a região não suportar domain mapping, usar um Load Balancer externo global).
+3. Adicionar no registro.br o registro (CNAME/A) que o comando retornar.
 
 ### 5. Primeiro deploy / bootstrap
 - Merge `integracao` → `main` dispara CI + deploy (web e API).

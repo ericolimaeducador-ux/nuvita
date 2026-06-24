@@ -12,6 +12,24 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { GoogleSecretsService } from './google-secrets.service';
 
+export type ConfigSource = 'gcp' | 'env';
+
+/**
+ * Decide de onde os segredos são carregados, de forma INDEPENDENTE da postura de
+ * segurança (NODE_ENV). Isso permite rodar com NODE_ENV=production (Swagger
+ * fechado, CSP ligado, logs sane) e ainda injetar segredos por variáveis de
+ * ambiente — útil quando o GCP Secret Manager ainda não está provisionado.
+ *
+ * - CONFIG_SOURCE=gcp|env força explicitamente.
+ * - Sem a flag: production/staging => gcp; caso contrário => env.
+ */
+export function resolveConfigSource(): ConfigSource {
+  const explicit = (process.env.CONFIG_SOURCE || '').toLowerCase();
+  if (explicit === 'gcp' || explicit === 'env') return explicit;
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  return nodeEnv === 'production' || nodeEnv === 'staging' ? 'gcp' : 'env';
+}
+
 export interface AppConfig {
   // Server
   port: number;
@@ -90,9 +108,10 @@ export class AppConfigService {
   async initialize(): Promise<AppConfig> {
     this.logger.log('Initializing configuration...');
 
-    const nodeEnv = (process.env.NODE_ENV || 'development') as 'development' | 'staging' | 'production';
+    const source = resolveConfigSource();
+    this.logger.log(`Config source: ${source} (NODE_ENV=${process.env.NODE_ENV || 'development'})`);
 
-    if (nodeEnv === 'production' || nodeEnv === 'staging') {
+    if (source === 'gcp') {
       return this.loadFromGCP();
     } else {
       return this.loadFromEnv();
@@ -164,7 +183,7 @@ export class AppConfigService {
 
       const config: AppConfig = {
         port: parseInt(process.env.PORT || '3000', 10),
-        nodeEnv: 'production',
+        nodeEnv: (process.env.NODE_ENV as AppConfig['nodeEnv']) || 'production',
         corsOrigin: (process.env.CORS_ORIGIN || 'http://localhost:5173').split(','),
         mongodbUri,
         redisUrl,
@@ -242,7 +261,7 @@ export class AppConfigService {
 
     const config: AppConfig = {
       port: parseInt(process.env.PORT || '3000', 10),
-      nodeEnv: 'development',
+      nodeEnv: (process.env.NODE_ENV as AppConfig['nodeEnv']) || 'development',
       corsOrigin: (process.env.CORS_ORIGIN || 'http://localhost:5173').split(','),
       mongodbUri: process.env.MONGODB_URI!,
       redisUrl: process.env.REDIS_URL!,

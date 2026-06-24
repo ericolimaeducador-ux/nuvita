@@ -1,0 +1,76 @@
+name: Deploy API to Cloud Run
+
+# Faz build da imagem (Dockerfile na raiz) e deploy da API no Google Cloud Run.
+#
+# Pré-requisitos (configurar uma vez em Settings > Secrets and variables > Actions):
+#   - GCP_SA_KEY            JSON da service account com papéis: Cloud Run Admin,
+#                          Cloud Build Editor, Artifact Registry Writer, Service
+#                          Account User, Storage Admin.
+#   - GCP_PROJECT_ID       ID do projeto GCP (ex.: nuvita-499800).
+#   - CLOUDRUN_ENV_YAML    Conteúdo COMPLETO do cloudrun.env.yaml (segredos da API).
+#                          Gere localmente com `node scripts/gen-cloudrun-env.cjs`
+#                          e cole o conteúdo do arquivo neste secret. O GitHub
+#                          mascara o valor nos logs.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'packages/shared/**'
+      - 'Dockerfile'
+      - '.gcloudignore'
+      - '.github/workflows/deploy-api.yml'
+  workflow_dispatch:
+
+# Um deploy por vez; não cancela um deploy em andamento.
+concurrency:
+  group: cloud-run-api
+  cancel-in-progress: false
+
+env:
+  SERVICE: nuvita-api
+  REGION: southamerica-east1
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Write env-vars file (masked)
+        run: |
+          printf '%s\n' "${{ secrets.CLOUDRUN_ENV_YAML }}" > cloudrun.env.yaml
+          echo "Variáveis no env-vars-file: $(grep -c ':' cloudrun.env.yaml)"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --source . \
+            --project "${{ secrets.GCP_PROJECT_ID }}" \
+            --region "$REGION" \
+            --allow-unauthenticated \
+            --env-vars-file cloudrun.env.yaml \
+            --quiet
+
+      - name: Show service URL
+        run: |
+          gcloud run services describe "$SERVICE" \
+            --project "${{ secrets.GCP_PROJECT_ID }}" \
+            --region "$REGION" \
+            --format='value(status.url)'
+
+      - name: Cleanup secrets file
+        if: always()
+        run: rm -f cloudrun.env.yaml

@@ -14,6 +14,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 import { KeyManagementServiceClient } from '@google-cloud/kms';
 import * as crypto from 'crypto';
+import { resolveConfigSource } from './config.service';
 
 interface CachedSecret {
   value: string;
@@ -44,10 +45,9 @@ export class GoogleSecretsService implements OnModuleInit {
   private readonly rotationCheckInterval = 24 * 60 * 60 * 1000; // 24 hours
 
   async onModuleInit() {
-    const nodeEnv = process.env.NODE_ENV || 'development';
-    if (nodeEnv !== 'production' && nodeEnv !== 'staging') {
+    if (resolveConfigSource() !== 'gcp') {
       this.logger.log(
-        `Skipping Google Secrets Service init (NODE_ENV=${nodeEnv}); secrets are loaded from .env`,
+        `Skipping Google Secrets Service init (CONFIG_SOURCE=env); secrets are loaded from environment variables`,
       );
       return;
     }

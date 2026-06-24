@@ -2,15 +2,14 @@ name: Deploy API to Cloud Run
 
 # Faz build da imagem (Dockerfile na raiz) e deploy da API no Google Cloud Run.
 #
-# Pré-requisitos (configurar uma vez em Settings > Secrets and variables > Actions):
-#   - GCP_SA_KEY            JSON da service account com papéis: Cloud Run Admin,
-#                          Cloud Build Editor, Artifact Registry Writer, Service
-#                          Account User, Storage Admin.
+# Autenticação via Workload Identity Federation (OIDC) — sem chave de SA de longa
+# duração. Secrets (Settings > Secrets and variables > Actions):
 #   - GCP_PROJECT_ID       ID do projeto GCP (ex.: nuvita-499800).
+#   - GCP_WIF_PROVIDER     Resource name do provider WIF
+#                          (projects/<num>/locations/global/workloadIdentityPools/<pool>/providers/<prov>).
+#   - GCP_SA_EMAIL         E-mail da service account de deploy.
 #   - CLOUDRUN_ENV_YAML    Conteúdo COMPLETO do cloudrun.env.yaml (segredos da API).
-#                          Gere localmente com `node scripts/gen-cloudrun-env.cjs`
-#                          e cole o conteúdo do arquivo neste secret. O GitHub
-#                          mascara o valor nos logs.
+#                          Gere com `node scripts/gen-cloudrun-env.cjs` e cole aqui.
 on:
   push:
     branches: [main]
@@ -27,6 +26,11 @@ concurrency:
   group: cloud-run-api
   cancel-in-progress: false
 
+# id-token: write é obrigatório para o OIDC do Workload Identity Federation.
+permissions:
+  contents: read
+  id-token: write
+
 env:
   SERVICE: nuvita-api
   REGION: southamerica-east1
@@ -39,10 +43,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Authenticate to Google Cloud
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2

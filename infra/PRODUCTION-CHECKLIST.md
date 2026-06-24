@@ -28,13 +28,17 @@ Antes de tráfego real, rotacione e regenere o env-vars-file:
 - Tokens Resend, Cloudflare R2, Z-API, Upstash Redis
 - Depois: `node scripts/gen-cloudrun-env.cjs`
 
-### 2. Configurar os GitHub Secrets (para o CD automático)
-Settings → Secrets and variables → Actions:
-- `GCP_SA_KEY` — JSON da service account (papéis: Cloud Run Admin, Cloud Build Editor,
-  Artifact Registry Writer, Service Account User, Storage Admin)
-- `GCP_PROJECT_ID` — ex.: `nuvita-499800`
-- `CLOUDRUN_ENV_YAML` — conteúdo completo de `cloudrun.env.yaml` (já com segredos rotacionados)
-- `VITE_API_URL` — URL pública da API no Cloud Run (para o build do GitHub Pages)
+### 2. GitHub Secrets (para o CD automático) — ✅ FEITO via Workload Identity Federation
+Configurado em 2026-06-24 (a org bloqueia chaves de SA, então usamos WIF/OIDC — sem
+chave de longa duração). Já criados no repo:
+- `GCP_PROJECT_ID` = `nuvita-499800`
+- `GCP_WIF_PROVIDER` = provider OIDC (pool `github-pool`, restrito ao owner `ericolimaeducador-ux`)
+- `GCP_SA_EMAIL` = `gh-actions-deployer@nuvita-499800.iam.gserviceaccount.com`
+  (papéis: run.admin, cloudbuild.builds.editor, artifactregistry.admin, iam.serviceAccountUser, storage.admin)
+- `CLOUDRUN_ENV_YAML` = conteúdo de `cloudrun.env.yaml` ⚠️ **regerar e re-setar após rotacionar os segredos (item 1)**
+
+Ainda falta:
+- `VITE_API_URL` — URL pública da API no Cloud Run (sai após o 1º deploy; usar no build do GitHub Pages)
 
 ### 3. MongoDB Atlas — acesso de rede
 Cloud Run usa IPs dinâmicos. Em Atlas → Network Access, libere `0.0.0.0/0`

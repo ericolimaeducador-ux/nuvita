@@ -2,13 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, integracao]
   pull_request:
     branches: [main]
 
 jobs:
-  build:
-    name: Type-check & Build
+  api:
+    name: API — Type-check, Build & Test
     runs-on: ubuntu-latest
 
     steps:
@@ -38,3 +38,23 @@ jobs:
       - name: Tests
         working-directory: apps/api
         run: npx jest --passWithNoTests
+
+  web:
+    name: Web — Type-check & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Type check & build
+        working-directory: apps/web
+        run: npm run build

@@ -40,11 +40,9 @@ jobs:
       - name: Build web
         working-directory: apps/web
         env:
-          # Base path do projeto no Pages: https://<user>.github.io/nuvita/
-          # Para domínio próprio, troque para '/'.
-          VITE_BASE: /nuvita/
-          # URL pública da API (HTTPS). Defina o secret VITE_API_URL no repositório
-          # quando a API estiver hospedada; vazio = sem backend (front só carrega).
+          # Domínio próprio www.nuvita.app.br (ver apps/web/public/CNAME) serve na raiz.
+          VITE_BASE: /
+          # URL pública da API (HTTPS). Secret VITE_API_URL = https://api.nuvita.app.br.
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
         run: npm run build
 

@@ -12,7 +12,10 @@ async function bootstrap() {
   const configService = app.get(AppConfigService);
   const config = configService.getConfig();
 
-  app.use(helmet({ contentSecurityPolicy: config.nodeEnv === 'production' }));
+  const isProd = config.nodeEnv === 'production';
+
+  // CSP fica ligado fora de dev. Em dev é desligado para a UI do Swagger funcionar.
+  app.use(helmet({ contentSecurityPolicy: config.nodeEnv !== 'development' }));
   app.use(cookieParser());
 
   app.useGlobalPipes(
@@ -28,7 +31,10 @@ async function bootstrap() {
     credentials: true,
   });
 
-  if (process.env.NODE_ENV !== 'production') {
+  // Swagger nunca fica exposto em produção, a menos que EXPOSE_DOCS=true seja
+  // definido explicitamente (ex.: ambiente de staging protegido).
+  const exposeDocs = !isProd || process.env.EXPOSE_DOCS === 'true';
+  if (exposeDocs) {
     const config = new DocumentBuilder()
       .setTitle('Nuvita API')
       .setDescription('SaaS de gestão clínica — autenticação, pacientes, prontuários, agendamentos, financeiro e telemedicina')
@@ -55,8 +61,8 @@ async function bootstrap() {
 
   const port = config.port;
   await app.listen(port);
-  console.log(`API rodando em http://localhost:${port}`);
-  if (process.env.NODE_ENV !== 'production') {
+  console.log(`API rodando na porta ${port} (NODE_ENV=${config.nodeEnv})`);
+  if (exposeDocs) {
     console.log(`Swagger em http://localhost:${port}/docs`);
   }
 }

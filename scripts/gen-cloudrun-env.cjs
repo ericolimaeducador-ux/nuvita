@@ -3,7 +3,9 @@
  *   gcloud run deploy ... --env-vars-file cloudrun.env.yaml
  *
  * Ajustes automáticos:
- *  - NODE_ENV=development  (faz a API ler segredos das env vars, não do GCP Secret Manager)
+ *  - NODE_ENV=production   (postura segura: Swagger fechado, CSP ligado, logs sane)
+ *  - CONFIG_SOURCE=env     (lê segredos das env vars, NÃO do GCP Secret Manager)
+ *  - LOG_LEVEL=info        (evita logs debug verbosos com possível PII em produção)
  *  - CORS_ORIGIN inclui a URL do GitHub Pages
  *  - remove PORT (o Cloud Run injeta a porta automaticamente)
  *
@@ -12,7 +14,13 @@
 const fs = require('fs');
 const path = require('path');
 
-const PAGES_ORIGIN = 'https://ericolimaeducador-ux.github.io';
+// Origens permitidas no CORS em produção (frontend + apex). localhost p/ dev local.
+const PROD_ORIGINS = [
+  'https://www.nuvita.app.br',
+  'https://nuvita.app.br',
+  'http://localhost:5173',
+];
+const PROD_ROOT_DOMAIN = 'nuvita.app.br';
 const envFile = path.join(__dirname, '..', 'apps', 'api', '.env');
 const outFile = path.join(__dirname, '..', 'cloudrun.env.yaml');
 
@@ -26,9 +34,13 @@ for (const raw of fs.readFileSync(envFile, 'utf8').split(/\r?\n/)) {
 }
 
 // Overrides para o ambiente Cloud Run
-vars.NODE_ENV = 'development';
-vars.CORS_ORIGIN = `${PAGES_ORIGIN},http://localhost:5173`;
+vars.NODE_ENV = 'production';
+vars.CONFIG_SOURCE = 'env';
+vars.LOG_LEVEL = 'info';
+vars.CORS_ORIGIN = PROD_ORIGINS.join(',');
+vars.APP_ROOT_DOMAIN = PROD_ROOT_DOMAIN;
 delete vars.PORT; // Cloud Run define a porta
+delete vars.EXPOSE_DOCS; // Swagger fechado em produção
 
 // YAML com valores como strings JSON (seguro p/ caracteres especiais da URI/secrets)
 const yaml = Object.entries(vars)

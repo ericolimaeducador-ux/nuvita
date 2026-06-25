@@ -1,0 +1,2 @@
+# Diretório público do Firebase Hosting intencionalmente vazio.
+# Todas as requisições são reescritas para o Cloud Run (nuvita-api) via firebase.json.

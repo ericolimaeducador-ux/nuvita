@@ -1,0 +1,15 @@
+{
+  "hosting": {
+    "public": "infra/firebase-public",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "nuvita-api",
+          "region": "southamerica-east1"
+        }
+      }
+    ]
+  }
+}

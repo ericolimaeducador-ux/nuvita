@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { ArrowLeft, User, Download } from 'lucide-react';
+import { ArrowLeft, User, Download, Plus, FileText } from 'lucide-react';
+import { ProntuarioDetailDialog, NovoAtendimentoDialog } from '@/components/ProntuarioDialogs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +15,7 @@ import { formatCpf, idade, toItems } from '@/utils';
 import {
   SEXO_LABEL,
   STATUS_AGENDAMENTO_LABEL,
+  TIPO_ATENDIMENTO_LABEL,
   type Agendamento,
   type Prontuario,
   type Sexo,
@@ -30,6 +33,8 @@ function DescItem({ label, value }: { label: string; value: string }) {
 export function PacienteDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const [viewProntuarioId, setViewProntuarioId] = useState<string | null>(null);
+  const [novoOpen, setNovoOpen] = useState(false);
 
   const pacQ = useQuery({ queryKey: ['paciente', id], queryFn: () => pacientesApi.get(id), enabled: !!id });
   const prontQ = useQuery({ queryKey: ['prontuarios', 'paciente', id], queryFn: () => prontuariosApi.list({ pacienteId: id }), enabled: !!id });
@@ -102,6 +107,12 @@ export function PacienteDetailPage() {
             </TabsContent>
 
             <TabsContent value="prontuarios" className="mt-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm text-muted-foreground">Clique em um atendimento para abrir o prontuário.</p>
+                <Button size="sm" onClick={() => setNovoOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" /> Novo atendimento
+                </Button>
+              </div>
               {prontQ.isLoading ? (
                 <div className="space-y-3">{[1,2,3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
               ) : (
@@ -110,19 +121,28 @@ export function PacienteDetailPage() {
                     <TableRow>
                       <TableHead>Data</TableHead>
                       <TableHead>Tipo</TableHead>
-                      <TableHead>Assinado</TableHead>
+                      <TableHead>Situação</TableHead>
+                      <TableHead className="w-10" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {toItems<Prontuario>(prontQ.data as never).map((pr) => (
-                      <TableRow key={pr.id}>
+                      <TableRow key={pr.id} className="cursor-pointer" onClick={() => setViewProntuarioId(pr.id)}>
                         <TableCell>{pr.dataAtendimento ? dayjs(pr.dataAtendimento).format('DD/MM/YYYY HH:mm') : '—'}</TableCell>
-                        <TableCell>{pr.tipo}</TableCell>
+                        <TableCell>{TIPO_ATENDIMENTO_LABEL[pr.tipo] ?? pr.tipo}</TableCell>
                         <TableCell>
-                          <Badge variant={pr.assinado ? 'success' : 'warning'}>{pr.assinado ? 'Sim' : 'Rascunho'}</Badge>
+                          <Badge variant={pr.assinado ? 'success' : 'warning'}>{pr.assinado ? 'Assinado' : 'Rascunho'}</Badge>
                         </TableCell>
+                        <TableCell><FileText className="h-4 w-4 text-muted-foreground" /></TableCell>
                       </TableRow>
                     ))}
+                    {toItems<Prontuario>(prontQ.data as never).length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                          Nenhum atendimento registrado. Clique em “Novo atendimento” para abrir a ficha.
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               )}
@@ -155,6 +175,18 @@ export function PacienteDetailPage() {
           </Tabs>
         </CardContent>
       </Card>
+
+      <ProntuarioDetailDialog
+        prontuarioId={viewProntuarioId}
+        open={!!viewProntuarioId}
+        onOpenChange={(o) => { if (!o) setViewProntuarioId(null); }}
+      />
+      <NovoAtendimentoDialog
+        pacienteId={id}
+        pacienteNome={p.nome}
+        open={novoOpen}
+        onOpenChange={setNovoOpen}
+      />
     </div>
   );
 }

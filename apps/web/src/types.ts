@@ -193,17 +193,54 @@ export interface Agendamento {
   motivoCancelamento?: string;
 }
 
+export interface SinaisVitais {
+  pressaoArterial?: string;
+  frequenciaCardiaca?: number;
+  frequenciaRespiratoria?: number;
+  temperatura?: number;
+  saturacaoO2?: number;
+  peso?: number;
+  altura?: number;
+}
+
+export interface ProntuarioSubjetivo {
+  queixaPrincipal?: string;
+  hda?: string;
+}
+
+export interface ProntuarioObjetivo {
+  exameFisico?: string;
+  sinaisVitais?: SinaisVitais;
+}
+
+export interface ProntuarioAvaliacao {
+  hipotesesDiagnosticas?: string[];
+  cid10?: string[];
+}
+
+export interface ProntuarioPlano {
+  conduta?: string;
+  prescricao?: string;
+  examesSolicitados?: string[];
+}
+
+export interface AssinaturaProntuario {
+  medicoId: string;
+  dataAssinatura: string;
+  hash?: string;
+}
+
 export interface Prontuario {
   id: string;
   clinicaId: string;
   pacienteId: string;
   dataAtendimento: string;
   tipo: TipoAtendimento;
-  assinado?: boolean;
-  subjetivo?: Record<string, unknown>;
-  objetivo?: Record<string, unknown>;
-  avaliacao?: Record<string, unknown>;
-  plano?: Record<string, unknown>;
+  assinado?: AssinaturaProntuario;
+  subjetivo?: ProntuarioSubjetivo;
+  objetivo?: ProntuarioObjetivo;
+  avaliacao?: ProntuarioAvaliacao;
+  plano?: ProntuarioPlano;
 }
 
 export interface Documento {

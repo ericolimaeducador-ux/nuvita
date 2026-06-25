@@ -19,12 +19,14 @@ import { apiErrorMessage } from '@/api/client';
 import { toItems } from '@/utils';
 import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
+import { ProntuarioDetailDialog } from '@/components/ProntuarioDialogs';
 import { TipoAtendimento, TIPO_ATENDIMENTO_LABEL, type Prontuario, type Paciente } from '@/types';
 
 export function ProntuariosPage() {
   const qc = useQueryClient();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [viewId, setViewId] = useState<string | null>(null);
   const [cidOpts, setCidOpts] = useState<{ value: string; label: string }[]>([]);
   const [cidSearch, setCidSearch] = useState('');
   const [cidSelected, setCidSelected] = useState('');
@@ -61,6 +63,7 @@ export function ProntuariosPage() {
 
   const prontuarios = toItems<Prontuario>(listQ.data as never);
   const pacientes = toItems<Paciente>(pacientesQ.data as never);
+  const nomePaciente = (pacienteId: string) => pacientes.find((p) => p.id === pacienteId)?.nome ?? pacienteId;
 
   async function buscarCid(q: string) {
     setCidSearch(q);
@@ -120,14 +123,14 @@ export function ProntuariosPage() {
               </TableHeader>
               <TableBody>
                 {prontuarios.map((p) => (
-                  <TableRow key={p.id}>
+                  <TableRow key={p.id} className="cursor-pointer" onClick={() => setViewId(p.id)}>
                     <TableCell>{p.dataAtendimento ? dayjs(p.dataAtendimento).format('DD/MM/YYYY HH:mm') : '—'}</TableCell>
-                    <TableCell>{p.pacienteId}</TableCell>
+                    <TableCell className="font-medium">{nomePaciente(p.pacienteId)}</TableCell>
                     <TableCell>{TIPO_ATENDIMENTO_LABEL[p.tipo] ?? p.tipo}</TableCell>
                     <TableCell>
                       <Badge variant={p.assinado ? 'success' : 'warning'}>{p.assinado ? 'Assinado' : 'Rascunho'}</Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       {!p.assinado && (
                         <Button size="sm" variant="outline" disabled={assinarMut.isPending} onClick={() => assinarMut.mutate(p.id)}>
                           <PenLine className="mr-1 h-3 w-3" /> Assinar
@@ -234,6 +237,12 @@ export function ProntuariosPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ProntuarioDetailDialog
+        prontuarioId={viewId}
+        open={!!viewId}
+        onOpenChange={(o) => { if (!o) setViewId(null); }}
+      />
     </div>
   );
 }

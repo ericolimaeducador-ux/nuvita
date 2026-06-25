@@ -5,6 +5,7 @@ import { Printer, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { laudoMedicoApi, pacientesApi } from '@/api/resources';
+import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
 
 export function LaudoImpressaoPage() {
   const { id: pacienteId, laudoId } = useParams<{ id: string; laudoId: string }>();
@@ -43,6 +44,9 @@ export function LaudoImpressaoPage() {
 
       {/* Conteúdo imprimível */}
       <div className="laudo-print max-w-3xl mx-auto p-8 text-gray-900 bg-white min-h-screen print:p-0 print:max-w-full">
+        {/* Timbre Nuvita */}
+        <DocumentoTimbre />
+
         {/* Cabeçalho */}
         <div className="text-center border-b-2 border-gray-800 pb-4 mb-6">
           <h1 className="text-xl font-bold uppercase tracking-wide">LAUDO MÉDICO</h1>
@@ -136,6 +140,8 @@ export function LaudoImpressaoPage() {
             <p>_____________________________</p>
           </div>
         </div>
+
+        <DocumentoRodape />
       </div>
 
       <style>{`

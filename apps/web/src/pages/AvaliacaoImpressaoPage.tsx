@@ -8,6 +8,7 @@ import { avaliacaoIUApi, pacientesApi } from '@/api/resources';
 import {
   LOCAL_LABEL, PERFIL_LABEL, DESTREZA_LABEL, TIPO_IU_LABEL, ENCAMINHAMENTO_LABEL,
 } from '@/types';
+import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
 
 export function AvaliacaoImpressaoPage() {
   const { id: pacienteId, avaliacaoId } = useParams<{ id: string; avaliacaoId: string }>();
@@ -48,6 +49,9 @@ export function AvaliacaoImpressaoPage() {
       </div>
 
       <div className="avaliacao-print max-w-3xl mx-auto p-8 text-gray-900 bg-white min-h-screen print:p-0 print:max-w-full text-sm">
+        {/* Timbre Nuvita */}
+        <DocumentoTimbre />
+
         {/* Cabeçalho */}
         <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4 mb-6">
           <div>
@@ -151,6 +155,8 @@ export function AvaliacaoImpressaoPage() {
             <p className="mt-6 border-t border-gray-400 pt-1">_____________________________</p>
           </div>
         </div>
+
+        <DocumentoRodape />
       </div>
 
       <style>{`

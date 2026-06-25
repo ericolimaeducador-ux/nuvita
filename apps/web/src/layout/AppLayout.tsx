@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/auth/AuthContext';
 import { Papel } from '@/types';
+import { brand } from '@/lib/brand';
 
 const navItems: { to: string; icon: React.ElementType; label: string; roles?: Papel[] }[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -46,10 +47,7 @@ export function AppLayout() {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 py-5 border-b border-white/5">
-          <div className="relative shrink-0">
-            <span className="text-2xl font-bold text-primary">n</span>
-            <span className="absolute -top-0.5 -right-1.5 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-          </div>
+          <img src={brand.mark.light} alt={brand.nome} className="h-8 w-auto shrink-0" />
           <AnimatePresence>
             {!collapsed && (
               <motion.span
@@ -59,7 +57,7 @@ export function AppLayout() {
                 transition={{ duration: 0.15 }}
                 className="text-xl font-bold text-foreground"
               >
-                nuvita
+                {brand.nome}
               </motion.span>
             )}
           </AnimatePresence>

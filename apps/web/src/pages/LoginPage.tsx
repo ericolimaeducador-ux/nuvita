@@ -10,6 +10,7 @@ import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { brand } from '@/lib/brand';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Informe o e-mail.').email('E-mail inválido.'),
@@ -58,12 +59,8 @@ export function LoginPage() {
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" />
         <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl" />
 
-        <div className="relative flex items-center gap-3">
-          <div className="relative">
-            <span className="text-3xl font-black text-white">n</span>
-            <span className="absolute -top-1 -right-2 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse" />
-          </div>
-          <span className="text-2xl font-bold text-white">nuvita</span>
+        <div className="relative flex items-center">
+          <img src={brand.logo.light} alt={`${brand.nome} — ${brand.slogan}`} className="h-12 w-auto" />
         </div>
 
         <div className="relative">
@@ -90,12 +87,8 @@ export function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
-          <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="relative">
-              <span className="text-2xl font-black text-primary">n</span>
-              <span className="absolute -top-0.5 -right-1.5 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-            </div>
-            <span className="text-xl font-bold text-foreground">nuvita</span>
+          <div className="flex items-center mb-8 lg:hidden">
+            <img src={brand.logo.light} alt={brand.nome} className="h-9 w-auto" />
           </div>
 
           <div className="glass rounded-2xl p-8 shadow-2xl">

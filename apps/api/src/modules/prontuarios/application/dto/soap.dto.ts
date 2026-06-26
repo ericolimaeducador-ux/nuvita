@@ -1,6 +1,7 @@
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsInt,
   IsNumber,
   IsOptional,
@@ -115,4 +116,49 @@ export class ArquivosProntuarioDto {
   @ValidateNested({ each: true })
   @Type(() => ArquivoProntuarioDto)
   arquivos?: ArquivoProntuarioDto[];
+}
+
+export class CateterVaProDto {
+  @IsOptional() @IsString() sexo?: string;
+  @IsOptional() @IsNumber() french?: number;
+  @IsOptional() @IsNumber() codigo?: number;
+}
+
+/**
+ * Questionário VaPro/Hollister (Ficha de Avaliação de Incontinência Urinária),
+ * amarrado ao prontuário SOAP. Todos os campos são opcionais — a ficha só é
+ * preenchida quando o atendimento envolve o programa VaPro.
+ */
+export class FichaVaProDto {
+  @IsOptional() @IsString() local?: string;
+  @IsOptional() @IsString() estadoCivil?: string;
+  @IsOptional() @IsString() prescritor?: string;
+  @IsOptional() @IsString() planoSaude?: string;
+  @IsOptional() @IsString() hospitalReferencia?: string;
+  @IsOptional() @IsString() motivoIU?: string;
+  @IsOptional() @IsString() inicioSintomas?: string;
+  @IsOptional() @IsString() perfilCliente?: string;
+  @IsOptional() @IsString() destreza?: string;
+  @IsOptional() @IsBoolean() dntui?: boolean;
+  @IsOptional() @IsArray() @IsString({ each: true }) tiposIU?: string[];
+  @IsOptional() @IsBoolean() miccaoEspontanea?: boolean;
+  @IsOptional() @IsNumber() volumeAproximadoMl?: number;
+  @IsOptional() @IsBoolean() realizaCateterismo?: boolean;
+  @IsOptional() @IsNumber() cateterismosDia?: number;
+  @IsOptional() @IsString() cateterUtilizado?: string;
+  @IsOptional() @IsString() ultimaInfeccaoUrinaria?: string;
+  @IsOptional() @IsBoolean() emTratamento?: boolean;
+  @IsOptional() @IsString() tratamento?: string;
+  @IsOptional() @IsString() volumeDrenado?: string;
+  @IsOptional() @IsString() outrasIntercorrencias?: string;
+  @IsOptional() @ValidateNested() @Type(() => CateterVaProDto) cateterVaProIndicado?: CateterVaProDto;
+  @IsOptional() @IsString() encaminhamento?: string;
+  @IsOptional() @IsString() localEncaminhamento?: string;
+  @IsOptional() @IsString() responsavelCateterismo?: string;
+  @IsOptional() @IsBoolean() autorizaPesquisa?: boolean;
+  @IsOptional() @IsBoolean() aceitaInformacoes?: boolean;
+  @IsOptional() @IsString() emailContato?: string;
+  @IsOptional() @IsString() whatsappContato?: string;
+  @IsOptional() @IsString() coren?: string;
+  @IsOptional() @IsString() respCuidador?: string;
 }

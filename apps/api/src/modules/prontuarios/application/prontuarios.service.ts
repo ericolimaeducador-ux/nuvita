@@ -49,6 +49,7 @@ export class ProntuariosService {
       objetivo: dto.objetivo,
       avaliacao: dto.avaliacao,
       plano: dto.plano,
+      fichaVaPro: dto.fichaVaPro,
       arquivos: dto.arquivos ?? [],
     });
 

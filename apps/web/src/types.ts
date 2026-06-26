@@ -230,6 +230,47 @@ export interface AssinaturaProntuario {
   hash?: string;
 }
 
+export interface CateterVaProIndicado {
+  sexo?: string;
+  french?: number;
+  codigo?: number;
+}
+
+/** Questionário VaPro/Hollister (Ficha de Avaliação de IU) embutido no prontuário. */
+export interface FichaVaPro {
+  local?: string;
+  estadoCivil?: string;
+  prescritor?: string;
+  planoSaude?: string;
+  hospitalReferencia?: string;
+  motivoIU?: string;
+  inicioSintomas?: string;
+  perfilCliente?: string;
+  destreza?: string;
+  dntui?: boolean;
+  tiposIU?: string[];
+  miccaoEspontanea?: boolean;
+  volumeAproximadoMl?: number;
+  realizaCateterismo?: boolean;
+  cateterismosDia?: number;
+  cateterUtilizado?: string;
+  ultimaInfeccaoUrinaria?: string;
+  emTratamento?: boolean;
+  tratamento?: string;
+  volumeDrenado?: string;
+  outrasIntercorrencias?: string;
+  cateterVaProIndicado?: CateterVaProIndicado;
+  encaminhamento?: string;
+  localEncaminhamento?: string;
+  responsavelCateterismo?: string;
+  autorizaPesquisa?: boolean;
+  aceitaInformacoes?: boolean;
+  emailContato?: string;
+  whatsappContato?: string;
+  coren?: string;
+  respCuidador?: string;
+}
+
 export interface Prontuario {
   id: string;
   clinicaId: string;
@@ -241,6 +282,7 @@ export interface Prontuario {
   objetivo?: ProntuarioObjetivo;
   avaliacao?: ProntuarioAvaliacao;
   plano?: ProntuarioPlano;
+  fichaVaPro?: FichaVaPro;
 }
 
 export interface Documento {

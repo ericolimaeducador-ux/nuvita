@@ -50,6 +50,9 @@ export class ProntuarioMongo {
   @Prop({ required: true, type: MongooseSchema.Types.Mixed })
   plano!: Record<string, unknown>;
 
+  @Prop({ type: MongooseSchema.Types.Mixed })
+  fichaVaPro?: Record<string, unknown>;
+
   @Prop({ type: [MongooseSchema.Types.Mixed], default: [] })
   arquivos!: Record<string, unknown>[];
 

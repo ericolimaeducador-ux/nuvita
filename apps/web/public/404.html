@@ -4,10 +4,11 @@
     <meta charset="utf-8" />
     <title>Nuvita</title>
     <!-- SPA fallback p/ GitHub Pages (rafgraph/spa-github-pages).
-         Converte /nuvita/pacientes em /nuvita/?/pacientes e o index.html restaura a rota.
-         pathSegmentsToKeep = 1 porque o app vive em /<repo>/ (/nuvita/). Use 0 p/ domínio próprio. -->
+         Converte /pacientes em /?/pacientes e o index.html restaura a rota.
+         pathSegmentsToKeep = 0 porque servimos em domínio próprio (www.nuvita.app.br)
+         na raiz. Se voltar a servir em /<repo>/ (project pages), use 1. -->
     <script type="text/javascript">
-      var pathSegmentsToKeep = 1;
+      var pathSegmentsToKeep = 0;
       var l = window.location;
       l.replace(
         l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +

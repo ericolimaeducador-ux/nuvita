@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { extractRequestMeta } from '../../../common/http/client-ip';
-import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
+import { AuthTokenPayload, PAPEIS_PROFISSIONAIS, Papel } from '../../../../../../packages/shared/src/auth';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
@@ -38,7 +38,7 @@ export class PacientesController {
   }
 
   @Get()
-  @Roles(Papel.SECRETARIA, Papel.MEDICO)
+  @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   list(
     @Query() query: ListPacientesQueryDto,
     @CurrentUser() user: AuthTokenPayload,
@@ -48,7 +48,7 @@ export class PacientesController {
   }
 
   @Get(':id')
-  @Roles(Papel.SECRETARIA, Papel.MEDICO)
+  @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   findOne(
     @Param('id') pacienteId: string,
     @Query('clinicaId') clinicaId: string | undefined,
@@ -58,8 +58,9 @@ export class PacientesController {
     return this.pacientesService.findOne(pacienteId, clinicaId, this.contextFromRequest(request, user));
   }
 
+  // Export LGPD é dump completo de dados sensíveis — não abre p/ todos os profissionais.
   @Get(':id/export')
-  @Roles(Papel.SECRETARIA, Papel.MEDICO)
+  @Roles(Papel.SECRETARIA, Papel.MEDICO, Papel.ADMIN)
   exportLgpd(
     @Param('id') pacienteId: string,
     @Query('clinicaId') clinicaId: string | undefined,

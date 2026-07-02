@@ -301,3 +301,10 @@ export class FichaAvaliacaoIUDto {
   @IsOptional() @IsString() coren?: string;
   @IsOptional() @IsString() respCuidador?: string;
 }
+
+/** Registro da consulta de enfermagem — ligação de acompanhamento + chegada da sonda de teste. */
+export class RegistroEnfermagemDto {
+  @IsOptional() @IsISO8601() dataLigacao?: string;
+  @IsOptional() @IsISO8601() sondaChegouEm?: string;
+  @IsOptional() @IsString() observacoes?: string;
+}

@@ -125,6 +125,7 @@ export enum TipoAtendimento {
   RETORNO = 'retorno',
   URGENCIA = 'urgencia',
   TELECONSULTA = 'teleconsulta',
+  CONSULTA_ENFERMAGEM = 'consulta_enfermagem',
 }
 
 export const TIPO_ATENDIMENTO_LABEL: Record<TipoAtendimento, string> = {
@@ -132,6 +133,7 @@ export const TIPO_ATENDIMENTO_LABEL: Record<TipoAtendimento, string> = {
   [TipoAtendimento.RETORNO]: 'Retorno',
   [TipoAtendimento.URGENCIA]: 'Urgência',
   [TipoAtendimento.TELECONSULTA]: 'Teleconsulta',
+  [TipoAtendimento.CONSULTA_ENFERMAGEM]: 'Consulta de Enfermagem',
 };
 
 // ---- Permissões por módulo (espelho de packages/shared/src/auth/permissao.ts) ----
@@ -199,7 +201,7 @@ export const PERMISSOES_PADRAO_POR_PAPEL: Record<Papel, Modulo[]> = {
     M.FLUXO_CLINICO,
   ],
   [Papel.SECRETARIA]: [
-    M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS, M.FINANCEIRO, M.NOTIFICACOES,
+    M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS, M.FINANCEIRO, M.NOTIFICACOES, M.FLUXO_CLINICO,
   ],
   [Papel.PACIENTE]: [M.DASHBOARD],
 };
@@ -260,6 +262,7 @@ export interface Paciente {
   email?: string;
   endereco?: Endereco;
   programaIU?: boolean;
+  observacoes?: string;
   ativo?: boolean;
   criadoEm?: string;
 }
@@ -436,6 +439,12 @@ export interface FichaAvaliacaoIU {
   respCuidador?: string;
 }
 
+export interface RegistroEnfermagem {
+  dataLigacao?: string;
+  sondaChegouEm?: string;
+  observacoes?: string;
+}
+
 export interface Prontuario {
   id: string;
   clinicaId: string;
@@ -448,17 +457,59 @@ export interface Prontuario {
   avaliacao?: ProntuarioAvaliacao;
   plano?: ProntuarioPlano;
   fichaAvaliacaoIU?: FichaAvaliacaoIU;
+  registroEnfermagem?: RegistroEnfermagem;
   relatorioJudicial?: RelatorioJudicial;
 }
 
+export enum TipoDocumento {
+  EXAME = 'exame',
+  RECEITA = 'receita',
+  LAUDO = 'laudo',
+  TERMO = 'termo',
+  OUTRO = 'outro',
+}
+export const TIPO_DOCUMENTO_LABEL: Record<TipoDocumento, string> = {
+  [TipoDocumento.EXAME]: 'Exame',
+  [TipoDocumento.RECEITA]: 'Receita',
+  [TipoDocumento.LAUDO]: 'Laudo',
+  [TipoDocumento.TERMO]: 'Termo',
+  [TipoDocumento.OUTRO]: 'Outro',
+};
+
+export const ALLOWED_DOCUMENT_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'application/dicom'] as const;
+export type AllowedDocumentMimeType = (typeof ALLOWED_DOCUMENT_MIME_TYPES)[number];
+
 export interface Documento {
   id: string;
-  nome?: string;
-  titulo?: string;
-  tipo?: string;
-  tamanho?: number;
-  status?: string;
-  criadoEm?: string;
+  clinicaId: string;
+  pacienteId: string;
+  prontuarioId?: string;
+  nome: string;
+  tipo: TipoDocumento;
+  mimeType: AllowedDocumentMimeType;
+  tamanho: number;
+  hash: string;
+  uploadPor: string;
+  thumbnailUrl?: string;
+  criadoEm: string;
+}
+
+// Espelho de packages/shared/src/checklist-documentos/documentos-padrao.ts —
+// usado como sugestão de nome ao anexar um documento.
+export const DOCUMENTOS_PADRAO: string[] = [
+  'RG ou CNH (documento de identificação com foto)',
+  'Comprovante de endereço',
+  'Comprovante de rendimentos',
+  'Cópia da carteirinha do SUS',
+  'Relatório médico',
+  'Negativa administrativa',
+];
+
+export interface PresignUploadResponse {
+  documento: Documento;
+  uploadUrl: string;
+  expiresInSeconds: number;
+  requiredHeaders: Record<string, string>;
 }
 
 // ---------- Financeiro ----------

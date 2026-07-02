@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { PenLine, Scale, FileText } from 'lucide-react';
+import { PenLine, Scale, FileText, UserCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
-import { prontuariosApi } from '@/api/resources';
+import { prontuariosApi, avaliacaoIUApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/auth/AuthContext';
@@ -109,6 +109,17 @@ export function ProntuarioDetailDialog({
   });
 
   const pr = q.data as Prontuario | undefined;
+
+  // Só carrega (e só importa) quando a consulta é de enfermagem e já foi assinada —
+  // é o pré-requisito pra liberar o atalho de follow-up (que exige avaliação de IU).
+  const podeMostrarAtalhoFollowup = !!pr && pr.tipo === TipoAtendimento.CONSULTA_ENFERMAGEM && !!pr.assinado;
+  const avaliacoesQ = useQuery({
+    queryKey: ['avaliacao-iu', 'paciente', pacienteId],
+    queryFn: () => avaliacaoIUApi.listByPaciente(pacienteId!),
+    enabled: podeMostrarAtalhoFollowup && !!pacienteId,
+  });
+  const temAvaliacaoIU = (avaliacoesQ.data ?? []).length > 0;
+
   const sv = pr?.objetivo?.sinaisVitais;
   const sinais = sv
     ? [
@@ -149,6 +160,8 @@ export function ProntuarioDetailDialog({
               )}
             </div>
 
+            {pr.tipo !== TipoAtendimento.CONSULTA_ENFERMAGEM && (
+            <>
             <SecaoSOAP letra="S" titulo="Subjetivo / Anamnese">
               <Campo label="Queixa principal">{pr.subjetivo?.queixaPrincipal}</Campo>
               <CampoSe label="História da doença atual">{pr.subjetivo?.hda}</CampoSe>
@@ -189,6 +202,8 @@ export function ProntuarioDetailDialog({
               <CampoSe label="Encaminhamentos">{pr.plano?.encaminhamentos}</CampoSe>
               <CampoSe label="Retorno">{pr.plano?.retorno}</CampoSe>
             </SecaoSOAP>
+            </>
+            )}
 
             {rj && (
               <div className="glass rounded-xl p-4 border border-amber-500/20">
@@ -273,6 +288,19 @@ export function ProntuarioDetailDialog({
                 </div>
               </div>
             )}
+
+            {pr.registroEnfermagem && (
+              <div className="glass rounded-xl p-4 border border-primary/20">
+                <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-3">
+                  Registro de Enfermagem
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <CampoSe label="Ligação ao paciente">{pr.registroEnfermagem.dataLigacao && dayjs(pr.registroEnfermagem.dataLigacao).format('DD/MM/YYYY')}</CampoSe>
+                  <CampoSe label="Chegada da sonda">{pr.registroEnfermagem.sondaChegouEm && dayjs(pr.registroEnfermagem.sondaChegouEm).format('DD/MM/YYYY')}</CampoSe>
+                </div>
+                <CampoSe label="Observações">{pr.registroEnfermagem.observacoes}</CampoSe>
+              </div>
+            )}
           </div>
         )}
 
@@ -280,6 +308,16 @@ export function ProntuarioDetailDialog({
           {pr?.relatorioJudicial && pacienteId && (
             <Button variant="outline" onClick={() => navigate(`/pacientes/${pacienteId}/prontuario/${pr.id}/natjus/imprimir`)}>
               <FileText className="mr-2 h-4 w-4" /> Gerar relatório NAT-JUS
+            </Button>
+          )}
+          {podeMostrarAtalhoFollowup && pacienteId && (
+            <Button
+              variant="outline"
+              disabled={avaliacoesQ.isLoading || !temAvaliacaoIU}
+              title={!avaliacoesQ.isLoading && !temAvaliacaoIU ? 'Paciente ainda não tem avaliação de incontinência urinária registrada.' : undefined}
+              onClick={() => navigate(`/fluxo-clinico/${pacienteId}`)}
+            >
+              <UserCheck className="mr-2 h-4 w-4" /> Registrar follow-up
             </Button>
           )}
           {pr && !pr.assinado && (
@@ -323,6 +361,12 @@ export function NovoAtendimentoDialog({
   const { user } = useAuth();
   const [data, setData] = useState(dayjs().format('YYYY-MM-DDTHH:mm'));
   const [tipo, setTipo] = useState<TipoAtendimento>(TipoAtendimento.CONSULTA);
+  const isEnfermagem = tipo === TipoAtendimento.CONSULTA_ENFERMAGEM;
+
+  // Consulta de enfermagem: ligação de acompanhamento + chegada da sonda de teste.
+  const [dataLigacao, setDataLigacao] = useState('');
+  const [sondaChegouEm, setSondaChegouEm] = useState('');
+  const [obsEnfermagem, setObsEnfermagem] = useState('');
 
   const [subjetivo, setSubjetivo] = useState<ProntuarioSubjetivo>({});
   const [sinais, setSinais] = useState<SinaisVitais>({});
@@ -354,6 +398,7 @@ export function NovoAtendimentoDialog({
     setAvaliacao({}); setPlano({});
     setCidSearch(''); setCidSelected([]); setCidOpts([]);
     setIncluirJudicial(false); setJudicial({});
+    setDataLigacao(''); setSondaChegouEm(''); setObsEnfermagem('');
   }
 
   async function buscarCid(qstr: string) {
@@ -383,6 +428,25 @@ export function NovoAtendimentoDialog({
   }
 
   function submit() {
+    if (isEnfermagem) {
+      if (!dataLigacao && !sondaChegouEm && !obsEnfermagem) {
+        toast.error('Informe ao menos um dado do registro de enfermagem.');
+        return;
+      }
+      createMut.mutate({
+        clinicaId: user?.clinicaId,
+        pacienteId,
+        dataAtendimento: dayjs(data).toISOString(),
+        tipo,
+        registroEnfermagem: clean({
+          dataLigacao: dataLigacao ? dayjs(dataLigacao).toISOString() : undefined,
+          sondaChegouEm: sondaChegouEm ? dayjs(sondaChegouEm).toISOString() : undefined,
+          observacoes: obsEnfermagem || undefined,
+        }),
+      });
+      return;
+    }
+
     if (!subjetivo.queixaPrincipal) { toast.error('Informe ao menos a queixa principal.'); return; }
     const objetivo: ProntuarioObjetivo = {
       estadoGeral: estadoGeral || undefined,
@@ -434,6 +498,8 @@ export function NovoAtendimentoDialog({
             </div>
           </div>
 
+          {!isEnfermagem && (
+          <>
           <Separator />
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">S — Subjetivo / Anamnese</p>
           <div className="space-y-2">
@@ -595,9 +661,29 @@ export function NovoAtendimentoDialog({
               </div>
             </div>
           )}
+          </>
+          )}
 
           {/* Avaliação de incontinência urinária foi desacoplada do atendimento SOAP —
               agora é registro independente, criado em /fluxo-clinico/:id. */}
+
+          {isEnfermagem && (
+            <div className="space-y-4">
+              <Separator />
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Registro de enfermagem</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Dia em que ligou para o paciente</Label>
+                  <Input type="date" value={dataLigacao} onChange={(e) => setDataLigacao(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Dia em que a sonda chegou na casa do paciente</Label>
+                  <Input type="date" value={sondaChegouEm} onChange={(e) => setSondaChegouEm(e.target.value)} />
+                </div>
+              </div>
+              <TextField label="Observações" value={obsEnfermagem} onChange={setObsEnfermagem} rows={3} />
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>

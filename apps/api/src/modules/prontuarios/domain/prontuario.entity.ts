@@ -3,10 +3,13 @@ export enum TipoAtendimento {
   RETORNO = 'retorno',
   URGENCIA = 'urgencia',
   TELECONSULTA = 'teleconsulta',
+  CONSULTA_ENFERMAGEM = 'consulta_enfermagem',
 }
 
 export interface Subjetivo {
-  queixaPrincipal: string;
+  // Opcional pois a consulta de enfermagem (CONSULTA_ENFERMAGEM) não é um SOAP
+  // tradicional e não preenche este bloco.
+  queixaPrincipal?: string;
   /** História da Doença Atual. */
   hda?: string;
   /** Antecedentes pessoais / comorbidades / doenças de base. */
@@ -188,6 +191,13 @@ export interface FichaAvaliacaoIU {
   respCuidador?: string;
 }
 
+/** Registro da consulta de enfermagem (ligação de acompanhamento + chegada da sonda de teste). */
+export interface RegistroEnfermagem {
+  dataLigacao?: Date;
+  sondaChegouEm?: Date;
+  observacoes?: string;
+}
+
 export interface ArquivoProntuario {
   nome: string;
   url: string;
@@ -214,6 +224,7 @@ export interface Prontuario {
   avaliacao: Avaliacao;
   plano: Plano;
   fichaAvaliacaoIU?: FichaAvaliacaoIU;
+  registroEnfermagem?: RegistroEnfermagem;
   relatorioJudicial?: RelatorioJudicial;
   arquivos: ArquivoProntuario[];
   assinado?: AssinaturaProntuario;

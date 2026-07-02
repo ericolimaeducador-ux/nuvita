@@ -45,11 +45,20 @@ export class ProntuariosService {
       agendamentoId: dto.agendamentoId,
       dataAtendimento: new Date(dto.dataAtendimento),
       tipo: dto.tipo,
-      subjetivo: dto.subjetivo,
-      objetivo: dto.objetivo,
-      avaliacao: dto.avaliacao,
-      plano: dto.plano,
+      subjetivo: dto.subjetivo ?? {},
+      objetivo: dto.objetivo ?? {},
+      avaliacao: dto.avaliacao ?? {},
+      plano: dto.plano ?? {},
       fichaAvaliacaoIU: dto.fichaAvaliacaoIU,
+      registroEnfermagem: dto.registroEnfermagem
+        ? {
+            ...dto.registroEnfermagem,
+            dataLigacao: dto.registroEnfermagem.dataLigacao ? new Date(dto.registroEnfermagem.dataLigacao) : undefined,
+            sondaChegouEm: dto.registroEnfermagem.sondaChegouEm
+              ? new Date(dto.registroEnfermagem.sondaChegouEm)
+              : undefined,
+          }
+        : undefined,
       relatorioJudicial: dto.relatorioJudicial
         ? {
             ...dto.relatorioJudicial,
@@ -122,6 +131,15 @@ export class ProntuariosService {
             ...dto.relatorioJudicial,
             dataEmissao: dto.relatorioJudicial.dataEmissao
               ? new Date(dto.relatorioJudicial.dataEmissao)
+              : undefined,
+          }
+        : undefined,
+      registroEnfermagem: dto.registroEnfermagem
+        ? {
+            ...dto.registroEnfermagem,
+            dataLigacao: dto.registroEnfermagem.dataLigacao ? new Date(dto.registroEnfermagem.dataLigacao) : undefined,
+            sondaChegouEm: dto.registroEnfermagem.sondaChegouEm
+              ? new Date(dto.registroEnfermagem.sondaChegouEm)
               : undefined,
           }
         : undefined,
@@ -280,6 +298,7 @@ export class ProntuariosService {
         avaliacao: prontuario.avaliacao,
         plano: prontuario.plano,
         fichaAvaliacaoIU: prontuario.fichaAvaliacaoIU ?? null,
+        registroEnfermagem: prontuario.registroEnfermagem ?? null,
         relatorioJudicial: this.normalizeJudicial(prontuario.relatorioJudicial),
         arquivos: prontuario.arquivos,
       },

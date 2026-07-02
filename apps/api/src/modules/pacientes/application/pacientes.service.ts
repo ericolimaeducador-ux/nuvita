@@ -7,6 +7,7 @@ import { AuditEvent } from '../../auth/domain/audit-event.enum';
 import { CreatePacienteDto } from './dto/create-paciente.dto';
 import { ListPacientesQueryDto } from './dto/list-pacientes-query.dto';
 import { UpdatePacienteDto } from './dto/update-paciente.dto';
+import { UpdateObservacoesPacienteDto } from './dto/update-observacoes-paciente.dto';
 import { PACIENTE_REPOSITORY } from '../pacientes.constants';
 import { Paciente } from '../domain/paciente.entity';
 import { PacienteRepository } from './ports/paciente.repository';
@@ -131,6 +132,28 @@ export class PacientesService {
       clinicaId: resolvedClinicaId,
       pacienteId,
       campos: Object.keys(dto),
+    });
+
+    return paciente;
+  }
+
+  async updateObservacoes(
+    pacienteId: string,
+    dto: UpdateObservacoesPacienteDto,
+    clinicaId: string | undefined,
+    context: RequestAuditContext,
+  ): Promise<Paciente> {
+    const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+    const paciente = await this.pacientes.update(resolvedClinicaId, pacienteId, { observacoes: dto.observacoes });
+
+    if (!paciente) {
+      throw new NotFoundException('Paciente nao encontrado.');
+    }
+
+    await this.audit(AuditEvent.PATIENT_UPDATED, context, {
+      clinicaId: resolvedClinicaId,
+      pacienteId,
+      campos: ['observacoes'],
     });
 
     return paciente;

@@ -152,6 +152,7 @@ export class PacienteMongoRepository implements PacienteRepository {
     if (input.endereco !== undefined) update.endereco = this.encryptJsonOptional(input.endereco);
     if (input.convenio !== undefined) update.convenio = this.encryptJsonOptional(input.convenio);
     if (input.programaIU !== undefined) update.programaIU = input.programaIU;
+    if (input.observacoes !== undefined) update.observacoes = this.encryptOptional(input.observacoes);
 
     return update;
   }
@@ -186,6 +187,7 @@ export class PacienteMongoRepository implements PacienteRepository {
       endereco: this.decryptJsonOptional<Endereco>(object.endereco),
       convenio: this.decryptJsonOptional<Convenio>(object.convenio),
       consentimentoLGPD: object.consentimentoLGPD,
+      observacoes: this.decryptOptional(object.observacoes),
       programaIU: object.programaIU ?? false,
       ativo: object.ativo,
       criadoEm: object.criadoEm,

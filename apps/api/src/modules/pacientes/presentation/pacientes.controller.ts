@@ -20,6 +20,7 @@ import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.gua
 import { CreatePacienteDto } from '../application/dto/create-paciente.dto';
 import { ListPacientesQueryDto } from '../application/dto/list-pacientes-query.dto';
 import { UpdatePacienteDto } from '../application/dto/update-paciente.dto';
+import { UpdateObservacoesPacienteDto } from '../application/dto/update-observacoes-paciente.dto';
 import { PacientesService, RequestAuditContext } from '../application/pacientes.service';
 
 @Controller('pacientes')
@@ -80,6 +81,21 @@ export class PacientesController {
     @Req() request: Request,
   ) {
     return this.pacientesService.update(pacienteId, dto, clinicaId, this.contextFromRequest(request, user));
+  }
+
+  // Campo de observações livres — mais aberto que o update geral, pois
+  // qualquer profissional de atendimento pode registrar informação
+  // pertinente sobre o paciente (não só secretaria/admin).
+  @Patch(':id/observacoes')
+  @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
+  updateObservacoes(
+    @Param('id') pacienteId: string,
+    @Body() dto: UpdateObservacoesPacienteDto,
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.pacientesService.updateObservacoes(pacienteId, dto, clinicaId, this.contextFromRequest(request, user));
   }
 
   @Patch(':id/desativar')

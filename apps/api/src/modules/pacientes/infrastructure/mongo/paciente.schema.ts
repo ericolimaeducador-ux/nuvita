@@ -56,6 +56,11 @@ export class PacienteMongo {
   @Prop({ default: false, index: true })
   programaIU?: boolean;
 
+  // Texto livre, criptografado (mesmo padrão de telefone/email/endereco) —
+  // qualquer profissional de atendimento pode escrever, ver PATCH /observacoes.
+  @Prop()
+  observacoes?: string;
+
   @Prop({ default: true, index: true })
   ativo!: boolean;
 

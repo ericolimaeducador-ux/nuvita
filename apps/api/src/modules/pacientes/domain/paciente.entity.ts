@@ -40,6 +40,7 @@ export interface Paciente {
   convenio?: Convenio;
   consentimentoLGPD: ConsentimentoLGPD;
   programaIU?: boolean;
+  observacoes?: string;
   ativo: boolean;
   criadoEm: Date;
   atualizadoEm: Date;

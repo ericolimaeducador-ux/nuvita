@@ -8,6 +8,7 @@ import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.gua
 import { ChecklistDocumentosService } from '../application/checklist-documentos.service';
 import { CreateChecklistDocumentoDto } from '../application/dto/create-checklist-documento.dto';
 import { UpdateChecklistDocumentoDto } from '../application/dto/update-checklist-documento.dto';
+import { CriarChecklistPadraoDto } from '../application/dto/criar-checklist-padrao.dto';
 
 @Controller('checklist-documentos')
 @UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
@@ -27,6 +28,19 @@ export class ChecklistDocumentosController {
     @CurrentUser() user: AuthTokenPayload,
   ) {
     return this.service.listByPaciente(pacienteId, clinicaId, user);
+  }
+
+  @Get('resumo-pendentes')
+  resumoPendentes(
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+  ) {
+    return this.service.resumoPendentes(clinicaId, user);
+  }
+
+  @Post('padrao')
+  criarPadrao(@Body() dto: CriarChecklistPadraoDto, @CurrentUser() user: AuthTokenPayload) {
+    return this.service.criarPadrao(dto, user);
   }
 
   @Patch(':id')

@@ -57,7 +57,7 @@ export interface ListPacientesParams {
   limit?: number;
   incluirInativos?: boolean;
   clinicaId?: string;
-  programaVaPro?: boolean;
+  programaIU?: boolean;
 }
 export const pacientesApi = {
   list: (params: ListPacientesParams = {}) =>
@@ -296,6 +296,10 @@ export const checklistDocumentosApi = {
     api.patch<ChecklistDocumentoItem>(`/checklist-documentos/${id}`, payload).then((r) => r.data),
   remove: (id: string) =>
     api.delete<{ ok: true }>(`/checklist-documentos/${id}`).then((r) => r.data),
+  criarPadrao: (pacienteId: string) =>
+    api.post<ChecklistDocumentoItem[]>('/checklist-documentos/padrao', { pacienteId }).then((r) => r.data),
+  resumoPendentes: () =>
+    api.get<{ pendentes: number }>('/checklist-documentos/resumo-pendentes').then((r) => r.data),
 };
 
 // ---------- Entregas ----------

@@ -11,4 +11,5 @@ export interface ChecklistDocumentoRepository {
   listByPaciente(clinicaId: string, pacienteId: string): Promise<ChecklistDocumentoItem[]>;
   update(clinicaId: string, id: string, input: UpdateChecklistDocumentoInput): Promise<ChecklistDocumentoItem | null>;
   delete(clinicaId: string, id: string): Promise<boolean>;
+  countPendentesPorClinica(clinicaId: string): Promise<number>;
 }

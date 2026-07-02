@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { ChecklistDocumentoItem } from '../../domain/checklist-documento.entity';
+import { ChecklistDocumentoItem, StatusChecklistDocumento } from '../../domain/checklist-documento.entity';
 import {
   ChecklistDocumentoRepository,
   UpdateChecklistDocumentoInput,
@@ -45,6 +45,10 @@ export class ChecklistDocumentoMongoRepository implements ChecklistDocumentoRepo
   async delete(clinicaId: string, id: string): Promise<boolean> {
     const r = await this.model.deleteOne({ _id: id, clinicaId });
     return r.deletedCount > 0;
+  }
+
+  countPendentesPorClinica(clinicaId: string): Promise<number> {
+    return this.model.countDocuments({ clinicaId, status: StatusChecklistDocumento.PENDENTE });
   }
 
   private toEntity(doc: Record<string, unknown>): ChecklistDocumentoItem {

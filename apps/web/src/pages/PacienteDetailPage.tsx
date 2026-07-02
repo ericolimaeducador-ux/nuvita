@@ -268,10 +268,10 @@ export function PacienteDetailPage() {
         )}
       </Secao>
 
-      {/* Avaliações de IU (VaPro) */}
+      {/* Avaliações de incontinência urinária */}
       <Secao
         icon={<ClipboardList className="h-4 w-4" />}
-        titulo="Avaliações de incontinência (VaPro)"
+        titulo="Avaliações de incontinência urinária"
         contagem={avaliacoesQ.data?.length}
         defaultOpen={false}
         acao={
@@ -483,6 +483,12 @@ function ChecklistDocumentosSecao({ pacienteId }: { pacienteId: string }) {
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
+  const criarPadraoMut = useMutation({
+    mutationFn: () => checklistDocumentosApi.criarPadrao(pacienteId),
+    onSuccess: () => void invalidate(),
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
   const toggleMut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: StatusChecklistDocumento }) =>
       checklistDocumentosApi.update(id, { status }),
@@ -516,16 +522,25 @@ function ChecklistDocumentosSecao({ pacienteId }: { pacienteId: string }) {
           >
             <Plus className="h-4 w-4" />
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0"
+            disabled={criarPadraoMut.isPending}
+            onClick={() => criarPadraoMut.mutate()}
+          >
+            {criarPadraoMut.isPending ? 'Criando…' : 'Usar lista padrão'}
+          </Button>
         </div>
 
         {listQ.isLoading ? (
           <Skeleton className="h-16 w-full" />
         ) : itens.length === 0 ? (
-          <Vazio>Nenhum documento no checklist.</Vazio>
+          <Vazio>Nenhum documento no checklist. Use "Usar lista padrão" ou adicione manualmente.</Vazio>
         ) : (
           <div className="space-y-1.5">
             {pendentes > 0 && (
-              <p className="text-xs text-muted-foreground">{pendentes} pendente{pendentes !== 1 ? 's' : ''}</p>
+              <p className="text-xs font-medium text-amber-500">⚠ {pendentes} documento{pendentes !== 1 ? 's' : ''} pendente{pendentes !== 1 ? 's' : ''}</p>
             )}
             {itens.map((item) => (
               <div key={item.id} className="flex items-center gap-3 glass rounded-lg p-2.5">

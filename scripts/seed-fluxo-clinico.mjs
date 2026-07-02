@@ -1,14 +1,14 @@
 /**
- * Seed completo do fluxo VaPro/Nuvita
+ * Seed completo do fluxo clínico da Nuvita
  * Cria: clínica (bootstrap) → usuários → pacientes → agendamentos
  *       → avaliações IU → follow-ups → laudos → processos → entregas
  *
  * Uso:
  *   1) Tenha o servidor rodando: npm run dev (na raiz do monorepo)
- *   2) node scripts/seed-vapro.mjs
+ *   2) node scripts/seed-fluxo-clinico.mjs
  *
  * Se a clínica ainda não existir, o script imprime o comando bootstrap e para.
- * Para re-rodar em banco limpo, passe: RESET=1 node scripts/seed-vapro.mjs
+ * Para re-rodar em banco limpo, passe: RESET=1 node scripts/seed-fluxo-clinico.mjs
  */
 
 import { createHmac } from 'crypto';
@@ -131,7 +131,7 @@ async function login(email, password, totpSecret) {
 
 // ─── MAIN ──────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log('🌱 Nuvita VaPro — Seed de dados demo\n');
+  console.log('🌱 Nuvita — Seed de dados demo do fluxo clínico\n');
 
   // 1) Login admin
   const adminAuth = await login(ADMIN_EMAIL, ADMIN_PASS, DEV_TOTP_SECRET);
@@ -194,18 +194,18 @@ async function main() {
 
   // 3) Criar pacientes
   const dadosPacientes = [
-    // VaPro — cadeirantes, IU por retenção
-    { nome: 'Maria Aparecida dos Santos',  sexo: 'FEMININO',  nasc: '1972-03-15', tel: '(11) 98001-1001', vapro: true,  perfil: 'cadeirante', diag: 'Bexiga Neurogênica pós-lesão medular T6' },
-    { nome: 'José Carlos Pereira',         sexo: 'MASCULINO', nasc: '1965-08-22', tel: '(11) 98001-1002', vapro: true,  perfil: 'cadeirante', diag: 'Retenção urinária por lesão medular L2' },
-    { nome: 'Silvia Regina Almeida',       sexo: 'FEMININO',  nasc: '1980-11-08', tel: '(11) 98001-1003', vapro: true,  perfil: 'cadeirante', diag: 'IU por esclerose múltipla' },
-    { nome: 'Marcos Antonio Rodrigues',    sexo: 'MASCULINO', nasc: '1958-05-30', tel: '(11) 98001-1004', vapro: true,  perfil: 'cadeirante', diag: 'Retenção urinária crônica — paralisia cerebral' },
-    { nome: 'Claudia Beatriz Lima',        sexo: 'FEMININO',  nasc: '1990-01-17', tel: '(11) 98001-1005', vapro: true,  perfil: 'cadeirante', diag: 'Bexiga neurogênica — espinha bífida' },
-    { nome: 'Augusto Henrique Ferreira',   sexo: 'MASCULINO', nasc: '1975-09-04', tel: '(11) 98001-1006', vapro: true,  perfil: 'cadeirante', diag: 'Retenção urinária pós-AVC' },
-    { nome: 'Fernanda Costa Nascimento',   sexo: 'FEMININO',  nasc: '1988-06-20', tel: '(11) 98001-1007', vapro: true,  perfil: 'cadeirante', diag: 'IU neurogênica — Parkinson' },
-    // Pacientes regulares (sem VaPro)
-    { nome: 'Roberto Carvalho Mendes',     sexo: 'MASCULINO', nasc: '1985-12-01', tel: '(11) 98001-1008', vapro: false, perfil: 'ativo',      diag: 'IU de esforço' },
-    { nome: 'Ana Lucia Teixeira',          sexo: 'FEMININO',  nasc: '1993-04-25', tel: '(11) 98001-1009', vapro: false, perfil: 'ativo',      diag: 'Urgência urinária' },
-    { nome: 'Paulo Eduardo Barros',        sexo: 'MASCULINO', nasc: '1970-07-11', tel: '(11) 98001-1010', vapro: false, perfil: 'moderado',   diag: 'Incontinência mista' },
+    // Programa de acompanhamento de IU — cadeirantes, IU por retenção
+    { nome: 'Maria Aparecida dos Santos',  sexo: 'FEMININO',  nasc: '1972-03-15', tel: '(11) 98001-1001', elegivelIU: true,  perfil: 'cadeirante', diag: 'Bexiga Neurogênica pós-lesão medular T6' },
+    { nome: 'José Carlos Pereira',         sexo: 'MASCULINO', nasc: '1965-08-22', tel: '(11) 98001-1002', elegivelIU: true,  perfil: 'cadeirante', diag: 'Retenção urinária por lesão medular L2' },
+    { nome: 'Silvia Regina Almeida',       sexo: 'FEMININO',  nasc: '1980-11-08', tel: '(11) 98001-1003', elegivelIU: true,  perfil: 'cadeirante', diag: 'IU por esclerose múltipla' },
+    { nome: 'Marcos Antonio Rodrigues',    sexo: 'MASCULINO', nasc: '1958-05-30', tel: '(11) 98001-1004', elegivelIU: true,  perfil: 'cadeirante', diag: 'Retenção urinária crônica — paralisia cerebral' },
+    { nome: 'Claudia Beatriz Lima',        sexo: 'FEMININO',  nasc: '1990-01-17', tel: '(11) 98001-1005', elegivelIU: true,  perfil: 'cadeirante', diag: 'Bexiga neurogênica — espinha bífida' },
+    { nome: 'Augusto Henrique Ferreira',   sexo: 'MASCULINO', nasc: '1975-09-04', tel: '(11) 98001-1006', elegivelIU: true,  perfil: 'cadeirante', diag: 'Retenção urinária pós-AVC' },
+    { nome: 'Fernanda Costa Nascimento',   sexo: 'FEMININO',  nasc: '1988-06-20', tel: '(11) 98001-1007', elegivelIU: true,  perfil: 'cadeirante', diag: 'IU neurogênica — Parkinson' },
+    // Pacientes regulares (fora do programa de acompanhamento)
+    { nome: 'Roberto Carvalho Mendes',     sexo: 'MASCULINO', nasc: '1985-12-01', tel: '(11) 98001-1008', elegivelIU: false, perfil: 'ativo',      diag: 'IU de esforço' },
+    { nome: 'Ana Lucia Teixeira',          sexo: 'FEMININO',  nasc: '1993-04-25', tel: '(11) 98001-1009', elegivelIU: false, perfil: 'ativo',      diag: 'Urgência urinária' },
+    { nome: 'Paulo Eduardo Barros',        sexo: 'MASCULINO', nasc: '1970-07-11', tel: '(11) 98001-1010', elegivelIU: false, perfil: 'moderado',   diag: 'Incontinência mista' },
   ];
 
   const pacienteIds = [];
@@ -218,11 +218,11 @@ async function main() {
       sexo: p.sexo,
       telefone: p.tel,
       email: (() => { const parts = p.nome.toLowerCase().split(' '); return `${parts[0]}.${parts[parts.length - 1]}@nuvita.demo`; })(),
-      programaVaPro: p.vapro,
+      programaIU: p.elegivelIU,
       consentimentoLGPD: { aceito: true, dataAceite: new Date().toISOString(), versao: '1.0' },
     });
     pacienteIds.push({ id: data.id, ...p });
-    console.log(`  ✓ Paciente: ${p.nome} ${p.vapro ? '[VaPro]' : ''}`);
+    console.log(`  ✓ Paciente: ${p.nome} ${p.elegivelIU ? '[IU]' : ''}`);
   }
   console.log(`✓ ${pacienteIds.length} pacientes criados`);
 
@@ -239,20 +239,20 @@ async function main() {
   for (let i = 0; i < Math.min(pacienteIds.length, slots.length); i++) {
     const slot = slots[i];
     const pac = pacienteIds[i];
-    const isVapro = pac.vapro;
+    const isElegivelIU = pac.elegivelIU;
     const inicio = iso(slot.dia, slot.hora);
     const fim = maisMin(inicio, 30);
     const { data } = await req('POST', '/agendamentos', {
       clinicaId,
       pacienteId: pac.id,
-      medicoId: isVapro ? enfermeiroId : medicoId,
-      modalidade: isVapro ? 'enfermagem' : 'medico',
+      medicoId: isElegivelIU ? enfermeiroId : medicoId,
+      modalidade: isElegivelIU ? 'enfermagem' : 'medico',
       dataHoraInicio: inicio,
       dataHoraFim: fim,
-      tipo: isVapro ? 'atendimento_enfermagem' : 'consulta',
-      observacoes: isVapro ? `Avaliação IU — ${pac.diag}` : 'Consulta de rotina',
+      tipo: isElegivelIU ? 'atendimento_enfermagem' : 'consulta',
+      observacoes: isElegivelIU ? `Avaliação IU — ${pac.diag}` : 'Consulta de rotina',
     });
-    agendamentos.push({ id: data.id, pacienteId: pac.id, vapro: isVapro });
+    agendamentos.push({ id: data.id, pacienteId: pac.id, elegivelIU: isElegivelIU });
   }
   console.log(`✓ ${agendamentos.length} agendamentos criados`);
 
@@ -260,7 +260,7 @@ async function main() {
   token = equipe['ENFERMEIRO']?.token;
   if (!token) { console.log('⚠ Token de enfermeiro não disponível, pulando avaliações'); }
 
-  const vaproIds = pacienteIds.filter(p => p.vapro);
+  const elegiveisIds = pacienteIds.filter(p => p.elegivelIU);
   const avaliacaoIds = [];
 
   const produtosFeminino = [
@@ -274,8 +274,8 @@ async function main() {
     { codigo: 72124, sexo: 'masculino', french: 12 },
   ];
 
-  for (let i = 0; i < vaproIds.length; i++) {
-    const pac = vaproIds[i];
+  for (let i = 0; i < elegiveisIds.length; i++) {
+    const pac = elegiveisIds[i];
     const isFem = pac.sexo === 'FEMININO';
     const produtos = isFem ? produtosFeminino : produtosMasculino;
     const produto = produtos[i % produtos.length];
@@ -441,7 +441,7 @@ async function main() {
   console.log('\n' + '─'.repeat(56));
   console.log('✅ SEED CONCLUÍDO\n');
   console.log(`  Clínica ID  : ${clinicaId}`);
-  console.log(`  Pacientes   : ${pacienteIds.length} (${vaproIds.length} VaPro + ${pacienteIds.length - vaproIds.length} regulares)`);
+  console.log(`  Pacientes   : ${pacienteIds.length} (${elegiveisIds.length} em acompanhamento IU + ${pacienteIds.length - elegiveisIds.length} regulares)`);
   console.log(`  Agendamentos: ${agendamentos.length}`);
   console.log(`  Avaliações  : ${avaliacaoIds.length}`);
   console.log(`  Follow-ups  : ${followupIds.length} (${elegiveis.length} elegíveis)`);

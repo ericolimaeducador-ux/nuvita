@@ -1,11 +1,12 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
+import { AuthTokenPayload, DOCUMENTOS_PADRAO } from '../../../../../../packages/shared/src';
 import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
 import { CHECKLIST_DOCUMENTO_REPOSITORY } from '../checklist-documentos.constants';
 import { ChecklistDocumentoItem, StatusChecklistDocumento } from '../domain/checklist-documento.entity';
 import { ChecklistDocumentoRepository } from './ports/checklist-documento.repository';
 import { CreateChecklistDocumentoDto } from './dto/create-checklist-documento.dto';
 import { UpdateChecklistDocumentoDto } from './dto/update-checklist-documento.dto';
+import { CriarChecklistPadraoDto } from './dto/criar-checklist-padrao.dto';
 
 @Injectable()
 export class ChecklistDocumentosService {
@@ -48,5 +49,32 @@ export class ChecklistDocumentosService {
     const deleted = await this.repo.delete(resolveTenantClinicaId(user, clinicaId), id);
     if (!deleted) throw new NotFoundException('Item do checklist não encontrado.');
     return { ok: true };
+  }
+
+  /** Cria de uma vez os itens da lista padrão que o paciente ainda não tem (por nome). */
+  async criarPadrao(dto: CriarChecklistPadraoDto, user: AuthTokenPayload): Promise<ChecklistDocumentoItem[]> {
+    const clinicaId = resolveTenantClinicaId(user, dto.clinicaId);
+    const existentes = await this.repo.listByPaciente(clinicaId, dto.pacienteId);
+    const nomesExistentes = new Set(existentes.map((i) => i.nome.trim().toLowerCase()));
+    const faltantes = DOCUMENTOS_PADRAO.filter((nome) => !nomesExistentes.has(nome.trim().toLowerCase()));
+
+    const criados = await Promise.all(
+      faltantes.map((nome) =>
+        this.repo.create({
+          clinicaId,
+          pacienteId: dto.pacienteId,
+          nome,
+          status: StatusChecklistDocumento.PENDENTE,
+          criadoPor: user.sub,
+        }),
+      ),
+    );
+    return [...criados, ...existentes];
+  }
+
+  resumoPendentes(clinicaId: string | undefined, user: AuthTokenPayload): Promise<{ pendentes: number }> {
+    return this.repo
+      .countPendentesPorClinica(resolveTenantClinicaId(user, clinicaId))
+      .then((pendentes) => ({ pendentes }));
   }
 }

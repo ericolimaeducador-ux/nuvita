@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { PenLine } from 'lucide-react';
+import { PenLine, Scale } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +21,33 @@ import {
   LocalAtendimento, LOCAL_LABEL, PerfilCliente, PERFIL_LABEL, Destreza, DESTREZA_LABEL,
   TipoIU, TIPO_IU_LABEL, EncaminhamentoIU, ENCAMINHAMENTO_LABEL,
   type Prontuario, type FichaVaPro,
+  type ProntuarioSubjetivo, type ProntuarioObjetivo, type ExameSegmentar, type SinaisVitais,
+  type ProntuarioAvaliacao, type ProntuarioPlano,
+  type RelatorioJudicial, type NaturezaAtendimento, type TipoSolicitacaoJudicial,
 } from '@/types';
+
+const NATUREZA_LABEL: Record<NaturezaAtendimento, string> = {
+  sus: 'Saúde Pública (SUS)',
+  suplementar: 'Saúde Suplementar',
+  particular: 'Particular',
+};
+
+const TIPO_SOLICITACAO_LABEL: Record<TipoSolicitacaoJudicial, string> = {
+  medicamento: 'Medicamento',
+  produto: 'Produto / Insumo',
+  procedimento: 'Procedimento',
+};
+
+const EXAME_SEGMENTAR_CAMPOS: { key: keyof ExameSegmentar; label: string }[] = [
+  { key: 'cabecaPescoco', label: 'Cabeça e pescoço' },
+  { key: 'cardiovascular', label: 'Cardiovascular' },
+  { key: 'respiratorio', label: 'Respiratório' },
+  { key: 'abdome', label: 'Abdome' },
+  { key: 'geniturinario', label: 'Geniturinário' },
+  { key: 'neurologico', label: 'Neurológico' },
+  { key: 'extremidades', label: 'Extremidades' },
+  { key: 'pele', label: 'Pele e mucosas' },
+];
 
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -32,6 +58,13 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+/** Só renderiza o Campo se houver valor — evita poluir a visualização. */
+function CampoSe({ label, children }: { label: string; children?: React.ReactNode }) {
+  if (children === undefined || children === null || children === '' ||
+      (Array.isArray(children) && children.length === 0)) return null;
+  return <Campo label={label}>{children}</Campo>;
+}
+
 function SecaoSOAP({ letra, titulo, children }: { letra: string; titulo: string; children: React.ReactNode }) {
   return (
     <div className="glass rounded-xl p-4">
@@ -39,6 +72,10 @@ function SecaoSOAP({ letra, titulo, children }: { letra: string; titulo: string;
       <div className="space-y-3">{children}</div>
     </div>
   );
+}
+
+function simNao(v?: boolean): string {
+  return v === undefined ? '' : v ? 'Sim' : 'Não';
 }
 
 /** Visualização (somente leitura) de um prontuário SOAP, com ação de assinar rascunho. */
@@ -78,8 +115,11 @@ export function ProntuarioDetailDialog({
         sv.saturacaoO2 && `SatO₂ ${sv.saturacaoO2}%`,
         sv.peso && `Peso ${sv.peso} kg`,
         sv.altura && `Altura ${sv.altura} cm`,
+        sv.escalaDor !== undefined && `Dor ${sv.escalaDor}/10`,
       ].filter(Boolean).join('  ·  ')
     : '';
+  const seg = pr?.objetivo?.exameSegmentar;
+  const rj = pr?.relatorioJudicial;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -105,26 +145,89 @@ export function ProntuarioDetailDialog({
               )}
             </div>
 
-            <SecaoSOAP letra="S" titulo="Subjetivo">
+            <SecaoSOAP letra="S" titulo="Subjetivo / Anamnese">
               <Campo label="Queixa principal">{pr.subjetivo?.queixaPrincipal}</Campo>
-              <Campo label="História da doença atual">{pr.subjetivo?.hda}</Campo>
+              <CampoSe label="História da doença atual">{pr.subjetivo?.hda}</CampoSe>
+              <CampoSe label="Antecedentes pessoais">{pr.subjetivo?.antecedentesPessoais}</CampoSe>
+              <CampoSe label="Antecedentes cirúrgicos">{pr.subjetivo?.antecedentesCirurgicos}</CampoSe>
+              <CampoSe label="Medicamentos em uso">{pr.subjetivo?.medicamentosEmUso}</CampoSe>
+              <CampoSe label="Alergias">{pr.subjetivo?.alergias}</CampoSe>
+              <CampoSe label="História familiar">{pr.subjetivo?.historiaFamiliar}</CampoSe>
+              <CampoSe label="História social">{pr.subjetivo?.historiaSocial}</CampoSe>
+              <CampoSe label="Revisão de sistemas">{pr.subjetivo?.revisaoSistemas}</CampoSe>
             </SecaoSOAP>
 
-            <SecaoSOAP letra="O" titulo="Objetivo">
-              <Campo label="Exame físico">{pr.objetivo?.exameFisico}</Campo>
-              <Campo label="Sinais vitais">{sinais}</Campo>
+            <SecaoSOAP letra="O" titulo="Objetivo / Exame físico">
+              <CampoSe label="Estado geral">{pr.objetivo?.estadoGeral}</CampoSe>
+              <CampoSe label="Sinais vitais">{sinais}</CampoSe>
+              {seg && Object.values(seg).some(Boolean) && (
+                <div className="grid grid-cols-2 gap-3">
+                  {EXAME_SEGMENTAR_CAMPOS.map(({ key, label }) => (
+                    <CampoSe key={key} label={label}>{seg[key]}</CampoSe>
+                  ))}
+                </div>
+              )}
+              <CampoSe label="Outros achados">{pr.objetivo?.exameFisico}</CampoSe>
             </SecaoSOAP>
 
             <SecaoSOAP letra="A" titulo="Avaliação">
-              <Campo label="Hipóteses diagnósticas">{pr.avaliacao?.hipotesesDiagnosticas?.join(', ')}</Campo>
-              <Campo label="CID-10">{pr.avaliacao?.cid10?.join(', ')}</Campo>
+              <CampoSe label="Hipóteses diagnósticas">{pr.avaliacao?.hipotesesDiagnosticas?.join(', ')}</CampoSe>
+              <CampoSe label="CID-10">{pr.avaliacao?.cid10?.join(', ')}</CampoSe>
+              <CampoSe label="Diagnóstico definitivo">{pr.avaliacao?.diagnosticoDefinitivo}</CampoSe>
+              <CampoSe label="Evolução">{pr.avaliacao?.evolucao}</CampoSe>
             </SecaoSOAP>
 
             <SecaoSOAP letra="P" titulo="Plano">
-              <Campo label="Conduta">{pr.plano?.conduta}</Campo>
-              <Campo label="Prescrição">{pr.plano?.prescricao}</Campo>
-              <Campo label="Exames solicitados">{pr.plano?.examesSolicitados?.join(', ')}</Campo>
+              <CampoSe label="Conduta">{pr.plano?.conduta}</CampoSe>
+              <CampoSe label="Prescrição">{pr.plano?.prescricao}</CampoSe>
+              <CampoSe label="Exames solicitados">{pr.plano?.examesSolicitados?.join(', ')}</CampoSe>
+              <CampoSe label="Orientações">{pr.plano?.orientacoes}</CampoSe>
+              <CampoSe label="Encaminhamentos">{pr.plano?.encaminhamentos}</CampoSe>
+              <CampoSe label="Retorno">{pr.plano?.retorno}</CampoSe>
             </SecaoSOAP>
+
+            {rj && (
+              <div className="glass rounded-xl p-4 border border-amber-500/20">
+                <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Scale className="h-3.5 w-3.5" /> Judicialização — NAT-JUS
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <CampoSe label="Município/Estado">{rj.municipioEstado}</CampoSe>
+                  <CampoSe label="Natureza do atendimento">{rj.naturezaAtendimento && NATUREZA_LABEL[rj.naturezaAtendimento]}</CampoSe>
+                  <CampoSe label="Data de emissão">{rj.dataEmissao && dayjs(rj.dataEmissao).format('DD/MM/YYYY')}</CampoSe>
+                  <CampoSe label="Tipo de solicitação">{rj.tipoSolicitacao && TIPO_SOLICITACAO_LABEL[rj.tipoSolicitacao]}</CampoSe>
+                </div>
+                <div className="mt-3 space-y-3">
+                  <CampoSe label="Enfermidade / CID">{rj.enfermidadeCid}</CampoSe>
+                  <CampoSe label="Histórico da doença">{rj.historicoDoenca}</CampoSe>
+                  <CampoSe label="Tratamentos realizados / resultado">{rj.tratamentosRealizados}</CampoSe>
+                  {rj.produto && (
+                    <CampoSe label="Produto solicitado">
+                      {[rj.produto.descricao,
+                        rj.produto.calibreFrench && `calibre ${rj.produto.calibreFrench} Fr`,
+                        rj.produto.comprimentoCm && `${rj.produto.comprimentoCm} cm`,
+                        rj.produto.quantidadePorDia && `${rj.produto.quantidadePorDia}/dia`,
+                        rj.produto.quantidadePorMes && `${rj.produto.quantidadePorMes}/mês`,
+                        rj.produto.usoContinuo && 'uso contínuo',
+                      ].filter(Boolean).join(' · ')}
+                    </CampoSe>
+                  )}
+                  {rj.medicamento && (
+                    <CampoSe label="Medicamento solicitado">
+                      {[rj.medicamento.principioAtivo, rj.medicamento.formaFarmaceuticaApresentacao,
+                        rj.medicamento.dose, rj.medicamento.posologia, rj.medicamento.viaAdministracao,
+                        rj.medicamento.duracaoTratamento].filter(Boolean).join(' · ')}
+                    </CampoSe>
+                  )}
+                  <CampoSe label="Procedimento">{rj.procedimentoDescricao}</CampoSe>
+                  <CampoSe label="Urgente">{rj.urgente !== undefined && `${simNao(rj.urgente)}${rj.justificativaUrgencia ? ` — ${rj.justificativaUrgencia}` : ''}`}</CampoSe>
+                  <CampoSe label="Imprescindível">{rj.imprescindivel !== undefined && `${simNao(rj.imprescindivel)}${rj.justificativaImprescindivel ? ` — ${rj.justificativaImprescindivel}` : ''}`}</CampoSe>
+                  <CampoSe label="Benefícios esperados">{rj.beneficiosEsperados}</CampoSe>
+                  <CampoSe label="Consequências da não utilização">{rj.consequenciasNaoUso}</CampoSe>
+                  <CampoSe label="Prescritor">{rj.prescritor && [rj.prescritor.nome, rj.prescritor.registro, rj.prescritor.especialidade].filter(Boolean).join(' · ')}</CampoSe>
+                </div>
+              </div>
+            )}
 
             {pr.fichaVaPro && (
               <div className="glass rounded-xl p-4 border border-primary/20">
@@ -137,14 +240,14 @@ export function ProntuarioDetailDialog({
                   <Campo label="Motivo da IU">{pr.fichaVaPro.motivoIU}</Campo>
                   <Campo label="Perfil do cliente">{pr.fichaVaPro.perfilCliente ? PERFIL_LABEL[pr.fichaVaPro.perfilCliente as PerfilCliente] : ''}</Campo>
                   <Campo label="Destreza">{pr.fichaVaPro.destreza ? DESTREZA_LABEL[pr.fichaVaPro.destreza as Destreza] : ''}</Campo>
-                  <Campo label="DNTUI">{pr.fichaVaPro.dntui === undefined ? '' : pr.fichaVaPro.dntui ? 'Sim' : 'Não'}</Campo>
+                  <Campo label="DNTUI">{simNao(pr.fichaVaPro.dntui)}</Campo>
                   <Campo label="Tipos de IU">{(pr.fichaVaPro.tiposIU ?? []).map((t) => TIPO_IU_LABEL[t as TipoIU] ?? t).join(', ')}</Campo>
-                  <Campo label="Micção espontânea">{pr.fichaVaPro.miccaoEspontanea === undefined ? '' : pr.fichaVaPro.miccaoEspontanea ? 'Sim' : 'Não'}</Campo>
-                  <Campo label="Realiza cateterismo">{pr.fichaVaPro.realizaCateterismo === undefined ? '' : pr.fichaVaPro.realizaCateterismo ? 'Sim' : 'Não'}</Campo>
+                  <Campo label="Micção espontânea">{simNao(pr.fichaVaPro.miccaoEspontanea)}</Campo>
+                  <Campo label="Realiza cateterismo">{simNao(pr.fichaVaPro.realizaCateterismo)}</Campo>
                   <Campo label="Cateterismos/dia">{pr.fichaVaPro.cateterismosDia}</Campo>
                   <Campo label="Cateter utilizado">{pr.fichaVaPro.cateterUtilizado}</Campo>
                   <Campo label="Última ITU">{pr.fichaVaPro.ultimaInfeccaoUrinaria}</Campo>
-                  <Campo label="Em tratamento">{pr.fichaVaPro.emTratamento === undefined ? '' : pr.fichaVaPro.emTratamento ? 'Sim' : 'Não'}</Campo>
+                  <Campo label="Em tratamento">{simNao(pr.fichaVaPro.emTratamento)}</Campo>
                   <Campo label="Tratamento">{pr.fichaVaPro.tratamento}</Campo>
                   <Campo label="Volume drenado">{pr.fichaVaPro.volumeDrenado}</Campo>
                   <Campo label="Cateter VaPro indicado">{pr.fichaVaPro.cateterVaProIndicado ? `${pr.fichaVaPro.cateterVaProIndicado.sexo ?? ''} ${pr.fichaVaPro.cateterVaProIndicado.french ?? ''}Fr`.trim() : ''}</Campo>
@@ -173,6 +276,19 @@ export function ProntuarioDetailDialog({
   );
 }
 
+// ---- Formulário de novo atendimento ---------------------------------------
+
+function TextField({ label, value, onChange, rows = 2, placeholder }: {
+  label: string; value?: string; onChange: (v: string) => void; rows?: number; placeholder?: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <Textarea rows={rows} value={value ?? ''} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+    </div>
+  );
+}
+
 /** Abre um novo atendimento (ficha SOAP em branco) já vinculado a um paciente. */
 export function NovoAtendimentoDialog({
   pacienteId,
@@ -191,19 +307,19 @@ export function NovoAtendimentoDialog({
   const { user } = useAuth();
   const [data, setData] = useState(dayjs().format('YYYY-MM-DDTHH:mm'));
   const [tipo, setTipo] = useState<TipoAtendimento>(TipoAtendimento.CONSULTA);
-  const [queixa, setQueixa] = useState('');
-  const [historia, setHistoria] = useState('');
-  const [exame, setExame] = useState('');
-  const [pa, setPa] = useState('');
-  const [fc, setFc] = useState('');
-  const [temp, setTemp] = useState('');
-  const [sat, setSat] = useState('');
-  const [avaliacao, setAvaliacao] = useState('');
+
+  const [subjetivo, setSubjetivo] = useState<ProntuarioSubjetivo>({});
+  const [sinais, setSinais] = useState<SinaisVitais>({});
+  const [estadoGeral, setEstadoGeral] = useState('');
+  const [seg, setSeg] = useState<ExameSegmentar>({});
+  const [exameOutros, setExameOutros] = useState('');
+  const [avaliacao, setAvaliacao] = useState<ProntuarioAvaliacao>({});
+  const [plano, setPlano] = useState<ProntuarioPlano>({});
+
   const [cidSearch, setCidSearch] = useState('');
-  const [cidSelected, setCidSelected] = useState('');
+  const [cidSelected, setCidSelected] = useState<string[]>([]);
   const [cidOpts, setCidOpts] = useState<{ value: string; label: string }[]>([]);
-  const [prescricao, setPrescricao] = useState('');
-  const [conduta, setConduta] = useState('');
+
   // Ficha VaPro / Hollister (questionário de IU amarrado ao prontuário)
   const [incluirFicha, setIncluirFicha] = useState(vaProDefault);
   const [ficha, setFicha] = useState<FichaVaPro>({});
@@ -214,11 +330,25 @@ export function NovoAtendimentoDialog({
       return { ...f, tiposIU: cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t] };
     });
 
+  // Judicialização / NAT-JUS
+  const [incluirJudicial, setIncluirJudicial] = useState(false);
+  const [judicial, setJudicial] = useState<RelatorioJudicial>({});
+  const setJ = (patch: Partial<RelatorioJudicial>) => setJudicial((j) => ({ ...j, ...patch }));
+
+  const setS = (patch: Partial<ProntuarioSubjetivo>) => setSubjetivo((s) => ({ ...s, ...patch }));
+  const setSV = (patch: Partial<SinaisVitais>) => setSinais((s) => ({ ...s, ...patch }));
+  const setSeg2 = (patch: Partial<ExameSegmentar>) => setSeg((s) => ({ ...s, ...patch }));
+  const setA = (patch: Partial<ProntuarioAvaliacao>) => setAvaliacao((a) => ({ ...a, ...patch }));
+  const setP = (patch: Partial<ProntuarioPlano>) => setPlano((p) => ({ ...p, ...patch }));
+  const num = (v: string): number | undefined => (v ? Number(v) : undefined);
+
   function reset() {
     setData(dayjs().format('YYYY-MM-DDTHH:mm')); setTipo(TipoAtendimento.CONSULTA);
-    setQueixa(''); setHistoria(''); setExame(''); setPa(''); setFc(''); setTemp(''); setSat('');
-    setAvaliacao(''); setCidSearch(''); setCidSelected(''); setCidOpts([]); setPrescricao(''); setConduta('');
+    setSubjetivo({}); setSinais({}); setEstadoGeral(''); setSeg({}); setExameOutros('');
+    setAvaliacao({}); setPlano({});
+    setCidSearch(''); setCidSelected([]); setCidOpts([]);
     setIncluirFicha(vaProDefault); setFicha({});
+    setIncluirJudicial(false); setJudicial({});
   }
 
   async function buscarCid(qstr: string) {
@@ -241,23 +371,39 @@ export function NovoAtendimentoDialog({
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
+  function clean<T extends object>(obj: T): T | undefined {
+    const entries = Object.entries(obj).filter(([, v]) =>
+      v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0));
+    return entries.length ? (Object.fromEntries(entries) as T) : undefined;
+  }
+
   function submit() {
-    if (!queixa) { toast.error('Informe ao menos a queixa principal.'); return; }
-    const sinaisVitais: Record<string, unknown> = {};
-    if (pa) sinaisVitais.pressaoArterial = pa;
-    if (fc) sinaisVitais.frequenciaCardiaca = Number(fc);
-    if (temp) sinaisVitais.temperatura = Number(temp);
-    if (sat) sinaisVitais.saturacaoO2 = Number(sat);
+    if (!subjetivo.queixaPrincipal) { toast.error('Informe ao menos a queixa principal.'); return; }
+    const objetivo: ProntuarioObjetivo = {
+      estadoGeral: estadoGeral || undefined,
+      sinaisVitais: clean(sinais),
+      exameSegmentar: clean(seg),
+      exameFisico: exameOutros || undefined,
+    };
     createMut.mutate({
       clinicaId: user?.clinicaId,
       pacienteId,
       dataAtendimento: dayjs(data).toISOString(),
       tipo,
-      subjetivo: { queixaPrincipal: queixa, hda: historia || undefined },
-      objetivo: { exameFisico: exame || undefined, sinaisVitais: Object.keys(sinaisVitais).length ? sinaisVitais : undefined },
-      avaliacao: { hipotesesDiagnosticas: avaliacao ? [avaliacao] : undefined, cid10: cidSelected ? [cidSelected] : undefined },
-      plano: { conduta: conduta || undefined, prescricao: prescricao || undefined },
-      fichaVaPro: incluirFicha && Object.keys(ficha).length ? ficha : undefined,
+      subjetivo: { ...subjetivo, queixaPrincipal: subjetivo.queixaPrincipal },
+      objetivo: clean(objetivo) ?? {},
+      avaliacao: { ...clean(avaliacao), cid10: cidSelected.length ? cidSelected : undefined } ,
+      plano: clean(plano) ?? {},
+      fichaVaPro: incluirFicha ? clean(ficha) : undefined,
+      relatorioJudicial: incluirJudicial
+        ? clean({
+            ...judicial,
+            produto: clean(judicial.produto ?? {}),
+            medicamento: clean(judicial.medicamento ?? {}),
+            prescritor: clean(judicial.prescritor ?? {}),
+            dataEmissao: judicial.dataEmissao || undefined,
+          })
+        : undefined,
     });
   }
 
@@ -285,62 +431,168 @@ export function NovoAtendimentoDialog({
           </div>
 
           <Separator />
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">S — Subjetivo</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">S — Subjetivo / Anamnese</p>
           <div className="space-y-2">
             <Label htmlFor="naQueixa">Queixa principal *</Label>
-            <Textarea id="naQueixa" rows={2} value={queixa} onChange={(e) => setQueixa(e.target.value)} />
+            <Textarea id="naQueixa" rows={2} value={subjetivo.queixaPrincipal ?? ''} onChange={(e) => setS({ queixaPrincipal: e.target.value })} />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="naHist">História da doença atual</Label>
-            <Textarea id="naHist" rows={2} value={historia} onChange={(e) => setHistoria(e.target.value)} />
+          <TextField label="História da doença atual (HDA)" value={subjetivo.hda} onChange={(v) => setS({ hda: v })} />
+          <div className="grid grid-cols-2 gap-3">
+            <TextField label="Antecedentes pessoais / comorbidades" value={subjetivo.antecedentesPessoais} onChange={(v) => setS({ antecedentesPessoais: v })} />
+            <TextField label="Antecedentes cirúrgicos" value={subjetivo.antecedentesCirurgicos} onChange={(v) => setS({ antecedentesCirurgicos: v })} />
+            <TextField label="Medicamentos em uso" value={subjetivo.medicamentosEmUso} onChange={(v) => setS({ medicamentosEmUso: v })} />
+            <TextField label="Alergias" value={subjetivo.alergias} onChange={(v) => setS({ alergias: v })} />
+            <TextField label="História familiar" value={subjetivo.historiaFamiliar} onChange={(v) => setS({ historiaFamiliar: v })} />
+            <TextField label="História social (tabagismo, etilismo, ocupação)" value={subjetivo.historiaSocial} onChange={(v) => setS({ historiaSocial: v })} />
           </div>
+          <TextField label="Revisão de sistemas" value={subjetivo.revisaoSistemas} onChange={(v) => setS({ revisaoSistemas: v })} />
 
           <Separator />
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">O — Objetivo</p>
-          <div className="space-y-2">
-            <Label htmlFor="naExame">Exame físico</Label>
-            <Textarea id="naExame" rows={2} value={exame} onChange={(e) => setExame(e.target.value)} />
-          </div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">O — Objetivo / Exame físico</p>
+          <TextField label="Estado geral" value={estadoGeral} onChange={setEstadoGeral} rows={2} placeholder="BEG, LOTE, hidratado, corado, afebril…" />
           <div className="grid grid-cols-4 gap-3">
-            <div className="space-y-2"><Label htmlFor="naPa">PA</Label><Input id="naPa" placeholder="120/80" value={pa} onChange={(e) => setPa(e.target.value)} /></div>
-            <div className="space-y-2"><Label htmlFor="naFc">FC (bpm)</Label><Input id="naFc" inputMode="numeric" value={fc} onChange={(e) => setFc(e.target.value)} /></div>
-            <div className="space-y-2"><Label htmlFor="naTemp">Tax (°C)</Label><Input id="naTemp" inputMode="decimal" value={temp} onChange={(e) => setTemp(e.target.value)} /></div>
-            <div className="space-y-2"><Label htmlFor="naSat">SatO₂ (%)</Label><Input id="naSat" inputMode="numeric" value={sat} onChange={(e) => setSat(e.target.value)} /></div>
+            <div className="space-y-2"><Label>PA</Label><Input placeholder="120/80" value={sinais.pressaoArterial ?? ''} onChange={(e) => setSV({ pressaoArterial: e.target.value })} /></div>
+            <div className="space-y-2"><Label>FC (bpm)</Label><Input inputMode="numeric" value={sinais.frequenciaCardiaca ?? ''} onChange={(e) => setSV({ frequenciaCardiaca: num(e.target.value) })} /></div>
+            <div className="space-y-2"><Label>FR (irpm)</Label><Input inputMode="numeric" value={sinais.frequenciaRespiratoria ?? ''} onChange={(e) => setSV({ frequenciaRespiratoria: num(e.target.value) })} /></div>
+            <div className="space-y-2"><Label>Tax (°C)</Label><Input inputMode="decimal" value={sinais.temperatura ?? ''} onChange={(e) => setSV({ temperatura: num(e.target.value) })} /></div>
+            <div className="space-y-2"><Label>SatO₂ (%)</Label><Input inputMode="numeric" value={sinais.saturacaoO2 ?? ''} onChange={(e) => setSV({ saturacaoO2: num(e.target.value) })} /></div>
+            <div className="space-y-2"><Label>Peso (kg)</Label><Input inputMode="decimal" value={sinais.peso ?? ''} onChange={(e) => setSV({ peso: num(e.target.value) })} /></div>
+            <div className="space-y-2"><Label>Altura (cm)</Label><Input inputMode="numeric" value={sinais.altura ?? ''} onChange={(e) => setSV({ altura: num(e.target.value) })} /></div>
+            <div className="space-y-2"><Label>Dor (0–10)</Label><Input inputMode="numeric" value={sinais.escalaDor ?? ''} onChange={(e) => setSV({ escalaDor: num(e.target.value) })} /></div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            {EXAME_SEGMENTAR_CAMPOS.map(({ key, label }) => (
+              <TextField key={key} label={label} value={seg[key]} onChange={(v) => setSeg2({ [key]: v })} />
+            ))}
+          </div>
+          <TextField label="Outros achados" value={exameOutros} onChange={setExameOutros} />
 
           <Separator />
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">A — Avaliação</p>
+          <TextField label="Hipótese diagnóstica" value={avaliacao.hipotesesDiagnosticas?.join('\n')} onChange={(v) => setA({ hipotesesDiagnosticas: v ? v.split('\n').map((s) => s.trim()).filter(Boolean) : undefined })} placeholder="Uma por linha" />
           <div className="space-y-2">
-            <Label htmlFor="naAval">Hipótese diagnóstica</Label>
-            <Textarea id="naAval" rows={2} value={avaliacao} onChange={(e) => setAvaliacao(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="naCid">CID-10</Label>
-            <Input id="naCid" placeholder="Digite para buscar (ex.: J11)" value={cidSearch} onChange={(e) => buscarCid(e.target.value)} />
+            <Label htmlFor="naCid">CID-10 {cidSelected.length > 0 && <span className="text-primary">({cidSelected.join(', ')})</span>}</Label>
+            <Input id="naCid" placeholder="Digite para buscar (ex.: N31)" value={cidSearch} onChange={(e) => buscarCid(e.target.value)} />
             {cidOpts.length > 0 && (
               <div className="glass rounded-lg p-1 space-y-0.5 max-h-40 overflow-y-auto">
                 {cidOpts.map((o) => (
                   <button key={o.value} type="button"
                     className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-white/5 text-foreground"
-                    onClick={() => { setCidSelected(o.value); setCidSearch(o.label); setCidOpts([]); }}>
+                    onClick={() => { setCidSelected((cur) => cur.includes(o.value) ? cur : [...cur, o.value]); setCidSearch(''); setCidOpts([]); }}>
                     {o.label}
                   </button>
                 ))}
               </div>
             )}
+            {cidSelected.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {cidSelected.map((c) => (
+                  <Badge key={c} variant="secondary" className="cursor-pointer" onClick={() => setCidSelected((cur) => cur.filter((x) => x !== c))}>
+                    {c} ✕
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
+          <TextField label="Diagnóstico definitivo" value={avaliacao.diagnosticoDefinitivo} onChange={(v) => setA({ diagnosticoDefinitivo: v })} />
+          <TextField label="Evolução" value={avaliacao.evolucao} onChange={(v) => setA({ evolucao: v })} />
 
           <Separator />
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">P — Plano</p>
-          <div className="space-y-2">
-            <Label htmlFor="naPresc">Prescrição</Label>
-            <Textarea id="naPresc" rows={2} value={prescricao} onChange={(e) => setPrescricao(e.target.value)} />
+          <TextField label="Conduta" value={plano.conduta} onChange={(v) => setP({ conduta: v })} />
+          <TextField label="Prescrição" value={plano.prescricao} onChange={(v) => setP({ prescricao: v })} />
+          <TextField label="Exames solicitados" value={plano.examesSolicitados?.join('\n')} onChange={(v) => setP({ examesSolicitados: v ? v.split('\n').map((s) => s.trim()).filter(Boolean) : undefined })} placeholder="Um por linha" />
+          <div className="grid grid-cols-2 gap-3">
+            <TextField label="Orientações" value={plano.orientacoes} onChange={(v) => setP({ orientacoes: v })} />
+            <TextField label="Encaminhamentos" value={plano.encaminhamentos} onChange={(v) => setP({ encaminhamentos: v })} />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="naCond">Conduta</Label>
-            <Textarea id="naCond" rows={2} value={conduta} onChange={(e) => setConduta(e.target.value)} />
-          </div>
+          <div className="space-y-2"><Label>Retorno</Label><Input value={plano.retorno ?? ''} placeholder="Ex.: 30 dias / conforme necessidade" onChange={(e) => setP({ retorno: e.target.value })} /></div>
 
+          {/* --- Judicialização / NAT-JUS --- */}
+          <Separator />
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Checkbox checked={incluirJudicial} onCheckedChange={(c) => setIncluirJudicial(!!c)} />
+            <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+              <Scale className="h-3.5 w-3.5" /> Judicialização — Relatório NAT-JUS
+            </span>
+          </label>
+
+          {incluirJudicial && (
+            <div className="space-y-4 glass rounded-xl p-4 border border-amber-500/20">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2"><Label>Município/Estado</Label><Input value={judicial.municipioEstado ?? ''} placeholder="São Paulo/SP" onChange={(e) => setJ({ municipioEstado: e.target.value })} /></div>
+                <div className="space-y-2">
+                  <Label>Natureza do atendimento</Label>
+                  <Select value={judicial.naturezaAtendimento ?? undefined} onValueChange={(v) => setJ({ naturezaAtendimento: v as NaturezaAtendimento })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>{(Object.keys(NATUREZA_LABEL) as NaturezaAtendimento[]).map((n) => <SelectItem key={n} value={n}>{NATUREZA_LABEL[n]}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2"><Label>Data de emissão</Label><Input type="date" value={judicial.dataEmissao ? dayjs(judicial.dataEmissao).format('YYYY-MM-DD') : ''} onChange={(e) => setJ({ dataEmissao: e.target.value ? dayjs(e.target.value).toISOString() : undefined })} /></div>
+              </div>
+              <TextField label="Enfermidade / CID (principal e causa de base)" value={judicial.enfermidadeCid} onChange={(v) => setJ({ enfermidadeCid: v })} />
+              <TextField label="Histórico da doença" value={judicial.historicoDoenca} onChange={(v) => setJ({ historicoDoenca: v })} rows={3} />
+              <TextField label="Tratamentos já realizados / resultado" value={judicial.tratamentosRealizados} onChange={(v) => setJ({ tratamentosRealizados: v })} rows={3} />
+
+              <div className="space-y-2">
+                <Label>Tipo de solicitação</Label>
+                <Select value={judicial.tipoSolicitacao ?? undefined} onValueChange={(v) => setJ({ tipoSolicitacao: v as TipoSolicitacaoJudicial })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>{(Object.keys(TIPO_SOLICITACAO_LABEL) as TipoSolicitacaoJudicial[]).map((t) => <SelectItem key={t} value={t}>{TIPO_SOLICITACAO_LABEL[t]}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+
+              {judicial.tipoSolicitacao === 'produto' && (
+                <div className="space-y-3 border-l-2 border-amber-500/20 pl-3">
+                  <TextField label="Descrição do produto" value={judicial.produto?.descricao} onChange={(v) => setJ({ produto: { ...judicial.produto, descricao: v } })} placeholder="Ex.: Cateter hidrofílico VaPro, pronto para uso, com ponta protetora" />
+                  <div className="grid grid-cols-4 gap-3">
+                    <div className="space-y-2"><Label>Calibre (Fr)</Label><Input inputMode="numeric" value={judicial.produto?.calibreFrench ?? ''} onChange={(e) => setJ({ produto: { ...judicial.produto, calibreFrench: num(e.target.value) } })} /></div>
+                    <div className="space-y-2"><Label>Compr. (cm)</Label><Input inputMode="numeric" value={judicial.produto?.comprimentoCm ?? ''} onChange={(e) => setJ({ produto: { ...judicial.produto, comprimentoCm: num(e.target.value) } })} /></div>
+                    <div className="space-y-2"><Label>Qtd/dia</Label><Input inputMode="numeric" value={judicial.produto?.quantidadePorDia ?? ''} onChange={(e) => setJ({ produto: { ...judicial.produto, quantidadePorDia: num(e.target.value) } })} /></div>
+                    <div className="space-y-2"><Label>Qtd/mês</Label><Input inputMode="numeric" value={judicial.produto?.quantidadePorMes ?? ''} onChange={(e) => setJ({ produto: { ...judicial.produto, quantidadePorMes: num(e.target.value) } })} /></div>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={!!judicial.produto?.usoContinuo} onCheckedChange={(c) => setJ({ produto: { ...judicial.produto, usoContinuo: !!c } })} /> Uso contínuo</label>
+                </div>
+              )}
+
+              {judicial.tipoSolicitacao === 'medicamento' && (
+                <div className="space-y-3 border-l-2 border-amber-500/20 pl-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2"><Label>Princípio ativo (DCB/DCI)</Label><Input value={judicial.medicamento?.principioAtivo ?? ''} onChange={(e) => setJ({ medicamento: { ...judicial.medicamento, principioAtivo: e.target.value } })} /></div>
+                    <div className="space-y-2"><Label>Forma farm. e apresentação</Label><Input value={judicial.medicamento?.formaFarmaceuticaApresentacao ?? ''} onChange={(e) => setJ({ medicamento: { ...judicial.medicamento, formaFarmaceuticaApresentacao: e.target.value } })} /></div>
+                    <div className="space-y-2"><Label>Dose</Label><Input value={judicial.medicamento?.dose ?? ''} onChange={(e) => setJ({ medicamento: { ...judicial.medicamento, dose: e.target.value } })} /></div>
+                    <div className="space-y-2"><Label>Posologia</Label><Input value={judicial.medicamento?.posologia ?? ''} onChange={(e) => setJ({ medicamento: { ...judicial.medicamento, posologia: e.target.value } })} /></div>
+                    <div className="space-y-2"><Label>Via de administração</Label><Input value={judicial.medicamento?.viaAdministracao ?? ''} onChange={(e) => setJ({ medicamento: { ...judicial.medicamento, viaAdministracao: e.target.value } })} /></div>
+                    <div className="space-y-2"><Label>Duração do tratamento</Label><Input value={judicial.medicamento?.duracaoTratamento ?? ''} onChange={(e) => setJ({ medicamento: { ...judicial.medicamento, duracaoTratamento: e.target.value } })} /></div>
+                  </div>
+                </div>
+              )}
+
+              {judicial.tipoSolicitacao === 'procedimento' && (
+                <TextField label="Descrição do procedimento" value={judicial.procedimentoDescricao} onChange={(v) => setJ({ procedimentoDescricao: v })} />
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={!!judicial.urgente} onCheckedChange={(c) => setJ({ urgente: !!c })} /> É urgente</label>
+                  {judicial.urgente && <Textarea rows={2} placeholder="Por quê?" value={judicial.justificativaUrgencia ?? ''} onChange={(e) => setJ({ justificativaUrgencia: e.target.value })} />}
+                </div>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={!!judicial.imprescindivel} onCheckedChange={(c) => setJ({ imprescindivel: !!c })} /> É imprescindível</label>
+                  {judicial.imprescindivel && <Textarea rows={2} placeholder="Por quê?" value={judicial.justificativaImprescindivel ?? ''} onChange={(e) => setJ({ justificativaImprescindivel: e.target.value })} />}
+                </div>
+              </div>
+              <TextField label="Benefícios esperados com o tratamento" value={judicial.beneficiosEsperados} onChange={(v) => setJ({ beneficiosEsperados: v })} />
+              <TextField label="Consequências da não utilização" value={judicial.consequenciasNaoUso} onChange={(v) => setJ({ consequenciasNaoUso: v })} />
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2"><Label>Prescritor — nome</Label><Input value={judicial.prescritor?.nome ?? ''} onChange={(e) => setJ({ prescritor: { ...judicial.prescritor, nome: e.target.value } })} /></div>
+                <div className="space-y-2"><Label>Registro (CRM/COREN)</Label><Input value={judicial.prescritor?.registro ?? ''} placeholder="CRM-SP 123456" onChange={(e) => setJ({ prescritor: { ...judicial.prescritor, registro: e.target.value } })} /></div>
+                <div className="space-y-2"><Label>Especialidade</Label><Input value={judicial.prescritor?.especialidade ?? ''} onChange={(e) => setJ({ prescritor: { ...judicial.prescritor, especialidade: e.target.value } })} /></div>
+              </div>
+            </div>
+          )}
+
+          {/* --- Ficha VaPro --- */}
           <Separator />
           <label className="flex items-center gap-2 cursor-pointer">
             <Checkbox checked={incluirFicha} onCheckedChange={(c) => setIncluirFicha(!!c)} />

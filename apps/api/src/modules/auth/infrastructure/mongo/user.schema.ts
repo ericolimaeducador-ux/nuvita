@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { Papel } from '../../../../../../../packages/shared/src/auth';
+import { Modulo, Papel } from '../../../../../../../packages/shared/src/auth';
 
 export type UserDocument = HydratedDocument<UserMongo>;
 
@@ -26,6 +26,13 @@ export class UserMongo {
 
   @Prop({ default: true, index: true })
   ativo!: boolean;
+
+  // Exceções de permissão por usuário (padrão do papel fica no código compartilhado).
+  @Prop({ type: [String], enum: Object.values(Modulo), default: undefined })
+  modulosConcedidos?: Modulo[];
+
+  @Prop({ type: [String], enum: Object.values(Modulo), default: undefined })
+  modulosRevogados?: Modulo[];
 
   @Prop({ default: Date.now, immutable: true })
   criadoEm!: Date;

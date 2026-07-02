@@ -64,6 +64,8 @@ export class UserMongoRepository implements UserRepository {
     if (input.ativo !== undefined) set['ativo'] = input.ativo;
     if (input.passwordHash !== undefined) set['passwordHash'] = input.passwordHash;
     if (input.twoFactorSecret !== undefined) set['2faSecret'] = input.twoFactorSecret;
+    if (input.modulosConcedidos !== undefined) set['modulosConcedidos'] = input.modulosConcedidos;
+    if (input.modulosRevogados !== undefined) set['modulosRevogados'] = input.modulosRevogados;
 
     const doc = await this.userModel
       .findByIdAndUpdate(id, { $set: set }, { new: true })
@@ -96,6 +98,8 @@ export class UserMongoRepository implements UserRepository {
       twoFactorSecret: object['2faSecret'],
       ativo: object.ativo,
       criadoEm: object.criadoEm,
+      modulosConcedidos: object.modulosConcedidos,
+      modulosRevogados: object.modulosRevogados,
     };
   }
 }

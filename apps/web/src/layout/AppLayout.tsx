@@ -9,27 +9,29 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/auth/AuthContext';
-import { Papel } from '@/types';
+import { Modulo, Papel } from '@/types';
 import { brand } from '@/lib/brand';
 
-const navItems: { to: string; icon: React.ElementType; label: string; roles?: Papel[] }[] = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/pacientes', icon: Users, label: 'Pacientes' },
-  { to: '/fluxo-clinico', icon: Activity, label: 'Fluxo Clínico' },
-  { to: '/meus-processos', icon: Scale, label: 'Meus Processos', roles: [Papel.ADVOGADO, Papel.ADMIN] },
-  { to: '/agenda', icon: Calendar, label: 'Agenda' },
-  { to: '/notificacoes', icon: Bell, label: 'Notificações' },
-  { to: '/financeiro', icon: DollarSign, label: 'Financeiro' },
-  { to: '/telemedicina', icon: Video, label: 'Telemedicina' },
-  { to: '/clinica', icon: Building2, label: 'Clínica' },
-  { to: '/super-admin', icon: Shield, label: 'Super Admin', roles: [Papel.SUPER_ADMIN] },
+// Cada item é gateado pelo módulo correspondente (permissões efetivas do usuário,
+// ajustáveis por checkbox no Super Admin). `roles` fica só como trava dura extra.
+const navItems: { to: string; icon: React.ElementType; label: string; modulo: Modulo; roles?: Papel[] }[] = [
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', modulo: Modulo.DASHBOARD },
+  { to: '/pacientes', icon: Users, label: 'Pacientes', modulo: Modulo.PACIENTES },
+  { to: '/fluxo-clinico', icon: Activity, label: 'Fluxo Clínico', modulo: Modulo.FLUXO_CLINICO },
+  { to: '/meus-processos', icon: Scale, label: 'Meus Processos', modulo: Modulo.PROCESSOS },
+  { to: '/agenda', icon: Calendar, label: 'Agenda', modulo: Modulo.AGENDA },
+  { to: '/notificacoes', icon: Bell, label: 'Notificações', modulo: Modulo.NOTIFICACOES },
+  { to: '/financeiro', icon: DollarSign, label: 'Financeiro', modulo: Modulo.FINANCEIRO },
+  { to: '/telemedicina', icon: Video, label: 'Telemedicina', modulo: Modulo.TELEMEDICINA },
+  { to: '/clinica', icon: Building2, label: 'Clínica', modulo: Modulo.CLINICA },
+  { to: '/super-admin', icon: Shield, label: 'Super Admin', modulo: Modulo.SUPER_ADMIN, roles: [Papel.SUPER_ADMIN] },
 ];
 
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, permissoes, logout } = useAuth();
 
   const initials = user?.nome
     ? user.nome.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
@@ -63,7 +65,11 @@ export function AppLayout() {
 
         {/* Nav */}
         <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
-          {navItems.filter(({ roles }) => !roles || (user?.papel && roles.includes(user.papel as Papel))).map(({ to, icon: Icon, label }) => {
+          {navItems
+            .filter(({ modulo, roles }) =>
+              permissoes.includes(modulo) &&
+              (!roles || (user?.papel && roles.includes(user.papel as Papel))))
+            .map(({ to, icon: Icon, label }) => {
             const active = location.pathname === to || location.pathname.startsWith(to + '/');
             return (
               <Link

@@ -1,5 +1,5 @@
-import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
-import { Papel } from '../../../../../../../packages/shared/src/auth';
+import { IsArray, IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
+import { Modulo, Papel } from '../../../../../../../packages/shared/src/auth';
 
 export class UpdateUserDto {
   @IsOptional()
@@ -17,4 +17,15 @@ export class UpdateUserDto {
   @IsOptional()
   @IsBoolean()
   ativo?: boolean;
+
+  // Exceções de permissão por usuário sobre o padrão do papel.
+  @IsOptional()
+  @IsArray()
+  @IsEnum(Modulo, { each: true })
+  modulosConcedidos?: Modulo[];
+
+  @IsOptional()
+  @IsArray()
+  @IsEnum(Modulo, { each: true })
+  modulosRevogados?: Modulo[];
 }

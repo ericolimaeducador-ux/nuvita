@@ -1,4 +1,4 @@
-import { Papel } from '../../../../../../packages/shared/src/auth';
+import { Modulo, Papel, resolvePermissoes } from '../../../../../../packages/shared/src/auth';
 
 export interface User {
   id: string;
@@ -10,11 +10,20 @@ export interface User {
   twoFactorSecret?: string;
   ativo: boolean;
   criadoEm: Date;
+  /** Exceções por usuário sobre o padrão do papel (ver resolvePermissoes). */
+  modulosConcedidos?: Modulo[];
+  modulosRevogados?: Modulo[];
 }
 
-export type PublicUser = Omit<User, 'passwordHash' | 'twoFactorSecret'>;
+export type PublicUser = Omit<User, 'passwordHash' | 'twoFactorSecret'> & {
+  /** Permissões efetivas (padrão do papel ∪ concedidas − revogadas). */
+  permissoes: Modulo[];
+};
 
 export function toPublicUser(user: User): PublicUser {
   const { passwordHash: _passwordHash, twoFactorSecret: _twoFactorSecret, ...safeUser } = user;
-  return safeUser;
+  return {
+    ...safeUser,
+    permissoes: resolvePermissoes(user.papel, user.modulosConcedidos, user.modulosRevogados),
+  };
 }

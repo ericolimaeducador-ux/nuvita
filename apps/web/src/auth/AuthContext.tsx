@@ -9,12 +9,14 @@ import {
 } from 'react';
 import { getToken, setToken } from '@/api/client';
 import { authApi } from '@/api/resources';
-import type { AuthUser } from '@/types';
+import { resolvePermissoes, type AuthUser, type Modulo } from '@/types';
 
 interface AuthState {
   user: AuthUser | null;
   token: string | null;
   loading: boolean;
+  /** Permissões efetivas de módulos (fallback: padrão do papel p/ sessões antigas). */
+  permissoes: Modulo[];
   login: (email: string, password: string, totpCode?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -71,9 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
+  const permissoes = useMemo<Modulo[]>(
+    () => (user ? user.permissoes ?? resolvePermissoes(user.papel) : []),
+    [user],
+  );
+
   const value = useMemo<AuthState>(
-    () => ({ user, token, loading, login, logout }),
-    [user, token, loading, login, logout],
+    () => ({ user, token, loading, permissoes, login, logout }),
+    [user, token, loading, permissoes, login, logout],
   );
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;

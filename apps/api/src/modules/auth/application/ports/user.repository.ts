@@ -1,4 +1,4 @@
-import { Papel } from '../../../../../../../packages/shared/src/auth';
+import { Modulo, Papel } from '../../../../../../../packages/shared/src/auth';
 import { User } from '../../domain/user.entity';
 
 export interface CreateUserInput {
@@ -17,6 +17,8 @@ export interface UpdateUserInput {
   ativo?: boolean;
   passwordHash?: string;
   twoFactorSecret?: string;
+  modulosConcedidos?: Modulo[];
+  modulosRevogados?: Modulo[];
 }
 
 export interface UserFilters {

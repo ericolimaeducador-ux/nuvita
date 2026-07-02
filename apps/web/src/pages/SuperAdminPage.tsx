@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Shield, Plus, Search, KeyRound, Pencil, ChevronLeft, ChevronRight, RefreshCw,
+  Shield, Plus, Search, KeyRound, Pencil, ChevronLeft, ChevronRight, RefreshCw, RotateCcw,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -15,12 +15,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
 import { superAdminApi } from '@/api/resources';
 import type { CreateAdminUserPayload, UpdateUsuarioPayload } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
-import { Papel, PAPEL_LABEL } from '@/types';
+import {
+  Modulo, MODULO_LABEL, TODOS_MODULOS, PERMISSOES_PADRAO_POR_PAPEL,
+  resolvePermissoes, Papel, PAPEL_LABEL,
+} from '@/types';
 import type { UsuarioAdmin } from '@/types';
 
 const PAPEL_BADGE: Record<Papel, string> = {
@@ -73,6 +77,9 @@ export function SuperAdminPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<UsuarioAdmin | null>(null);
   const [resetTarget, setResetTarget] = useState<UsuarioAdmin | null>(null);
+
+  // Módulos efetivamente marcados no editor de permissões
+  const [modulosSel, setModulosSel] = useState<Modulo[]>([]);
 
   // Forms
   const createForm = useForm<CreateForm>({
@@ -135,6 +142,12 @@ export function SuperAdminPage() {
   function openEdit(u: UsuarioAdmin) {
     setEditTarget(u);
     editForm.reset({ nome: u.nome, papel: u.papel, clinicaId: u.clinicaId ?? '', ativo: u.ativo });
+    // permissoes vem da API; fallback recalcula para respostas antigas em cache
+    setModulosSel(u.permissoes ?? resolvePermissoes(u.papel, u.modulosConcedidos, u.modulosRevogados));
+  }
+
+  function toggleModulo(m: Modulo, checked: boolean) {
+    setModulosSel((prev) => (checked ? [...prev, m] : prev.filter((x) => x !== m)));
   }
 
   function onSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -356,18 +369,23 @@ export function SuperAdminPage() {
 
       {/* Dialog: Editar usuário */}
       <Dialog open={!!editTarget} onOpenChange={(o) => { if (!o) setEditTarget(null); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar usuário — {editTarget?.email}</DialogTitle>
           </DialogHeader>
           <form
             onSubmit={editForm.handleSubmit((v) => {
               if (!editTarget) return;
+              // Persistimos só as EXCEÇÕES em relação ao padrão do papel; assim,
+              // mudanças futuras no padrão continuam valendo para quem não foi customizado.
+              const padrao = PERMISSOES_PADRAO_POR_PAPEL[v.papel] ?? [];
               const payload: UpdateUsuarioPayload = {
                 nome: v.nome,
                 papel: v.papel,
                 clinicaId: v.clinicaId || null,
                 ativo: v.ativo,
+                modulosConcedidos: modulosSel.filter((m) => !padrao.includes(m)),
+                modulosRevogados: padrao.filter((m) => !modulosSel.includes(m)),
               };
               editMut.mutate({ id: editTarget.id, payload });
             })}
@@ -383,7 +401,14 @@ export function SuperAdminPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Perfil</Label>
-                <Select value={editForm.watch('papel')} onValueChange={(v) => editForm.setValue('papel', v as Papel)}>
+                <Select
+                  value={editForm.watch('papel')}
+                  onValueChange={(v) => {
+                    editForm.setValue('papel', v as Papel);
+                    // trocar de perfil recomeça do padrão do novo papel
+                    setModulosSel(PERMISSOES_PADRAO_POR_PAPEL[v as Papel] ?? []);
+                  }}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {TODOS_PAPEIS.map((p) => <SelectItem key={p} value={p}>{PAPEL_LABEL[p]}</SelectItem>)}
@@ -403,6 +428,42 @@ export function SuperAdminPage() {
               <div className="col-span-2 space-y-1.5">
                 <Label>Clínica ID <span className="text-muted-foreground">(vazio = sem vínculo)</span></Label>
                 <Input placeholder="MongoDB ObjectId da clínica" {...editForm.register('clinicaId')} />
+              </div>
+
+              {/* Permissões de módulos */}
+              <div className="col-span-2 space-y-2 pt-2 border-t border-border">
+                <div className="flex items-center justify-between">
+                  <Label>Módulos liberados</Label>
+                  {editForm.watch('papel') !== Papel.SUPER_ADMIN && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1.5 text-xs text-muted-foreground"
+                      onClick={() => setModulosSel(PERMISSOES_PADRAO_POR_PAPEL[editForm.watch('papel')] ?? [])}
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Restaurar padrão do perfil
+                    </Button>
+                  )}
+                </div>
+                {editForm.watch('papel') === Papel.SUPER_ADMIN ? (
+                  <p className="text-sm text-muted-foreground">
+                    Super Admin sempre tem acesso total — as permissões não são editáveis.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    {TODOS_MODULOS.filter((m) => m !== Modulo.SUPER_ADMIN).map((m) => (
+                      <label key={m} className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                        <Checkbox
+                          checked={modulosSel.includes(m)}
+                          onCheckedChange={(c) => toggleModulo(m, c === true)}
+                        />
+                        {MODULO_LABEL[m]}
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <DialogFooter>

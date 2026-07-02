@@ -11,6 +11,7 @@ import type {
   ListUsuariosResult,
   LoginResponse,
   ModalidadeAtendimento,
+  Modulo,
   Paciente,
   PageResult,
   Papel,
@@ -304,6 +305,8 @@ export interface UpdateUsuarioPayload {
   papel?: Papel;
   clinicaId?: string | null;
   ativo?: boolean;
+  modulosConcedidos?: Modulo[];
+  modulosRevogados?: Modulo[];
 }
 
 export interface CreateAdminUserPayload {

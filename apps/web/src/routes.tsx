@@ -19,46 +19,56 @@ import { AvaliacaoImpressaoPage } from '@/pages/AvaliacaoImpressaoPage';
 import { NatjusImpressaoPage } from '@/pages/NatjusImpressaoPage';
 import { MeusProcessosPage } from '@/pages/MeusProcessosPage';
 import { SuperAdminPage } from '@/pages/SuperAdminPage';
-import { Papel } from '@/types';
+import { Modulo, Papel } from '@/types';
 
+// O acesso é controlado por MÓDULO (permissões efetivas do usuário, ajustáveis
+// pelo super-admin). O papel só permanece como trava dura no /super-admin;
+// nos demais, o padrão por papel já vem embutido em resolvePermissoes.
 export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
+          {/* /dashboard fica sem gate: é o destino dos redirects e todo papel o tem por padrão. */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/pacientes" element={<PacientesPage />} />
-          <Route path="/pacientes/:id" element={<PacienteDetailPage />} />
-          <Route path="/pacientes/:id/prontuario/:prontuarioId/natjus/imprimir" element={<NatjusImpressaoPage />} />
-          <Route path="/agenda" element={<AgendaPage />} />
-          <Route path="/prontuarios" element={<ProntuariosPage />} />
-          <Route path="/documentos" element={<DocumentosPage />} />
-          <Route path="/notificacoes" element={<NotificacoesPage />} />
-          <Route element={<ProtectedRoute roles={[Papel.SECRETARIA, Papel.ADMIN]} />}>
+          <Route element={<ProtectedRoute modulo={Modulo.PACIENTES} />}>
+            <Route path="/pacientes" element={<PacientesPage />} />
+            <Route path="/pacientes/:id" element={<PacienteDetailPage />} />
+            <Route path="/pacientes/:id/prontuario/:prontuarioId/natjus/imprimir" element={<NatjusImpressaoPage />} />
+          </Route>
+          <Route element={<ProtectedRoute modulo={Modulo.AGENDA} />}>
+            <Route path="/agenda" element={<AgendaPage />} />
+          </Route>
+          <Route element={<ProtectedRoute modulo={Modulo.PRONTUARIOS} />}>
+            <Route path="/prontuarios" element={<ProntuariosPage />} />
+          </Route>
+          <Route element={<ProtectedRoute modulo={Modulo.DOCUMENTOS} />}>
+            <Route path="/documentos" element={<DocumentosPage />} />
+          </Route>
+          <Route element={<ProtectedRoute modulo={Modulo.NOTIFICACOES} />}>
+            <Route path="/notificacoes" element={<NotificacoesPage />} />
+          </Route>
+          <Route element={<ProtectedRoute modulo={Modulo.FINANCEIRO} />}>
             <Route path="/financeiro" element={<FinanceiroPage />} />
           </Route>
-          <Route
-            element={
-              <ProtectedRoute
-                roles={[Papel.MEDICO, Papel.ENFERMEIRO, Papel.ADVOGADO, Papel.ADMIN]}
-              />
-            }
-          >
+          <Route element={<ProtectedRoute modulo={Modulo.TELEMEDICINA} />}>
             <Route path="/telemedicina" element={<TelemedicinaPage />} />
+          </Route>
+          <Route element={<ProtectedRoute modulo={Modulo.FLUXO_CLINICO} />}>
             <Route path="/fluxo-clinico" element={<FluxoClinicoPage />} />
             <Route path="/fluxo-clinico/:id" element={<FluxoPacientePage />} />
             <Route path="/fluxo-clinico/:id/laudo/:laudoId/imprimir" element={<LaudoImpressaoPage />} />
             <Route path="/fluxo-clinico/:id/avaliacao/:avaliacaoId/imprimir" element={<AvaliacaoImpressaoPage />} />
           </Route>
-          <Route element={<ProtectedRoute roles={[Papel.ADVOGADO, Papel.ADMIN]} />}>
+          <Route element={<ProtectedRoute modulo={Modulo.PROCESSOS} />}>
             <Route path="/meus-processos" element={<MeusProcessosPage />} />
           </Route>
-          <Route element={<ProtectedRoute roles={[Papel.ADMIN]} />}>
+          <Route element={<ProtectedRoute modulo={Modulo.CLINICA} />}>
             <Route path="/clinica" element={<ClinicaPage />} />
           </Route>
-          <Route element={<ProtectedRoute roles={[Papel.SUPER_ADMIN]} />}>
+          <Route element={<ProtectedRoute roles={[Papel.SUPER_ADMIN]} modulo={Modulo.SUPER_ADMIN} />}>
             <Route path="/super-admin" element={<SuperAdminPage />} />
           </Route>
         </Route>

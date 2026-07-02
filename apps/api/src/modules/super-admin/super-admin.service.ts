@@ -1,7 +1,7 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import * as speakeasy from 'speakeasy';
-import { exigeTwoFactor, Papel } from '../../../../../packages/shared/src/auth';
+import { exigeTwoFactor, Modulo, Papel } from '../../../../../packages/shared/src/auth';
 import { USER_REPOSITORY } from '../auth/auth.constants';
 import { UserRepository } from '../auth/application/ports/user.repository';
 import { toPublicUser } from '../auth/domain/user.entity';
@@ -70,8 +70,16 @@ export class SuperAdminService {
       }
     }
 
+    // O módulo SUPER_ADMIN nunca é concedível por checkbox: só o papel dá acesso.
+    const papelFinal = dto.papel ?? current.papel;
+    const modulosConcedidos =
+      papelFinal === Papel.SUPER_ADMIN
+        ? dto.modulosConcedidos
+        : dto.modulosConcedidos?.filter((m) => m !== Modulo.SUPER_ADMIN);
+
     const updated = await this.users.update(id, {
       ...dto,
+      ...(modulosConcedidos !== undefined ? { modulosConcedidos } : {}),
       ...(twoFactorSetup ? { twoFactorSecret: twoFactorSetup.base32 } : {}),
     });
     if (!updated) throw new NotFoundException('Usuário não encontrado.');

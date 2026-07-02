@@ -4,6 +4,7 @@ export interface ProcessoJuridicoRepository {
   create(data: Omit<ProcessoJuridico, 'id' | 'criadoEm' | 'atualizadoEm'>): Promise<ProcessoJuridico>;
   findById(clinicaId: string, id: string): Promise<ProcessoJuridico | null>;
   findByPaciente(clinicaId: string, pacienteId: string): Promise<ProcessoJuridico[]>;
+  findByStatus(clinicaId: string, status: StatusProcesso): Promise<ProcessoJuridico[]>;
   listByAdvogado(clinicaId: string, advogadoId: string): Promise<ProcessoJuridico[]>;
   updateStatus(clinicaId: string, id: string, status: StatusProcesso, observacoes?: string): Promise<ProcessoJuridico | null>;
   addDocumento(clinicaId: string, id: string, documento: DocumentoProcesso): Promise<ProcessoJuridico | null>;

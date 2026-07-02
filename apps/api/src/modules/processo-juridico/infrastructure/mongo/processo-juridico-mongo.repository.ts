@@ -29,6 +29,11 @@ export class ProcessoJuridicoMongoRepository implements ProcessoJuridicoReposito
     return docs.map((d) => this.toEntity(d));
   }
 
+  async findByStatus(clinicaId: string, status: StatusProcesso): Promise<ProcessoJuridico[]> {
+    const docs = await this.model.find({ clinicaId, status }).sort({ dataDecisao: -1, criadoEm: -1 }).lean();
+    return docs.map((d) => this.toEntity(d));
+  }
+
   async updateStatus(clinicaId: string, id: string, status: StatusProcesso, observacoes?: string): Promise<ProcessoJuridico | null> {
     const set: Record<string, unknown> = { status, atualizadoEm: new Date() };
     if (observacoes !== undefined) set['observacoes'] = observacoes;

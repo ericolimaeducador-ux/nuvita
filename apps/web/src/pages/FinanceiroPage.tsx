@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { Plus, TrendingUp, TrendingDown, Clock, Scale, Check, X } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { financeiroApi, type CreateLancamentoPayload } from '@/api/resources';
+import { financeiroApi, processoJuridicoApi, type CreateLancamentoPayload } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toItems } from '@/utils';
 import { useAuth } from '@/auth/AuthContext';
@@ -23,6 +24,7 @@ import {
   FORMA_PAGAMENTO_LABEL,
   StatusLancamento,
   STATUS_LANCAMENTO_LABEL,
+  StatusProcesso,
   TipoLancamento,
   TIPO_LANCAMENTO_LABEL,
   type DashboardFinanceiro,
@@ -59,6 +61,14 @@ export function FinanceiroPage() {
   const listQ = useQuery({
     queryKey: ['financeiro', 'lancamentos'],
     queryFn: () => financeiroApi.list(),
+  });
+
+  // Pacientes com liminar ganha — gestão financeira precisa acompanhar o
+  // envio mensal de insumos para cada um (rastreio de recorrência ainda não
+  // existe; por ora, é uma lista de quem já tem processo julgado procedente).
+  const processosGanhosQ = useQuery({
+    queryKey: ['processo-juridico', 'por-status', StatusProcesso.GANHO],
+    queryFn: () => processoJuridicoApi.listByStatus(StatusProcesso.GANHO),
   });
 
   const createMut = useMutation({
@@ -148,6 +158,48 @@ export function FinanceiroPage() {
               );
             })}
       </div>
+
+      {/* Pacientes com liminar ganha — acompanhamento de envio mensal de insumos */}
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div className="flex items-center gap-2">
+            <Scale className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm font-semibold">Pacientes com liminar ganha</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {processosGanhosQ.isLoading ? (
+            <Skeleton className="h-16 w-full" />
+          ) : (processosGanhosQ.data ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">Nenhum processo com liminar ganha ainda.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nº do processo</TableHead>
+                  <TableHead>Tribunal</TableHead>
+                  <TableHead>Data da decisão</TableHead>
+                  <TableHead className="w-32" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(processosGanhosQ.data ?? []).map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{p.numeroProcesso || '—'}</TableCell>
+                    <TableCell className="text-muted-foreground">{p.tribunal || '—'}</TableCell>
+                    <TableCell className="text-muted-foreground">{p.dataDecisao ? dayjs(p.dataDecisao).format('DD/MM/YYYY') : '—'}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link to={`/pacientes/${p.pacienteId}`}>Ver paciente →</Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="p-6">

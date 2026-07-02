@@ -39,6 +39,10 @@ export class ProcessoJuridicoService {
     return this.repo.listByAdvogado(clinicaId, user.sub);
   }
 
+  async listByStatus(status: StatusProcesso, clinicaId: string | undefined, user: AuthTokenPayload): Promise<ProcessoJuridico[]> {
+    return this.repo.findByStatus(this.resolveClinicaId(user, clinicaId), status);
+  }
+
   async updateStatus(id: string, dto: UpdateStatusProcessoDto, clinicaId: string | undefined, user: AuthTokenPayload): Promise<ProcessoJuridico> {
     const resolved = this.resolveClinicaId(user, clinicaId);
     const extra: Partial<ProcessoJuridico> = {};

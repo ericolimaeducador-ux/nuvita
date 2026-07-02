@@ -1,26 +1,34 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import {
   ArrowLeft, User, Download, Plus, FileText, FileSignature, Scale,
   Package, PackageCheck, ClipboardList, CalendarClock, ChevronDown, Stethoscope,
+  ListChecks, Trash2,
 } from 'lucide-react';
 import { ProntuarioDetailDialog, NovoAtendimentoDialog } from '@/components/ProntuarioDialogs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/components/ui/use-toast';
+import { useAuth } from '@/auth/AuthContext';
 import {
   pacientesApi, prontuariosApi, agendaApi, documentosApi,
   laudoMedicoApi, avaliacaoIUApi, entregasApi, processoJuridicoApi,
+  anotacaoJuridicaApi, checklistDocumentosApi,
 } from '@/api/resources';
+import { apiErrorMessage } from '@/api/client';
 import { formatCpf, idade, toItems, formatBRL } from '@/utils';
 import {
   SEXO_LABEL, STATUS_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_LABEL,
-  STATUS_PROCESSO_LABEL, StatusEntrega,
+  STATUS_PROCESSO_LABEL, StatusEntrega, Modulo,
+  StatusChecklistDocumento, STATUS_CHECKLIST_DOCUMENTO_LABEL,
   type Agendamento, type Prontuario, type Sexo, type Documento,
   type LaudoMedico, type AvaliacaoIU, type Entrega, type ProcessoJuridico,
 } from '@/types';
@@ -67,6 +75,7 @@ function Vazio({ children }: { children: React.ReactNode }) {
 export function PacienteDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const { permissoes } = useAuth();
   const [viewProntuarioId, setViewProntuarioId] = useState<string | null>(null);
   const [novoOpen, setNovoOpen] = useState(false);
 
@@ -231,6 +240,9 @@ export function PacienteDetailPage() {
         )}
       </Secao>
 
+      {/* Checklist de documentos (secretaria/admin) */}
+      {permissoes.includes(Modulo.DOCUMENTOS) && <ChecklistDocumentosSecao pacienteId={id} />}
+
       {/* Laudos / relatórios médicos */}
       <Secao icon={<FileSignature className="h-4 w-4" />} titulo="Laudos e relatórios médicos" contagem={laudosQ.data?.length} defaultOpen={false}>
         {laudosQ.isLoading ? (
@@ -257,7 +269,19 @@ export function PacienteDetailPage() {
       </Secao>
 
       {/* Avaliações de IU (VaPro) */}
-      <Secao icon={<ClipboardList className="h-4 w-4" />} titulo="Avaliações de incontinência (VaPro)" contagem={avaliacoesQ.data?.length} defaultOpen={false}>
+      <Secao
+        icon={<ClipboardList className="h-4 w-4" />}
+        titulo="Avaliações de incontinência (VaPro)"
+        contagem={avaliacoesQ.data?.length}
+        defaultOpen={false}
+        acao={
+          permissoes.includes(Modulo.FLUXO_CLINICO) ? (
+            <Button size="sm" variant="outline" onClick={() => navigate(`/fluxo-clinico/${id}`)}>
+              <Plus className="mr-2 h-4 w-4" /> Nova avaliação
+            </Button>
+          ) : undefined
+        }
+      >
         {avaliacoesQ.isLoading ? (
           <Skeleton className="h-20 w-full" />
         ) : (avaliacoesQ.data ?? []).length === 0 ? (
@@ -318,6 +342,9 @@ export function PacienteDetailPage() {
         )}
       </Secao>
 
+      {/* Anotações jurídicas (campo livre do advogado, fora do prontuário clínico) */}
+      {permissoes.includes(Modulo.PROCESSOS) && <AnotacoesJuridicasSecao pacienteId={id} />}
+
       {/* Histórico de agenda */}
       <Secao icon={<CalendarClock className="h-4 w-4" />} titulo="Histórico de agenda" contagem={toItems<Agendamento>(agendaQ.data as never).length} defaultOpen={false}>
         {agendaQ.isLoading ? (
@@ -372,5 +399,161 @@ function TabelaEntregas({ entregas }: { entregas: Entrega[] }) {
         ))}
       </TableBody>
     </Table>
+  );
+}
+
+/** Timeline de texto livre do jurídico sobre o paciente — separada do prontuário
+ * clínico (assinado/imutável), para não misturar anotação jurídica com SOAP. */
+function AnotacoesJuridicasSecao({ pacienteId }: { pacienteId: string }) {
+  const qc = useQueryClient();
+  const [texto, setTexto] = useState('');
+
+  const listQ = useQuery({
+    queryKey: ['anotacoes-juridicas', pacienteId],
+    queryFn: () => anotacaoJuridicaApi.listByPaciente(pacienteId),
+  });
+
+  const createMut = useMutation({
+    mutationFn: () => anotacaoJuridicaApi.create({ pacienteId, texto: texto.trim() }),
+    onSuccess: () => {
+      setTexto('');
+      void qc.invalidateQueries({ queryKey: ['anotacoes-juridicas', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  return (
+    <Secao icon={<Scale className="h-4 w-4" />} titulo="Anotações jurídicas" contagem={listQ.data?.length} defaultOpen={false}>
+      <div className="space-y-3">
+        <div className="space-y-2">
+          <Textarea
+            rows={3}
+            placeholder="Registre aqui observações jurídicas sobre o caso do paciente…"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+          />
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              disabled={texto.trim().length < 3 || createMut.isPending}
+              onClick={() => createMut.mutate()}
+            >
+              {createMut.isPending ? 'Salvando…' : 'Adicionar anotação'}
+            </Button>
+          </div>
+        </div>
+
+        {listQ.isLoading ? (
+          <Skeleton className="h-16 w-full" />
+        ) : (listQ.data ?? []).length === 0 ? (
+          <Vazio>Nenhuma anotação jurídica registrada.</Vazio>
+        ) : (
+          <div className="space-y-2">
+            {(listQ.data ?? []).map((a) => (
+              <div key={a.id} className="glass rounded-lg p-3">
+                <p className="text-xs text-muted-foreground mb-1">
+                  {dayjs(a.criadoEm).format('DD/MM/YYYY HH:mm')}
+                </p>
+                <p className="text-sm text-foreground whitespace-pre-wrap">{a.texto}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Secao>
+  );
+}
+
+/** Checklist administrativo de documentos pendentes/recebidos (secretaria/admin),
+ * independente dos arquivos em si (seção Documentos, que é upload de fato). */
+function ChecklistDocumentosSecao({ pacienteId }: { pacienteId: string }) {
+  const qc = useQueryClient();
+  const [novoNome, setNovoNome] = useState('');
+
+  const listQ = useQuery({
+    queryKey: ['checklist-documentos', pacienteId],
+    queryFn: () => checklistDocumentosApi.listByPaciente(pacienteId),
+  });
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['checklist-documentos', pacienteId] });
+
+  const createMut = useMutation({
+    mutationFn: () => checklistDocumentosApi.create({ pacienteId, nome: novoNome.trim() }),
+    onSuccess: () => { setNovoNome(''); void invalidate(); },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  const toggleMut = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: StatusChecklistDocumento }) =>
+      checklistDocumentosApi.update(id, { status }),
+    onSuccess: () => void invalidate(),
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  const removeMut = useMutation({
+    mutationFn: (id: string) => checklistDocumentosApi.remove(id),
+    onSuccess: () => void invalidate(),
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  const itens = listQ.data ?? [];
+  const pendentes = itens.filter((i) => i.status === StatusChecklistDocumento.PENDENTE).length;
+
+  return (
+    <Secao icon={<ListChecks className="h-4 w-4" />} titulo="Checklist de documentos" contagem={itens.length} defaultOpen={false}>
+      <div className="space-y-3">
+        <div className="flex gap-2">
+          <Input
+            placeholder="Nome do documento (ex.: RG, comprovante de residência…)"
+            value={novoNome}
+            onChange={(e) => setNovoNome(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && novoNome.trim().length >= 2) createMut.mutate(); }}
+          />
+          <Button
+            size="sm"
+            disabled={novoNome.trim().length < 2 || createMut.isPending}
+            onClick={() => createMut.mutate()}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {listQ.isLoading ? (
+          <Skeleton className="h-16 w-full" />
+        ) : itens.length === 0 ? (
+          <Vazio>Nenhum documento no checklist.</Vazio>
+        ) : (
+          <div className="space-y-1.5">
+            {pendentes > 0 && (
+              <p className="text-xs text-muted-foreground">{pendentes} pendente{pendentes !== 1 ? 's' : ''}</p>
+            )}
+            {itens.map((item) => (
+              <div key={item.id} className="flex items-center gap-3 glass rounded-lg p-2.5">
+                <button
+                  type="button"
+                  onClick={() => toggleMut.mutate({
+                    id: item.id,
+                    status: item.status === StatusChecklistDocumento.PENDENTE
+                      ? StatusChecklistDocumento.RECEBIDO
+                      : StatusChecklistDocumento.PENDENTE,
+                  })}
+                >
+                  <Badge
+                    variant={item.status === StatusChecklistDocumento.RECEBIDO ? 'success' : 'warning'}
+                    className="cursor-pointer"
+                  >
+                    {STATUS_CHECKLIST_DOCUMENTO_LABEL[item.status]}
+                  </Badge>
+                </button>
+                <span className="text-sm text-foreground flex-1 min-w-0 truncate">{item.nome}</span>
+                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeMut.mutate(item.id)}>
+                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Secao>
   );
 }

@@ -21,7 +21,7 @@ import {
   TipoAtendimento, TIPO_ATENDIMENTO_LABEL,
   LocalAtendimento, LOCAL_LABEL, PerfilCliente, PERFIL_LABEL, Destreza, DESTREZA_LABEL,
   TipoIU, TIPO_IU_LABEL, EncaminhamentoIU, ENCAMINHAMENTO_LABEL,
-  type Prontuario, type FichaVaPro,
+  type Prontuario,
   type ProntuarioSubjetivo, type ProntuarioObjetivo, type ExameSegmentar, type SinaisVitais,
   type ProntuarioAvaliacao, type ProntuarioPlano,
   type RelatorioJudicial, type NaturezaAtendimento, type TipoSolicitacaoJudicial,
@@ -233,6 +233,15 @@ export function ProntuarioDetailDialog({
               </div>
             )}
 
+            {!rj && (
+              <div className="glass rounded-xl p-4 border border-dashed border-white/10 text-center">
+                <Scale className="h-4 w-4 text-muted-foreground mx-auto mb-1.5" />
+                <p className="text-sm text-muted-foreground">
+                  Este atendimento não tem ficha de judicialização (NAT-JUS) preenchida.
+                </p>
+              </div>
+            )}
+
             {pr.fichaVaPro && (
               <div className="glass rounded-xl p-4 border border-primary/20">
                 <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-3">
@@ -302,13 +311,11 @@ function TextField({ label, value, onChange, rows = 2, placeholder }: {
 export function NovoAtendimentoDialog({
   pacienteId,
   pacienteNome,
-  vaProDefault = false,
   open,
   onOpenChange,
 }: {
   pacienteId: string;
   pacienteNome?: string;
-  vaProDefault?: boolean;
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
@@ -329,16 +336,6 @@ export function NovoAtendimentoDialog({
   const [cidSelected, setCidSelected] = useState<string[]>([]);
   const [cidOpts, setCidOpts] = useState<{ value: string; label: string }[]>([]);
 
-  // Ficha VaPro / Hollister (questionário de IU amarrado ao prontuário)
-  const [incluirFicha, setIncluirFicha] = useState(vaProDefault);
-  const [ficha, setFicha] = useState<FichaVaPro>({});
-  const setF = (patch: Partial<FichaVaPro>) => setFicha((f) => ({ ...f, ...patch }));
-  const toggleTipoIU = (t: TipoIU) =>
-    setFicha((f) => {
-      const cur = f.tiposIU ?? [];
-      return { ...f, tiposIU: cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t] };
-    });
-
   // Judicialização / NAT-JUS
   const [incluirJudicial, setIncluirJudicial] = useState(false);
   const [judicial, setJudicial] = useState<RelatorioJudicial>({});
@@ -356,7 +353,6 @@ export function NovoAtendimentoDialog({
     setSubjetivo({}); setSinais({}); setEstadoGeral(''); setSeg({}); setExameOutros('');
     setAvaliacao({}); setPlano({});
     setCidSearch(''); setCidSelected([]); setCidOpts([]);
-    setIncluirFicha(vaProDefault); setFicha({});
     setIncluirJudicial(false); setJudicial({});
   }
 
@@ -403,7 +399,6 @@ export function NovoAtendimentoDialog({
       objetivo: clean(objetivo) ?? {},
       avaliacao: { ...clean(avaliacao), cid10: cidSelected.length ? cidSelected : undefined } ,
       plano: clean(plano) ?? {},
-      fichaVaPro: incluirFicha ? clean(ficha) : undefined,
       relatorioJudicial: incluirJudicial
         ? clean({
             ...judicial,
@@ -601,112 +596,8 @@ export function NovoAtendimentoDialog({
             </div>
           )}
 
-          {/* --- Ficha VaPro --- */}
-          <Separator />
-          <label className="flex items-center gap-2 cursor-pointer">
-            <Checkbox checked={incluirFicha} onCheckedChange={(c) => setIncluirFicha(!!c)} />
-            <span className="text-xs font-semibold text-primary uppercase tracking-wider">
-              Ficha VaPro (Hollister) — Avaliação de Incontinência Urinária
-            </span>
-          </label>
-
-          {incluirFicha && (
-            <div className="space-y-4 glass rounded-xl p-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Local de atendimento</Label>
-                  <Select value={ficha.local ?? undefined} onValueChange={(v) => setF({ local: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>{Object.values(LocalAtendimento).map((l) => <SelectItem key={l} value={l}>{LOCAL_LABEL[l]}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Início dos sintomas</Label>
-                  <Input value={ficha.inicioSintomas ?? ''} onChange={(e) => setF({ inicioSintomas: e.target.value })} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Motivo da IU</Label>
-                <Textarea rows={2} value={ficha.motivoIU ?? ''} onChange={(e) => setF({ motivoIU: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Perfil do cliente</Label>
-                  <Select value={ficha.perfilCliente ?? undefined} onValueChange={(v) => setF({ perfilCliente: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>{Object.values(PerfilCliente).map((x) => <SelectItem key={x} value={x}>{PERFIL_LABEL[x]}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Destreza</Label>
-                  <Select value={ficha.destreza ?? undefined} onValueChange={(v) => setF({ destreza: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>{Object.values(Destreza).map((x) => <SelectItem key={x} value={x}>{DESTREZA_LABEL[x]}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-xs">Tipo de Incontinência Urinária</Label>
-                <div className="grid grid-cols-2 gap-1.5 mt-1.5">
-                  {Object.values(TipoIU).map((t) => (
-                    <label key={t} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <Checkbox checked={(ficha.tiposIU ?? []).includes(t)} onCheckedChange={() => toggleTipoIU(t)} /> {TIPO_IU_LABEL[t]}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-4">
-                <label className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={!!ficha.dntui} onCheckedChange={(c) => setF({ dntui: !!c })} /> DNTUI</label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={!!ficha.miccaoEspontanea} onCheckedChange={(c) => setF({ miccaoEspontanea: !!c })} /> Micção espontânea</label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={!!ficha.realizaCateterismo} onCheckedChange={(c) => setF({ realizaCateterismo: !!c })} /> Realiza cateterismo</label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={!!ficha.emTratamento} onCheckedChange={(c) => setF({ emTratamento: !!c })} /> Em tratamento</label>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-2"><Label>Cateterismos/dia</Label><Input inputMode="numeric" value={ficha.cateterismosDia ?? ''} onChange={(e) => setF({ cateterismosDia: e.target.value ? Number(e.target.value) : undefined })} /></div>
-                <div className="space-y-2"><Label>Cateter utilizado</Label><Input value={ficha.cateterUtilizado ?? ''} onChange={(e) => setF({ cateterUtilizado: e.target.value })} /></div>
-                <div className="space-y-2"><Label>Última ITU</Label><Input value={ficha.ultimaInfeccaoUrinaria ?? ''} onChange={(e) => setF({ ultimaInfeccaoUrinaria: e.target.value })} /></div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2"><Label>Volume drenado</Label><Input value={ficha.volumeDrenado ?? ''} onChange={(e) => setF({ volumeDrenado: e.target.value })} /></div>
-                <div className="space-y-2"><Label>Tratamento</Label><Input value={ficha.tratamento ?? ''} onChange={(e) => setF({ tratamento: e.target.value })} /></div>
-              </div>
-              <div className="space-y-2"><Label>Outras intercorrências / medicamentos</Label><Textarea rows={2} value={ficha.outrasIntercorrencias ?? ''} onChange={(e) => setF({ outrasIntercorrencias: e.target.value })} /></div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-2">
-                  <Label>Cateter VaPro — sexo</Label>
-                  <Select value={ficha.cateterVaProIndicado?.sexo ?? undefined} onValueChange={(v) => setF({ cateterVaProIndicado: { ...ficha.cateterVaProIndicado, sexo: v } })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent><SelectItem value="feminino">Feminino</SelectItem><SelectItem value="masculino">Masculino</SelectItem></SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2"><Label>French (Fr)</Label><Input inputMode="numeric" value={ficha.cateterVaProIndicado?.french ?? ''} onChange={(e) => setF({ cateterVaProIndicado: { ...ficha.cateterVaProIndicado, french: e.target.value ? Number(e.target.value) : undefined } })} /></div>
-                <div className="space-y-2">
-                  <Label>Encaminhamento</Label>
-                  <Select value={ficha.encaminhamento ?? undefined} onValueChange={(v) => setF({ encaminhamento: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>{Object.values(EncaminhamentoIU).map((x) => <SelectItem key={x} value={x}>{ENCAMINHAMENTO_LABEL[x]}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2"><Label>Responsável pelo cateterismo</Label><Input value={ficha.responsavelCateterismo ?? ''} onChange={(e) => setF({ responsavelCateterismo: e.target.value })} /></div>
-                <div className="space-y-2"><Label>COREN</Label><Input value={ficha.coren ?? ''} onChange={(e) => setF({ coren: e.target.value })} /></div>
-              </div>
-
-              <div className="flex flex-wrap gap-4">
-                <label className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={!!ficha.autorizaPesquisa} onCheckedChange={(c) => setF({ autorizaPesquisa: !!c })} /> Autoriza uso de dados (pesquisa Hollister)</label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={!!ficha.aceitaInformacoes} onCheckedChange={(c) => setF({ aceitaInformacoes: !!c })} /> Aceita informações por e-mail/WhatsApp</label>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2"><Label>E-mail de contato</Label><Input value={ficha.emailContato ?? ''} onChange={(e) => setF({ emailContato: e.target.value })} /></div>
-                <div className="space-y-2"><Label>WhatsApp de contato</Label><Input value={ficha.whatsappContato ?? ''} onChange={(e) => setF({ whatsappContato: e.target.value })} /></div>
-              </div>
-            </div>
-          )}
+          {/* Avaliação de incontinência (VaPro) foi desacoplada do atendimento SOAP —
+              agora é registro independente, criado em /fluxo-clinico/:id. */}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>

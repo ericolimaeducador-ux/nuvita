@@ -17,13 +17,16 @@ import type {
   Paciente,
   PageResult,
   Papel,
+  PresignUploadResponse,
   ProcessoJuridico,
   Produto,
   Prontuario,
   SalaTelemedicina,
   StatusAgendamento,
+  StatusProcesso,
   TipoAgendamento,
   TipoAtendimento,
+  TipoDocumento,
   UsuarioAdmin,
 } from '@/types';
 
@@ -71,6 +74,8 @@ export const pacientesApi = {
     api.patch(`/pacientes/${id}/desativar`).then((r) => r.data),
   export: (id: string) =>
     api.get(`/pacientes/${id}/export`).then((r) => r.data),
+  updateObservacoes: (id: string, observacoes: string) =>
+    api.patch<Paciente>(`/pacientes/${id}/observacoes`, { observacoes }).then((r) => r.data),
 };
 
 // ---------- Agenda ----------
@@ -141,10 +146,15 @@ export const documentosApi = {
     api
       .get<PageResult<Documento> | Documento[]>('/documentos', { params })
       .then((r) => r.data),
-  presignUpload: (payload: Record<string, unknown>) =>
-    api.post('/documentos/presign-upload', payload).then((r) => r.data),
+  presignUpload: (payload: {
+    clinicaId: string; pacienteId: string; prontuarioId?: string;
+    nome: string; tipo: TipoDocumento; mimeType: string; tamanho: number; hash: string;
+  }) =>
+    api.post<PresignUploadResponse>('/documentos/presign-upload', payload).then((r) => r.data),
+  confirmarUpload: (id: string) =>
+    api.post<Documento>(`/documentos/${id}/confirmar-upload`).then((r) => r.data),
   accessUrl: (id: string) =>
-    api.get<{ url: string }>(`/documentos/${id}/access-url`).then((r) => r.data),
+    api.get<{ accessUrl: string; expiresInSeconds: number }>(`/documentos/${id}/access-url`).then((r) => r.data),
   excluir: (id: string) =>
     api.patch(`/documentos/${id}/excluir`).then((r) => r.data),
 };
@@ -272,6 +282,8 @@ export const processoJuridicoApi = {
     api.get<ProcessoJuridico>(`/processo-juridico/${id}`).then((r) => r.data),
   meus: () =>
     api.get<ProcessoJuridico[]>('/processo-juridico/meus').then((r) => r.data),
+  listByStatus: (status: StatusProcesso) =>
+    api.get<ProcessoJuridico[]>('/processo-juridico/por-status', { params: { status } }).then((r) => r.data),
   updateStatus: (id: string, payload: Record<string, unknown>) =>
     api.patch<ProcessoJuridico>(`/processo-juridico/${id}/status`, payload).then((r) => r.data),
   addDocumento: (id: string, payload: { nome: string; url: string; tipo: string }) =>

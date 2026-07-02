@@ -75,6 +75,10 @@ export class DocumentosService {
       expiresInSeconds: presigned.expiresInSeconds,
       requiredHeaders: {
         'Content-Type': dto.mimeType,
+        // A URL presignada assina o Metadata do PutObjectCommand (ver
+        // s3-document-storage.service.ts) — sem este header exato, o S3/R2
+        // rejeita o PUT com SignatureDoesNotMatch.
+        'x-amz-meta-sha256': dto.hash.toLowerCase(),
       },
     };
   }

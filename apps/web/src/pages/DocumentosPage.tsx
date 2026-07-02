@@ -11,7 +11,7 @@ import { documentosApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toItems } from '@/utils';
 import { toast } from '@/components/ui/use-toast';
-import type { Documento } from '@/types';
+import { TIPO_DOCUMENTO_LABEL, type Documento } from '@/types';
 
 function fmtTamanho(bytes?: number): string {
   if (!bytes && bytes !== 0) return '—';
@@ -33,8 +33,8 @@ export function DocumentosPage() {
 
   async function baixar(id: string) {
     try {
-      const { url } = await documentosApi.accessUrl(id);
-      if (url) window.open(url, '_blank');
+      const { accessUrl } = await documentosApi.accessUrl(id);
+      if (accessUrl) window.open(accessUrl, '_blank');
       else toast.info('URL de acesso indisponível.');
     } catch (e) {
       toast.error('Erro', apiErrorMessage(e));
@@ -47,7 +47,7 @@ export function DocumentosPage() {
     <div className="p-6">
       <PageHeader
         title="Documentos"
-        subtitle="Arquivos clínicos e administrativos (armazenamento seguro S3/R2)"
+        subtitle="Arquivos clínicos e administrativos de todos os pacientes (só leitura — o envio é feito na página de cada paciente)"
       />
 
       <Card>
@@ -59,9 +59,8 @@ export function DocumentosPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Documento</TableHead>
-                  <TableHead>Tipo</TableHead>
+                  <TableHead>Categoria</TableHead>
                   <TableHead>Tamanho</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead>Enviado em</TableHead>
                   <TableHead className="w-24" />
                 </TableRow>
@@ -72,12 +71,11 @@ export function DocumentosPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <File className="h-4 w-4 text-blue-400 shrink-0" />
-                        <span className="font-medium">{d.nome ?? d.titulo ?? d.id}</span>
+                        <span className="font-medium">{d.nome}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{d.tipo || '—'}</TableCell>
+                    <TableCell>{d.tipo ? <Badge variant="secondary">{TIPO_DOCUMENTO_LABEL[d.tipo]}</Badge> : '—'}</TableCell>
                     <TableCell>{fmtTamanho(d.tamanho)}</TableCell>
-                    <TableCell>{d.status ? <Badge variant="secondary">{d.status}</Badge> : '—'}</TableCell>
                     <TableCell>{d.criadoEm ? dayjs(d.criadoEm).format('DD/MM/YYYY') : '—'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
@@ -97,7 +95,7 @@ export function DocumentosPage() {
                 ))}
                 {docs.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum documento encontrado</TableCell>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum documento encontrado</TableCell>
                   </TableRow>
                 )}
               </TableBody>

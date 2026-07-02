@@ -5,9 +5,10 @@ import dayjs from 'dayjs';
 import {
   ArrowLeft, User, Download, Plus, FileText, FileSignature, Scale,
   Package, PackageCheck, ClipboardList, CalendarClock, ChevronDown, Stethoscope,
-  ListChecks, Trash2,
+  ListChecks, Trash2, UserCheck,
 } from 'lucide-react';
 import { ProntuarioDetailDialog, NovoAtendimentoDialog } from '@/components/ProntuarioDialogs';
+import { NovoDocumentoDialog } from '@/components/NovoDocumentoDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,14 +22,15 @@ import { useAuth } from '@/auth/AuthContext';
 import {
   pacientesApi, prontuariosApi, agendaApi, documentosApi,
   laudoMedicoApi, avaliacaoIUApi, entregasApi, processoJuridicoApi,
-  anotacaoJuridicaApi, checklistDocumentosApi,
+  anotacaoJuridicaApi, checklistDocumentosApi, followUpApi,
 } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { formatCpf, idade, toItems, formatBRL } from '@/utils';
 import {
   SEXO_LABEL, STATUS_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_LABEL,
   STATUS_PROCESSO_LABEL, StatusEntrega, Modulo,
-  StatusChecklistDocumento, STATUS_CHECKLIST_DOCUMENTO_LABEL,
+  StatusChecklistDocumento, STATUS_CHECKLIST_DOCUMENTO_LABEL, TIPO_DOCUMENTO_LABEL,
+  StatusElegibilidade, STATUS_ELEGIBILIDADE_LABEL,
   type Agendamento, type Prontuario, type Sexo, type Documento,
   type LaudoMedico, type AvaliacaoIU, type Entrega, type ProcessoJuridico,
 } from '@/types';
@@ -78,6 +80,7 @@ export function PacienteDetailPage() {
   const { permissoes } = useAuth();
   const [viewProntuarioId, setViewProntuarioId] = useState<string | null>(null);
   const [novoOpen, setNovoOpen] = useState(false);
+  const [novoDocOpen, setNovoDocOpen] = useState(false);
 
   const pacQ = useQuery({ queryKey: ['paciente', id], queryFn: () => pacientesApi.get(id), enabled: !!id });
   const prontQ = useQuery({ queryKey: ['prontuarios', 'paciente', id], queryFn: () => prontuariosApi.list({ pacienteId: id }), enabled: !!id });
@@ -155,6 +158,9 @@ export function PacienteDetailPage() {
         </div>
       </Secao>
 
+      {/* Observações gerais — campo livre p/ qualquer profissional de atendimento */}
+      <ObservacoesSecao pacienteId={id} observacoesAtuais={p.observacoes} />
+
       {/* Prontuários / atendimentos */}
       <Secao
         icon={<Stethoscope className="h-4 w-4" />}
@@ -213,24 +219,34 @@ export function PacienteDetailPage() {
       </Secao>
 
       {/* Documentos */}
-      <Secao icon={<FileText className="h-4 w-4" />} titulo="Documentos" contagem={toItems<Documento>(docsQ.data as never).length} defaultOpen={false}>
+      <Secao
+        icon={<FileText className="h-4 w-4" />}
+        titulo="Documentos"
+        contagem={toItems<Documento>(docsQ.data as never).length}
+        defaultOpen={false}
+        acao={
+          <Button size="sm" variant="outline" onClick={() => setNovoDocOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Novo documento
+          </Button>
+        }
+      >
         {docsQ.isLoading ? (
           <Skeleton className="h-20 w-full" />
         ) : toItems<Documento>(docsQ.data as never).length === 0 ? (
           <Vazio>Nenhum documento anexado.</Vazio>
         ) : (
           <Table>
-            <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>Data</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Categoria</TableHead><TableHead>Data</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
             <TableBody>
               {toItems<Documento>(docsQ.data as never).map((d) => (
                 <TableRow key={d.id}>
-                  <TableCell className="font-medium">{d.nome || d.titulo || '—'}</TableCell>
-                  <TableCell className="text-muted-foreground">{d.tipo || '—'}</TableCell>
+                  <TableCell className="font-medium">{d.nome}</TableCell>
+                  <TableCell className="text-muted-foreground">{d.tipo ? TIPO_DOCUMENTO_LABEL[d.tipo] : '—'}</TableCell>
                   <TableCell className="text-muted-foreground">{d.criadoEm ? dayjs(d.criadoEm).format('DD/MM/YYYY') : '—'}</TableCell>
                   <TableCell>
                     <Button variant="ghost" size="sm" onClick={async () => {
                       const r = await documentosApi.accessUrl(d.id);
-                      if (r?.url) window.open(r.url, '_blank');
+                      if (r?.accessUrl) window.open(r.accessUrl, '_blank');
                     }}>Abrir</Button>
                   </TableCell>
                 </TableRow>
@@ -305,6 +321,9 @@ export function PacienteDetailPage() {
         )}
       </Secao>
 
+      {/* Follow-up de elegibilidade (ligações do enfermeiro) */}
+      {permissoes.includes(Modulo.FLUXO_CLINICO) && <FollowUpSecao pacienteId={id} />}
+
       {/* Insumos a receber */}
       <Secao icon={<Package className="h-4 w-4" />} titulo="Insumos a receber" contagem={insumosAReceber.length} defaultOpen={false}>
         {entregasQ.isLoading ? <Skeleton className="h-20 w-full" /> : insumosAReceber.length === 0 ? (
@@ -377,6 +396,11 @@ export function PacienteDetailPage() {
         pacienteNome={p.nome}
         open={novoOpen}
         onOpenChange={setNovoOpen}
+      />
+      <NovoDocumentoDialog
+        pacienteId={id}
+        open={novoDocOpen}
+        onOpenChange={setNovoDocOpen}
       />
     </div>
   );
@@ -569,6 +593,99 @@ function ChecklistDocumentosSecao({ pacienteId }: { pacienteId: string }) {
           </div>
         )}
       </div>
+    </Secao>
+  );
+}
+
+/** Anotação livre sobre o paciente, editável por qualquer profissional de
+ * atendimento (não fica restrita a secretaria/admin como o cadastro geral). */
+function ObservacoesSecao({ pacienteId, observacoesAtuais }: { pacienteId: string; observacoesAtuais?: string }) {
+  const qc = useQueryClient();
+  const [texto, setTexto] = useState(observacoesAtuais ?? '');
+  const [editando, setEditando] = useState(false);
+
+  const salvarMut = useMutation({
+    mutationFn: () => pacientesApi.updateObservacoes(pacienteId, texto),
+    onSuccess: () => {
+      toast.success('Observações salvas.');
+      setEditando(false);
+      void qc.invalidateQueries({ queryKey: ['paciente', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  return (
+    <Secao icon={<FileText className="h-4 w-4" />} titulo="Observações" defaultOpen={false}>
+      <div className="space-y-2">
+        <Textarea
+          rows={4}
+          placeholder="Informações pertinentes sobre o paciente, visíveis para toda a equipe…"
+          value={texto}
+          onChange={(e) => { setTexto(e.target.value); setEditando(true); }}
+        />
+        {editando && (
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setTexto(observacoesAtuais ?? ''); setEditando(false); }}
+            >
+              Cancelar
+            </Button>
+            <Button size="sm" disabled={salvarMut.isPending} onClick={() => salvarMut.mutate()}>
+              {salvarMut.isPending ? 'Salvando…' : 'Salvar'}
+            </Button>
+          </div>
+        )}
+      </div>
+    </Secao>
+  );
+}
+
+/** Somente leitura — o registro em si é feito em /fluxo-clinico/:id (Passo 2),
+ * onde o enfermeiro já tem o fluxo completo de elegibilidade. */
+function FollowUpSecao({ pacienteId }: { pacienteId: string }) {
+  const navigate = useNavigate();
+  const listQ = useQuery({
+    queryKey: ['followup', 'paciente', pacienteId],
+    queryFn: () => followUpApi.listByPaciente(pacienteId),
+  });
+  const followups = listQ.data ?? [];
+
+  return (
+    <Secao
+      icon={<UserCheck className="h-4 w-4" />}
+      titulo="Follow-up"
+      contagem={followups.length}
+      defaultOpen={false}
+      acao={
+        <Button size="sm" variant="outline" onClick={() => navigate(`/fluxo-clinico/${pacienteId}`)}>
+          Ver no fluxo clínico
+        </Button>
+      }
+    >
+      {listQ.isLoading ? (
+        <Skeleton className="h-16 w-full" />
+      ) : followups.length === 0 ? (
+        <Vazio>Nenhum follow-up registrado ainda.</Vazio>
+      ) : (
+        <Table>
+          <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Elegibilidade</TableHead><TableHead>Observações</TableHead></TableRow></TableHeader>
+          <TableBody>
+            {followups.map((f) => (
+              <TableRow key={f.id}>
+                <TableCell>{f.dataFollowup ? dayjs(f.dataFollowup).format('DD/MM/YYYY') : '—'}</TableCell>
+                <TableCell>
+                  <Badge variant={f.statusElegibilidade === StatusElegibilidade.ELEGIVEL ? 'success' : f.statusElegibilidade === StatusElegibilidade.NAO_ELEGIVEL ? 'destructive' : 'warning'}>
+                    {STATUS_ELEGIBILIDADE_LABEL[f.statusElegibilidade]}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-muted-foreground truncate max-w-xs">{f.observacoes || '—'}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
     </Secao>
   );
 }

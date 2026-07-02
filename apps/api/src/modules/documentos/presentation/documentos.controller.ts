@@ -11,9 +11,11 @@ import { CreateUploadUrlDto } from '../application/dto/create-upload-url.dto';
 import { ListDocumentosQueryDto } from '../application/dto/list-documentos-query.dto';
 import { DocumentoRequestContext, DocumentosService } from '../application/documentos.service';
 
+// Todo papel que tem o módulo DOCUMENTOS por padrão (ver permissao.ts) precisa
+// conseguir usá-lo de fato — antes faltavam ENFERMEIRO/ADVOGADO aqui.
 @Controller('documentos')
 @UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
-@Roles(Papel.SECRETARIA, Papel.MEDICO, Papel.ADMIN)
+@Roles(Papel.SECRETARIA, Papel.MEDICO, Papel.ENFERMEIRO, Papel.ADVOGADO, Papel.ADMIN)
 export class DocumentosController {
   constructor(private readonly documentosService: DocumentosService) {}
 

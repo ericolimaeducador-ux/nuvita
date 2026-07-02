@@ -128,7 +128,7 @@ export function FluxoPacientePage() {
           titulo="Follow-up de Elegibilidade"
           subtitulo="Acompanhamento do enfermeiro durante uso do produto"
           icon={UserCheck}
-          concluido={followups.some((f) => f.statusElegibilidade === StatusElegibilidade.ELEGIVEL)}
+          concluido={followups[0]?.statusElegibilidade === StatusElegibilidade.ELEGIVEL}
           visivel={avaliacoes.length > 0}
         >
           <FollowUpStep
@@ -146,7 +146,7 @@ export function FluxoPacientePage() {
           subtitulo="Justificativa médica para solicitação ao SUS"
           icon={Stethoscope}
           concluido={laudos.some((l) => !!l.assinado)}
-          visivel={followups.some((f) => f.statusElegibilidade === StatusElegibilidade.ELEGIVEL)}
+          visivel={followups[0]?.statusElegibilidade === StatusElegibilidade.ELEGIVEL}
         >
           <LaudoMedicoStep
             pacienteId={pacienteId!}

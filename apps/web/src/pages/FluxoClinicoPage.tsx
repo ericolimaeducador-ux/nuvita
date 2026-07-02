@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 const ETAPAS = [
   { key: 'todos', label: 'Todos', icon: Activity },
   { key: 'avaliacao', label: 'Avaliação IU', icon: ClipboardList },
-  { key: 'followup', label: 'Follow-up', icon: UserCheck },
+  { key: 'followup', label: 'Aguardando Relatório Médico', icon: UserCheck },
   { key: 'laudo', label: 'Laudo Médico', icon: Activity },
   { key: 'processo', label: 'Processo Jurídico', icon: Scale },
   { key: 'entrega', label: 'Entrega', icon: Package },
@@ -25,7 +25,7 @@ const ETAPAS = [
 function EtapaChip({ etapa }: { etapa: string }) {
   const map: Record<string, { label: string; color: string }> = {
     avaliacao: { label: 'Avaliação', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
-    followup: { label: 'Follow-up', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
+    followup: { label: 'Aguardando Relatório', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
     laudo: { label: 'Laudo', color: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
     processo: { label: 'Processo', color: 'bg-orange-500/10 text-orange-400 border-orange-500/20' },
     entrega: { label: 'Entregue', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
@@ -48,7 +48,10 @@ function detectarEtapa(
   if (entregas.some((e) => e.status === StatusEntrega.ENTREGUE)) return 'entrega';
   if (processos.length > 0) return 'processo';
   if (laudos.length > 0) return 'laudo';
-  if (followups.some((f) => f.statusElegibilidade === StatusElegibilidade.ELEGIVEL)) return 'followup';
+  // Só o followup MAIS RECENTE decide a elegibilidade (a lista já vem ordenada
+  // desc por dataFollowup) — um followup antigo elegível não conta se o mais
+  // novo mudou de ideia.
+  if (followups[0]?.statusElegibilidade === StatusElegibilidade.ELEGIVEL) return 'followup';
   if (avaliacoes.length > 0) return 'avaliacao';
   return 'avaliacao';
 }

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, Users, Calendar, FileText, Folder, Bell, DollarSign,
+  LayoutDashboard, Users, Calendar, Bell, DollarSign,
   Video, Building2, LogOut, ChevronLeft, ChevronRight, Activity, Scale, Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -18,8 +18,6 @@ const navItems: { to: string; icon: React.ElementType; label: string; roles?: Pa
   { to: '/fluxo-clinico', icon: Activity, label: 'Fluxo Clínico' },
   { to: '/meus-processos', icon: Scale, label: 'Meus Processos', roles: [Papel.ADVOGADO, Papel.ADMIN] },
   { to: '/agenda', icon: Calendar, label: 'Agenda' },
-  { to: '/prontuarios', icon: FileText, label: 'Prontuários' },
-  { to: '/documentos', icon: Folder, label: 'Documentos' },
   { to: '/notificacoes', icon: Bell, label: 'Notificações' },
   { to: '/financeiro', icon: DollarSign, label: 'Financeiro' },
   { to: '/telemedicina', icon: Video, label: 'Telemedicina' },

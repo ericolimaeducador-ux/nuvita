@@ -134,9 +134,9 @@ export type { TipoAtendimento };
 
 // ---------- Documentos ----------
 export const documentosApi = {
-  list: () =>
+  list: (params: { pacienteId?: string; prontuarioId?: string } = {}) =>
     api
-      .get<PageResult<Documento> | Documento[]>('/documentos')
+      .get<PageResult<Documento> | Documento[]>('/documentos', { params })
       .then((r) => r.data),
   presignUpload: (payload: Record<string, unknown>) =>
     api.post('/documentos/presign-upload', payload).then((r) => r.data),

@@ -201,27 +201,100 @@ export interface SinaisVitais {
   saturacaoO2?: number;
   peso?: number;
   altura?: number;
+  escalaDor?: number;
 }
 
 export interface ProntuarioSubjetivo {
   queixaPrincipal?: string;
   hda?: string;
+  antecedentesPessoais?: string;
+  antecedentesCirurgicos?: string;
+  medicamentosEmUso?: string;
+  alergias?: string;
+  historiaFamiliar?: string;
+  historiaSocial?: string;
+  revisaoSistemas?: string;
+}
+
+export interface ExameSegmentar {
+  cabecaPescoco?: string;
+  cardiovascular?: string;
+  respiratorio?: string;
+  abdome?: string;
+  geniturinario?: string;
+  neurologico?: string;
+  extremidades?: string;
+  pele?: string;
 }
 
 export interface ProntuarioObjetivo {
-  exameFisico?: string;
+  estadoGeral?: string;
   sinaisVitais?: SinaisVitais;
+  exameSegmentar?: ExameSegmentar;
+  exameFisico?: string;
 }
 
 export interface ProntuarioAvaliacao {
   hipotesesDiagnosticas?: string[];
   cid10?: string[];
+  diagnosticoDefinitivo?: string;
+  evolucao?: string;
 }
 
 export interface ProntuarioPlano {
   conduta?: string;
   prescricao?: string;
   examesSolicitados?: string[];
+  orientacoes?: string;
+  encaminhamentos?: string;
+  retorno?: string;
+}
+
+export type NaturezaAtendimento = 'sus' | 'suplementar' | 'particular';
+export type TipoSolicitacaoJudicial = 'medicamento' | 'produto' | 'procedimento';
+
+export interface PrescritorJudicial {
+  nome?: string;
+  registro?: string;
+  especialidade?: string;
+}
+
+export interface ProdutoJudicial {
+  descricao?: string;
+  calibreFrench?: number;
+  comprimentoCm?: number;
+  quantidadePorDia?: number;
+  quantidadePorMes?: number;
+  usoContinuo?: boolean;
+}
+
+export interface MedicamentoJudicial {
+  principioAtivo?: string;
+  formaFarmaceuticaApresentacao?: string;
+  dose?: string;
+  posologia?: string;
+  viaAdministracao?: string;
+  duracaoTratamento?: string;
+}
+
+export interface RelatorioJudicial {
+  municipioEstado?: string;
+  naturezaAtendimento?: NaturezaAtendimento;
+  enfermidadeCid?: string;
+  historicoDoenca?: string;
+  tratamentosRealizados?: string;
+  tipoSolicitacao?: TipoSolicitacaoJudicial;
+  produto?: ProdutoJudicial;
+  medicamento?: MedicamentoJudicial;
+  procedimentoDescricao?: string;
+  urgente?: boolean;
+  justificativaUrgencia?: string;
+  imprescindivel?: boolean;
+  justificativaImprescindivel?: string;
+  beneficiosEsperados?: string;
+  consequenciasNaoUso?: string;
+  prescritor?: PrescritorJudicial;
+  dataEmissao?: string;
 }
 
 export interface AssinaturaProntuario {
@@ -283,6 +356,7 @@ export interface Prontuario {
   avaliacao?: ProntuarioAvaliacao;
   plano?: ProntuarioPlano;
   fichaVaPro?: FichaVaPro;
+  relatorioJudicial?: RelatorioJudicial;
 }
 
 export interface Documento {

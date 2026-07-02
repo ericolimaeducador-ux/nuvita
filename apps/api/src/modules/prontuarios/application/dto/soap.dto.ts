@@ -2,7 +2,9 @@ import {
   ArrayMaxSize,
   IsArray,
   IsBoolean,
+  IsEnum,
   IsInt,
+  IsISO8601,
   IsNumber,
   IsOptional,
   IsString,
@@ -12,6 +14,10 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import {
+  NaturezaAtendimento,
+  TipoSolicitacaoJudicial,
+} from '../../domain/prontuario.entity';
 
 export class SubjetivoDto {
   @IsString()
@@ -20,6 +26,34 @@ export class SubjetivoDto {
   @IsOptional()
   @IsString()
   hda?: string;
+
+  @IsOptional()
+  @IsString()
+  antecedentesPessoais?: string;
+
+  @IsOptional()
+  @IsString()
+  antecedentesCirurgicos?: string;
+
+  @IsOptional()
+  @IsString()
+  medicamentosEmUso?: string;
+
+  @IsOptional()
+  @IsString()
+  alergias?: string;
+
+  @IsOptional()
+  @IsString()
+  historiaFamiliar?: string;
+
+  @IsOptional()
+  @IsString()
+  historiaSocial?: string;
+
+  @IsOptional()
+  @IsString()
+  revisaoSistemas?: string;
 }
 
 export class SinaisVitaisDto {
@@ -54,17 +88,43 @@ export class SinaisVitaisDto {
   @IsOptional()
   @IsNumber()
   altura?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10)
+  escalaDor?: number;
+}
+
+export class ExameSegmentarDto {
+  @IsOptional() @IsString() cabecaPescoco?: string;
+  @IsOptional() @IsString() cardiovascular?: string;
+  @IsOptional() @IsString() respiratorio?: string;
+  @IsOptional() @IsString() abdome?: string;
+  @IsOptional() @IsString() geniturinario?: string;
+  @IsOptional() @IsString() neurologico?: string;
+  @IsOptional() @IsString() extremidades?: string;
+  @IsOptional() @IsString() pele?: string;
 }
 
 export class ObjetivoDto {
   @IsOptional()
   @IsString()
-  exameFisico?: string;
+  estadoGeral?: string;
 
   @IsOptional()
   @ValidateNested()
   @Type(() => SinaisVitaisDto)
   sinaisVitais?: SinaisVitaisDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ExameSegmentarDto)
+  exameSegmentar?: ExameSegmentarDto;
+
+  @IsOptional()
+  @IsString()
+  exameFisico?: string;
 }
 
 export class AvaliacaoDto {
@@ -77,6 +137,14 @@ export class AvaliacaoDto {
   @IsArray()
   @IsString({ each: true })
   cid10?: string[];
+
+  @IsOptional()
+  @IsString()
+  diagnosticoDefinitivo?: string;
+
+  @IsOptional()
+  @IsString()
+  evolucao?: string;
 }
 
 export class PlanoDto {
@@ -92,6 +160,77 @@ export class PlanoDto {
   @IsArray()
   @IsString({ each: true })
   examesSolicitados?: string[];
+
+  @IsOptional()
+  @IsString()
+  orientacoes?: string;
+
+  @IsOptional()
+  @IsString()
+  encaminhamentos?: string;
+
+  @IsOptional()
+  @IsString()
+  retorno?: string;
+}
+
+export class PrescritorJudicialDto {
+  @IsOptional() @IsString() nome?: string;
+  @IsOptional() @IsString() registro?: string;
+  @IsOptional() @IsString() especialidade?: string;
+}
+
+export class ProdutoJudicialDto {
+  @IsOptional() @IsString() descricao?: string;
+  @IsOptional() @IsNumber() calibreFrench?: number;
+  @IsOptional() @IsNumber() comprimentoCm?: number;
+  @IsOptional() @IsNumber() quantidadePorDia?: number;
+  @IsOptional() @IsNumber() quantidadePorMes?: number;
+  @IsOptional() @IsBoolean() usoContinuo?: boolean;
+}
+
+export class MedicamentoJudicialDto {
+  @IsOptional() @IsString() principioAtivo?: string;
+  @IsOptional() @IsString() formaFarmaceuticaApresentacao?: string;
+  @IsOptional() @IsString() dose?: string;
+  @IsOptional() @IsString() posologia?: string;
+  @IsOptional() @IsString() viaAdministracao?: string;
+  @IsOptional() @IsString() duracaoTratamento?: string;
+}
+
+/** Bloco de judicialização (NAT-JUS). Todos os campos são opcionais. */
+export class RelatorioJudicialDto {
+  @IsOptional() @IsString() municipioEstado?: string;
+  @IsOptional() @IsEnum(NaturezaAtendimento) naturezaAtendimento?: NaturezaAtendimento;
+  @IsOptional() @IsString() enfermidadeCid?: string;
+  @IsOptional() @IsString() historicoDoenca?: string;
+  @IsOptional() @IsString() tratamentosRealizados?: string;
+  @IsOptional() @IsEnum(TipoSolicitacaoJudicial) tipoSolicitacao?: TipoSolicitacaoJudicial;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProdutoJudicialDto)
+  produto?: ProdutoJudicialDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => MedicamentoJudicialDto)
+  medicamento?: MedicamentoJudicialDto;
+
+  @IsOptional() @IsString() procedimentoDescricao?: string;
+  @IsOptional() @IsBoolean() urgente?: boolean;
+  @IsOptional() @IsString() justificativaUrgencia?: string;
+  @IsOptional() @IsBoolean() imprescindivel?: boolean;
+  @IsOptional() @IsString() justificativaImprescindivel?: string;
+  @IsOptional() @IsString() beneficiosEsperados?: string;
+  @IsOptional() @IsString() consequenciasNaoUso?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PrescritorJudicialDto)
+  prescritor?: PrescritorJudicialDto;
+
+  @IsOptional() @IsISO8601() dataEmissao?: string;
 }
 
 export class ArquivoProntuarioDto {

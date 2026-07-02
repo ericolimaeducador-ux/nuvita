@@ -50,6 +50,14 @@ export class ProntuariosService {
       avaliacao: dto.avaliacao,
       plano: dto.plano,
       fichaVaPro: dto.fichaVaPro,
+      relatorioJudicial: dto.relatorioJudicial
+        ? {
+            ...dto.relatorioJudicial,
+            dataEmissao: dto.relatorioJudicial.dataEmissao
+              ? new Date(dto.relatorioJudicial.dataEmissao)
+              : undefined,
+          }
+        : undefined,
       arquivos: dto.arquivos ?? [],
     });
 
@@ -109,6 +117,14 @@ export class ProntuariosService {
     const updated = await this.prontuarios.updateDraft(current.clinicaId, prontuarioId, {
       ...dto,
       dataAtendimento: dto.dataAtendimento ? new Date(dto.dataAtendimento) : undefined,
+      relatorioJudicial: dto.relatorioJudicial
+        ? {
+            ...dto.relatorioJudicial,
+            dataEmissao: dto.relatorioJudicial.dataEmissao
+              ? new Date(dto.relatorioJudicial.dataEmissao)
+              : undefined,
+          }
+        : undefined,
     });
 
     if (!updated) {
@@ -264,6 +280,7 @@ export class ProntuariosService {
         avaliacao: prontuario.avaliacao,
         plano: prontuario.plano,
         fichaVaPro: prontuario.fichaVaPro ?? null,
+        relatorioJudicial: this.normalizeJudicial(prontuario.relatorioJudicial),
         arquivos: prontuario.arquivos,
       },
       medicoId,
@@ -271,6 +288,19 @@ export class ProntuariosService {
     };
 
     return createHmac('sha256', secret).update(this.stableStringify(payload)).digest('hex');
+  }
+
+  /**
+   * Normaliza o bloco jurídico para o hash de assinatura: `dataEmissao` pode
+   * chegar como Date (create) ou string ISO (update de rascunho); convertê-la
+   * para ISO garante que o hash seja idêntico independente da origem.
+   */
+  private normalizeJudicial(judicial: Prontuario['relatorioJudicial']): unknown {
+    if (!judicial) return null;
+    const dataEmissao = judicial.dataEmissao
+      ? new Date(judicial.dataEmissao).toISOString()
+      : null;
+    return { ...judicial, dataEmissao };
   }
 
   private stableStringify(value: unknown): string {

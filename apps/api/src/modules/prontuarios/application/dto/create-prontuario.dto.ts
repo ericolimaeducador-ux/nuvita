@@ -7,6 +7,7 @@ import {
   FichaVaProDto,
   ObjetivoDto,
   PlanoDto,
+  RelatorioJudicialDto,
   SubjetivoDto,
 } from './soap.dto';
 
@@ -47,6 +48,11 @@ export class CreateProntuarioDto {
   @ValidateNested()
   @Type(() => FichaVaProDto)
   fichaVaPro?: FichaVaProDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RelatorioJudicialDto)
+  relatorioJudicial?: RelatorioJudicialDto;
 
   @IsOptional()
   @ValidateNested({ each: true })

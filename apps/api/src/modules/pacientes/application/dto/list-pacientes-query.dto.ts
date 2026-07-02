@@ -31,5 +31,5 @@ export class ListPacientesQueryDto {
 
   @IsOptional()
   @Transform(({ value }) => value === true || value === 'true')
-  programaVaPro?: boolean;
+  programaIU?: boolean;
 }

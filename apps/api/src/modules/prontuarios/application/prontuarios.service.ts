@@ -49,7 +49,7 @@ export class ProntuariosService {
       objetivo: dto.objetivo,
       avaliacao: dto.avaliacao,
       plano: dto.plano,
-      fichaVaPro: dto.fichaVaPro,
+      fichaAvaliacaoIU: dto.fichaAvaliacaoIU,
       relatorioJudicial: dto.relatorioJudicial
         ? {
             ...dto.relatorioJudicial,
@@ -279,7 +279,7 @@ export class ProntuariosService {
         objetivo: prontuario.objetivo,
         avaliacao: prontuario.avaliacao,
         plano: prontuario.plano,
-        fichaVaPro: prontuario.fichaVaPro ?? null,
+        fichaAvaliacaoIU: prontuario.fichaAvaliacaoIU ?? null,
         relatorioJudicial: this.normalizeJudicial(prontuario.relatorioJudicial),
         arquivos: prontuario.arquivos,
       },

@@ -57,5 +57,5 @@ export class CreatePacienteDto {
 
   @IsOptional()
   @IsBoolean()
-  programaVaPro?: boolean;
+  programaIU?: boolean;
 }

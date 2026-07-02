@@ -54,7 +54,7 @@ export class PacienteMongo {
   consentimentoLGPD!: ConsentimentoLGPDMongo;
 
   @Prop({ default: false, index: true })
-  programaVaPro?: boolean;
+  programaIU?: boolean;
 
   @Prop({ default: true, index: true })
   ativo!: boolean;

@@ -10,7 +10,7 @@ export type UpdatePacienteInput = Partial<
 export interface ListPacientesInput extends CursorPaginationInput {
   clinicaId: string;
   incluirInativos?: boolean;
-  programaVaPro?: boolean;
+  programaIU?: boolean;
 }
 
 export interface SearchPacientesByNameInput extends ListPacientesInput {

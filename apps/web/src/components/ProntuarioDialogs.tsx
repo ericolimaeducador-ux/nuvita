@@ -242,34 +242,34 @@ export function ProntuarioDetailDialog({
               </div>
             )}
 
-            {pr.fichaVaPro && (
+            {pr.fichaAvaliacaoIU && (
               <div className="glass rounded-xl p-4 border border-primary/20">
                 <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-3">
-                  Ficha VaPro (Hollister) — Avaliação de IU
+                  Ficha de Avaliação de Incontinência Urinária
                 </p>
                 <div className="grid grid-cols-2 gap-3">
-                  <Campo label="Local">{pr.fichaVaPro.local ? LOCAL_LABEL[pr.fichaVaPro.local as LocalAtendimento] : ''}</Campo>
-                  <Campo label="Início dos sintomas">{pr.fichaVaPro.inicioSintomas}</Campo>
-                  <Campo label="Motivo da IU">{pr.fichaVaPro.motivoIU}</Campo>
-                  <Campo label="Perfil do cliente">{pr.fichaVaPro.perfilCliente ? PERFIL_LABEL[pr.fichaVaPro.perfilCliente as PerfilCliente] : ''}</Campo>
-                  <Campo label="Destreza">{pr.fichaVaPro.destreza ? DESTREZA_LABEL[pr.fichaVaPro.destreza as Destreza] : ''}</Campo>
-                  <Campo label="DNTUI">{simNao(pr.fichaVaPro.dntui)}</Campo>
-                  <Campo label="Tipos de IU">{(pr.fichaVaPro.tiposIU ?? []).map((t) => TIPO_IU_LABEL[t as TipoIU] ?? t).join(', ')}</Campo>
-                  <Campo label="Micção espontânea">{simNao(pr.fichaVaPro.miccaoEspontanea)}</Campo>
-                  <Campo label="Realiza cateterismo">{simNao(pr.fichaVaPro.realizaCateterismo)}</Campo>
-                  <Campo label="Cateterismos/dia">{pr.fichaVaPro.cateterismosDia}</Campo>
-                  <Campo label="Cateter utilizado">{pr.fichaVaPro.cateterUtilizado}</Campo>
-                  <Campo label="Última ITU">{pr.fichaVaPro.ultimaInfeccaoUrinaria}</Campo>
-                  <Campo label="Em tratamento">{simNao(pr.fichaVaPro.emTratamento)}</Campo>
-                  <Campo label="Tratamento">{pr.fichaVaPro.tratamento}</Campo>
-                  <Campo label="Volume drenado">{pr.fichaVaPro.volumeDrenado}</Campo>
-                  <Campo label="Cateter VaPro indicado">{pr.fichaVaPro.cateterVaProIndicado ? `${pr.fichaVaPro.cateterVaProIndicado.sexo ?? ''} ${pr.fichaVaPro.cateterVaProIndicado.french ?? ''}Fr`.trim() : ''}</Campo>
-                  <Campo label="Encaminhamento">{pr.fichaVaPro.encaminhamento ? ENCAMINHAMENTO_LABEL[pr.fichaVaPro.encaminhamento as EncaminhamentoIU] : ''}</Campo>
-                  <Campo label="Responsável pelo cateterismo">{pr.fichaVaPro.responsavelCateterismo}</Campo>
-                  <Campo label="COREN">{pr.fichaVaPro.coren}</Campo>
+                  <Campo label="Local">{pr.fichaAvaliacaoIU.local ? LOCAL_LABEL[pr.fichaAvaliacaoIU.local as LocalAtendimento] : ''}</Campo>
+                  <Campo label="Início dos sintomas">{pr.fichaAvaliacaoIU.inicioSintomas}</Campo>
+                  <Campo label="Motivo da IU">{pr.fichaAvaliacaoIU.motivoIU}</Campo>
+                  <Campo label="Perfil do cliente">{pr.fichaAvaliacaoIU.perfilCliente ? PERFIL_LABEL[pr.fichaAvaliacaoIU.perfilCliente as PerfilCliente] : ''}</Campo>
+                  <Campo label="Destreza">{pr.fichaAvaliacaoIU.destreza ? DESTREZA_LABEL[pr.fichaAvaliacaoIU.destreza as Destreza] : ''}</Campo>
+                  <Campo label="DNTUI">{simNao(pr.fichaAvaliacaoIU.dntui)}</Campo>
+                  <Campo label="Tipos de IU">{(pr.fichaAvaliacaoIU.tiposIU ?? []).map((t) => TIPO_IU_LABEL[t as TipoIU] ?? t).join(', ')}</Campo>
+                  <Campo label="Micção espontânea">{simNao(pr.fichaAvaliacaoIU.miccaoEspontanea)}</Campo>
+                  <Campo label="Realiza cateterismo">{simNao(pr.fichaAvaliacaoIU.realizaCateterismo)}</Campo>
+                  <Campo label="Cateterismos/dia">{pr.fichaAvaliacaoIU.cateterismosDia}</Campo>
+                  <Campo label="Cateter utilizado">{pr.fichaAvaliacaoIU.cateterUtilizado}</Campo>
+                  <Campo label="Última ITU">{pr.fichaAvaliacaoIU.ultimaInfeccaoUrinaria}</Campo>
+                  <Campo label="Em tratamento">{simNao(pr.fichaAvaliacaoIU.emTratamento)}</Campo>
+                  <Campo label="Tratamento">{pr.fichaAvaliacaoIU.tratamento}</Campo>
+                  <Campo label="Volume drenado">{pr.fichaAvaliacaoIU.volumeDrenado}</Campo>
+                  <Campo label="Cateter indicado">{pr.fichaAvaliacaoIU.cateterIndicado ? `${pr.fichaAvaliacaoIU.cateterIndicado.sexo ?? ''} ${pr.fichaAvaliacaoIU.cateterIndicado.french ?? ''}Fr`.trim() : ''}</Campo>
+                  <Campo label="Encaminhamento">{pr.fichaAvaliacaoIU.encaminhamento ? ENCAMINHAMENTO_LABEL[pr.fichaAvaliacaoIU.encaminhamento as EncaminhamentoIU] : ''}</Campo>
+                  <Campo label="Responsável pelo cateterismo">{pr.fichaAvaliacaoIU.responsavelCateterismo}</Campo>
+                  <Campo label="COREN">{pr.fichaAvaliacaoIU.coren}</Campo>
                 </div>
                 <div className="mt-3">
-                  <Campo label="Outras intercorrências / medicamentos">{pr.fichaVaPro.outrasIntercorrencias}</Campo>
+                  <Campo label="Outras intercorrências / medicamentos">{pr.fichaAvaliacaoIU.outrasIntercorrencias}</Campo>
                 </div>
               </div>
             )}
@@ -548,7 +548,7 @@ export function NovoAtendimentoDialog({
 
               {judicial.tipoSolicitacao === 'produto' && (
                 <div className="space-y-3 border-l-2 border-amber-500/20 pl-3">
-                  <TextField label="Descrição do produto" value={judicial.produto?.descricao} onChange={(v) => setJ({ produto: { ...judicial.produto, descricao: v } })} placeholder="Ex.: Cateter hidrofílico VaPro, pronto para uso, com ponta protetora" />
+                  <TextField label="Descrição do produto" value={judicial.produto?.descricao} onChange={(v) => setJ({ produto: { ...judicial.produto, descricao: v } })} placeholder="Ex.: Cateter intermitente hidrofílico, pronto para uso, com ponta protetora" />
                   <div className="grid grid-cols-4 gap-3">
                     <div className="space-y-2"><Label>Calibre (Fr)</Label><Input inputMode="numeric" value={judicial.produto?.calibreFrench ?? ''} onChange={(e) => setJ({ produto: { ...judicial.produto, calibreFrench: num(e.target.value) } })} /></div>
                     <div className="space-y-2"><Label>Compr. (cm)</Label><Input inputMode="numeric" value={judicial.produto?.comprimentoCm ?? ''} onChange={(e) => setJ({ produto: { ...judicial.produto, comprimentoCm: num(e.target.value) } })} /></div>
@@ -596,7 +596,7 @@ export function NovoAtendimentoDialog({
             </div>
           )}
 
-          {/* Avaliação de incontinência (VaPro) foi desacoplada do atendimento SOAP —
+          {/* Avaliação de incontinência urinária foi desacoplada do atendimento SOAP —
               agora é registro independente, criado em /fluxo-clinico/:id. */}
         </div>
         <DialogFooter>

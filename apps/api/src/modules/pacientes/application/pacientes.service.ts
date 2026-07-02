@@ -41,7 +41,7 @@ export class PacientesService {
         dataAceite: new Date(dto.consentimentoLGPD.dataAceite),
         versao: dto.consentimentoLGPD.versao,
       },
-      programaVaPro: dto.programaVaPro ?? false,
+      programaIU: dto.programaIU ?? false,
     });
 
     await this.audit(AuditEvent.PATIENT_CREATED, context, {
@@ -76,14 +76,14 @@ export class PacientesService {
           cursor: query.cursor,
           limit: query.limit,
           incluirInativos: query.incluirInativos,
-          programaVaPro: query.programaVaPro,
+          programaIU: query.programaIU,
         })
       : await this.pacientes.list({
           clinicaId,
           cursor: query.cursor,
           limit: query.limit,
           incluirInativos: query.incluirInativos,
-          programaVaPro: query.programaVaPro,
+          programaIU: query.programaIU,
         });
 
     await this.audit(query.nome ? AuditEvent.PATIENT_SEARCHED : AuditEvent.PATIENT_LISTED, context, {

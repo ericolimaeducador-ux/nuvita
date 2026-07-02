@@ -99,9 +99,9 @@ export function FluxoPacientePage() {
         </Button>
         <PageHeader
           title={paciente?.nome ?? 'Paciente'}
-          subtitle={`CPF: ${paciente?.cpf ?? '—'} · Fluxo clínico VaPro`}
+          subtitle={`CPF: ${paciente?.cpf ?? '—'} · Fluxo clínico de incontinência urinária`}
         />
-        <VaProToggle pacienteId={pacienteId!} programaVaPro={!!paciente?.programaVaPro} />
+        <ProgramaIUToggle pacienteId={pacienteId!} programaIU={!!paciente?.programaIU} />
       </div>
 
       <div className="space-y-4">
@@ -109,7 +109,7 @@ export function FluxoPacientePage() {
         <Passo
           numero={1}
           titulo="Avaliação de Incontinência Urinária"
-          subtitulo="Ficha Hollister VaPro — preenchida pelo enfermeiro na consulta"
+          subtitulo="Ficha de avaliação — preenchida pelo enfermeiro na consulta"
           icon={ClipboardList}
           concluido={avaliacoes.length > 0}
           visivel={user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN || !!avaliacoes.length}
@@ -315,7 +315,7 @@ function AvaliacaoIUStep({ pacienteId, avaliacoes, produtos, user }: {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Ficha de Avaliação — Incontinência Urinária (VaPro Hollister)</DialogTitle>
+            <DialogTitle>Ficha de Avaliação — Incontinência Urinária</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
@@ -431,7 +431,7 @@ function AvaliacaoIUStep({ pacienteId, avaliacoes, produtos, user }: {
 
             {/* Produto indicado */}
             <div className="space-y-2">
-              <Label>Produto VaPro indicado</Label>
+              <Label>Produto indicado</Label>
               <Select onValueChange={(v) => {
                 const p = produtos.find((pr) => pr.codigo === Number(v));
                 if (p) setValue('produtoIndicado', { codigo: p.codigo, sexo: p.sexo, french: p.french ?? 0 });
@@ -474,7 +474,7 @@ function AvaliacaoIUStep({ pacienteId, avaliacoes, produtos, user }: {
               <div className="flex items-center gap-2">
                 <Checkbox id="autoriza" onCheckedChange={(c) => setValue('autorizaPesquisa', !!c)} />
                 <Label htmlFor="autoriza" className="text-sm cursor-pointer">
-                  Paciente autoriza uso de dados para pesquisa (Hollister)
+                  Paciente autoriza uso de dados para pesquisa
                 </Label>
               </div>
               <div className="flex items-center gap-2">
@@ -982,27 +982,27 @@ function EntregasStep({ pacienteId, processoId, avaliacaoId, entregas, produtos,
   );
 }
 
-// ---- VaPro Toggle ----
-function VaProToggle({ pacienteId, programaVaPro }: { pacienteId: string; programaVaPro: boolean }) {
+// ---- Toggle do programa de acompanhamento de incontinência urinária ----
+function ProgramaIUToggle({ pacienteId, programaIU }: { pacienteId: string; programaIU: boolean }) {
   const qc = useQueryClient();
   const mut = useMutation({
-    mutationFn: (val: boolean) => pacientesApi.update(pacienteId, { programaVaPro: val }),
+    mutationFn: (val: boolean) => pacientesApi.update(pacienteId, { programaIU: val }),
     onSuccess: (_, val) => {
       void qc.invalidateQueries({ queryKey: ['paciente', pacienteId] });
       void qc.invalidateQueries({ queryKey: ['pacientes-fluxo'] });
-      toast.success(val ? 'Adicionado ao programa VaPro.' : 'Removido do programa VaPro.');
+      toast.success(val ? 'Adicionado ao programa de acompanhamento.' : 'Removido do programa de acompanhamento.');
     },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
   return (
     <Button
       size="sm"
-      variant={programaVaPro ? 'default' : 'outline'}
+      variant={programaIU ? 'default' : 'outline'}
       className="ml-auto shrink-0"
-      onClick={() => mut.mutate(!programaVaPro)}
+      onClick={() => mut.mutate(!programaIU)}
       disabled={mut.isPending}
     >
-      {programaVaPro ? '✓ Programa VaPro' : '+ Incluir no VaPro'}
+      {programaIU ? '✓ Em acompanhamento' : '+ Incluir no acompanhamento'}
     </Button>
   );
 }

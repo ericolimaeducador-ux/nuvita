@@ -147,14 +147,14 @@ export interface RelatorioJudicial {
   dataEmissao?: Date;
 }
 
-export interface CateterVaProIndicado {
+export interface CateterIndicado {
   sexo?: string;
   french?: number;
   codigo?: number;
 }
 
-/** Questionário VaPro/Hollister (Ficha de Avaliação de IU) embutido no prontuário. */
-export interface FichaVaPro {
+/** Questionário de Avaliação de Incontinência Urinária embutido no prontuário. */
+export interface FichaAvaliacaoIU {
   local?: string;
   estadoCivil?: string;
   prescritor?: string;
@@ -176,7 +176,7 @@ export interface FichaVaPro {
   tratamento?: string;
   volumeDrenado?: string;
   outrasIntercorrencias?: string;
-  cateterVaProIndicado?: CateterVaProIndicado;
+  cateterIndicado?: CateterIndicado;
   encaminhamento?: string;
   localEncaminhamento?: string;
   responsavelCateterismo?: string;
@@ -213,7 +213,7 @@ export interface Prontuario {
   objetivo: Objetivo;
   avaliacao: Avaliacao;
   plano: Plano;
-  fichaVaPro?: FichaVaPro;
+  fichaAvaliacaoIU?: FichaAvaliacaoIU;
   relatorioJudicial?: RelatorioJudicial;
   arquivos: ArquivoProntuario[];
   assinado?: AssinaturaProntuario;

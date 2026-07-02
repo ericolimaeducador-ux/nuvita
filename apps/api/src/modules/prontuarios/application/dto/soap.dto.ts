@@ -257,18 +257,18 @@ export class ArquivosProntuarioDto {
   arquivos?: ArquivoProntuarioDto[];
 }
 
-export class CateterVaProDto {
+export class CateterIndicadoDto {
   @IsOptional() @IsString() sexo?: string;
   @IsOptional() @IsNumber() french?: number;
   @IsOptional() @IsNumber() codigo?: number;
 }
 
 /**
- * Questionário VaPro/Hollister (Ficha de Avaliação de Incontinência Urinária),
- * amarrado ao prontuário SOAP. Todos os campos são opcionais — a ficha só é
- * preenchida quando o atendimento envolve o programa VaPro.
+ * Questionário de Avaliação de Incontinência Urinária, amarrado ao
+ * prontuário SOAP. Todos os campos são opcionais — a ficha só é
+ * preenchida quando o atendimento envolve avaliação de IU.
  */
-export class FichaVaProDto {
+export class FichaAvaliacaoIUDto {
   @IsOptional() @IsString() local?: string;
   @IsOptional() @IsString() estadoCivil?: string;
   @IsOptional() @IsString() prescritor?: string;
@@ -290,7 +290,7 @@ export class FichaVaProDto {
   @IsOptional() @IsString() tratamento?: string;
   @IsOptional() @IsString() volumeDrenado?: string;
   @IsOptional() @IsString() outrasIntercorrencias?: string;
-  @IsOptional() @ValidateNested() @Type(() => CateterVaProDto) cateterVaProIndicado?: CateterVaProDto;
+  @IsOptional() @ValidateNested() @Type(() => CateterIndicadoDto) cateterIndicado?: CateterIndicadoDto;
   @IsOptional() @IsString() encaminhamento?: string;
   @IsOptional() @IsString() localEncaminhamento?: string;
   @IsOptional() @IsString() responsavelCateterismo?: string;

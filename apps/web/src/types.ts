@@ -259,7 +259,7 @@ export interface Paciente {
   telefone?: string;
   email?: string;
   endereco?: Endereco;
-  programaVaPro?: boolean;
+  programaIU?: boolean;
   ativo?: boolean;
   criadoEm?: string;
 }
@@ -395,14 +395,14 @@ export interface AssinaturaProntuario {
   hash?: string;
 }
 
-export interface CateterVaProIndicado {
+export interface CateterIndicado {
   sexo?: string;
   french?: number;
   codigo?: number;
 }
 
-/** Questionário VaPro/Hollister (Ficha de Avaliação de IU) embutido no prontuário. */
-export interface FichaVaPro {
+/** Questionário de Avaliação de Incontinência Urinária embutido no prontuário. */
+export interface FichaAvaliacaoIU {
   local?: string;
   estadoCivil?: string;
   prescritor?: string;
@@ -424,7 +424,7 @@ export interface FichaVaPro {
   tratamento?: string;
   volumeDrenado?: string;
   outrasIntercorrencias?: string;
-  cateterVaProIndicado?: CateterVaProIndicado;
+  cateterIndicado?: CateterIndicado;
   encaminhamento?: string;
   localEncaminhamento?: string;
   responsavelCateterismo?: string;
@@ -447,7 +447,7 @@ export interface Prontuario {
   objetivo?: ProntuarioObjetivo;
   avaliacao?: ProntuarioAvaliacao;
   plano?: ProntuarioPlano;
-  fichaVaPro?: FichaVaPro;
+  fichaAvaliacaoIU?: FichaAvaliacaoIU;
   relatorioJudicial?: RelatorioJudicial;
 }
 
@@ -573,7 +573,7 @@ export interface SalaTelemedicina {
   criadoEm: string;
 }
 
-// ---------- Fluxo Clínico VaPro ----------
+// ---------- Fluxo Clínico — Avaliação de Incontinência Urinária ----------
 
 export enum LocalAtendimento {
   RESIDENCIA = 'residencia',

@@ -42,7 +42,7 @@ export function AvaliacaoImpressaoPage() {
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <span className="text-sm text-muted-foreground">Ficha de Avaliação — Hollister VaPro</span>
+        <span className="text-sm text-muted-foreground">Ficha de Avaliação de Incontinência Urinária</span>
         <Button size="sm" className="ml-auto" onClick={() => window.print()}>
           <Printer className="h-4 w-4 mr-2" /> Imprimir / Salvar PDF
         </Button>
@@ -56,7 +56,7 @@ export function AvaliacaoImpressaoPage() {
         <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4 mb-6">
           <div>
             <h1 className="text-base font-bold uppercase tracking-wide">Ficha de Avaliação de Incontinência Urinária</h1>
-            <p className="text-xs text-gray-500 mt-0.5">Produto VaPro Hollister — Uso exclusivo para cateterismo intermitente</p>
+            <p className="text-xs text-gray-500 mt-0.5">Uso exclusivo para cateterismo intermitente</p>
           </div>
           <div className="text-right text-xs text-gray-500">
             <p>Data: {av?.dataAtendimento ? dayjs(av.dataAtendimento).format('DD/MM/YYYY') : '—'}</p>
@@ -136,7 +136,7 @@ export function AvaliacaoImpressaoPage() {
         {/* Consentimento */}
         <section className="mb-6">
           <h2 className="text-xs font-bold uppercase text-gray-500 mb-2 border-b border-gray-300 pb-1">Consentimento</h2>
-          <p>{check(av?.autorizaPesquisa)} Autoriza uso de dados para pesquisa (Hollister)</p>
+          <p>{check(av?.autorizaPesquisa)} Autoriza uso de dados para pesquisa</p>
           <p>{check(av?.aceitaInformacoes)} Aceita receber informações por e-mail / WhatsApp</p>
           {av?.emailContato && <p className="mt-1 text-gray-600">E-mail: {av.emailContato}</p>}
           {av?.whatsappContato && <p className="text-gray-600">WhatsApp: {av.whatsappContato}</p>}

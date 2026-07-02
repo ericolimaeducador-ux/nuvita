@@ -51,7 +51,7 @@ export class ProntuarioMongo {
   plano!: Record<string, unknown>;
 
   @Prop({ type: MongooseSchema.Types.Mixed })
-  fichaVaPro?: Record<string, unknown>;
+  fichaAvaliacaoIU?: Record<string, unknown>;
 
   @Prop({ type: MongooseSchema.Types.Mixed })
   relatorioJudicial?: Record<string, unknown>;

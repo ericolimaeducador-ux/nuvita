@@ -4,7 +4,7 @@ import { TipoAtendimento } from '../../domain/prontuario.entity';
 import {
   ArquivoProntuarioDto,
   AvaliacaoDto,
-  FichaVaProDto,
+  FichaAvaliacaoIUDto,
   ObjetivoDto,
   PlanoDto,
   RelatorioJudicialDto,
@@ -46,8 +46,8 @@ export class CreateProntuarioDto {
 
   @IsOptional()
   @ValidateNested()
-  @Type(() => FichaVaProDto)
-  fichaVaPro?: FichaVaProDto;
+  @Type(() => FichaAvaliacaoIUDto)
+  fichaAvaliacaoIU?: FichaAvaliacaoIUDto;
 
   @IsOptional()
   @ValidateNested()

@@ -24,7 +24,7 @@ const TEMPLATES: Record<TipoNotificacao, { assunto: string; mensagem: string }> 
   },
   [TipoNotificacao.ELEGIBILIDADE_CONFIRMADA]: {
     assunto: 'Paciente elegivel para produto gratuito',
-    mensagem: 'O paciente {nome} foi confirmado como elegivel para receber o produto VaPro gratuitamente via SUS. Agende o laudo medico.',
+    mensagem: 'O paciente {nome} foi confirmado como elegivel para receber o insumo indicado gratuitamente via SUS. Agende o laudo medico.',
   },
 };
 

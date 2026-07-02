@@ -57,11 +57,11 @@ export function FluxoClinicoPage() {
   const navigate = useNavigate();
   const [busca, setBusca] = useState('');
   const [filtroEtapa, setFiltroEtapa] = useState('todos');
-  const [soVaPro, setSoVaPro] = useState(true);
+  const [soPrograma, setSoPrograma] = useState(true);
 
   const pacientesQ = useQuery({
-    queryKey: ['pacientes-fluxo', busca, soVaPro],
-    queryFn: () => pacientesApi.list({ nome: busca || undefined, limit: 50, programaVaPro: soVaPro || undefined }),
+    queryKey: ['pacientes-fluxo', busca, soPrograma],
+    queryFn: () => pacientesApi.list({ nome: busca || undefined, limit: 50, programaIU: soPrograma || undefined }),
   });
 
   const pacientes = toItems<Paciente>(pacientesQ.data as never);
@@ -73,19 +73,19 @@ export function FluxoClinicoPage() {
         subtitle="Pipeline completo: avaliação → follow-up → laudo → processo → entrega"
       />
 
-      {/* Toggle VaPro */}
+      {/* Toggle do programa de acompanhamento de IU */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => setSoVaPro(!soVaPro)}
+          onClick={() => setSoPrograma(!soPrograma)}
           className={cn(
             'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-all',
-            soVaPro
+            soPrograma
               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
               : 'bg-card/40 text-muted-foreground border-white/5 hover:bg-white/5'
           )}
         >
           <span className="inline-block w-2 h-2 rounded-full bg-current" />
-          {soVaPro ? 'Apenas programa VaPro' : 'Todos os pacientes'}
+          {soPrograma ? 'Apenas programa de acompanhamento' : 'Todos os pacientes'}
         </button>
       </div>
 

@@ -69,6 +69,6 @@ CORS com www/apex, secret `VITE_API_URL=https://api.nuvita.app.br`.
 - Confirmar `CORS_ORIGIN` cobre o domínio final do frontend.
 
 ## 📌 Recomendado (não bloqueia, mas importante)
-- Ampliar a cobertura de testes (hoje 8 testes) — pelo menos um e2e do pipeline clínico VaPro.
+- Ampliar a cobertura de testes (hoje 8 testes) — pelo menos um e2e do pipeline clínico de incontinência urinária.
 - Definir limites de recursos do Cloud Run (`--memory`, `--cpu`, `--max-instances`).
 - Monitoramento/alertas (Cloud Run métricas + uptime check no `/health`).

@@ -41,7 +41,7 @@ export function MeusProcessosPage() {
     <div className="p-6 space-y-6">
       <PageHeader
         title="Meus Processos"
-        subtitle="Processos jurídicos VaPro sob sua responsabilidade"
+        subtitle="Processos jurídicos sob sua responsabilidade"
       />
 
       {/* Cards resumo */}

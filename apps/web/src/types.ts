@@ -755,6 +755,36 @@ export interface ProcessoJuridico {
   criadoEm: string;
 }
 
+export interface AnotacaoJuridica {
+  id: string;
+  clinicaId: string;
+  pacienteId: string;
+  autorId: string;
+  texto: string;
+  criadoEm: string;
+}
+
+export enum StatusChecklistDocumento {
+  PENDENTE = 'pendente',
+  RECEBIDO = 'recebido',
+}
+export const STATUS_CHECKLIST_DOCUMENTO_LABEL: Record<StatusChecklistDocumento, string> = {
+  [StatusChecklistDocumento.PENDENTE]: 'Pendente',
+  [StatusChecklistDocumento.RECEBIDO]: 'Recebido',
+};
+
+export interface ChecklistDocumentoItem {
+  id: string;
+  clinicaId: string;
+  pacienteId: string;
+  nome: string;
+  status: StatusChecklistDocumento;
+  observacao?: string;
+  criadoPor: string;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
 export enum OrigemEntrega {
   SUS = 'sus',
   PLANO_SAUDE = 'plano_saude',

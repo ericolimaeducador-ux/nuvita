@@ -22,6 +22,8 @@ import { LaudoMedicoModule } from './modules/laudo-medico/laudo-medico.module';
 import { ProcessoJuridicoModule } from './modules/processo-juridico/processo-juridico.module';
 import { EntregasModule } from './modules/entregas/entregas.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
+import { AnotacoesJuridicasModule } from './modules/anotacoes-juridicas/anotacoes-juridicas.module';
+import { ChecklistDocumentosModule } from './modules/checklist-documentos/checklist-documentos.module';
 
 @Module({
   imports: [
@@ -56,6 +58,8 @@ import { SuperAdminModule } from './modules/super-admin/super-admin.module';
     ProcessoJuridicoModule,
     EntregasModule,
     SuperAdminModule,
+    AnotacoesJuridicasModule,
+    ChecklistDocumentosModule,
   ],
 })
 export class AppModule {}

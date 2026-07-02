@@ -1,7 +1,9 @@
 import { api } from './client';
 import type {
   Agendamento,
+  AnotacaoJuridica,
   AvaliacaoIU,
+  ChecklistDocumentoItem,
   DashboardFinanceiro,
   Documento,
   Entrega,
@@ -274,6 +276,26 @@ export const processoJuridicoApi = {
     api.patch<ProcessoJuridico>(`/processo-juridico/${id}/status`, payload).then((r) => r.data),
   addDocumento: (id: string, payload: { nome: string; url: string; tipo: string }) =>
     api.post<ProcessoJuridico>(`/processo-juridico/${id}/documento`, payload).then((r) => r.data),
+};
+
+// ---------- Anotações Jurídicas ----------
+export const anotacaoJuridicaApi = {
+  create: (payload: { pacienteId: string; texto: string }) =>
+    api.post<AnotacaoJuridica>('/anotacoes-juridicas', payload).then((r) => r.data),
+  listByPaciente: (pacienteId: string) =>
+    api.get<AnotacaoJuridica[]>('/anotacoes-juridicas', { params: { pacienteId } }).then((r) => r.data),
+};
+
+// ---------- Checklist de Documentos ----------
+export const checklistDocumentosApi = {
+  create: (payload: { pacienteId: string; nome: string; observacao?: string }) =>
+    api.post<ChecklistDocumentoItem>('/checklist-documentos', payload).then((r) => r.data),
+  listByPaciente: (pacienteId: string) =>
+    api.get<ChecklistDocumentoItem[]>('/checklist-documentos', { params: { pacienteId } }).then((r) => r.data),
+  update: (id: string, payload: { status?: string; observacao?: string; nome?: string }) =>
+    api.patch<ChecklistDocumentoItem>(`/checklist-documentos/${id}`, payload).then((r) => r.data),
+  remove: (id: string) =>
+    api.delete<{ ok: true }>(`/checklist-documentos/${id}`).then((r) => r.data),
 };
 
 // ---------- Entregas ----------

@@ -178,6 +178,7 @@ export function PacienteDetailPage() {
 
       <ProntuarioDetailDialog
         prontuarioId={viewProntuarioId}
+        pacienteId={id}
         open={!!viewProntuarioId}
         onOpenChange={(o) => { if (!o) setViewProntuarioId(null); }}
       />

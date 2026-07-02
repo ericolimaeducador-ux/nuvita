@@ -16,6 +16,7 @@ import { FluxoClinicoPage } from '@/pages/FluxoClinicoPage';
 import { FluxoPacientePage } from '@/pages/FluxoPacientePage';
 import { LaudoImpressaoPage } from '@/pages/LaudoImpressaoPage';
 import { AvaliacaoImpressaoPage } from '@/pages/AvaliacaoImpressaoPage';
+import { NatjusImpressaoPage } from '@/pages/NatjusImpressaoPage';
 import { MeusProcessosPage } from '@/pages/MeusProcessosPage';
 import { SuperAdminPage } from '@/pages/SuperAdminPage';
 import { Papel } from '@/types';
@@ -30,6 +31,7 @@ export function AppRoutes() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/pacientes" element={<PacientesPage />} />
           <Route path="/pacientes/:id" element={<PacienteDetailPage />} />
+          <Route path="/pacientes/:id/prontuario/:prontuarioId/natjus/imprimir" element={<NatjusImpressaoPage />} />
           <Route path="/agenda" element={<AgendaPage />} />
           <Route path="/prontuarios" element={<ProntuariosPage />} />
           <Route path="/documentos" element={<DocumentosPage />} />

@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { PenLine, Scale } from 'lucide-react';
+import { PenLine, Scale, FileText } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -81,14 +82,17 @@ function simNao(v?: boolean): string {
 /** Visualização (somente leitura) de um prontuário SOAP, com ação de assinar rascunho. */
 export function ProntuarioDetailDialog({
   prontuarioId,
+  pacienteId,
   open,
   onOpenChange,
 }: {
   prontuarioId: string | null;
+  pacienteId?: string;
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const q = useQuery({
     queryKey: ['prontuario', prontuarioId],
     queryFn: () => prontuariosApi.get(prontuarioId!),
@@ -264,6 +268,11 @@ export function ProntuarioDetailDialog({
         )}
 
         <DialogFooter>
+          {pr?.relatorioJudicial && pacienteId && (
+            <Button variant="outline" onClick={() => navigate(`/pacientes/${pacienteId}/prontuario/${pr.id}/natjus/imprimir`)}>
+              <FileText className="mr-2 h-4 w-4" /> Gerar relatório NAT-JUS
+            </Button>
+          )}
           {pr && !pr.assinado && (
             <Button variant="outline" disabled={assinarMut.isPending} onClick={() => assinarMut.mutate()}>
               <PenLine className="mr-2 h-4 w-4" /> {assinarMut.isPending ? 'Assinando...' : 'Assinar prontuário'}

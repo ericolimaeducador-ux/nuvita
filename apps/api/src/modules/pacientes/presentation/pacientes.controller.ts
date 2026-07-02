@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { extractRequestMeta } from '../../../common/http/client-ip';
 import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
@@ -92,14 +93,8 @@ export class PacientesController {
   }
 
   private contextFromRequest(request: Request, user: AuthTokenPayload): RequestAuditContext {
-    const forwardedFor = request.headers['x-forwarded-for'];
-    const ip = Array.isArray(forwardedFor)
-      ? forwardedFor[0]
-      : forwardedFor?.split(',')[0]?.trim() || request.ip || 'unknown';
-
     return {
-      ip,
-      userAgent: request.headers['user-agent'] ?? 'unknown',
+      ...extractRequestMeta(request),
       user,
     };
   }

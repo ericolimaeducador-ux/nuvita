@@ -1,9 +1,10 @@
 import { ValidationPipe } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { InvalidObjectIdFilter } from './common/http/invalid-object-id.filter';
 import { AppConfigService } from './common/security/config.service';
 
 async function bootstrap() {
@@ -25,6 +26,8 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  app.useGlobalFilters(new InvalidObjectIdFilter(app.get(HttpAdapterHost).httpAdapter));
 
   app.enableCors({
     origin: config.corsOrigin,

@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { extractRequestMeta } from '../../../common/http/client-ip';
 import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
 import { AuthService, AuthTokens, RequestContext } from '../application/auth.service';
 import { LoginDto } from '../application/dto/login.dto';
@@ -93,14 +94,8 @@ export class AuthController {
   }
 
   private contextFromRequest(request: Request): RequestContext {
-    const forwardedFor = request.headers['x-forwarded-for'];
-    const ip = Array.isArray(forwardedFor)
-      ? forwardedFor[0]
-      : forwardedFor?.split(',')[0]?.trim() || request.ip || 'unknown';
-
     return {
-      ip,
-      userAgent: request.headers['user-agent'] ?? 'unknown',
+      ...extractRequestMeta(request),
     };
   }
 }

@@ -263,6 +263,7 @@ export class ProntuariosService {
         objetivo: prontuario.objetivo,
         avaliacao: prontuario.avaliacao,
         plano: prontuario.plano,
+        fichaVaPro: prontuario.fichaVaPro ?? null,
         arquivos: prontuario.arquivos,
       },
       medicoId,

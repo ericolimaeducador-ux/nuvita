@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
-import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
+import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
+import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
 import { Connection } from 'mongoose';
 import {
   ANALYTICS_COLLECTION_AGENDAMENTOS,
@@ -141,8 +142,6 @@ export class AnalyticsService {
   }
 
   resolveClinicaId(user: AuthTokenPayload, requestedId?: string): string {
-    if (user.papel !== Papel.ADMIN && user.clinicaId) return user.clinicaId;
-    if (requestedId) return requestedId;
-    throw new BadRequestException('clinicaId obrigatorio.');
+    return resolveTenantClinicaId(user, requestedId);
   }
 }

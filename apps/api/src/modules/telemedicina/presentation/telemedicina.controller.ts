@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
+import { extractRequestMeta } from '../../../common/http/client-ip';
 import { AuthTokenPayload, Papel, PAPEIS_PROFISSIONAIS } from '../../../../../../packages/shared/src/auth';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
@@ -60,8 +61,6 @@ export class TelemedicinaController {
   }
 
   private ctx(req: Request, user: AuthTokenPayload): RequestAuditContext {
-    const fwd = req.headers['x-forwarded-for'];
-    const ip = Array.isArray(fwd) ? fwd[0] : fwd?.split(',')[0]?.trim() || req.ip || 'unknown';
-    return { ip, userAgent: req.headers['user-agent'] ?? 'unknown', user };
+    return { ...extractRequestMeta(req), user };
   }
 }

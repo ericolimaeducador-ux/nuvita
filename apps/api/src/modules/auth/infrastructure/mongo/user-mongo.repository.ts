@@ -63,6 +63,7 @@ export class UserMongoRepository implements UserRepository {
     if (input.clinicaId !== undefined) set['clinicaId'] = input.clinicaId;
     if (input.ativo !== undefined) set['ativo'] = input.ativo;
     if (input.passwordHash !== undefined) set['passwordHash'] = input.passwordHash;
+    if (input.twoFactorSecret !== undefined) set['2faSecret'] = input.twoFactorSecret;
 
     const doc = await this.userModel
       .findByIdAndUpdate(id, { $set: set }, { new: true })

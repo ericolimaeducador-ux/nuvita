@@ -1,5 +1,6 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
+import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
 import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
@@ -173,15 +174,7 @@ export class PacientesService {
   }
 
   private resolveClinicaId(user: AuthTokenPayload, requestedClinicaId?: string): string {
-    if (user.papel !== Papel.ADMIN && user.clinicaId) {
-      return user.clinicaId;
-    }
-
-    if (requestedClinicaId) {
-      return requestedClinicaId;
-    }
-
-    throw new BadRequestException('clinicaId e obrigatorio para esta operacao.');
+    return resolveTenantClinicaId(user, requestedClinicaId);
   }
 
   private async audit(

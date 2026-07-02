@@ -16,6 +16,7 @@ export interface UpdateUserInput {
   clinicaId?: string | null;
   ativo?: boolean;
   passwordHash?: string;
+  twoFactorSecret?: string;
 }
 
 export interface UserFilters {

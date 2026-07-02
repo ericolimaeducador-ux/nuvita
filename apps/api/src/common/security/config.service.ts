@@ -30,6 +30,12 @@ export function resolveConfigSource(): ConfigSource {
   return nodeEnv === 'production' || nodeEnv === 'staging' ? 'gcp' : 'env';
 }
 
+function resolveAllowPublicRegistration(nodeEnv: string): boolean {
+  const explicit = process.env.ALLOW_PUBLIC_REGISTRATION;
+  if (explicit !== undefined) return explicit === 'true';
+  return nodeEnv !== 'production';
+}
+
 export interface AppConfig {
   // Server
   port: number;
@@ -81,6 +87,12 @@ export interface AppConfig {
   appRootDomain: string;
   bootstrapSecret: string;
   totpIssuer: string;
+
+  // Auth
+  // Registro público (/auth/register) cria contas PACIENTE sem vínculo com
+  // clínica. Fora de produção fica liberado (seeds/dev); em produção só com
+  // ALLOW_PUBLIC_REGISTRATION=true explícito.
+  allowPublicRegistration: boolean;
 
   // Prontuário
   prontuarioSignatureSecret: string;
@@ -213,6 +225,9 @@ export class AppConfigService {
         appRootDomain,
         bootstrapSecret,
         prontuarioSignatureSecret,
+        allowPublicRegistration: resolveAllowPublicRegistration(
+          (process.env.NODE_ENV as AppConfig['nodeEnv']) || 'production',
+        ),
         gcpProjectId: process.env.GCP_PROJECT_ID!,
         kmsKeyRing: process.env.KMS_KEY_RING || 'nuvita-keyring',
         kmsKey: process.env.KMS_KEY || 'nuvita-master-key',
@@ -294,6 +309,9 @@ export class AppConfigService {
       appRootDomain: process.env.APP_ROOT_DOMAIN!,
       bootstrapSecret: process.env.BOOTSTRAP_SECRET!,
       prontuarioSignatureSecret: process.env.PRONTUARIO_SIGNATURE_SECRET!,
+      allowPublicRegistration: resolveAllowPublicRegistration(
+        (process.env.NODE_ENV as AppConfig['nodeEnv']) || 'development',
+      ),
       gcpProjectId: process.env.GCP_PROJECT_ID || 'nuvita-499800',
       kmsKeyRing: process.env.KMS_KEY_RING || 'nuvita-keyring',
       kmsKey: process.env.KMS_KEY || 'nuvita-master-key',

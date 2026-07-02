@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   UnauthorizedException,
@@ -59,6 +60,10 @@ export class AuthService {
     user: PublicUser;
     twoFactorSetup?: { required: true; otpauthUrl: string; base32: string };
   }> {
+    if (!this.configService.getConfig().allowPublicRegistration) {
+      throw new ForbiddenException('Registro publico desabilitado neste ambiente.');
+    }
+
     const email = dto.email.toLowerCase();
     const existingUser = await this.users.findByEmail(email);
 

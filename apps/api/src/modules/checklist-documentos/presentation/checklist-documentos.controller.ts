@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
+import { AuthTokenPayload, PAPEIS_PROFISSIONAIS, Papel } from '../../../../../../packages/shared/src/auth';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
@@ -10,18 +10,24 @@ import { CreateChecklistDocumentoDto } from '../application/dto/create-checklist
 import { UpdateChecklistDocumentoDto } from '../application/dto/update-checklist-documento.dto';
 import { CriarChecklistPadraoDto } from '../application/dto/criar-checklist-padrao.dto';
 
+// Leitura (GET) fica aberta também aos profissionais (médico/enfermeiro/advogado)
+// — a tela de Pacientes e o Fluxo Clínico mostram este checklist pra eles.
+// Mutações continuam restritas a quem de fato conduz a documentação (secretaria/admin).
+const LEITURA_CHECKLIST = [...PAPEIS_PROFISSIONAIS, Papel.ADMIN, Papel.SECRETARIA];
+
 @Controller('checklist-documentos')
 @UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
-@Roles(Papel.SECRETARIA, Papel.ADMIN)
 export class ChecklistDocumentosController {
   constructor(private readonly service: ChecklistDocumentosService) {}
 
   @Post()
+  @Roles(Papel.SECRETARIA, Papel.ADMIN)
   create(@Body() dto: CreateChecklistDocumentoDto, @CurrentUser() user: AuthTokenPayload) {
     return this.service.create(dto, user);
   }
 
   @Get()
+  @Roles(...LEITURA_CHECKLIST)
   listByPaciente(
     @Query('pacienteId') pacienteId: string,
     @Query('clinicaId') clinicaId: string | undefined,
@@ -31,6 +37,7 @@ export class ChecklistDocumentosController {
   }
 
   @Get('resumo-pendentes')
+  @Roles(...LEITURA_CHECKLIST)
   resumoPendentes(
     @Query('clinicaId') clinicaId: string | undefined,
     @CurrentUser() user: AuthTokenPayload,
@@ -39,11 +46,13 @@ export class ChecklistDocumentosController {
   }
 
   @Post('padrao')
+  @Roles(Papel.SECRETARIA, Papel.ADMIN)
   criarPadrao(@Body() dto: CriarChecklistPadraoDto, @CurrentUser() user: AuthTokenPayload) {
     return this.service.criarPadrao(dto, user);
   }
 
   @Patch(':id')
+  @Roles(Papel.SECRETARIA, Papel.ADMIN)
   update(
     @Param('id') id: string,
     @Body() dto: UpdateChecklistDocumentoDto,
@@ -53,6 +62,7 @@ export class ChecklistDocumentosController {
   }
 
   @Delete(':id')
+  @Roles(Papel.SECRETARIA, Papel.ADMIN)
   delete(
     @Param('id') id: string,
     @Query('clinicaId') clinicaId: string | undefined,

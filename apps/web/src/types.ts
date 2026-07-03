@@ -946,6 +946,28 @@ export function calcularPrazoEtapa(
   return { diasLimite, diasDecorridos, diasRestantes, atrasado: diasRestantes < 0 };
 }
 
+/**
+ * Avanço MANUAL do fluxo ("Avançar etapa" na tela do paciente) — espelho de
+ * packages/shared/src/fluxo-clinico/etapa.ts. Usado só pra decidir se/como
+ * mostrar o botão; a validação de verdade (papel x etapa) é feita no backend.
+ * Ficam de fora as etapas cujo gatilho automático produz um documento
+ * clínico/legal essencial (Avaliação IU, Laudo Médico) — pular via botão
+ * perderia esse registro.
+ */
+export const PROXIMA_ETAPA_MANUAL: Partial<Record<EtapaFluxoClinico, EtapaFluxoClinico>> = {
+  [EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO]: EtapaFluxoClinico.ENTREVISTA_AGENDADA,
+  [EtapaFluxoClinico.ENTREVISTA_AGENDADA]: EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS,
+  [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA,
+  [EtapaFluxoClinico.AGUARDANDO_ENVIO_JURIDICO]: EtapaFluxoClinico.PROCESSO_JURIDICO,
+};
+
+export const PAPEIS_AVANCO_MANUAL: Partial<Record<EtapaFluxoClinico, Papel[]>> = {
+  [EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO]: [Papel.SECRETARIA],
+  [EtapaFluxoClinico.ENTREVISTA_AGENDADA]: [Papel.SECRETARIA],
+  [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: [Papel.SECRETARIA],
+  [EtapaFluxoClinico.AGUARDANDO_ENVIO_JURIDICO]: [Papel.ADVOGADO],
+};
+
 export interface Produto {
   id: string;
   codigo: number;

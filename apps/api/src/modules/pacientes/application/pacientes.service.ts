@@ -1,6 +1,11 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
-import { EtapaFluxoClinico, podeAvancarPara } from '../../../../../../packages/shared/src/fluxo-clinico';
+import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
+import {
+  EtapaFluxoClinico,
+  podeAvancarPara,
+  PROXIMA_ETAPA_MANUAL,
+  PAPEIS_AVANCO_MANUAL,
+} from '../../../../../../packages/shared/src/fluxo-clinico';
 import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
 import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
@@ -241,6 +246,52 @@ export class PacientesService {
         `avancarEtapaFluxo falhou para paciente ${pacienteId} -> ${novaEtapa}: ${(err as Error).message}`,
       );
     }
+  }
+
+  /**
+   * Avanço MANUAL, acionado pelo botão "Avançar etapa" na tela do paciente —
+   * ao contrário de avancarEtapaFluxo (chamado internamente pelos hooks de
+   * outros módulos), este É a ação primária do request e por isso lança
+   * exceção normalmente em vez de engolir o erro. Só permite mover para a
+   * ÚNICA próxima etapa definida em PROXIMA_ETAPA_MANUAL (nunca pula etapas),
+   * e só para quem tem o papel autorizado a fechar aquela etapa específica
+   * (ADMIN sempre pode, como qualquer ação administrativa do sistema).
+   */
+  async avancarEtapaManual(
+    pacienteId: string,
+    clinicaId: string | undefined,
+    context: RequestAuditContext,
+  ): Promise<Paciente> {
+    const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+    const paciente = await this.pacientes.findById(resolvedClinicaId, pacienteId);
+    if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+
+    const proximaEtapa = PROXIMA_ETAPA_MANUAL[paciente.etapaFluxo];
+    if (!proximaEtapa) {
+      throw new BadRequestException('Esta etapa nao pode ser avancada manualmente.');
+    }
+
+    const papeisPermitidos = PAPEIS_AVANCO_MANUAL[paciente.etapaFluxo] ?? [];
+    if (context.user.papel !== Papel.ADMIN && !papeisPermitidos.includes(context.user.papel)) {
+      throw new ForbiddenException('Seu papel nao pode avancar esta etapa.');
+    }
+
+    await this.pacientes.update(resolvedClinicaId, pacienteId, {
+      etapaFluxo: proximaEtapa,
+      etapaFluxoDesde: new Date(),
+    });
+
+    await this.audit(AuditEvent.PIPELINE_STAGE_CHANGED, context, {
+      clinicaId: resolvedClinicaId,
+      pacienteId,
+      etapaAnterior: paciente.etapaFluxo,
+      etapaNova: proximaEtapa,
+      manual: true,
+    });
+
+    const atualizado = await this.pacientes.findById(resolvedClinicaId, pacienteId);
+    if (!atualizado) throw new NotFoundException('Paciente nao encontrado.');
+    return atualizado;
   }
 
   private resolveClinicaId(user: AuthTokenPayload, requestedClinicaId?: string): string {

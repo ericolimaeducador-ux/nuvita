@@ -98,6 +98,21 @@ export class PacientesController {
     return this.pacientesService.updateObservacoes(pacienteId, dto, clinicaId, this.contextFromRequest(request, user));
   }
 
+  // Avanço manual de etapa do fluxo clínico ("Avançar etapa" na tela do
+  // paciente) — a checagem de QUAL papel pode avançar de QUAL etapa é feita
+  // dentro do service (depende da etapa atual do paciente, não é estática),
+  // então aqui só exigimos que o usuário seja algum profissional/secretaria/admin.
+  @Patch(':id/fluxo/avancar')
+  @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
+  avancarEtapaManual(
+    @Param('id') pacienteId: string,
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.pacientesService.avancarEtapaManual(pacienteId, clinicaId, this.contextFromRequest(request, user));
+  }
+
   @Patch(':id/desativar')
   @Roles(Papel.SECRETARIA, Papel.ADMIN)
   deactivate(

@@ -32,7 +32,7 @@ import {
   StatusElegibilidade, StatusProcesso, OrigemEntrega,
   LOCAL_LABEL, PERFIL_LABEL, DESTREZA_LABEL, TIPO_IU_LABEL, ENCAMINHAMENTO_LABEL,
   STATUS_ELEGIBILIDADE_LABEL, STATUS_PROCESSO_LABEL, ORIGEM_ENTREGA_LABEL,
-  EtapaFluxoClinico, ETAPA_FLUXO_LABEL, calcularPrazoEtapa,
+  EtapaFluxoClinico, ETAPA_FLUXO_LABEL, calcularPrazoEtapa, PROXIMA_ETAPA_MANUAL, PAPEIS_AVANCO_MANUAL,
   ModalidadeAtendimento, TipoAgendamento, StatusAgendamento, STATUS_AGENDAMENTO_LABEL,
   StatusChecklistDocumento, STATUS_CHECKLIST_DOCUMENTO_LABEL,
   type AvaliacaoIU, type FollowUp, type LaudoMedico, type ProcessoJuridico, type Entrega, type Produto,
@@ -109,7 +109,9 @@ export function FluxoPacientePage() {
         <ProgramaIUToggle pacienteId={pacienteId!} programaIU={!!paciente?.programaIU} />
       </div>
 
-      {paciente?.etapaFluxo && <EtapaFluxoHeader paciente={paciente} />}
+      {paciente?.etapaFluxo && (
+        <EtapaFluxoHeader paciente={paciente} pacienteId={pacienteId!} papel={user?.papel} />
+      )}
 
       <div className="space-y-4">
         {/* Passo 1: Avaliação IU */}
@@ -1013,10 +1015,34 @@ function EntregasStep({ pacienteId, processoId, avaliacaoId, entregas, produtos,
   );
 }
 
-// ---- Cabeçalho com a etapa atual do fluxo e prazo ----
-function EtapaFluxoHeader({ paciente }: { paciente: { etapaFluxo?: EtapaFluxoClinico; etapaFluxoDesde?: string } }) {
+// ---- Cabeçalho com a etapa atual do fluxo, prazo e avanço manual ----
+function EtapaFluxoHeader({
+  paciente, pacienteId, papel,
+}: {
+  paciente: { etapaFluxo?: EtapaFluxoClinico; etapaFluxoDesde?: string };
+  pacienteId: string;
+  papel?: Papel;
+}) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const qc = useQueryClient();
+
+  const avancarMut = useMutation({
+    mutationFn: () => pacientesApi.avancarEtapaFluxo(pacienteId),
+    onSuccess: () => {
+      toast.success('Etapa avançada.');
+      setConfirmOpen(false);
+      void qc.invalidateQueries({ queryKey: ['paciente', pacienteId] });
+      void qc.invalidateQueries({ queryKey: ['pacientes-fluxo'] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
   if (!paciente.etapaFluxo) return null;
   const info = paciente.etapaFluxoDesde ? calcularPrazoEtapa(paciente.etapaFluxo, paciente.etapaFluxoDesde) : undefined;
+
+  const proximaEtapa = PROXIMA_ETAPA_MANUAL[paciente.etapaFluxo];
+  const papeisPermitidos = proximaEtapa ? PAPEIS_AVANCO_MANUAL[paciente.etapaFluxo] ?? [] : [];
+  const podeAvancar = !!proximaEtapa && (papel === Papel.ADMIN || (!!papel && papeisPermitidos.includes(papel)));
 
   return (
     <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/2 px-4 py-3">
@@ -1029,6 +1055,26 @@ function EtapaFluxoHeader({ paciente }: { paciente: { etapaFluxo?: EtapaFluxoCli
               {info.diasRestantes}d restantes
             </span>
       )}
+      {podeAvancar && (
+        <Button size="sm" variant="outline" className="ml-auto" onClick={() => setConfirmOpen(true)}>
+          Avançar etapa
+        </Button>
+      )}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Confirmar avanço de etapa</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Mover este paciente de <strong>{ETAPA_FLUXO_LABEL[paciente.etapaFluxo]}</strong> para{' '}
+            <strong>{proximaEtapa ? ETAPA_FLUXO_LABEL[proximaEtapa] : '—'}</strong>?
+          </p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)}>Cancelar</Button>
+            <Button onClick={() => avancarMut.mutate()} disabled={avancarMut.isPending}>
+              {avancarMut.isPending ? 'Avançando...' : 'Confirmar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

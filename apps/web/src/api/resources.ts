@@ -78,6 +78,8 @@ export const pacientesApi = {
     api.get(`/pacientes/${id}/export`).then((r) => r.data),
   updateObservacoes: (id: string, observacoes: string) =>
     api.patch<Paciente>(`/pacientes/${id}/observacoes`, { observacoes }).then((r) => r.data),
+  avancarEtapaFluxo: (id: string) =>
+    api.patch<Paciente>(`/pacientes/${id}/fluxo/avancar`).then((r) => r.data),
 };
 
 // ---------- Agenda ----------

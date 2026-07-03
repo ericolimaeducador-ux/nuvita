@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { prontuariosApi, pacientesApi } from '@/api/resources';
 import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
-import { formatCpf, idade } from '@/utils';
+import { formatCpf, formatData, idade } from '@/utils';
 import type { Prontuario, RelatorioJudicial } from '@/types';
 
 function marca(cond?: boolean): string {
@@ -111,7 +111,7 @@ export function NatjusImpressaoPage() {
         <Secao titulo="I — Sobre o paciente">
           <Linha rotulo="Nome">{paciente?.nome}</Linha>
           <div className="grid grid-cols-2 gap-x-8">
-            <Linha rotulo="Data de nascimento">{paciente?.dataNascimento ? `${dayjs(paciente.dataNascimento).format('DD/MM/YYYY')} (${idade(paciente.dataNascimento)})` : ''}</Linha>
+            <Linha rotulo="Data de nascimento">{paciente?.dataNascimento ? `${formatData(paciente.dataNascimento)} (${idade(paciente.dataNascimento)})` : ''}</Linha>
             <Linha rotulo="CPF">{paciente?.cpf ? formatCpf(paciente.cpf) : ''}</Linha>
             <Linha rotulo="Sexo">{paciente?.sexo}</Linha>
             {pr.objetivo?.sinaisVitais?.peso && <Linha rotulo="Peso">{pr.objetivo.sinaisVitais.peso} kg</Linha>}

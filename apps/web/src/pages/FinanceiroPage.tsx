@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { financeiroApi, processoJuridicoApi, type CreateLancamentoPayload } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
-import { toItems } from '@/utils';
+import { formatData, toItems } from '@/utils';
 import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import {
@@ -230,7 +230,7 @@ export function FinanceiroPage() {
                     <TableCell className="font-medium">{fmtValor(l.valor)}</TableCell>
                     <TableCell><Badge variant={lancamentoVariant(l.status)}>{STATUS_LANCAMENTO_LABEL[l.status] ?? l.status}</Badge></TableCell>
                     <TableCell>{l.formaPagamento ? (FORMA_PAGAMENTO_LABEL[l.formaPagamento] ?? l.formaPagamento) : '—'}</TableCell>
-                    <TableCell>{l.vencimento ? dayjs(l.vencimento).format('DD/MM/YYYY') : '—'}</TableCell>
+                    <TableCell>{formatData(l.vencimento)}</TableCell>
                     <TableCell>
                       {l.status === StatusLancamento.PENDENTE && (
                         <div className="flex gap-1">

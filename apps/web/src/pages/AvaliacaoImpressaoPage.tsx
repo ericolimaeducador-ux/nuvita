@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import dayjs from 'dayjs';
 import { Printer, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,6 +8,7 @@ import {
   LOCAL_LABEL, PERFIL_LABEL, DESTREZA_LABEL, TIPO_IU_LABEL, ENCAMINHAMENTO_LABEL,
 } from '@/types';
 import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
+import { formatData } from '@/utils';
 
 export function AvaliacaoImpressaoPage() {
   const { id: pacienteId, avaliacaoId } = useParams<{ id: string; avaliacaoId: string }>();
@@ -59,7 +59,7 @@ export function AvaliacaoImpressaoPage() {
             <p className="text-xs text-gray-500 mt-0.5">Uso exclusivo para cateterismo intermitente</p>
           </div>
           <div className="text-right text-xs text-gray-500">
-            <p>Data: {av?.dataAtendimento ? dayjs(av.dataAtendimento).format('DD/MM/YYYY') : '—'}</p>
+            <p>Data: {formatData(av?.dataAtendimento)}</p>
             <p>Local: {av?.local ? LOCAL_LABEL[av.local] : '—'}</p>
           </div>
         </div>
@@ -70,7 +70,7 @@ export function AvaliacaoImpressaoPage() {
           <div className="grid grid-cols-2 gap-x-8 gap-y-1">
             <div><span className="font-semibold">Nome:</span> {paciente?.nome ?? '—'}</div>
             <div><span className="font-semibold">CPF:</span> {paciente?.cpf ?? '—'}</div>
-            <div><span className="font-semibold">Data de Nascimento:</span> {paciente?.dataNascimento ? dayjs(paciente.dataNascimento).format('DD/MM/YYYY') : '—'}</div>
+            <div><span className="font-semibold">Data de Nascimento:</span> {formatData(paciente?.dataNascimento)}</div>
             <div><span className="font-semibold">Sexo:</span> {paciente?.sexo ?? '—'}</div>
             {av?.planoSaude && <div><span className="font-semibold">Plano de Saúde:</span> {av.planoSaude}</div>}
             {av?.hospitalReferencia && <div><span className="font-semibold">Hospital Ref.:</span> {av.hospitalReferencia}</div>}

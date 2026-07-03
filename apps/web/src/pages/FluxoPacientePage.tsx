@@ -26,6 +26,7 @@ import { apiErrorMessage } from '@/api/client';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/auth/AuthContext';
 import { cn } from '@/lib/utils';
+import { formatData } from '@/utils';
 import {
   Papel, LocalAtendimento, PerfilCliente, Destreza, TipoIU, EncaminhamentoIU,
   StatusElegibilidade, StatusProcesso, OrigemEntrega,
@@ -287,7 +288,7 @@ function AvaliacaoIUStep({ pacienteId, avaliacoes, produtos, user }: {
       {avaliacoes.map((av) => (
         <div key={av.id} className="rounded-lg border border-white/5 bg-white/2 p-4 space-y-1">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{dayjs(av.dataAtendimento).format('DD/MM/YYYY')}</span>
+            <span className="text-sm font-medium">{formatData(av.dataAtendimento)}</span>
             <Badge variant="outline" className="text-xs">{PERFIL_LABEL[av.perfilCliente]}</Badge>
             {av.encaminhamento && <Badge variant="outline" className="text-xs">{ENCAMINHAMENTO_LABEL[av.encaminhamento]}</Badge>}
             <Button size="sm" variant="ghost" className="ml-auto h-7 px-2 text-xs text-muted-foreground" onClick={() => window.open(`/fluxo-clinico/${pacienteId}/avaliacao/${av.id}/imprimir`, '_blank')}>
@@ -524,13 +525,13 @@ function FollowUpStep({ pacienteId, avaliacaoId, followups, user }: {
       {followups.map((f) => (
         <div key={f.id} className="rounded-lg border border-white/5 bg-white/2 p-3 space-y-1">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{dayjs(f.dataFollowup).format('DD/MM/YYYY')}</span>
+            <span className="text-sm font-medium">{formatData(f.dataFollowup)}</span>
             <StatusBadge value={f.statusElegibilidade} labels={STATUS_ELEGIBILIDADE_LABEL} />
           </div>
           <p className="text-xs text-muted-foreground">{f.observacoes}</p>
           {f.proximoFollowup && (
             <p className="text-xs flex items-center gap-1 text-muted-foreground">
-              <Clock className="h-3 w-3" /> Próximo: {dayjs(f.proximoFollowup).format('DD/MM/YYYY')}
+              <Clock className="h-3 w-3" /> Próximo: {formatData(f.proximoFollowup)}
             </p>
           )}
         </div>
@@ -543,7 +544,7 @@ function FollowUpStep({ pacienteId, avaliacaoId, followups, user }: {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Registrar Follow-up</DialogTitle></DialogHeader>
-          <form onSubmit={handleSubmit((v) => mut.mutate({ ...v, pacienteId, avaliacaoIuId: avaliacaoId, clinicaId: user?.clinicaId }))} className="space-y-4">
+          <form onSubmit={handleSubmit((v) => mut.mutate({ ...v, proximoFollowup: v.proximoFollowup || undefined, pacienteId, avaliacaoIuId: avaliacaoId, clinicaId: user?.clinicaId }))} className="space-y-4">
             <div className="space-y-1">
               <Label>Data do follow-up</Label>
               <Input type="date" {...register('dataFollowup', { required: true })} />
@@ -614,7 +615,7 @@ function LaudoMedicoStep({ pacienteId, avaliacaoId, laudos, produtos, user }: {
         <div key={l.id} className="rounded-lg border border-white/5 bg-white/2 p-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">{dayjs(l.dataLaudo).format('DD/MM/YYYY')}</span>
+              <span className="text-sm font-medium">{formatData(l.dataLaudo)}</span>
               {l.assinado
                 ? <Badge variant="success" className="text-xs">Assinado</Badge>
                 : <Badge variant="outline" className="text-xs">Rascunho</Badge>}
@@ -901,7 +902,7 @@ function EntregasStep({ pacienteId, processoId, avaliacaoId, entregas, produtos,
         <div key={e.id} className="rounded-lg border border-white/5 bg-white/2 p-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">{dayjs(e.dataEntrega).format('DD/MM/YYYY')}</span>
+              <span className="text-sm font-medium">{formatData(e.dataEntrega)}</span>
               <Badge variant={e.status === 'entregue' ? 'success' : 'outline'} className="text-xs">
                 {STATUS_LABEL[e.status] ?? e.status}
               </Badge>

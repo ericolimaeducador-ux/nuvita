@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import type { PageResult } from '@/types';
 
 /** Normaliza respostas de lista que podem vir como array puro ou paginado. */
@@ -21,6 +22,18 @@ export function idade(dataNascimento?: string): string {
   const diff = Date.now() - nasc.getTime();
   const anos = Math.floor(diff / (365.25 * 24 * 3600 * 1000));
   return `${anos} anos`;
+}
+
+/**
+ * Formata campos de DATA-CALENDÁRIO (nascimento, data de follow-up, vencimento…)
+ * que a API grava como meia-noite UTC. `dayjs(iso).format(...)` converteria para
+ * o fuso local e mostraria o dia ANTERIOR no Brasil (UTC-3); por isso usa só a
+ * parte YYYY-MM-DD. Não usar em timestamps de evento (criadoEm, dataProtocolo…),
+ * onde o horário local é o correto.
+ */
+export function formatData(value?: string | null): string {
+  if (!value) return '—';
+  return dayjs(value.slice(0, 10)).format('DD/MM/YYYY');
 }
 
 export function formatBRL(value: number): string {

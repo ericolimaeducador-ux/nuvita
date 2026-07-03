@@ -5,6 +5,7 @@ import { Printer, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { laudoMedicoApi, pacientesApi } from '@/api/resources';
+import { formatData } from '@/utils';
 import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
 
 export function LaudoImpressaoPage() {
@@ -61,7 +62,7 @@ export function LaudoImpressaoPage() {
           <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
             <div><span className="font-semibold">Nome:</span> {paciente?.nome ?? '—'}</div>
             <div><span className="font-semibold">CPF:</span> {paciente?.cpf ?? '—'}</div>
-            <div><span className="font-semibold">Data de Nascimento:</span> {paciente?.dataNascimento ? dayjs(paciente.dataNascimento).format('DD/MM/YYYY') : '—'}</div>
+            <div><span className="font-semibold">Data de Nascimento:</span> {formatData(paciente?.dataNascimento)}</div>
             <div><span className="font-semibold">Sexo:</span> {paciente?.sexo ?? '—'}</div>
           </div>
         </section>
@@ -72,7 +73,7 @@ export function LaudoImpressaoPage() {
             Dados do Laudo
           </h2>
           <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm mb-3">
-            <div><span className="font-semibold">Data:</span> {laudo?.dataLaudo ? dayjs(laudo.dataLaudo).format('DD/MM/YYYY') : '—'}</div>
+            <div><span className="font-semibold">Data:</span> {formatData(laudo?.dataLaudo)}</div>
             <div><span className="font-semibold">CID-10:</span> {laudo?.cid10?.join(', ') ?? '—'}</div>
           </div>
         </section>

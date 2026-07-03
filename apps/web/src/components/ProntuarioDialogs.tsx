@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { prontuariosApi, avaliacaoIUApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
+import { formatData } from '@/utils';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/auth/AuthContext';
 import {
@@ -295,8 +296,8 @@ export function ProntuarioDetailDialog({
                   Registro de Enfermagem
                 </p>
                 <div className="grid grid-cols-2 gap-3">
-                  <CampoSe label="Ligação ao paciente">{pr.registroEnfermagem.dataLigacao && dayjs(pr.registroEnfermagem.dataLigacao).format('DD/MM/YYYY')}</CampoSe>
-                  <CampoSe label="Chegada da sonda">{pr.registroEnfermagem.sondaChegouEm && dayjs(pr.registroEnfermagem.sondaChegouEm).format('DD/MM/YYYY')}</CampoSe>
+                  <CampoSe label="Ligação ao paciente">{pr.registroEnfermagem.dataLigacao && formatData(pr.registroEnfermagem.dataLigacao)}</CampoSe>
+                  <CampoSe label="Chegada da sonda">{pr.registroEnfermagem.sondaChegouEm && formatData(pr.registroEnfermagem.sondaChegouEm)}</CampoSe>
                 </div>
                 <CampoSe label="Observações">{pr.registroEnfermagem.observacoes}</CampoSe>
               </div>

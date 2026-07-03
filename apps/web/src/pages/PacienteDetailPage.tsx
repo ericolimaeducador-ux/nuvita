@@ -25,7 +25,7 @@ import {
   anotacaoJuridicaApi, checklistDocumentosApi, followUpApi,
 } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
-import { formatCpf, idade, toItems, formatBRL } from '@/utils';
+import { formatCpf, formatData, idade, toItems, formatBRL } from '@/utils';
 import {
   SEXO_LABEL, STATUS_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_LABEL,
   STATUS_PROCESSO_LABEL, StatusEntrega, Modulo,
@@ -151,7 +151,7 @@ export function PacienteDetailPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 glass rounded-xl p-4">
           <DescItem label="Nome" value={p.nome} />
           <DescItem label="CPF" value={formatCpf(p.cpf)} />
-          <DescItem label="Nascimento" value={p.dataNascimento ? dayjs(p.dataNascimento).format('DD/MM/YYYY') : '—'} />
+          <DescItem label="Nascimento" value={formatData(p.dataNascimento)} />
           <DescItem label="Sexo" value={p.sexo ? SEXO_LABEL[p.sexo as Sexo] : '—'} />
           <DescItem label="Telefone" value={p.telefone || '—'} />
           <DescItem label="E-mail" value={p.email || '—'} />
@@ -271,7 +271,7 @@ export function PacienteDetailPage() {
             <TableBody>
               {(laudosQ.data as LaudoMedico[]).map((l) => (
                 <TableRow key={l.id}>
-                  <TableCell>{l.dataLaudo ? dayjs(l.dataLaudo).format('DD/MM/YYYY') : '—'}</TableCell>
+                  <TableCell>{formatData(l.dataLaudo)}</TableCell>
                   <TableCell className="text-muted-foreground">{l.cid10?.join(', ') || '—'}</TableCell>
                   <TableCell><Badge variant={l.assinado ? 'success' : 'warning'}>{l.assinado ? 'Assinado' : 'Rascunho'}</Badge></TableCell>
                   <TableCell>
@@ -308,7 +308,7 @@ export function PacienteDetailPage() {
             <TableBody>
               {(avaliacoesQ.data as AvaliacaoIU[]).map((a) => (
                 <TableRow key={a.id}>
-                  <TableCell>{a.dataAtendimento ? dayjs(a.dataAtendimento).format('DD/MM/YYYY') : '—'}</TableCell>
+                  <TableCell>{formatData(a.dataAtendimento)}</TableCell>
                   <TableCell className="text-muted-foreground truncate max-w-xs">{a.motivoIU || '—'}</TableCell>
                   <TableCell className="text-muted-foreground">{a.produtoIndicado ? `${a.produtoIndicado.sexo} ${a.produtoIndicado.french}Fr` : '—'}</TableCell>
                   <TableCell>
@@ -413,7 +413,7 @@ function TabelaEntregas({ entregas }: { entregas: Entrega[] }) {
       <TableBody>
         {entregas.map((e) => (
           <TableRow key={e.id}>
-            <TableCell>{e.dataEntrega ? dayjs(e.dataEntrega).format('DD/MM/YYYY') : '—'}</TableCell>
+            <TableCell>{formatData(e.dataEntrega)}</TableCell>
             <TableCell className="text-muted-foreground">
               {(e.itens ?? []).map((i) => `${i.quantidade}× ${i.descricao}`).join(', ') || '—'}
             </TableCell>
@@ -674,7 +674,7 @@ function FollowUpSecao({ pacienteId }: { pacienteId: string }) {
           <TableBody>
             {followups.map((f) => (
               <TableRow key={f.id}>
-                <TableCell>{f.dataFollowup ? dayjs(f.dataFollowup).format('DD/MM/YYYY') : '—'}</TableCell>
+                <TableCell>{formatData(f.dataFollowup)}</TableCell>
                 <TableCell>
                   <Badge variant={f.statusElegibilidade === StatusElegibilidade.ELEGIVEL ? 'success' : f.statusElegibilidade === StatusElegibilidade.NAO_ELEGIVEL ? 'destructive' : 'warning'}>
                     {STATUS_ELEGIBILIDADE_LABEL[f.statusElegibilidade]}

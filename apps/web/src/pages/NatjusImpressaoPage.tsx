@@ -100,7 +100,7 @@ export function NatjusImpressaoPage() {
         </Button>
       </div>
 
-      <div className="natjus-print max-w-3xl mx-auto p-8 text-gray-900 bg-white min-h-screen print:p-0 print:max-w-full">
+      <div className="natjus-print max-w-3xl mx-auto p-8 text-gray-900 bg-white min-h-screen print:min-h-0 print:max-w-full">
         <DocumentoTimbre />
 
         <div className="text-center border-b-2 border-gray-800 pb-3 mb-5">
@@ -167,7 +167,7 @@ export function NatjusImpressaoPage() {
           <p className="mt-0.5">Documento válido por até 90 dias da emissão, conforme exigência do NAT-JUS/SP.</p>
         </div>
 
-        <div className="mt-14 flex justify-between items-end">
+        <div className="mt-14 print:mt-10 flex justify-between items-end break-inside-avoid">
           <div className="text-center min-w-64">
             {pr.assinado && (
               <div className="border border-gray-400 rounded px-3 py-1 text-xs text-gray-600 mb-2 inline-block">
@@ -175,7 +175,7 @@ export function NatjusImpressaoPage() {
               </div>
             )}
             <div className="border-t-2 border-gray-800 pt-1">
-              <p className="text-sm font-semibold">{rj.prescritor?.nome || '___________________________'}</p>
+              <p className="text-sm font-semibold">{rj.prescritor?.nome || 'Prescritor Responsável'}</p>
               <p className="text-xs text-gray-600">
                 {rj.prescritor?.registro || 'Registro profissional: ___________'}
                 {rj.prescritor?.especialidade ? ` · ${rj.prescritor.especialidade}` : ''}
@@ -192,9 +192,15 @@ export function NatjusImpressaoPage() {
       </div>
 
       <style>{`
+        @page { size: A4; margin: 0; }
         @media print {
-          .natjus-print { color: #111 !important; background: white !important; }
-          body { margin: 0; }
+          html, body { margin: 0 !important; padding: 0 !important; }
+          .natjus-print {
+            color: #111 !important;
+            background: white !important;
+            padding: 12mm 14mm !important;
+            min-height: auto !important;
+          }
         }
       `}</style>
     </>

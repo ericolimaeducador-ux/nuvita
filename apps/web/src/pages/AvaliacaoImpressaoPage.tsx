@@ -48,7 +48,7 @@ export function AvaliacaoImpressaoPage() {
         </Button>
       </div>
 
-      <div className="avaliacao-print max-w-3xl mx-auto p-8 text-gray-900 bg-white min-h-screen print:p-0 print:max-w-full text-sm">
+      <div className="avaliacao-print max-w-3xl mx-auto p-8 text-gray-900 bg-white min-h-screen print:min-h-0 print:max-w-full text-sm">
         {/* Timbre Nuvita */}
         <DocumentoTimbre />
 
@@ -143,16 +143,15 @@ export function AvaliacaoImpressaoPage() {
         </section>
 
         {/* Assinatura enfermeiro */}
-        <div className="mt-12 flex justify-between items-end">
+        <div className="mt-12 print:mt-8 flex justify-between items-end break-inside-avoid">
           <div className="text-center min-w-52">
             <div className="border-t-2 border-gray-800 pt-1">
               <p className="font-semibold">Enfermeiro(a) Responsável</p>
               <p className="text-xs text-gray-600">COREN: {av?.coren ?? '___________'}</p>
             </div>
           </div>
-          <div className="text-right text-xs text-gray-500">
-            <p>Assinatura do Paciente / Responsável:</p>
-            <p className="mt-6 border-t border-gray-400 pt-1">_____________________________</p>
+          <div className="text-center text-xs text-gray-500 min-w-52">
+            <p className="mt-6 border-t border-gray-400 pt-1">Assinatura do Paciente / Responsável</p>
           </div>
         </div>
 
@@ -160,9 +159,16 @@ export function AvaliacaoImpressaoPage() {
       </div>
 
       <style>{`
+        @page { size: A4; margin: 0; }
         @media print {
-          .avaliacao-print { color: #111 !important; background: white !important; font-size: 11pt; }
-          body { margin: 0; }
+          html, body { margin: 0 !important; padding: 0 !important; }
+          .avaliacao-print {
+            color: #111 !important;
+            background: white !important;
+            font-size: 10pt;
+            padding: 10mm 14mm !important;
+            min-height: auto !important;
+          }
         }
       `}</style>
     </>

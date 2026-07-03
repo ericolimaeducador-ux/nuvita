@@ -44,7 +44,7 @@ export function LaudoImpressaoPage() {
       </div>
 
       {/* Conteúdo imprimível */}
-      <div className="laudo-print max-w-3xl mx-auto p-8 text-gray-900 bg-white min-h-screen print:p-0 print:max-w-full">
+      <div className="laudo-print max-w-3xl mx-auto p-8 text-gray-900 bg-white min-h-screen print:min-h-0 print:max-w-full">
         {/* Timbre Nuvita */}
         <DocumentoTimbre />
 
@@ -124,7 +124,7 @@ export function LaudoImpressaoPage() {
         )}
 
         {/* Assinatura */}
-        <div className="mt-16 flex justify-between items-end">
+        <div className="mt-16 print:mt-10 flex justify-between items-end break-inside-avoid">
           <div className="text-center min-w-52">
             {laudo?.assinado && (
               <div className="border border-gray-400 rounded px-3 py-1 text-xs text-gray-600 mb-2 inline-block">
@@ -132,8 +132,8 @@ export function LaudoImpressaoPage() {
               </div>
             )}
             <div className="border-t-2 border-gray-800 pt-1">
-              <p className="text-sm font-semibold">___________________________</p>
-              <p className="text-xs text-gray-600">Médico Responsável (CRM: ___________)</p>
+              <p className="text-sm font-semibold">Médico Responsável</p>
+              <p className="text-xs text-gray-600">CRM: ___________</p>
             </div>
           </div>
           <div className="text-sm text-gray-500 text-right">
@@ -146,9 +146,15 @@ export function LaudoImpressaoPage() {
       </div>
 
       <style>{`
+        @page { size: A4; margin: 0; }
         @media print {
-          .laudo-print { color: #111 !important; background: white !important; }
-          body { margin: 0; }
+          html, body { margin: 0 !important; padding: 0 !important; }
+          .laudo-print {
+            color: #111 !important;
+            background: white !important;
+            padding: 12mm 14mm !important;
+            min-height: auto !important;
+          }
         }
       `}</style>
     </>

@@ -326,7 +326,7 @@ async function main() {
       dataFollowup: diasAtras(Math.max(1, 7 - i)),
       statusElegibilidade: status,
       observacoes: status === 'elegivel'
-        ? 'Paciente elegível conforme critérios do programa VaPro/SUS. Renda per capita abaixo de 1 SM, cadeirante, diagnóstico confirmado.'
+        ? 'Paciente elegível conforme critérios do programa de fornecimento pelo SUS. Renda per capita abaixo de 1 SM, cadeirante, diagnóstico confirmado.'
         : status === 'nao_elegivel'
           ? 'Paciente não atendeu aos critérios de renda per capita do programa.'
           : 'Aguardando documentação complementar para confirmar elegibilidade.',
@@ -350,12 +350,12 @@ async function main() {
       avaliacaoIuId: f.avaliacaoId,
       dataLaudo: diasAtras(Math.floor(Math.random() * 5) + 1),
       cid10: ['N31.9', 'G82.2'],
-      justificativaMedica: `Paciente portador(a) de bexiga neurogênica com necessidade de cateterismo intermitente limpo (CIL) para esvaziamento vesical. O uso do cateter VaPro/Hollister com revestimento lubrificado é essencial para redução de infecções urinárias recorrentes, manutenção da qualidade de vida e preservação da função renal. Conforme protocolo clínico DATASUS e RDC ANVISA nº 11/2014.`,
+      justificativaMedica: `Paciente portador(a) de bexiga neurogênica com necessidade de cateterismo intermitente limpo (CIL) para esvaziamento vesical. O uso de cateter intermitente com revestimento hidrofílico é essencial para redução de infecções urinárias recorrentes, manutenção da qualidade de vida e preservação da função renal. Conforme protocolo clínico DATASUS e RDC ANVISA nº 11/2014.`,
       fundamentoLegal: 'Art. 196 CF/88 — Direito à saúde. Lei 8.080/90 — SUS. Portaria MS 1.083/2012 — CIL. Resolução CFM 1.957/2010.',
       produtosSolicitados: [
         {
           codigo: f.produto.codigo,
-          descricao: `Cateter VaPro Hollister ${isFem ? 'Feminino' : 'Masculino'} Fr${f.produto.french}`,
+          descricao: `Cateter intermitente hidrofílico ${isFem ? 'Feminino' : 'Masculino'} Fr${f.produto.french}`,
           quantidade: 120,
           unidade: 'unidade',
           codigoSiafisico: isFem ? 9206 : 9207,
@@ -383,7 +383,7 @@ async function main() {
       pacienteId: l.pacienteId,
       avaliacaoIuId: l.avaliacaoId,
       laudoMedicoId: l.id,
-      observacoes: 'Ação judicial para fornecimento de cateter VaPro pelo SUS. Direito à saúde — art. 196 CF/88.',
+      observacoes: 'Ação judicial para fornecimento de cateter intermitente pelo SUS. Direito à saúde — art. 196 CF/88.',
     });
 
     const status = statusProcesso[i % statusProcesso.length];

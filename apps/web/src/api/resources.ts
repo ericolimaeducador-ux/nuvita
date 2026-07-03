@@ -7,6 +7,7 @@ import type {
   DashboardFinanceiro,
   Documento,
   Entrega,
+  EtapaFluxoClinico,
   FollowUp,
   LaudoMedico,
   Lancamento,
@@ -61,6 +62,7 @@ export interface ListPacientesParams {
   incluirInativos?: boolean;
   clinicaId?: string;
   programaIU?: boolean;
+  etapaFluxo?: EtapaFluxoClinico;
 }
 export const pacientesApi = {
   list: (params: ListPacientesParams = {}) =>

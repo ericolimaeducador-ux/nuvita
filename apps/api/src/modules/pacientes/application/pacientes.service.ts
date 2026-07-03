@@ -1,5 +1,6 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
+import { EtapaFluxoClinico, podeAvancarPara } from '../../../../../../packages/shared/src/fluxo-clinico';
 import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
 import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
@@ -20,6 +21,8 @@ export interface RequestAuditContext {
 
 @Injectable()
 export class PacientesService {
+  private readonly logger = new Logger(PacientesService.name);
+
   constructor(
     @Inject(PACIENTE_REPOSITORY) private readonly pacientes: PacienteRepository,
     @Inject(AUDIT_LOG_REPOSITORY) private readonly auditLogs: AuditLogRepository,
@@ -78,6 +81,7 @@ export class PacientesService {
           limit: query.limit,
           incluirInativos: query.incluirInativos,
           programaIU: query.programaIU,
+          etapaFluxo: query.etapaFluxo,
         })
       : await this.pacientes.list({
           clinicaId,
@@ -85,6 +89,7 @@ export class PacientesService {
           limit: query.limit,
           incluirInativos: query.incluirInativos,
           programaIU: query.programaIU,
+          etapaFluxo: query.etapaFluxo,
         });
 
     await this.audit(query.nome ? AuditEvent.PATIENT_SEARCHED : AuditEvent.PATIENT_LISTED, context, {
@@ -194,6 +199,48 @@ export class PacientesService {
       formato: 'application/json',
       dados: paciente,
     };
+  }
+
+  /**
+   * Único ponto de mutação de etapaFluxo no sistema. Chamado pelos services de
+   * avaliacao-iu, followup, agendamentos, checklist-documentos, laudo-medico,
+   * processo-juridico e entregas quando um evento de negócio faz o paciente
+   * avançar no pipeline clínico. Nunca lança exceção: uma falha nessa
+   * transição secundária não pode derrubar a operação clínica primária que a
+   * disparou (criar avaliação, follow-up, laudo, etc.).
+   */
+  async avancarEtapaFluxo(
+    clinicaId: string,
+    pacienteId: string,
+    novaEtapa: EtapaFluxoClinico,
+    context: RequestAuditContext,
+  ): Promise<void> {
+    try {
+      const atual = await this.pacientes.findById(clinicaId, pacienteId);
+      if (!atual) {
+        this.logger.warn(`avancarEtapaFluxo: paciente ${pacienteId} nao encontrado (clinica ${clinicaId}).`);
+        return;
+      }
+      if (!podeAvancarPara(atual.etapaFluxo, novaEtapa)) {
+        return;
+      }
+
+      await this.pacientes.update(clinicaId, pacienteId, {
+        etapaFluxo: novaEtapa,
+        etapaFluxoDesde: new Date(),
+      });
+
+      await this.audit(AuditEvent.PIPELINE_STAGE_CHANGED, context, {
+        clinicaId,
+        pacienteId,
+        etapaAnterior: atual.etapaFluxo,
+        etapaNova: novaEtapa,
+      });
+    } catch (err) {
+      this.logger.error(
+        `avancarEtapaFluxo falhou para paciente ${pacienteId} -> ${novaEtapa}: ${(err as Error).message}`,
+      );
+    }
   }
 
   private resolveClinicaId(user: AuthTokenPayload, requestedClinicaId?: string): string {

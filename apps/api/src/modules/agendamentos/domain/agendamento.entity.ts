@@ -22,6 +22,8 @@ export enum TipoAgendamento {
   // Juridico
   ATENDIMENTO_JURIDICO = 'atendimento_juridico',
   AUDIENCIA = 'audiencia',
+  // Fluxo clínico
+  ENTREVISTA = 'entrevista',
 }
 
 export interface Agendamento {

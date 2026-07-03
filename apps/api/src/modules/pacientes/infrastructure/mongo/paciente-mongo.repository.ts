@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, PipelineStage, Types } from 'mongoose';
+import { EtapaFluxoClinico } from '../../../../../../../packages/shared/src/fluxo-clinico';
 import {
   CreatePacienteInput,
   ListPacientesInput,
@@ -38,6 +39,8 @@ export class PacienteMongoRepository implements PacienteRepository {
       endereco: this.encryptJsonOptional(input.endereco),
       convenio: this.encryptJsonOptional(input.convenio),
       consentimentoLGPD: input.consentimentoLGPD,
+      etapaFluxo: EtapaFluxoClinico.AGUARDANDO_ATENDIMENTO,
+      etapaFluxoDesde: new Date(),
       ativo: true,
     });
 
@@ -47,6 +50,7 @@ export class PacienteMongoRepository implements PacienteRepository {
   async list(input: ListPacientesInput): Promise<CursorPaginationResult<Paciente>> {
     const query = this.baseQuery(input.clinicaId, input.incluirInativos);
     if (input.programaIU !== undefined) query.programaIU = input.programaIU;
+    if (input.etapaFluxo !== undefined) query.etapaFluxo = input.etapaFluxo;
     this.applyCursor(query, input.cursor);
 
     const limit = this.normalizeLimit(input.limit);
@@ -75,7 +79,13 @@ export class PacienteMongoRepository implements PacienteRepository {
           },
         },
       },
-      { $match: { ...query, ...(input.programaIU !== undefined ? { programaIU: input.programaIU } : {}) } },
+      {
+        $match: {
+          ...query,
+          ...(input.programaIU !== undefined ? { programaIU: input.programaIU } : {}),
+          ...(input.etapaFluxo !== undefined ? { etapaFluxo: input.etapaFluxo } : {}),
+        },
+      },
       { $sort: { criadoEm: -1, _id: -1 } },
       { $limit: limit + 1 },
     ];
@@ -153,6 +163,8 @@ export class PacienteMongoRepository implements PacienteRepository {
     if (input.convenio !== undefined) update.convenio = this.encryptJsonOptional(input.convenio);
     if (input.programaIU !== undefined) update.programaIU = input.programaIU;
     if (input.observacoes !== undefined) update.observacoes = this.encryptOptional(input.observacoes);
+    if (input.etapaFluxo !== undefined) update.etapaFluxo = input.etapaFluxo;
+    if (input.etapaFluxoDesde !== undefined) update.etapaFluxoDesde = input.etapaFluxoDesde;
 
     return update;
   }
@@ -189,6 +201,8 @@ export class PacienteMongoRepository implements PacienteRepository {
       consentimentoLGPD: object.consentimentoLGPD,
       observacoes: this.decryptOptional(object.observacoes),
       programaIU: object.programaIU ?? false,
+      etapaFluxo: object.etapaFluxo,
+      etapaFluxoDesde: object.etapaFluxoDesde,
       ativo: object.ativo,
       criadoEm: object.criadoEm,
       atualizadoEm: object.atualizadoEm,

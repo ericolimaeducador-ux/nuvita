@@ -1,5 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
+import { EtapaFluxoClinico } from '../../../../../../packages/shared/src/fluxo-clinico';
+import { PacientesService } from '../../pacientes/application/pacientes.service';
 import { PROCESSO_JURIDICO_REPOSITORY } from '../processo-juridico.constants';
 import { ProcessoJuridico, StatusProcesso } from '../domain/processo-juridico.entity';
 import { ProcessoJuridicoRepository } from './ports/processo-juridico.repository';
@@ -7,11 +9,14 @@ import { AddDocumentoProcessoDto, CreateProcessoJuridicoDto, UpdateStatusProcess
 
 @Injectable()
 export class ProcessoJuridicoService {
-  constructor(@Inject(PROCESSO_JURIDICO_REPOSITORY) private readonly repo: ProcessoJuridicoRepository) {}
+  constructor(
+    @Inject(PROCESSO_JURIDICO_REPOSITORY) private readonly repo: ProcessoJuridicoRepository,
+    private readonly pacientesService: PacientesService,
+  ) {}
 
   async create(dto: CreateProcessoJuridicoDto, user: AuthTokenPayload): Promise<ProcessoJuridico> {
     const clinicaId = this.resolveClinicaId(user, dto.clinicaId);
-    return this.repo.create({
+    const processo = await this.repo.create({
       clinicaId,
       pacienteId: dto.pacienteId,
       avaliacaoIuId: dto.avaliacaoIuId,
@@ -21,6 +26,13 @@ export class ProcessoJuridicoService {
       observacoes: dto.observacoes,
       documentos: [],
     });
+
+    await this.pacientesService.avancarEtapaFluxo(
+      clinicaId, processo.pacienteId, EtapaFluxoClinico.PROCESSO_JURIDICO,
+      { ip: 'internal', userAgent: 'pipeline-clinico', user },
+    );
+
+    return processo;
   }
 
   async findOne(id: string, clinicaId: string | undefined, user: AuthTokenPayload): Promise<ProcessoJuridico> {

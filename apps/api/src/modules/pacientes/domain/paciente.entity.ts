@@ -1,3 +1,5 @@
+import { EtapaFluxoClinico } from '../../../../../../packages/shared/src/fluxo-clinico';
+
 export enum Sexo {
   FEMININO = 'FEMININO',
   MASCULINO = 'MASCULINO',
@@ -41,6 +43,8 @@ export interface Paciente {
   consentimentoLGPD: ConsentimentoLGPD;
   programaIU?: boolean;
   observacoes?: string;
+  etapaFluxo: EtapaFluxoClinico;
+  etapaFluxoDesde: Date;
   ativo: boolean;
   criadoEm: Date;
   atualizadoEm: Date;

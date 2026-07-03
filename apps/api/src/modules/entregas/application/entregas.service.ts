@@ -1,5 +1,9 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
+import { EtapaFluxoClinico } from '../../../../../../packages/shared/src/fluxo-clinico';
+import { PacientesService } from '../../pacientes/application/pacientes.service';
+import { ProcessoJuridicoService } from '../../processo-juridico/application/processo-juridico.service';
+import { StatusProcesso } from '../../processo-juridico/domain/processo-juridico.entity';
 import { ENTREGA_REPOSITORY } from '../entregas.constants';
 import { Entrega, StatusEntrega } from '../domain/entrega.entity';
 import { EntregaRepository } from './ports/entrega.repository';
@@ -7,7 +11,11 @@ import { CreateEntregaDto } from './dto/create-entrega.dto';
 
 @Injectable()
 export class EntregasService {
-  constructor(@Inject(ENTREGA_REPOSITORY) private readonly repo: EntregaRepository) {}
+  constructor(
+    @Inject(ENTREGA_REPOSITORY) private readonly repo: EntregaRepository,
+    private readonly pacientesService: PacientesService,
+    private readonly processoJuridicoService: ProcessoJuridicoService,
+  ) {}
 
   async create(dto: CreateEntregaDto, user: AuthTokenPayload): Promise<Entrega> {
     const clinicaId = this.resolveClinicaId(user, dto.clinicaId);
@@ -43,8 +51,20 @@ export class EntregasService {
   }
 
   async confirmarEntrega(id: string, clinicaId: string | undefined, user: AuthTokenPayload): Promise<Entrega> {
-    const updated = await this.repo.updateStatus(this.resolveClinicaId(user, clinicaId), id, StatusEntrega.ENTREGUE);
+    const resolvedClinicaId = this.resolveClinicaId(user, clinicaId);
+    const updated = await this.repo.updateStatus(resolvedClinicaId, id, StatusEntrega.ENTREGUE);
     if (!updated) throw new NotFoundException('Entrega não encontrada.');
+
+    if (updated.processoJuridicoId) {
+      const processo = await this.processoJuridicoService.findOne(updated.processoJuridicoId, resolvedClinicaId, user);
+      if (processo.status === StatusProcesso.GANHO) {
+        await this.pacientesService.avancarEtapaFluxo(
+          resolvedClinicaId, updated.pacienteId, EtapaFluxoClinico.CONCLUIDO,
+          { ip: 'internal', userAgent: 'pipeline-clinico', user },
+        );
+      }
+    }
+
     return updated;
   }
 

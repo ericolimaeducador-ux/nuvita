@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { JwtAuthGuard } from '../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/presentation/guards/roles.guard';
 import { NotificacoesModule } from '../notificacoes/notificacoes.module';
+import { PacientesModule } from '../pacientes/pacientes.module';
 import { FollowUpService } from './application/followup.service';
 import { FollowUpMongoRepository } from './infrastructure/mongo/followup-mongo.repository';
 import { FollowUpMongo, FollowUpSchema } from './infrastructure/mongo/followup.schema';
@@ -13,6 +14,7 @@ import { FollowUpController } from './presentation/followup.controller';
   imports: [
     MongooseModule.forFeature([{ name: FollowUpMongo.name, schema: FollowUpSchema }]),
     NotificacoesModule,
+    PacientesModule,
   ],
   controllers: [FollowUpController],
   providers: [

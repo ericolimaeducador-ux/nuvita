@@ -91,7 +91,7 @@ export class AgendamentosController {
   }
 
   @Patch(':id/concluir')
-  @Roles(...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
+  @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   conclude(
     @Param('id') id: string,
     @Query('clinicaId') clinicaId: string | undefined,

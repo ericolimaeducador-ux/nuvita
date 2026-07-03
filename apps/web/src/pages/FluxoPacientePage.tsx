@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import dayjs from 'dayjs';
 import {
   ArrowLeft, ClipboardList, UserCheck, Stethoscope, Scale, Package,
-  Plus, CheckCircle2, Clock, ChevronDown, ChevronUp, Printer,
+  Plus, CheckCircle2, Clock, ChevronDown, ChevronUp, Printer, CalendarClock, FileText,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,19 +20,23 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   pacientesApi, avaliacaoIUApi, followUpApi, laudoMedicoApi,
-  processoJuridicoApi, entregasApi, produtosApi,
+  processoJuridicoApi, entregasApi, produtosApi, agendaApi, checklistDocumentosApi,
 } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/auth/AuthContext';
 import { cn } from '@/lib/utils';
-import { formatData } from '@/utils';
+import { formatData, toItems } from '@/utils';
 import {
   Papel, LocalAtendimento, PerfilCliente, Destreza, TipoIU, EncaminhamentoIU,
   StatusElegibilidade, StatusProcesso, OrigemEntrega,
   LOCAL_LABEL, PERFIL_LABEL, DESTREZA_LABEL, TIPO_IU_LABEL, ENCAMINHAMENTO_LABEL,
   STATUS_ELEGIBILIDADE_LABEL, STATUS_PROCESSO_LABEL, ORIGEM_ENTREGA_LABEL,
+  EtapaFluxoClinico, ETAPA_FLUXO_LABEL, calcularPrazoEtapa,
+  ModalidadeAtendimento, TipoAgendamento, StatusAgendamento, STATUS_AGENDAMENTO_LABEL,
+  StatusChecklistDocumento, STATUS_CHECKLIST_DOCUMENTO_LABEL,
   type AvaliacaoIU, type FollowUp, type LaudoMedico, type ProcessoJuridico, type Entrega, type Produto,
+  type Agendamento, type ChecklistDocumentoItem,
 } from '@/types';
 
 export function FluxoPacientePage() {
@@ -105,6 +109,8 @@ export function FluxoPacientePage() {
         <ProgramaIUToggle pacienteId={pacienteId!} programaIU={!!paciente?.programaIU} />
       </div>
 
+      {paciente?.etapaFluxo && <EtapaFluxoHeader paciente={paciente} />}
+
       <div className="space-y-4">
         {/* Passo 1: Avaliação IU */}
         <Passo
@@ -140,9 +146,33 @@ export function FluxoPacientePage() {
           />
         </Passo>
 
-        {/* Passo 3: Laudo Médico */}
+        {/* Passo 3: Entrevista */}
         <Passo
           numero={3}
+          titulo="Entrevista"
+          subtitulo="Secretária agenda e conduz a entrevista com o paciente elegível"
+          icon={CalendarClock}
+          concluido={false}
+          visivel={followups[0]?.statusElegibilidade === StatusElegibilidade.ELEGIVEL}
+        >
+          <EntrevistaStep pacienteId={pacienteId!} user={user} />
+        </Passo>
+
+        {/* Passo 4: Documentação */}
+        <Passo
+          numero={4}
+          titulo="Documentação"
+          subtitulo="Checklist de documentos para a judicialização"
+          icon={FileText}
+          concluido={false}
+          visivel={followups[0]?.statusElegibilidade === StatusElegibilidade.ELEGIVEL}
+        >
+          <DocumentacaoStep pacienteId={pacienteId!} user={user} />
+        </Passo>
+
+        {/* Passo 5: Laudo Médico */}
+        <Passo
+          numero={5}
           titulo="Laudo Médico"
           subtitulo="Justificativa médica para solicitação ao SUS"
           icon={Stethoscope}
@@ -158,9 +188,9 @@ export function FluxoPacientePage() {
           />
         </Passo>
 
-        {/* Passo 4: Processo Jurídico */}
+        {/* Passo 6: Processo Jurídico */}
         <Passo
-          numero={4}
+          numero={6}
           titulo="Processo Jurídico"
           subtitulo="Advogado monta e acompanha o processo judicial"
           icon={Scale}
@@ -176,9 +206,9 @@ export function FluxoPacientePage() {
           />
         </Passo>
 
-        {/* Passo 5: Entregas */}
+        {/* Passo 7: Entregas */}
         <Passo
-          numero={5}
+          numero={7}
           titulo="Entregas"
           subtitulo="Registro de produtos enviados ao paciente"
           icon={Package}
@@ -979,6 +1009,169 @@ function EntregasStep({ pacienteId, processoId, avaliacaoId, entregas, produtos,
           </form>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// ---- Cabeçalho com a etapa atual do fluxo e prazo ----
+function EtapaFluxoHeader({ paciente }: { paciente: { etapaFluxo?: EtapaFluxoClinico; etapaFluxoDesde?: string } }) {
+  if (!paciente.etapaFluxo) return null;
+  const info = paciente.etapaFluxoDesde ? calcularPrazoEtapa(paciente.etapaFluxo, paciente.etapaFluxoDesde) : undefined;
+
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/2 px-4 py-3">
+      <span className="text-sm text-muted-foreground">Etapa atual:</span>
+      <Badge variant="outline" className="text-sm">{ETAPA_FLUXO_LABEL[paciente.etapaFluxo]}</Badge>
+      {info?.diasLimite !== undefined && (
+        info.atrasado
+          ? <span className="text-red-400 text-sm font-medium">Atrasado {Math.abs(info.diasRestantes!)}d</span>
+          : <span className={cn('text-sm font-medium', (info.diasRestantes ?? 99) <= 3 ? 'text-amber-400' : 'text-muted-foreground')}>
+              {info.diasRestantes}d restantes
+            </span>
+      )}
+    </div>
+  );
+}
+
+// ---- Passo 3: Entrevista ----
+function EntrevistaStep({ pacienteId, user }: { pacienteId: string; user: ReturnType<typeof useAuth>['user'] }) {
+  const [open, setOpen] = useState(false);
+  const qc = useQueryClient();
+  const { register, handleSubmit, reset } = useForm<Record<string, unknown>>();
+
+  const agendamentosQ = useQuery({
+    queryKey: ['agendamentos-paciente', pacienteId],
+    queryFn: () => agendaApi.list({ pacienteId }),
+  });
+  const entrevistas = toItems<Agendamento>(agendamentosQ.data).filter((a) => a.tipo === TipoAgendamento.ENTREVISTA);
+
+  const mut = useMutation({
+    mutationFn: (payload: Record<string, unknown>) => agendaApi.create({
+      pacienteId,
+      medicoId: user?.id ?? '',
+      clinicaId: user?.clinicaId ?? '',
+      modalidade: ModalidadeAtendimento.ENFERMAGEM,
+      tipo: TipoAgendamento.ENTREVISTA,
+      dataHoraInicio: payload.dataHoraInicio as string,
+      dataHoraFim: payload.dataHoraFim as string,
+      observacoes: payload.observacoes as string | undefined,
+    }),
+    onSuccess: () => {
+      toast.success('Entrevista agendada.');
+      setOpen(false); reset();
+      void qc.invalidateQueries({ queryKey: ['agendamentos-paciente', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  const concluirMut = useMutation({
+    mutationFn: (id: string) => agendaApi.concluir(id),
+    onSuccess: () => {
+      toast.success('Entrevista concluída.');
+      void qc.invalidateQueries({ queryKey: ['agendamentos-paciente', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  return (
+    <div className="space-y-3">
+      {entrevistas.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma entrevista agendada.</p>}
+      {entrevistas.map((a) => (
+        <div key={a.id} className="rounded-lg border border-white/5 bg-white/2 p-3 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">{dayjs(a.dataHoraInicio).format('DD/MM/YYYY HH:mm')}</p>
+            <Badge variant="outline" className="text-xs mt-1">{STATUS_AGENDAMENTO_LABEL[a.status]}</Badge>
+          </div>
+          {a.status !== StatusAgendamento.CONCLUIDO && a.status !== StatusAgendamento.CANCELADO && (
+            <Button size="sm" variant="outline" onClick={() => concluirMut.mutate(a.id)} disabled={concluirMut.isPending}>
+              Concluir
+            </Button>
+          )}
+        </div>
+      ))}
+      <Button size="sm" onClick={() => setOpen(true)}>
+        <Plus className="h-4 w-4 mr-1" /> Agendar entrevista
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Agendar Entrevista</DialogTitle></DialogHeader>
+          <form onSubmit={handleSubmit((v) => mut.mutate(v))} className="space-y-4">
+            <div className="space-y-1">
+              <Label>Início</Label>
+              <Input type="datetime-local" {...register('dataHoraInicio', { required: true })} />
+            </div>
+            <div className="space-y-1">
+              <Label>Fim</Label>
+              <Input type="datetime-local" {...register('dataHoraFim', { required: true })} />
+            </div>
+            <div className="space-y-1">
+              <Label>Observações</Label>
+              <Textarea rows={2} {...register('observacoes')} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={mut.isPending}>{mut.isPending ? 'Salvando...' : 'Agendar'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ---- Passo 4: Documentação (checklist para a judicialização) ----
+function DocumentacaoStep({ pacienteId, user }: { pacienteId: string; user: ReturnType<typeof useAuth>['user'] }) {
+  const qc = useQueryClient();
+
+  const itensQ = useQuery({
+    queryKey: ['checklist-documentos', pacienteId],
+    queryFn: () => checklistDocumentosApi.listByPaciente(pacienteId),
+  });
+  const itens = itensQ.data ?? [];
+
+  const criarPadraoMut = useMutation({
+    mutationFn: () => checklistDocumentosApi.criarPadrao(pacienteId),
+    onSuccess: () => {
+      toast.success('Checklist padrão criado.');
+      void qc.invalidateQueries({ queryKey: ['checklist-documentos', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  const marcarRecebidoMut = useMutation({
+    mutationFn: (id: string) => checklistDocumentosApi.update(id, { status: StatusChecklistDocumento.RECEBIDO }),
+    onSuccess: () => {
+      toast.success('Documento marcado como recebido.');
+      void qc.invalidateQueries({ queryKey: ['checklist-documentos', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  void user;
+
+  return (
+    <div className="space-y-3">
+      {itens.length === 0 && <p className="text-sm text-muted-foreground">Nenhum documento no checklist ainda.</p>}
+      {(itens as ChecklistDocumentoItem[]).map((item) => (
+        <div key={item.id} className="rounded-lg border border-white/5 bg-white/2 p-3 flex items-center justify-between">
+          <span className="text-sm">{item.nome}</span>
+          <div className="flex items-center gap-2">
+            <Badge variant={item.status === StatusChecklistDocumento.RECEBIDO ? 'success' : 'outline'} className="text-xs">
+              {STATUS_CHECKLIST_DOCUMENTO_LABEL[item.status]}
+            </Badge>
+            {item.status !== StatusChecklistDocumento.RECEBIDO && (
+              <Button size="sm" variant="outline" onClick={() => marcarRecebidoMut.mutate(item.id)} disabled={marcarRecebidoMut.isPending}>
+                Marcar recebido
+              </Button>
+            )}
+          </div>
+        </div>
+      ))}
+      {itens.length === 0 && (
+        <Button size="sm" onClick={() => criarPadraoMut.mutate()} disabled={criarPadraoMut.isPending}>
+          <Plus className="h-4 w-4 mr-1" /> Criar checklist padrão
+        </Button>
+      )}
     </div>
   );
 }

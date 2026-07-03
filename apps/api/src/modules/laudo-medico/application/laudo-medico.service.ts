@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { createHmac } from 'crypto';
 import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
+import { EtapaFluxoClinico } from '../../../../../../packages/shared/src/fluxo-clinico';
+import { PacientesService } from '../../pacientes/application/pacientes.service';
 import { LAUDO_MEDICO_REPOSITORY } from '../laudo-medico.constants';
 import { LaudoMedico } from '../domain/laudo-medico.entity';
 import { LaudoMedicoRepository } from './ports/laudo-medico.repository';
@@ -8,11 +10,14 @@ import { CreateLaudoMedicoDto } from './dto/create-laudo-medico.dto';
 
 @Injectable()
 export class LaudoMedicoService {
-  constructor(@Inject(LAUDO_MEDICO_REPOSITORY) private readonly repo: LaudoMedicoRepository) {}
+  constructor(
+    @Inject(LAUDO_MEDICO_REPOSITORY) private readonly repo: LaudoMedicoRepository,
+    private readonly pacientesService: PacientesService,
+  ) {}
 
   async create(dto: CreateLaudoMedicoDto, user: AuthTokenPayload): Promise<LaudoMedico> {
     const clinicaId = this.resolveClinicaId(user, dto.clinicaId);
-    return this.repo.create({
+    const laudo = await this.repo.create({
       clinicaId,
       pacienteId: dto.pacienteId,
       medicoId: user.sub,
@@ -23,6 +28,13 @@ export class LaudoMedicoService {
       fundamentoLegal: dto.fundamentoLegal,
       produtosSolicitados: dto.produtosSolicitados,
     });
+
+    await this.pacientesService.avancarEtapaFluxo(
+      clinicaId, laudo.pacienteId, EtapaFluxoClinico.AGUARDANDO_ENVIO_JURIDICO,
+      { ip: 'internal', userAgent: 'pipeline-clinico', user },
+    );
+
+    return laudo;
   }
 
   async findOne(id: string, clinicaId: string | undefined, user: AuthTokenPayload): Promise<LaudoMedico> {

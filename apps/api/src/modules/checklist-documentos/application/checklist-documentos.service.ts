@@ -1,6 +1,8 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { AuthTokenPayload, DOCUMENTOS_PADRAO } from '../../../../../../packages/shared/src';
+import { EtapaFluxoClinico } from '../../../../../../packages/shared/src/fluxo-clinico';
 import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
+import { PacientesService } from '../../pacientes/application/pacientes.service';
 import { CHECKLIST_DOCUMENTO_REPOSITORY } from '../checklist-documentos.constants';
 import { ChecklistDocumentoItem, StatusChecklistDocumento } from '../domain/checklist-documento.entity';
 import { ChecklistDocumentoRepository } from './ports/checklist-documento.repository';
@@ -12,6 +14,7 @@ import { CriarChecklistPadraoDto } from './dto/criar-checklist-padrao.dto';
 export class ChecklistDocumentosService {
   constructor(
     @Inject(CHECKLIST_DOCUMENTO_REPOSITORY) private readonly repo: ChecklistDocumentoRepository,
+    private readonly pacientesService: PacientesService,
   ) {}
 
   create(dto: CreateChecklistDocumentoDto, user: AuthTokenPayload): Promise<ChecklistDocumentoItem> {
@@ -42,6 +45,18 @@ export class ChecklistDocumentosService {
     const clinicaId = resolveTenantClinicaId(user, dto.clinicaId);
     const updated = await this.repo.update(clinicaId, id, dto);
     if (!updated) throw new NotFoundException('Item do checklist não encontrado.');
+
+    if (dto.status === StatusChecklistDocumento.RECEBIDO) {
+      const itens = await this.repo.listByPaciente(clinicaId, updated.pacienteId);
+      const completo = itens.length > 0 && itens.every((i) => i.status === StatusChecklistDocumento.RECEBIDO);
+      if (completo) {
+        await this.pacientesService.avancarEtapaFluxo(
+          clinicaId, updated.pacienteId, EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA,
+          { ip: 'internal', userAgent: 'pipeline-clinico', user },
+        );
+      }
+    }
+
     return updated;
   }
 

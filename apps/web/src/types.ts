@@ -87,6 +87,7 @@ export enum TipoAgendamento {
   PROCEDIMENTO_ENFERMAGEM = 'procedimento_enfermagem',
   ATENDIMENTO_JURIDICO = 'atendimento_juridico',
   AUDIENCIA = 'audiencia',
+  ENTREVISTA = 'entrevista',
 }
 
 export const TIPO_AGENDAMENTO_LABEL: Record<TipoAgendamento, string> = {
@@ -99,6 +100,7 @@ export const TIPO_AGENDAMENTO_LABEL: Record<TipoAgendamento, string> = {
   [TipoAgendamento.PROCEDIMENTO_ENFERMAGEM]: 'Proc. Enfermagem',
   [TipoAgendamento.ATENDIMENTO_JURIDICO]: 'Atend. Jurídico',
   [TipoAgendamento.AUDIENCIA]: 'Audiência',
+  [TipoAgendamento.ENTREVISTA]: 'Entrevista (Fluxo Clínico)',
 };
 
 // Tipos de agendamento sugeridos por modalidade (para filtrar o formulário).
@@ -113,6 +115,7 @@ export const TIPOS_POR_MODALIDADE: Record<ModalidadeAtendimento, TipoAgendamento
   [ModalidadeAtendimento.ENFERMAGEM]: [
     TipoAgendamento.ATENDIMENTO_ENFERMAGEM,
     TipoAgendamento.PROCEDIMENTO_ENFERMAGEM,
+    TipoAgendamento.ENTREVISTA,
   ],
   [ModalidadeAtendimento.JURIDICO]: [
     TipoAgendamento.ATENDIMENTO_JURIDICO,
@@ -263,6 +266,8 @@ export interface Paciente {
   endereco?: Endereco;
   programaIU?: boolean;
   observacoes?: string;
+  etapaFluxo?: EtapaFluxoClinico;
+  etapaFluxoDesde?: string;
   ativo?: boolean;
   criadoEm?: string;
 }
@@ -877,6 +882,68 @@ export interface Entrega {
   notaFiscal?: string;
   observacoes?: string;
   criadoEm: string;
+}
+
+// Espelho de packages/shared/src/fluxo-clinico/etapa.ts — etapa persistida do
+// pipeline clínico (fonte de verdade fica no backend).
+export enum EtapaFluxoClinico {
+  AGUARDANDO_ATENDIMENTO = 'aguardando_atendimento',
+  AVALIACAO_IU = 'avaliacao_iu',
+  APTO_AGUARDANDO_CONTATO = 'apto_aguardando_contato',
+  ENTREVISTA_AGENDADA = 'entrevista_agendada',
+  AGUARDANDO_DOCUMENTOS = 'aguardando_documentos',
+  AGUARDANDO_CONSULTA_MEDICA = 'aguardando_consulta_medica',
+  AGUARDANDO_ENVIO_JURIDICO = 'aguardando_envio_juridico',
+  PROCESSO_JURIDICO = 'processo_juridico',
+  NAO_ELEGIVEL = 'nao_elegivel',
+  CONCLUIDO = 'concluido',
+}
+
+export const ETAPA_FLUXO_LABEL: Record<EtapaFluxoClinico, string> = {
+  [EtapaFluxoClinico.AGUARDANDO_ATENDIMENTO]: 'Aguardando Atendimento',
+  [EtapaFluxoClinico.AVALIACAO_IU]: 'Avaliação IU / Teste do Produto',
+  [EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO]: 'Apto — Aguardando Contato',
+  [EtapaFluxoClinico.ENTREVISTA_AGENDADA]: 'Entrevista Agendada',
+  [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: 'Aguardando Documentos',
+  [EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA]: 'Aguardando Consulta Médica',
+  [EtapaFluxoClinico.AGUARDANDO_ENVIO_JURIDICO]: 'Aguardando Envio ao Jurídico',
+  [EtapaFluxoClinico.PROCESSO_JURIDICO]: 'Processo Jurídico',
+  [EtapaFluxoClinico.NAO_ELEGIVEL]: 'Não Elegível',
+  [EtapaFluxoClinico.CONCLUIDO]: 'Concluído',
+};
+
+/** Prazos (em dias) só para as etapas com SLA definido pelo negócio. */
+export const PRAZO_DIAS_POR_ETAPA: Partial<Record<EtapaFluxoClinico, number>> = {
+  [EtapaFluxoClinico.AGUARDANDO_ATENDIMENTO]: 10,
+  [EtapaFluxoClinico.AVALIACAO_IU]: 20,
+  [EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO]: 15,
+  [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: 10,
+  [EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA]: 15, // prazo médio, não SLA duro
+};
+
+export interface PrazoEtapaInfo {
+  diasLimite?: number;
+  diasDecorridos: number;
+  diasRestantes?: number;
+  atrasado: boolean;
+}
+
+/** Calcula a situação de prazo de uma etapa a partir de quando ela começou. */
+export function calcularPrazoEtapa(
+  etapa: EtapaFluxoClinico,
+  etapaDesde: string,
+  agora: Date = new Date(),
+): PrazoEtapaInfo {
+  const diasLimite = PRAZO_DIAS_POR_ETAPA[etapa];
+  const msPorDia = 24 * 60 * 60 * 1000;
+  const diasDecorridos = Math.floor((agora.getTime() - new Date(etapaDesde).getTime()) / msPorDia);
+
+  if (diasLimite === undefined) {
+    return { diasDecorridos, atrasado: false };
+  }
+
+  const diasRestantes = diasLimite - diasDecorridos;
+  return { diasLimite, diasDecorridos, diasRestantes, atrasado: diasRestantes < 0 };
 }
 
 export interface Produto {

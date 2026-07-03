@@ -1,7 +1,11 @@
+import { EtapaFluxoClinico } from '../../../../../../../packages/shared/src/fluxo-clinico';
 import { CursorPaginationInput, CursorPaginationResult } from '../../domain/pagination';
 import { Paciente } from '../../domain/paciente.entity';
 
-export type CreatePacienteInput = Omit<Paciente, 'id' | 'ativo' | 'criadoEm' | 'atualizadoEm'>;
+export type CreatePacienteInput = Omit<
+  Paciente,
+  'id' | 'ativo' | 'criadoEm' | 'atualizadoEm' | 'etapaFluxo' | 'etapaFluxoDesde'
+>;
 
 export type UpdatePacienteInput = Partial<
   Omit<Paciente, 'id' | 'clinicaId' | 'ativo' | 'criadoEm' | 'atualizadoEm' | 'consentimentoLGPD'>
@@ -11,6 +15,7 @@ export interface ListPacientesInput extends CursorPaginationInput {
   clinicaId: string;
   incluirInativos?: boolean;
   programaIU?: boolean;
+  etapaFluxo?: EtapaFluxoClinico;
 }
 
 export interface SearchPacientesByNameInput extends ListPacientesInput {

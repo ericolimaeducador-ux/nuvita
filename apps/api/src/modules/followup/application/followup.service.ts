@@ -1,10 +1,12 @@
 import { BadRequestException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
+import { EtapaFluxoClinico } from '../../../../../../packages/shared/src/fluxo-clinico';
 import { FOLLOWUP_REPOSITORY } from '../followup.constants';
 import { FollowUp, StatusElegibilidade } from '../domain/followup.entity';
 import { FollowUpRepository } from './ports/followup.repository';
 import { CreateFollowUpDto } from './dto/create-followup.dto';
 import { NotificacoesService } from '../../notificacoes/application/notificacoes.service';
+import { PacientesService } from '../../pacientes/application/pacientes.service';
 
 export interface ResumoFollowUp {
   emAvaliacao: number;
@@ -17,6 +19,7 @@ export class FollowUpService {
   constructor(
     @Inject(FOLLOWUP_REPOSITORY) private readonly repo: FollowUpRepository,
     @Optional() private readonly notificacoes: NotificacoesService,
+    private readonly pacientesService: PacientesService,
   ) {}
 
   async create(dto: CreateFollowUpDto, user: AuthTokenPayload): Promise<FollowUp> {
@@ -32,8 +35,17 @@ export class FollowUpService {
       proximoFollowup: dto.proximoFollowup ? new Date(dto.proximoFollowup) : undefined,
     });
 
-    if (dto.statusElegibilidade === StatusElegibilidade.ELEGIVEL && this.notificacoes) {
-      void this.notificacoes.notificarElegibilidade(clinicaId, dto.pacienteId, 'Paciente');
+    if (dto.statusElegibilidade === StatusElegibilidade.ELEGIVEL) {
+      if (this.notificacoes) void this.notificacoes.notificarElegibilidade(clinicaId, dto.pacienteId, 'Paciente');
+      await this.pacientesService.avancarEtapaFluxo(
+        clinicaId, dto.pacienteId, EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO,
+        { ip: 'internal', userAgent: 'pipeline-clinico', user },
+      );
+    } else if (dto.statusElegibilidade === StatusElegibilidade.NAO_ELEGIVEL) {
+      await this.pacientesService.avancarEtapaFluxo(
+        clinicaId, dto.pacienteId, EtapaFluxoClinico.NAO_ELEGIVEL,
+        { ip: 'internal', userAgent: 'pipeline-clinico', user },
+      );
     }
 
     return followup;

@@ -1,5 +1,7 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
+import { EtapaFluxoClinico } from '../../../../../../packages/shared/src/fluxo-clinico';
+import { PacientesService } from '../../pacientes/application/pacientes.service';
 import { AVALIACAO_IU_REPOSITORY } from '../avaliacao-iu.constants';
 import { AvaliacaoIU } from '../domain/avaliacao-iu.entity';
 import { AvaliacaoIURepository } from './ports/avaliacao-iu.repository';
@@ -8,11 +10,14 @@ import { Papel } from '../../../../../../packages/shared/src/auth';
 
 @Injectable()
 export class AvaliacaoIUService {
-  constructor(@Inject(AVALIACAO_IU_REPOSITORY) private readonly repo: AvaliacaoIURepository) {}
+  constructor(
+    @Inject(AVALIACAO_IU_REPOSITORY) private readonly repo: AvaliacaoIURepository,
+    private readonly pacientesService: PacientesService,
+  ) {}
 
   async create(dto: CreateAvaliacaoIUDto, user: AuthTokenPayload): Promise<AvaliacaoIU> {
     const clinicaId = this.resolveClinicaId(user, dto.clinicaId);
-    return this.repo.create({
+    const avaliacao = await this.repo.create({
       clinicaId,
       pacienteId: dto.pacienteId,
       enfermeiroId: user.sub,
@@ -49,6 +54,14 @@ export class AvaliacaoIUService {
       localEncaminhamento: dto.localEncaminhamento,
       respCuidador: dto.respCuidador,
     });
+
+    await this.pacientesService.avancarEtapaFluxo(clinicaId, avaliacao.pacienteId, EtapaFluxoClinico.AVALIACAO_IU, {
+      ip: 'internal',
+      userAgent: 'pipeline-clinico',
+      user,
+    });
+
+    return avaliacao;
   }
 
   async findOne(id: string, clinicaId: string | undefined, user: AuthTokenPayload): Promise<AvaliacaoIU> {

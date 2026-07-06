@@ -184,6 +184,7 @@ export function FluxoPacientePage() {
           <LaudoMedicoStep
             pacienteId={pacienteId!}
             avaliacaoId={avaliacoes[0]?.id}
+            produtoIndicado={avaliacoes[0]?.produtoIndicado}
             laudos={laudos}
             produtos={produtos}
             user={user}
@@ -612,12 +613,13 @@ function FollowUpStep({ pacienteId, avaliacaoId, followups, user }: {
 }
 
 // ---- Passo 3: Laudo Médico ----
-function LaudoMedicoStep({ pacienteId, avaliacaoId, laudos, produtos, user }: {
-  pacienteId: string; avaliacaoId?: string; laudos: LaudoMedico[]; produtos: Produto[]; user: ReturnType<typeof useAuth>['user'];
+function LaudoMedicoStep({ pacienteId, avaliacaoId, produtoIndicado, laudos, produtos, user }: {
+  pacienteId: string; avaliacaoId?: string; produtoIndicado?: AvaliacaoIU['produtoIndicado'];
+  laudos: LaudoMedico[]; produtos: Produto[]; user: ReturnType<typeof useAuth>['user'];
 }) {
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
-  const { register, handleSubmit, setValue, reset } = useForm<Record<string, unknown>>();
+  const { register, handleSubmit, setValue, watch, reset } = useForm<Record<string, unknown>>();
 
   const mut = useMutation({
     mutationFn: (payload: Record<string, unknown>) => laudoMedicoApi.create(payload),
@@ -672,7 +674,10 @@ function LaudoMedicoStep({ pacienteId, avaliacaoId, laudos, produtos, user }: {
         </div>
       ))}
       {podeCriar && (
-        <Button size="sm" onClick={() => setOpen(true)}>
+        <Button size="sm" onClick={() => {
+          if (produtoIndicado) setValue(`prod_${produtoIndicado.codigo}`, true);
+          setOpen(true);
+        }}>
           <Plus className="h-4 w-4 mr-1" /> Novo laudo
         </Button>
       )}
@@ -680,11 +685,14 @@ function LaudoMedicoStep({ pacienteId, avaliacaoId, laudos, produtos, user }: {
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Laudo Médico — Solicitação SUS</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit((v) => mut.mutate({
-            ...v, pacienteId, avaliacaoIuId: avaliacaoId, clinicaId: user?.clinicaId,
+            pacienteId, avaliacaoIuId: avaliacaoId, clinicaId: user?.clinicaId,
+            dataLaudo: v.dataLaudo,
+            justificativaMedica: v.justificativaMedica,
+            fundamentoLegal: v.fundamentoLegal,
             cid10: String(v.cid10 ?? '').split(',').map((s: string) => s.trim()).filter(Boolean),
-            produtosSolicitados: produtos.filter((p) => (v as Record<string, unknown>)[`prod_${p.codigo}`]).map((p) => ({
+            produtosSolicitados: produtos.filter((p) => v[`prod_${p.codigo}`]).map((p) => ({
               codigo: p.codigo, descricao: p.nome,
-              quantidade: Number((v as Record<string, unknown>)[`qty_${p.codigo}`] ?? 1),
+              quantidade: Number(v[`qty_${p.codigo}`] ?? 1) || 1,
               unidade: 'unidade', codigoSiafisico: p.codigoSiafisico,
             })),
           }))} className="space-y-4">
@@ -708,11 +716,22 @@ function LaudoMedicoStep({ pacienteId, avaliacaoId, laudos, produtos, user }: {
             </div>
             <div className="space-y-2">
               <Label>Produtos solicitados</Label>
-              {produtos.slice(0, 8).map((p) => (
+              {produtos.map((p) => (
                 <div key={p.codigo} className="flex items-center gap-3">
-                  <Checkbox id={`prod_${p.codigo}`} onCheckedChange={(c) => setValue(`prod_${p.codigo}`, !!c)} />
-                  <Label htmlFor={`prod_${p.codigo}`} className="text-sm flex-1 cursor-pointer">{p.nome}</Label>
-                  <Input type="number" min={1} defaultValue={1} className="w-20" {...register(`qty_${p.codigo}`, { valueAsNumber: true })} />
+                  <Checkbox
+                    id={`prod_${p.codigo}`}
+                    checked={!!watch(`prod_${p.codigo}`)}
+                    onCheckedChange={(c) => setValue(`prod_${p.codigo}`, !!c)}
+                  />
+                  <Label htmlFor={`prod_${p.codigo}`} className="text-sm flex-1 cursor-pointer">
+                    {p.nome}
+                    {produtoIndicado?.codigo === p.codigo && (
+                      <Badge variant="success" className="ml-2 text-xs">Indicado na avaliação</Badge>
+                    )}
+                  </Label>
+                  {!!watch(`prod_${p.codigo}`) && (
+                    <Input type="number" min={1} defaultValue={1} className="w-20" {...register(`qty_${p.codigo}`, { valueAsNumber: true })} />
+                  )}
                 </div>
               ))}
             </div>
@@ -904,7 +923,7 @@ function EntregasStep({ pacienteId, processoId, avaliacaoId, entregas, produtos,
 }) {
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
-  const { register, handleSubmit, setValue, reset } = useForm<Record<string, unknown>>();
+  const { register, handleSubmit, setValue, watch, reset } = useForm<Record<string, unknown>>();
 
   const mut = useMutation({
     mutationFn: (payload: Record<string, unknown>) => entregasApi.create(payload),
@@ -961,13 +980,18 @@ function EntregasStep({ pacienteId, processoId, avaliacaoId, entregas, produtos,
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Registrar Entrega de Produtos</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit((v) => {
-            const itens = produtos.filter((p) => (v as Record<string, unknown>)[`ent_${p.codigo}`]).map((p) => ({
+            const itens = produtos.filter((p) => v[`ent_${p.codigo}`]).map((p) => ({
               codigo: p.codigo, descricao: p.nome,
-              quantidade: Number((v as Record<string, unknown>)[`entqty_${p.codigo}`] ?? 1),
+              quantidade: Number(v[`entqty_${p.codigo}`] ?? 1) || 1,
               valorUnitarioCentavos: 0, valorTotalCentavos: 0,
             }));
             const total = itens.reduce((s, i) => s + i.valorTotalCentavos, 0);
-            mut.mutate({ ...v, pacienteId, processoJuridicoId: processoId, avaliacaoIuId: avaliacaoId, clinicaId: user?.clinicaId, itens, valorTotalCentavos: total });
+            mut.mutate({
+              pacienteId, processoJuridicoId: processoId, avaliacaoIuId: avaliacaoId, clinicaId: user?.clinicaId,
+              dataEntrega: v.dataEntrega, origem: v.origem,
+              notaFiscal: v.notaFiscal, observacoes: v.observacoes,
+              itens, valorTotalCentavos: total,
+            });
           })} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
@@ -988,11 +1012,17 @@ function EntregasStep({ pacienteId, processoId, avaliacaoId, entregas, produtos,
             </div>
             <div className="space-y-2">
               <Label>Produtos entregues</Label>
-              {produtos.slice(0, 11).map((p) => (
+              {produtos.map((p) => (
                 <div key={p.codigo} className="flex items-center gap-3">
-                  <Checkbox id={`ent_${p.codigo}`} onCheckedChange={(c) => setValue(`ent_${p.codigo}`, !!c)} />
+                  <Checkbox
+                    id={`ent_${p.codigo}`}
+                    checked={!!watch(`ent_${p.codigo}`)}
+                    onCheckedChange={(c) => setValue(`ent_${p.codigo}`, !!c)}
+                  />
                   <Label htmlFor={`ent_${p.codigo}`} className="text-sm flex-1 cursor-pointer">{p.nome}</Label>
-                  <Input type="number" min={1} defaultValue={1} className="w-20" {...register(`entqty_${p.codigo}`, { valueAsNumber: true })} />
+                  {!!watch(`ent_${p.codigo}`) && (
+                    <Input type="number" min={1} defaultValue={1} className="w-20" {...register(`entqty_${p.codigo}`, { valueAsNumber: true })} />
+                  )}
                 </div>
               ))}
             </div>

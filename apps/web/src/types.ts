@@ -254,6 +254,12 @@ export interface Endereco {
   cep?: string;
 }
 
+export interface ConsentimentoLGPD {
+  aceito: boolean;
+  dataAceite: string;
+  versao: string;
+}
+
 export interface Paciente {
   id: string;
   clinicaId: string;
@@ -264,6 +270,7 @@ export interface Paciente {
   telefone?: string;
   email?: string;
   endereco?: Endereco;
+  consentimentoLGPD?: ConsentimentoLGPD;
   programaIU?: boolean;
   observacoes?: string;
   etapaFluxo?: EtapaFluxoClinico;

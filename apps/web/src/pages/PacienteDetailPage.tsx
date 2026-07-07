@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import dayjs from 'dayjs';
 import {
   ArrowLeft, User, Download, Plus, FileText, FileSignature, Scale,
   Package, PackageCheck, ClipboardList, CalendarClock, ChevronDown, Stethoscope,
-  ListChecks, Trash2, UserCheck,
+  ListChecks, Trash2, UserCheck, Pencil,
 } from 'lucide-react';
 import { ProntuarioDetailDialog, NovoAtendimentoDialog } from '@/components/ProntuarioDialogs';
 import { NovoDocumentoDialog } from '@/components/NovoDocumentoDialog';
@@ -13,7 +16,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,11 +33,11 @@ import {
 import { apiErrorMessage } from '@/api/client';
 import { formatCpf, formatData, idade, toItems, formatBRL } from '@/utils';
 import {
-  SEXO_LABEL, STATUS_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_LABEL,
+  Sexo, SEXO_LABEL, STATUS_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_LABEL,
   STATUS_PROCESSO_LABEL, StatusEntrega, Modulo,
   StatusChecklistDocumento, STATUS_CHECKLIST_DOCUMENTO_LABEL, TIPO_DOCUMENTO_LABEL,
   StatusElegibilidade, STATUS_ELEGIBILIDADE_LABEL,
-  type Agendamento, type Prontuario, type Sexo, type Documento,
+  type Agendamento, type Prontuario, type Documento, type Paciente,
   type LaudoMedico, type AvaliacaoIU, type Entrega, type ProcessoJuridico,
 } from '@/types';
 
@@ -147,16 +153,7 @@ export function PacienteDetailPage() {
       </Card>
 
       {/* Dados cadastrais */}
-      <Secao icon={<User className="h-4 w-4" />} titulo="Dados cadastrais" defaultOpen={false}>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 glass rounded-xl p-4">
-          <DescItem label="Nome" value={p.nome} />
-          <DescItem label="CPF" value={formatCpf(p.cpf)} />
-          <DescItem label="Nascimento" value={formatData(p.dataNascimento)} />
-          <DescItem label="Sexo" value={p.sexo ? SEXO_LABEL[p.sexo as Sexo] : '—'} />
-          <DescItem label="Telefone" value={p.telefone || '—'} />
-          <DescItem label="E-mail" value={p.email || '—'} />
-        </div>
-      </Secao>
+      <DadosCadastraisSecao paciente={p} pacienteId={id} />
 
       {/* Observações gerais — campo livre p/ qualquer profissional de atendimento */}
       <ObservacoesSecao pacienteId={id} observacoesAtuais={p.observacoes} />
@@ -593,6 +590,140 @@ function ChecklistDocumentosSecao({ pacienteId }: { pacienteId: string }) {
           </div>
         )}
       </div>
+    </Secao>
+  );
+}
+
+const editPacienteSchema = z.object({
+  cpf: z.string().regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, 'CPF inválido.').optional().or(z.literal('')),
+  dataNascimento: z.string().optional(),
+  sexo: z.nativeEnum(Sexo).optional().or(z.literal('')),
+  telefone: z.string().optional(),
+  email: z.string().email('E-mail inválido.').optional().or(z.literal('')),
+  consentimento: z.boolean().optional(),
+});
+type EditPacienteForm = z.infer<typeof editPacienteSchema>;
+
+/** Dados cadastrais do paciente — muitos só ficam completos após a 1ª consulta
+ * (CPF, nascimento, consentimento LGPD), por isso o cadastro inicial não trava
+ * nesses campos e esta seção permite completá-los/corrigi-los a qualquer momento. */
+function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente; pacienteId: string }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<EditPacienteForm>({
+    resolver: zodResolver(editPacienteSchema),
+  });
+
+  function abrir() {
+    reset({
+      cpf: p.cpf ?? '',
+      dataNascimento: p.dataNascimento ? p.dataNascimento.slice(0, 10) : '',
+      sexo: p.sexo ?? '',
+      telefone: p.telefone ?? '',
+      email: p.email ?? '',
+      consentimento: !!p.consentimentoLGPD?.aceito,
+    });
+    setOpen(true);
+  }
+
+  const updateMut = useMutation({
+    mutationFn: (payload: Record<string, unknown>) => pacientesApi.update(pacienteId, payload),
+    onSuccess: () => {
+      toast.success('Cadastro atualizado.');
+      setOpen(false);
+      void qc.invalidateQueries({ queryKey: ['paciente', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  function onSubmit(v: EditPacienteForm) {
+    updateMut.mutate({
+      cpf: v.cpf || undefined,
+      dataNascimento: v.dataNascimento ? dayjs(v.dataNascimento).format('YYYY-MM-DD') : undefined,
+      sexo: v.sexo || undefined,
+      telefone: v.telefone || undefined,
+      email: v.email || undefined,
+      consentimentoLGPD: v.consentimento
+        ? { aceito: true, dataAceite: p.consentimentoLGPD?.aceito ? p.consentimentoLGPD.dataAceite : new Date().toISOString(), versao: '1.0' }
+        : undefined,
+    });
+  }
+
+  return (
+    <Secao
+      icon={<User className="h-4 w-4" />}
+      titulo="Dados cadastrais"
+      defaultOpen={false}
+      acao={
+        <Button variant="ghost" size="icon" title="Editar cadastro" onClick={abrir}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+      }
+    >
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 glass rounded-xl p-4">
+        <DescItem label="Nome" value={p.nome} />
+        <DescItem label="CPF" value={formatCpf(p.cpf)} />
+        <DescItem label="Nascimento" value={formatData(p.dataNascimento)} />
+        <DescItem label="Sexo" value={p.sexo ? SEXO_LABEL[p.sexo] : '—'} />
+        <DescItem label="Telefone" value={p.telefone || '—'} />
+        <DescItem label="E-mail" value={p.email || '—'} />
+        <DescItem label="Consentimento LGPD" value={p.consentimentoLGPD?.aceito ? 'Aceito' : 'Pendente'} />
+      </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar cadastro</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="editCpf">CPF</Label>
+                <Input id="editCpf" placeholder="000.000.000-00" {...register('cpf')} />
+                {errors.cpf && <p className="text-sm text-destructive">{errors.cpf.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editDataNascimento">Nascimento</Label>
+                <Input id="editDataNascimento" type="date" {...register('dataNascimento')} />
+              </div>
+              <div className="space-y-2">
+                <Label>Sexo</Label>
+                <Select value={watch('sexo') || undefined} onValueChange={(v) => setValue('sexo', v as Sexo)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {Object.values(Sexo).map((s) => <SelectItem key={s} value={s}>{SEXO_LABEL[s]}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="editTelefone">Telefone</Label>
+                <Input id="editTelefone" placeholder="(00) 00000-0000" {...register('telefone')} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editEmail">E-mail</Label>
+                <Input id="editEmail" type="email" placeholder="paciente@email.com" {...register('email')} />
+                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <Checkbox id="editConsentimento" checked={watch('consentimento')} onCheckedChange={(c) => setValue('consentimento', !!c)} />
+              <Label htmlFor="editConsentimento" className="text-sm leading-tight cursor-pointer">
+                O paciente consente com o tratamento de seus dados (LGPD).
+              </Label>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={updateMut.isPending}>{updateMut.isPending ? 'Salvando...' : 'Salvar'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Secao>
   );
 }

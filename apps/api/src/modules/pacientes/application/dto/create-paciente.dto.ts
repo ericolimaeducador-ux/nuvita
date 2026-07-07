@@ -24,14 +24,17 @@ export class CreatePacienteDto {
   @IsNotEmpty()
   nome!: string;
 
+  @IsOptional()
   @Matches(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/)
-  cpf!: string;
+  cpf?: string;
 
+  @IsOptional()
   @IsISO8601()
-  dataNascimento!: string;
+  dataNascimento?: string;
 
+  @IsOptional()
   @IsEnum(Sexo)
-  sexo!: Sexo;
+  sexo?: Sexo;
 
   @IsOptional()
   @IsString()
@@ -51,9 +54,10 @@ export class CreatePacienteDto {
   @Type(() => ConvenioDto)
   convenio?: ConvenioDto;
 
+  @IsOptional()
   @ValidateNested()
   @Type(() => ConsentimentoLGpdDto)
-  consentimentoLGPD!: ConsentimentoLGpdDto;
+  consentimentoLGPD?: ConsentimentoLGpdDto;
 
   @IsOptional()
   @IsBoolean()

@@ -27,17 +27,17 @@ export class PacienteMongo {
   @Prop({ required: true, trim: true, index: true })
   nome!: string;
 
-  @Prop({ required: true })
-  cpf!: string;
+  @Prop()
+  cpf?: string;
 
-  @Prop({ required: true, index: true })
-  cpfHash!: string;
+  @Prop({ index: true })
+  cpfHash?: string;
 
-  @Prop({ required: true })
-  dataNascimento!: Date;
+  @Prop()
+  dataNascimento?: Date;
 
-  @Prop({ required: true, enum: Object.values(Sexo), index: true })
-  sexo!: Sexo;
+  @Prop({ enum: Object.values(Sexo), index: true })
+  sexo?: Sexo;
 
   @Prop()
   telefone?: string;
@@ -51,8 +51,8 @@ export class PacienteMongo {
   @Prop()
   convenio?: string;
 
-  @Prop({ required: true, type: ConsentimentoLGPDSchema })
-  consentimentoLGPD!: ConsentimentoLGPDMongo;
+  @Prop({ type: ConsentimentoLGPDSchema })
+  consentimentoLGPD?: ConsentimentoLGPDMongo;
 
   @Prop({ default: false, index: true })
   programaIU?: boolean;
@@ -86,6 +86,6 @@ export class PacienteMongo {
 export const PacienteSchema = SchemaFactory.createForClass(PacienteMongo);
 
 PacienteSchema.index({ clinicaId: 1, _id: 1 });
-PacienteSchema.index({ clinicaId: 1, cpfHash: 1 }, { unique: true });
+PacienteSchema.index({ clinicaId: 1, cpfHash: 1 }, { unique: true, sparse: true });
 PacienteSchema.index({ clinicaId: 1, ativo: 1, criadoEm: -1, _id: -1 });
 PacienteSchema.index({ clinicaId: 1, etapaFluxo: 1, criadoEm: -1 });

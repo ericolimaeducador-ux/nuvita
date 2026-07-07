@@ -8,7 +8,7 @@ export type CreatePacienteInput = Omit<
 >;
 
 export type UpdatePacienteInput = Partial<
-  Omit<Paciente, 'id' | 'clinicaId' | 'ativo' | 'criadoEm' | 'atualizadoEm' | 'consentimentoLGPD'>
+  Omit<Paciente, 'id' | 'clinicaId' | 'ativo' | 'criadoEm' | 'atualizadoEm'>
 >;
 
 export interface ListPacientesInput extends CursorPaginationInput {

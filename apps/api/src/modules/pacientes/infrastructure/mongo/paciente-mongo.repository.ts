@@ -30,8 +30,8 @@ export class PacienteMongoRepository implements PacienteRepository {
     const created = await this.pacienteModel.create({
       clinicaId: input.clinicaId,
       nome: input.nome,
-      cpf: this.crypto.encryptString(this.crypto.normalizeCpf(input.cpf)),
-      cpfHash: this.crypto.cpfHash(input.cpf),
+      cpf: input.cpf ? this.crypto.encryptString(this.crypto.normalizeCpf(input.cpf)) : undefined,
+      cpfHash: input.cpf ? this.crypto.cpfHash(input.cpf) : undefined,
       dataNascimento: input.dataNascimento,
       sexo: input.sexo,
       telefone: this.encryptOptional(input.telefone),
@@ -161,6 +161,7 @@ export class PacienteMongoRepository implements PacienteRepository {
     if (input.email !== undefined) update.email = this.encryptOptional(input.email?.toLowerCase());
     if (input.endereco !== undefined) update.endereco = this.encryptJsonOptional(input.endereco);
     if (input.convenio !== undefined) update.convenio = this.encryptJsonOptional(input.convenio);
+    if (input.consentimentoLGPD !== undefined) update.consentimentoLGPD = input.consentimentoLGPD;
     if (input.programaIU !== undefined) update.programaIU = input.programaIU;
     if (input.observacoes !== undefined) update.observacoes = this.encryptOptional(input.observacoes);
     if (input.etapaFluxo !== undefined) update.etapaFluxo = input.etapaFluxo;
@@ -191,7 +192,7 @@ export class PacienteMongoRepository implements PacienteRepository {
       id: object._id.toString(),
       clinicaId: object.clinicaId,
       nome: object.nome,
-      cpf: this.crypto.decryptString(object.cpf),
+      cpf: this.decryptOptional(object.cpf),
       dataNascimento: object.dataNascimento,
       sexo: object.sexo,
       telefone: this.decryptOptional(object.telefone),

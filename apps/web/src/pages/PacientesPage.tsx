@@ -26,12 +26,12 @@ import { Sexo, SEXO_LABEL, type Paciente } from '@/types';
 
 const pacienteSchema = z.object({
   nome: z.string().min(1, 'Informe o nome.'),
-  cpf: z.string().regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, 'CPF inválido.'),
-  dataNascimento: z.string().min(1, 'Informe a data.'),
-  sexo: z.nativeEnum(Sexo, { error: 'Selecione.' }),
+  cpf: z.string().regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, 'CPF inválido.').optional().or(z.literal('')),
+  dataNascimento: z.string().optional(),
+  sexo: z.nativeEnum(Sexo, { error: 'Selecione.' }).optional(),
   telefone: z.string().optional(),
   email: z.string().email('E-mail inválido.').optional().or(z.literal('')),
-  consentimento: z.boolean().refine((v) => v, 'Consentimento obrigatório (LGPD).'),
+  consentimento: z.boolean().optional(),
 });
 type PacienteForm = z.infer<typeof pacienteSchema>;
 
@@ -69,12 +69,14 @@ export function PacientesPage() {
     createMut.mutate({
       clinicaId: user?.clinicaId,
       nome: v.nome,
-      cpf: v.cpf,
-      dataNascimento: dayjs(v.dataNascimento).format('YYYY-MM-DD'),
-      sexo: v.sexo,
+      cpf: v.cpf || undefined,
+      dataNascimento: v.dataNascimento ? dayjs(v.dataNascimento).format('YYYY-MM-DD') : undefined,
+      sexo: v.sexo || undefined,
       telefone: v.telefone || undefined,
       email: v.email || undefined,
-      consentimentoLGPD: { aceito: true, dataAceite: new Date().toISOString(), versao: '1.0' },
+      consentimentoLGPD: v.consentimento
+        ? { aceito: true, dataAceite: new Date().toISOString(), versao: '1.0' }
+        : undefined,
     });
   }
 
@@ -155,6 +157,9 @@ export function PacientesPage() {
           <DialogHeader>
             <DialogTitle>Novo paciente</DialogTitle>
           </DialogHeader>
+          <p className="text-sm text-muted-foreground -mt-2">
+            Apenas o nome é obrigatório. Os demais dados podem ser completados depois, na tela do paciente.
+          </p>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="nome">Nome completo</Label>
@@ -164,17 +169,17 @@ export function PacientesPage() {
 
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="cpf">CPF</Label>
+                <Label htmlFor="cpf">CPF (opcional)</Label>
                 <Input id="cpf" placeholder="000.000.000-00" {...register('cpf')} />
                 {errors.cpf && <p className="text-sm text-destructive">{errors.cpf.message}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dataNascimento">Nascimento</Label>
+                <Label htmlFor="dataNascimento">Nascimento (opcional)</Label>
                 <Input id="dataNascimento" type="date" {...register('dataNascimento')} />
                 {errors.dataNascimento && <p className="text-sm text-destructive">{errors.dataNascimento.message}</p>}
               </div>
               <div className="space-y-2">
-                <Label>Sexo</Label>
+                <Label>Sexo (opcional)</Label>
                 <Select onValueChange={(v) => setValue('sexo', v as Sexo)}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
@@ -200,10 +205,9 @@ export function PacientesPage() {
             <div className="flex items-start gap-2">
               <Checkbox id="consentimento" checked={watch('consentimento')} onCheckedChange={(c) => setValue('consentimento', !!c)} />
               <Label htmlFor="consentimento" className="text-sm leading-tight cursor-pointer">
-                O paciente consente com o tratamento de seus dados (LGPD).
+                O paciente consente com o tratamento de seus dados (LGPD). Se ainda não foi obtido, deixe em branco e registre depois.
               </Label>
             </div>
-            {errors.consentimento && <p className="text-sm text-destructive">{errors.consentimento.message}</p>}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>

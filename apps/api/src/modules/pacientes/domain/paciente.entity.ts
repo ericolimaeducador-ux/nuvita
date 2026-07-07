@@ -33,14 +33,14 @@ export interface Paciente {
   id: string;
   clinicaId: string;
   nome: string;
-  cpf: string;
-  dataNascimento: Date;
-  sexo: Sexo;
+  cpf?: string;
+  dataNascimento?: Date;
+  sexo?: Sexo;
   telefone?: string;
   email?: string;
   endereco?: Endereco;
   convenio?: Convenio;
-  consentimentoLGPD: ConsentimentoLGPD;
+  consentimentoLGPD?: ConsentimentoLGPD;
   programaIU?: boolean;
   observacoes?: string;
   etapaFluxo: EtapaFluxoClinico;

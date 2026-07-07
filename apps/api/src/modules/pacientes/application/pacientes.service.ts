@@ -39,17 +39,19 @@ export class PacientesService {
       clinicaId,
       nome: dto.nome,
       cpf: dto.cpf,
-      dataNascimento: new Date(dto.dataNascimento),
+      dataNascimento: dto.dataNascimento ? new Date(dto.dataNascimento) : undefined,
       sexo: dto.sexo,
       telefone: dto.telefone,
       email: dto.email,
       endereco: dto.endereco,
       convenio: dto.convenio,
-      consentimentoLGPD: {
-        aceito: dto.consentimentoLGPD.aceito,
-        dataAceite: new Date(dto.consentimentoLGPD.dataAceite),
-        versao: dto.consentimentoLGPD.versao,
-      },
+      consentimentoLGPD: dto.consentimentoLGPD
+        ? {
+            aceito: dto.consentimentoLGPD.aceito,
+            dataAceite: new Date(dto.consentimentoLGPD.dataAceite),
+            versao: dto.consentimentoLGPD.versao,
+          }
+        : undefined,
       programaIU: dto.programaIU ?? false,
     });
 
@@ -132,6 +134,13 @@ export class PacientesService {
     const paciente = await this.pacientes.update(resolvedClinicaId, pacienteId, {
       ...dto,
       dataNascimento: dto.dataNascimento ? new Date(dto.dataNascimento) : undefined,
+      consentimentoLGPD: dto.consentimentoLGPD
+        ? {
+            aceito: dto.consentimentoLGPD.aceito,
+            dataAceite: new Date(dto.consentimentoLGPD.dataAceite),
+            versao: dto.consentimentoLGPD.versao,
+          }
+        : undefined,
     });
 
     if (!paciente) {

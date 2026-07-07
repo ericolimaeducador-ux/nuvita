@@ -9,6 +9,7 @@ import {
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -335,7 +336,7 @@ export function SuperAdminPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Senha provisória</Label>
-                <Input type="password" placeholder="mín. 10 caracteres" {...createForm.register('password')} />
+                <PasswordInput placeholder="mín. 10 caracteres" {...createForm.register('password')} />
                 {createForm.formState.errors.password && (
                   <p className="text-xs text-destructive">{createForm.formState.errors.password.message}</p>
                 )}
@@ -494,7 +495,7 @@ export function SuperAdminPage() {
           >
             <div className="space-y-1.5">
               <Label>Nova senha</Label>
-              <Input type="password" placeholder="mín. 10 caracteres" {...resetForm.register('novaSenha')} />
+              <PasswordInput placeholder="mín. 10 caracteres" {...resetForm.register('novaSenha')} />
               {resetForm.formState.errors.novaSenha && (
                 <p className="text-xs text-destructive">{resetForm.formState.errors.novaSenha.message}</p>
               )}

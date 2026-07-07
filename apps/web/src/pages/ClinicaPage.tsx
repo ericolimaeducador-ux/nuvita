@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { clinicasApi } from '@/api/resources';
@@ -88,7 +89,7 @@ export function ClinicaPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Senha provisória</Label>
-                <Input id="password" type="password" placeholder="mínimo 10 caracteres" {...register('password')} />
+                <PasswordInput id="password" placeholder="mínimo 10 caracteres" {...register('password')} />
                 {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
               </div>
             </div>

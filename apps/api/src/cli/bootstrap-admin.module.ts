@@ -5,11 +5,13 @@ import { ClinicasModule } from '../modules/clinicas';
 import { BootstrapAdminCommand } from './bootstrap-admin.command';
 import { SecurityModule } from '../common/security/security.module';
 import { AppConfigService } from '../common/security/config.service';
+import { TenancyModule } from '../common/tenancy/tenancy.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     SecurityModule,
+    TenancyModule,
     MongooseModule.forRootAsync({
       imports: [SecurityModule],
       inject: [AppConfigService],

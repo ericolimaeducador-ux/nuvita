@@ -28,8 +28,10 @@ import { PacientesService, RequestAuditContext } from '../application/pacientes.
 export class PacientesController {
   constructor(private readonly pacientesService: PacientesService) {}
 
+  // Cadastro aberto aos papéis de atendimento: quem tem o módulo PACIENTES
+  // liberado no painel pode registrar paciente (a tela é gateada por módulo).
   @Post()
-  @Roles(Papel.SECRETARIA, Papel.ADMIN)
+  @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   create(
     @Body() dto: CreatePacienteDto,
     @CurrentUser() user: AuthTokenPayload,
@@ -72,7 +74,7 @@ export class PacientesController {
   }
 
   @Patch(':id')
-  @Roles(Papel.SECRETARIA, Papel.ADMIN)
+  @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   update(
     @Param('id') pacienteId: string,
     @Body() dto: UpdatePacienteDto,

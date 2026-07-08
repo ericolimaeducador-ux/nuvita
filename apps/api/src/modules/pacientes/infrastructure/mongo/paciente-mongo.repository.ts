@@ -37,11 +37,13 @@ export class PacienteMongoRepository implements PacienteRepository {
   ) {}
 
   async create(input: CreatePacienteInput): Promise<Paciente> {
-    const created = await this.pacienteModel.create({
+    // cpf/cpfHash só entram no objeto quando informados: o driver do Mongo
+    // serializa `undefined` como `null` explícito, e o índice único
+    // {clinicaId, cpfHash} é sparse (ignora campo AUSENTE, não campo null) —
+    // gravar null explícito quebraria o 2º paciente sem CPF na mesma clínica.
+    const doc: Record<string, unknown> = {
       clinicaId: input.clinicaId,
       nome: input.nome,
-      cpf: input.cpf ? this.crypto.encryptString(this.crypto.normalizeCpf(input.cpf)) : undefined,
-      cpfHash: input.cpf ? this.crypto.cpfHash(input.cpf) : undefined,
       dataNascimento: input.dataNascimento,
       sexo: input.sexo,
       telefone: this.encryptOptional(input.telefone),
@@ -52,7 +54,13 @@ export class PacienteMongoRepository implements PacienteRepository {
       etapaFluxo: EtapaFluxoClinico.AGUARDANDO_ATENDIMENTO,
       etapaFluxoDesde: new Date(),
       ativo: true,
-    });
+    };
+    if (input.cpf) {
+      doc.cpf = this.crypto.encryptString(this.crypto.normalizeCpf(input.cpf));
+      doc.cpfHash = this.crypto.cpfHash(input.cpf);
+    }
+
+    const created = await this.pacienteModel.create(doc);
 
     return this.toEntity(created);
   }

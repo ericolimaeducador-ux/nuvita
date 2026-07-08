@@ -86,6 +86,13 @@ export class PacienteMongo {
 export const PacienteSchema = SchemaFactory.createForClass(PacienteMongo);
 
 PacienteSchema.index({ clinicaId: 1, _id: 1 });
-PacienteSchema.index({ clinicaId: 1, cpfHash: 1 }, { unique: true, sparse: true });
+// `sparse` não basta aqui: em índice COMPOSTO o Mongo só pula o doc quando
+// TODOS os campos estão ausentes, e clinicaId sempre existe — então todo
+// paciente sem CPF entrava no índice com cpfHash:null e o 2º colidia.
+// Índice parcial exige cpfHash realmente presente (string), como pretendido.
+PacienteSchema.index(
+  { clinicaId: 1, cpfHash: 1 },
+  { unique: true, partialFilterExpression: { cpfHash: { $type: 'string' } } },
+);
 PacienteSchema.index({ clinicaId: 1, ativo: 1, criadoEm: -1, _id: -1 });
 PacienteSchema.index({ clinicaId: 1, etapaFluxo: 1, criadoEm: -1 });

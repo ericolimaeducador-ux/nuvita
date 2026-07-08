@@ -6,16 +6,39 @@ import { USER_REPOSITORY } from '../auth/auth.constants';
 import { UserRepository } from '../auth/application/ports/user.repository';
 import { toPublicUser } from '../auth/domain/user.entity';
 import { AppConfigService } from '../../common/security/config.service';
+import { CLINICA_REPOSITORY } from '../clinicas/clinicas.constants';
+import { ClinicaRepository } from '../clinicas/application/ports/clinica.repository';
 import { ListUsersQueryDto } from './application/dto/list-users-query.dto';
 import { UpdateUserDto } from './application/dto/update-user.dto';
 import { CreateAdminUserDto } from './application/dto/create-admin-user.dto';
+import { UpdateClinicaDto } from './application/dto/update-clinica.dto';
 
 @Injectable()
 export class SuperAdminService {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
+    @Inject(CLINICA_REPOSITORY) private readonly clinicas: ClinicaRepository,
     private readonly configService: AppConfigService,
   ) {}
+
+  async listClinicas() {
+    const clinicas = await this.clinicas.findAll();
+    // Total de usuários por clínica ajuda o super-admin a enxergar o que
+    // cada uma tem antes de mexer (contagem barata: poucas clínicas).
+    const items = await Promise.all(
+      clinicas.map(async (clinica) => ({
+        ...clinica,
+        totalUsuarios: await this.users.count({ clinicaId: clinica.id }),
+      })),
+    );
+    return { items, total: items.length };
+  }
+
+  async updateClinica(id: string, dto: UpdateClinicaDto) {
+    const updated = await this.clinicas.update(id, dto);
+    if (!updated) throw new NotFoundException('Clínica não encontrada.');
+    return updated;
+  }
 
   async listUsuarios(query: ListUsersQueryDto) {
     const { skip = 0, limit = 50, papel, clinicaId, ativo, search } = query;

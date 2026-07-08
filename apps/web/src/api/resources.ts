@@ -359,6 +359,22 @@ export interface CreateAdminUserPayload {
   clinicaId?: string;
 }
 
+export interface ClinicaAdmin {
+  id: string;
+  nome: string;
+  cnpj: string;
+  plano: 'basico' | 'profissional' | 'enterprise';
+  ativo: boolean;
+  criadoEm: string;
+  totalUsuarios: number;
+}
+
+export interface UpdateClinicaPayload {
+  nome?: string;
+  plano?: ClinicaAdmin['plano'];
+  ativo?: boolean;
+}
+
 export const superAdminApi = {
   listUsuarios: (params: ListUsersParams = {}) =>
     api.get<ListUsuariosResult>('/super-admin/usuarios', { params }).then((r) => r.data),
@@ -370,4 +386,8 @@ export const superAdminApi = {
     api.patch<UsuarioAdmin>(`/super-admin/usuarios/${id}`, payload).then((r) => r.data),
   resetPassword: (id: string, novaSenha: string) =>
     api.post<{ ok: boolean }>(`/super-admin/usuarios/${id}/reset-password`, { novaSenha }).then((r) => r.data),
+  listClinicas: () =>
+    api.get<{ items: ClinicaAdmin[]; total: number }>('/super-admin/clinicas').then((r) => r.data),
+  updateClinica: (id: string, payload: UpdateClinicaPayload) =>
+    api.patch<ClinicaAdmin>(`/super-admin/clinicas/${id}`, payload).then((r) => r.data),
 };

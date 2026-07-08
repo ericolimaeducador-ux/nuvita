@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Shield, Plus, Search, KeyRound, Pencil, ChevronLeft, ChevronRight, RefreshCw, RotateCcw,
+  Shield, Plus, Search, KeyRound, Pencil, ChevronLeft, ChevronRight, RefreshCw, RotateCcw, Building2,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
 import { superAdminApi } from '@/api/resources';
-import type { CreateAdminUserPayload, UpdateUsuarioPayload } from '@/api/resources';
+import type { CreateAdminUserPayload, UpdateUsuarioPayload, ClinicaAdmin } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import {
   Modulo, MODULO_LABEL, TODOS_MODULOS, PERMISSOES_PADRAO_POR_PAPEL,
@@ -64,6 +64,22 @@ const resetSchema = z.object({
 });
 type ResetForm = z.infer<typeof resetSchema>;
 
+const clinicaSchema = z.object({
+  nome: z.string().min(1, 'Informe o nome.'),
+  plano: z.enum(['basico', 'profissional', 'enterprise']),
+  ativo: z.boolean(),
+});
+type ClinicaForm = z.infer<typeof clinicaSchema>;
+
+const PLANO_LABEL: Record<ClinicaAdmin['plano'], string> = {
+  basico: 'Básico',
+  profissional: 'Profissional',
+  enterprise: 'Enterprise',
+};
+
+// Radix Select não aceita value="" — sentinela para "sem clínica".
+const SEM_CLINICA = 'none';
+
 // ---- Component --------------------------------------------------------------
 export function SuperAdminPage() {
   const qc = useQueryClient();
@@ -78,6 +94,7 @@ export function SuperAdminPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<UsuarioAdmin | null>(null);
   const [resetTarget, setResetTarget] = useState<UsuarioAdmin | null>(null);
+  const [clinicaTarget, setClinicaTarget] = useState<ClinicaAdmin | null>(null);
 
   // Módulos efetivamente marcados no editor de permissões
   const [modulosSel, setModulosSel] = useState<Modulo[]>([]);
@@ -89,6 +106,7 @@ export function SuperAdminPage() {
   });
   const editForm = useForm<EditForm>({ resolver: zodResolver(editSchema) });
   const resetForm = useForm<ResetForm>({ resolver: zodResolver(resetSchema) });
+  const clinicaForm = useForm<ClinicaForm>({ resolver: zodResolver(clinicaSchema) });
 
   // Query params
   const queryParams = {
@@ -104,6 +122,15 @@ export function SuperAdminPage() {
     queryFn: () => superAdminApi.listUsuarios(queryParams),
     placeholderData: (prev) => prev,
   });
+
+  // Lista de clínicas: alimenta a aba Clínicas e os dropdowns de vínculo dos usuários.
+  const { data: clinicasData, isFetching: clinicasFetching } = useQuery({
+    queryKey: ['super-admin', 'clinicas'],
+    queryFn: () => superAdminApi.listClinicas(),
+  });
+  const clinicas = clinicasData?.items ?? [];
+  const clinicaNome = (id?: string | null) =>
+    id ? clinicas.find((c) => c.id === id)?.nome ?? id : null;
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['super-admin', 'usuarios'] });
 
@@ -139,6 +166,22 @@ export function SuperAdminPage() {
     },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
+
+  const clinicaMut = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: ClinicaForm }) =>
+      superAdminApi.updateClinica(id, payload),
+    onSuccess: () => {
+      toast.success('Clínica atualizada.');
+      setClinicaTarget(null);
+      void qc.invalidateQueries({ queryKey: ['super-admin', 'clinicas'] });
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  function openEditClinica(c: ClinicaAdmin) {
+    setClinicaTarget(c);
+    clinicaForm.reset({ nome: c.nome, plano: c.plano, ativo: c.ativo });
+  }
 
   function openEdit(u: UsuarioAdmin) {
     setEditTarget(u);
@@ -181,6 +224,7 @@ export function SuperAdminPage() {
       <Tabs defaultValue="usuarios">
         <TabsList>
           <TabsTrigger value="usuarios">Usuários</TabsTrigger>
+          <TabsTrigger value="clinicas">Clínicas</TabsTrigger>
         </TabsList>
 
         <TabsContent value="usuarios" className="mt-4 space-y-4">
@@ -237,7 +281,7 @@ export function SuperAdminPage() {
                     <TableHead>Nome</TableHead>
                     <TableHead>E-mail</TableHead>
                     <TableHead>Perfil</TableHead>
-                    <TableHead>Clínica ID</TableHead>
+                    <TableHead>Clínica</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Criado em</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -260,8 +304,8 @@ export function SuperAdminPage() {
                           {PAPEL_LABEL[u.papel]}
                         </span>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-xs font-mono">
-                        {u.clinicaId ?? '—'}
+                      <TableCell className="text-muted-foreground text-sm">
+                        {clinicaNome(u.clinicaId) ?? '—'}
                       </TableCell>
                       <TableCell>
                         <Badge variant={u.ativo ? 'default' : 'secondary'} className={u.ativo ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'}>
@@ -304,6 +348,63 @@ export function SuperAdminPage() {
               </div>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="clinicas" className="mt-4 space-y-4">
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>CNPJ</TableHead>
+                    <TableHead>Plano</TableHead>
+                    <TableHead>Usuários</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Criada em</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {clinicas.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                        {clinicasFetching ? 'Carregando…' : 'Nenhuma clínica cadastrada.'}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {clinicas.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          {c.nome}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm font-mono">{c.cnpj}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{PLANO_LABEL[c.plano]}</Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{c.totalUsuarios}</TableCell>
+                      <TableCell>
+                        <Badge variant={c.ativo ? 'default' : 'secondary'} className={c.ativo ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'}>
+                          {c.ativo ? 'Ativa' : 'Inativa'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {new Date(c.criadoEm).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" title="Editar" onClick={() => openEditClinica(c)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -354,8 +455,17 @@ export function SuperAdminPage() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label>Clínica ID <span className="text-muted-foreground">(opcional)</span></Label>
-                <Input placeholder="MongoDB ObjectId da clínica" {...createForm.register('clinicaId')} />
+                <Label>Clínica <span className="text-muted-foreground">(opcional)</span></Label>
+                <Select
+                  defaultValue={SEM_CLINICA}
+                  onValueChange={(v) => createForm.setValue('clinicaId', v === SEM_CLINICA ? '' : v)}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SEM_CLINICA}>— Sem clínica —</SelectItem>
+                    {clinicas.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>
@@ -427,8 +537,17 @@ export function SuperAdminPage() {
                 </Select>
               </div>
               <div className="col-span-2 space-y-1.5">
-                <Label>Clínica ID <span className="text-muted-foreground">(vazio = sem vínculo)</span></Label>
-                <Input placeholder="MongoDB ObjectId da clínica" {...editForm.register('clinicaId')} />
+                <Label>Clínica <span className="text-muted-foreground">(mover o usuário troca a clínica em que ele atende)</span></Label>
+                <Select
+                  value={editForm.watch('clinicaId') || SEM_CLINICA}
+                  onValueChange={(v) => editForm.setValue('clinicaId', v === SEM_CLINICA ? '' : v)}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SEM_CLINICA}>— Sem clínica —</SelectItem>
+                    {clinicas.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Permissões de módulos */}
@@ -504,6 +623,68 @@ export function SuperAdminPage() {
               <Button type="button" variant="ghost" onClick={() => setResetTarget(null)}>Cancelar</Button>
               <Button type="submit" disabled={resetMut.isPending}>
                 {resetMut.isPending ? 'Redefinindo…' : 'Redefinir senha'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Editar clínica */}
+      <Dialog open={!!clinicaTarget} onOpenChange={(o) => { if (!o) setClinicaTarget(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar clínica — {clinicaTarget?.nome}</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={clinicaForm.handleSubmit((v) => {
+              if (!clinicaTarget) return;
+              clinicaMut.mutate({ id: clinicaTarget.id, payload: v });
+            })}
+            className="space-y-4 py-2"
+          >
+            <div className="space-y-1.5">
+              <Label>Nome</Label>
+              <Input {...clinicaForm.register('nome')} />
+              {clinicaForm.formState.errors.nome && (
+                <p className="text-xs text-destructive">{clinicaForm.formState.errors.nome.message}</p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Plano</Label>
+                <Select
+                  value={clinicaForm.watch('plano')}
+                  onValueChange={(v) => clinicaForm.setValue('plano', v as ClinicaForm['plano'])}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(PLANO_LABEL) as ClinicaAdmin['plano'][]).map((p) => (
+                      <SelectItem key={p} value={p}>{PLANO_LABEL[p]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select
+                  value={clinicaForm.watch('ativo') ? 'true' : 'false'}
+                  onValueChange={(v) => clinicaForm.setValue('ativo', v === 'true')}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Ativa</SelectItem>
+                    <SelectItem value="false">Inativa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              CNPJ: <span className="font-mono">{clinicaTarget?.cnpj}</span> (não editável)
+            </p>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setClinicaTarget(null)}>Cancelar</Button>
+              <Button type="submit" disabled={clinicaMut.isPending}>
+                {clinicaMut.isPending ? 'Salvando…' : 'Salvar alterações'}
               </Button>
             </DialogFooter>
           </form>

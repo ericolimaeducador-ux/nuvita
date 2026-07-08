@@ -7,12 +7,23 @@ import { ListUsersQueryDto } from './application/dto/list-users-query.dto';
 import { UpdateUserDto } from './application/dto/update-user.dto';
 import { CreateAdminUserDto } from './application/dto/create-admin-user.dto';
 import { ResetPasswordDto } from './application/dto/reset-password.dto';
+import { UpdateClinicaDto } from './application/dto/update-clinica.dto';
 
 @Controller('super-admin')
 @UseGuards(JwtAuthGuard, SuperAdminGuard)
 @AllowWithoutTenant()
 export class SuperAdminController {
   constructor(private readonly service: SuperAdminService) {}
+
+  @Get('clinicas')
+  listClinicas() {
+    return this.service.listClinicas();
+  }
+
+  @Patch('clinicas/:id')
+  updateClinica(@Param('id') id: string, @Body() dto: UpdateClinicaDto) {
+    return this.service.updateClinica(id, dto);
+  }
 
   @Get('usuarios')
   listUsuarios(@Query() query: ListUsersQueryDto) {

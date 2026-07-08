@@ -359,6 +359,11 @@ export interface CreateAdminUserPayload {
   clinicaId?: string;
 }
 
+export interface TwoFactorSetup {
+  otpauthUrl: string;
+  base32: string;
+}
+
 export interface ClinicaAdmin {
   id: string;
   nome: string;
@@ -381,11 +386,13 @@ export const superAdminApi = {
   getUsuario: (id: string) =>
     api.get<UsuarioAdmin>(`/super-admin/usuarios/${id}`).then((r) => r.data),
   createUsuario: (payload: CreateAdminUserPayload) =>
-    api.post<UsuarioAdmin>('/super-admin/usuarios', payload).then((r) => r.data),
+    api.post<UsuarioAdmin & { twoFactorSetup?: TwoFactorSetup }>('/super-admin/usuarios', payload).then((r) => r.data),
   updateUsuario: (id: string, payload: UpdateUsuarioPayload) =>
-    api.patch<UsuarioAdmin>(`/super-admin/usuarios/${id}`, payload).then((r) => r.data),
+    api.patch<UsuarioAdmin & { twoFactorSetup?: TwoFactorSetup }>(`/super-admin/usuarios/${id}`, payload).then((r) => r.data),
   resetPassword: (id: string, novaSenha: string) =>
     api.post<{ ok: boolean }>(`/super-admin/usuarios/${id}/reset-password`, { novaSenha }).then((r) => r.data),
+  reset2fa: (id: string) =>
+    api.post<TwoFactorSetup>(`/super-admin/usuarios/${id}/reset-2fa`).then((r) => r.data),
   listClinicas: () =>
     api.get<{ items: ClinicaAdmin[]; total: number }>('/super-admin/clinicas').then((r) => r.data),
   updateClinica: (id: string, payload: UpdateClinicaPayload) =>

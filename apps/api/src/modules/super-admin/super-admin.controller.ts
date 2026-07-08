@@ -49,4 +49,9 @@ export class SuperAdminController {
   resetPassword(@Param('id') id: string, @Body() dto: ResetPasswordDto) {
     return this.service.resetPassword(id, dto.novaSenha);
   }
+
+  @Post('usuarios/:id/reset-2fa')
+  reset2fa(@Param('id') id: string) {
+    return this.service.reset2fa(id);
+  }
 }

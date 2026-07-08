@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   Shield, Plus, Search, KeyRound, Pencil, ChevronLeft, ChevronRight, RefreshCw, RotateCcw, Building2,
+  ShieldCheck, Copy,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
 import { superAdminApi } from '@/api/resources';
-import type { CreateAdminUserPayload, UpdateUsuarioPayload, ClinicaAdmin } from '@/api/resources';
+import type { CreateAdminUserPayload, UpdateUsuarioPayload, ClinicaAdmin, TwoFactorSetup } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import {
   Modulo, MODULO_LABEL, TODOS_MODULOS, PERMISSOES_PADRAO_POR_PAPEL,
@@ -80,6 +81,9 @@ const PLANO_LABEL: Record<ClinicaAdmin['plano'], string> = {
 // Radix Select não aceita value="" — sentinela para "sem clínica".
 const SEM_CLINICA = 'none';
 
+// Espelha PAPEIS_COM_2FA_OBRIGATORIO do backend (packages/shared/src/auth).
+const PAPEIS_2FA: Papel[] = [Papel.SUPER_ADMIN, Papel.ADMIN, Papel.MEDICO, Papel.ENFERMEIRO, Papel.ADVOGADO];
+
 // ---- Component --------------------------------------------------------------
 export function SuperAdminPage() {
   const qc = useQueryClient();
@@ -95,6 +99,9 @@ export function SuperAdminPage() {
   const [editTarget, setEditTarget] = useState<UsuarioAdmin | null>(null);
   const [resetTarget, setResetTarget] = useState<UsuarioAdmin | null>(null);
   const [clinicaTarget, setClinicaTarget] = useState<ClinicaAdmin | null>(null);
+  // Chave TOTP recém-gerada, exibida uma única vez para cadastrar no autenticador.
+  const [twoFaSetup, setTwoFaSetup] = useState<{ email: string; setup: TwoFactorSetup } | null>(null);
+  const [twoFaTarget, setTwoFaTarget] = useState<UsuarioAdmin | null>(null);
 
   // Módulos efetivamente marcados no editor de permissões
   const [modulosSel, setModulosSel] = useState<Modulo[]>([]);
@@ -136,11 +143,16 @@ export function SuperAdminPage() {
 
   const createMut = useMutation({
     mutationFn: (payload: CreateAdminUserPayload) => superAdminApi.createUsuario(payload),
-    onSuccess: () => {
+    onSuccess: (created) => {
       toast.success('Usuário criado com sucesso.');
       setCreateOpen(false);
       createForm.reset();
       void invalidate();
+      // Papel com 2FA obrigatório nasce com segredo TOTP — exibe a chave agora,
+      // senão ela se perde e o usuário não consegue logar.
+      if (created.twoFactorSetup) {
+        setTwoFaSetup({ email: created.email, setup: created.twoFactorSetup });
+      }
     },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
@@ -148,10 +160,13 @@ export function SuperAdminPage() {
   const editMut = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: UpdateUsuarioPayload }) =>
       superAdminApi.updateUsuario(id, payload),
-    onSuccess: () => {
+    onSuccess: (updated) => {
       toast.success('Usuário atualizado.');
       setEditTarget(null);
       void invalidate();
+      if (updated.twoFactorSetup) {
+        setTwoFaSetup({ email: updated.email, setup: updated.twoFactorSetup });
+      }
     },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
@@ -163,6 +178,15 @@ export function SuperAdminPage() {
       toast.success('Senha redefinida com sucesso.');
       setResetTarget(null);
       resetForm.reset();
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  const reset2faMut = useMutation({
+    mutationFn: (u: UsuarioAdmin) => superAdminApi.reset2fa(u.id),
+    onSuccess: (setup, u) => {
+      setTwoFaTarget(null);
+      setTwoFaSetup({ email: u.email, setup });
     },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
@@ -323,6 +347,11 @@ export function SuperAdminPage() {
                           <Button variant="ghost" size="icon" title="Redefinir senha" onClick={() => { setResetTarget(u); resetForm.reset(); }}>
                             <KeyRound className="h-4 w-4" />
                           </Button>
+                          {PAPEIS_2FA.includes(u.papel) && (
+                            <Button variant="ghost" size="icon" title="Gerar chave 2FA" onClick={() => setTwoFaTarget(u)}>
+                              <ShieldCheck className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -626,6 +655,71 @@ export function SuperAdminPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: confirmar geração de nova chave 2FA */}
+      <Dialog open={!!twoFaTarget} onOpenChange={(o) => { if (!o) setTwoFaTarget(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Gerar nova chave 2FA</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Será gerada uma nova chave para <span className="font-medium text-foreground">{twoFaTarget?.nome}</span> ({twoFaTarget?.email}).
+            A chave anterior <span className="font-medium text-foreground">deixa de funcionar</span> — o usuário
+            precisará cadastrar a nova no aplicativo autenticador.
+          </p>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setTwoFaTarget(null)}>Cancelar</Button>
+            <Button
+              type="button"
+              disabled={reset2faMut.isPending}
+              onClick={() => twoFaTarget && reset2faMut.mutate(twoFaTarget)}
+            >
+              {reset2faMut.isPending ? 'Gerando…' : 'Gerar nova chave'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: exibir chave 2FA recém-gerada (aparece uma única vez) */}
+      <Dialog open={!!twoFaSetup} onOpenChange={(o) => { if (!o) setTwoFaSetup(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Chave 2FA — {twoFaSetup?.email}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Cadastre no <span className="font-medium text-foreground">Google Authenticator</span>:
+              toque em <span className="font-medium text-foreground">+</span> →{' '}
+              <span className="font-medium text-foreground">Inserir chave de configuração</span>, informe o
+              e-mail como nome da conta e a chave abaixo (tipo: baseado em tempo).
+            </p>
+            <div className="flex items-center gap-2 rounded-md border border-border bg-secondary p-3">
+              <code className="flex-1 text-sm font-mono break-all select-all">{twoFaSetup?.setup.base32}</code>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                title="Copiar chave"
+                onClick={() => {
+                  if (twoFaSetup) {
+                    void navigator.clipboard.writeText(twoFaSetup.setup.base32);
+                    toast.success('Chave copiada.');
+                  }
+                }}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-destructive">
+              Esta chave não será exibida novamente — repasse ao usuário agora. Se ela se perder,
+              gere outra pelo botão de escudo na lista de usuários.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button type="button" onClick={() => setTwoFaSetup(null)}>Concluído</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

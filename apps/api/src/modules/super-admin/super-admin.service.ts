@@ -1,4 +1,4 @@
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import * as speakeasy from 'speakeasy';
 import { exigeTwoFactor, Modulo, Papel } from '../../../../../packages/shared/src/auth';
@@ -129,6 +129,26 @@ export class SuperAdminService {
       otpauthUrl: secret.otpauth_url ?? '',
       base32: secret.base32,
     };
+  }
+
+  /**
+   * Regenera o segredo TOTP do usuário e devolve a chave UMA vez para o
+   * super-admin repassar (Google Authenticator). Nunca expomos o segredo
+   * já gravado: se a chave se perdeu, o caminho é gerar outra — a anterior
+   * deixa de valer no próximo login.
+   */
+  async reset2fa(id: string) {
+    const user = await this.users.findById(id);
+    if (!user) throw new NotFoundException('Usuário não encontrado.');
+    if (!exigeTwoFactor(user.papel)) {
+      throw new BadRequestException('Este papel não usa 2FA.');
+    }
+
+    const setup = this.buildTwoFactorSetup(user.papel, user.email)!;
+    const updated = await this.users.update(id, { twoFactorSecret: setup.base32 });
+    if (!updated) throw new NotFoundException('Usuário não encontrado.');
+
+    return { otpauthUrl: setup.otpauthUrl, base32: setup.base32 };
   }
 
   async resetPassword(id: string, novaSenha: string) {

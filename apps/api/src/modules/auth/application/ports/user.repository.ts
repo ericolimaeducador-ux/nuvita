@@ -12,6 +12,7 @@ export interface CreateUserInput {
 
 export interface UpdateUserInput {
   nome?: string;
+  email?: string;
   papel?: Papel;
   clinicaId?: string | null;
   ativo?: boolean;

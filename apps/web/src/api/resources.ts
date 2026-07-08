@@ -344,6 +344,7 @@ export interface ListUsersParams {
 
 export interface UpdateUsuarioPayload {
   nome?: string;
+  email?: string;
   papel?: Papel;
   clinicaId?: string | null;
   ativo?: boolean;

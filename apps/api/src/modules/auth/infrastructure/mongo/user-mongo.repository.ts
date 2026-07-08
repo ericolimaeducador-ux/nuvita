@@ -59,6 +59,7 @@ export class UserMongoRepository implements UserRepository {
   async update(id: string, input: UpdateUserInput): Promise<User | null> {
     const set: Record<string, unknown> = {};
     if (input.nome !== undefined) set['nome'] = input.nome;
+    if (input.email !== undefined) set['email'] = input.email;
     if (input.papel !== undefined) set['papel'] = input.papel;
     if (input.clinicaId !== undefined) set['clinicaId'] = input.clinicaId;
     if (input.ativo !== undefined) set['ativo'] = input.ativo;

@@ -1,10 +1,14 @@
-import { IsArray, IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsEmail, IsEnum, IsOptional, IsString } from 'class-validator';
 import { Modulo, Papel } from '../../../../../../../packages/shared/src/auth';
 
 export class UpdateUserDto {
   @IsOptional()
   @IsString()
   nome?: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
 
   @IsOptional()
   @IsEnum(Papel)

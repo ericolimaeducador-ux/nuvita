@@ -54,6 +54,7 @@ type CreateForm = z.infer<typeof createSchema>;
 
 const editSchema = z.object({
   nome: z.string().min(1, 'Informe o nome.'),
+  email: z.string().email('E-mail inválido.'),
   papel: z.nativeEnum(Papel, { message: 'Selecione um perfil.' }),
   clinicaId: z.string().optional(),
   ativo: z.boolean(),
@@ -209,7 +210,7 @@ export function SuperAdminPage() {
 
   function openEdit(u: UsuarioAdmin) {
     setEditTarget(u);
-    editForm.reset({ nome: u.nome, papel: u.papel, clinicaId: u.clinicaId ?? '', ativo: u.ativo });
+    editForm.reset({ nome: u.nome, email: u.email, papel: u.papel, clinicaId: u.clinicaId ?? '', ativo: u.ativo });
     // permissoes vem da API; fallback recalcula para respostas antigas em cache
     setModulosSel(u.permissoes ?? resolvePermissoes(u.papel, u.modulosConcedidos, u.modulosRevogados));
   }
@@ -521,6 +522,7 @@ export function SuperAdminPage() {
               const padrao = PERMISSOES_PADRAO_POR_PAPEL[v.papel] ?? [];
               const payload: UpdateUsuarioPayload = {
                 nome: v.nome,
+                email: v.email,
                 papel: v.papel,
                 clinicaId: v.clinicaId || null,
                 ativo: v.ativo,
@@ -537,6 +539,13 @@ export function SuperAdminPage() {
                 <Input {...editForm.register('nome')} />
                 {editForm.formState.errors.nome && (
                   <p className="text-xs text-destructive">{editForm.formState.errors.nome.message}</p>
+                )}
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label>E-mail <span className="text-muted-foreground">(login do usuário — alterar aqui recupera contas com e-mail antigo)</span></Label>
+                <Input type="email" {...editForm.register('email')} />
+                {editForm.formState.errors.email && (
+                  <p className="text-xs text-destructive">{editForm.formState.errors.email.message}</p>
                 )}
               </div>
               <div className="space-y-1.5">

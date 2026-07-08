@@ -83,6 +83,20 @@ export class SuperAdminService {
     const current = await this.users.findById(id);
     if (!current) throw new NotFoundException('Usuário não encontrado.');
 
+    // Troca de e-mail (ex.: usuário perdeu acesso à caixa antiga): normaliza
+    // e garante que o novo endereço não pertence a outra conta.
+    let novoEmail: string | undefined;
+    if (dto.email) {
+      const emailNormalizado = dto.email.toLowerCase();
+      if (emailNormalizado !== current.email) {
+        const existing = await this.users.findByEmail(emailNormalizado);
+        if (existing && existing.id !== id) {
+          throw new ConflictException('E-mail já cadastrado por outro usuário.');
+        }
+        novoEmail = emailNormalizado;
+      }
+    }
+
     // Se a mudança de papel passa a exigir 2FA e o usuário ainda não tem
     // secret, gera um agora para não travar o próximo login.
     let twoFactorSetup: ReturnType<SuperAdminService['buildTwoFactorSetup']>;
@@ -102,6 +116,7 @@ export class SuperAdminService {
 
     const updated = await this.users.update(id, {
       ...dto,
+      email: novoEmail,
       ...(modulosConcedidos !== undefined ? { modulosConcedidos } : {}),
       ...(twoFactorSetup ? { twoFactorSecret: twoFactorSetup.base32 } : {}),
     });

@@ -89,6 +89,8 @@ export class PacientesService {
           incluirInativos: query.incluirInativos,
           programaIU: query.programaIU,
           etapaFluxo: query.etapaFluxo,
+          dataNascimento: query.dataNascimento,
+          sort: query.sort,
         })
       : await this.pacientes.list({
           clinicaId,
@@ -97,6 +99,8 @@ export class PacientesService {
           incluirInativos: query.incluirInativos,
           programaIU: query.programaIU,
           etapaFluxo: query.etapaFluxo,
+          dataNascimento: query.dataNascimento,
+          sort: query.sort,
         });
 
     await this.audit(query.nome ? AuditEvent.PATIENT_SEARCHED : AuditEvent.PATIENT_LISTED, context, {

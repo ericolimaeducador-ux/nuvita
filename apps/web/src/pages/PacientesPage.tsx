@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { Plus, Search, Download } from 'lucide-react';
+import { Plus, Search, Download, X } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,9 +17,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { pacientesApi } from '@/api/resources';
+import { pacientesApi, type PacienteSort } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
-import { toItems, formatCpf, idade } from '@/utils';
+import { toItems, formatCpf, formatData, idade } from '@/utils';
 import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { Sexo, SEXO_LABEL, type Paciente } from '@/types';
@@ -35,22 +35,64 @@ const pacienteSchema = z.object({
 });
 type PacienteForm = z.infer<typeof pacienteSchema>;
 
+const SORT_OPTIONS: { value: PacienteSort; label: string }[] = [
+  { value: 'recentes', label: 'Mais recentes' },
+  { value: 'nome_asc', label: 'Nome (A–Z)' },
+  { value: 'nome_desc', label: 'Nome (Z–A)' },
+  { value: 'nascimento_asc', label: 'Nascimento (mais velhos)' },
+  { value: 'nascimento_desc', label: 'Nascimento (mais novos)' },
+];
+
 export function PacientesPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
+  const [buscaInput, setBuscaInput] = useState('');
   const [busca, setBusca] = useState('');
+  const [nascFiltro, setNascFiltro] = useState('');
+  const [sort, setSort] = useState<PacienteSort>('recentes');
+  const [incluirInativos, setIncluirInativos] = useState(false);
   const [open, setOpen] = useState(false);
+
+  // Debounce: evita disparar uma busca (e um audit log) a cada tecla.
+  useEffect(() => {
+    const t = setTimeout(() => setBusca(buscaInput.trim()), 350);
+    return () => clearTimeout(t);
+  }, [buscaInput]);
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<PacienteForm>({
     resolver: zodResolver(pacienteSchema),
     defaultValues: { consentimento: false },
   });
 
-  const listQ = useQuery({
-    queryKey: ['pacientes', busca],
-    queryFn: () => pacientesApi.list({ nome: busca || undefined, limit: 50 }),
+  // 11 dígitos sem letras = CPF (busca exata); qualquer outra coisa = nome.
+  const buscaDigitos = busca.replace(/\D/g, '');
+  const buscaEhCpf = buscaDigitos.length === 11 && !/[a-zA-Z]/.test(busca);
+
+  const filtros = {
+    nome: !buscaEhCpf && busca ? busca : undefined,
+    cpf: buscaEhCpf ? buscaDigitos : undefined,
+    dataNascimento: nascFiltro || undefined,
+    sort,
+    incluirInativos: incluirInativos || undefined,
+  };
+
+  const listQ = useInfiniteQuery({
+    queryKey: ['pacientes', filtros],
+    queryFn: ({ pageParam }) => pacientesApi.list({ ...filtros, cursor: pageParam, limit: 50 }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
   });
+
+  const temFiltros = Boolean(buscaInput || nascFiltro || sort !== 'recentes' || incluirInativos);
+
+  function limparFiltros() {
+    setBuscaInput('');
+    setBusca('');
+    setNascFiltro('');
+    setSort('recentes');
+    setIncluirInativos(false);
+  }
 
   const createMut = useMutation({
     mutationFn: (payload: Record<string, unknown>) => pacientesApi.create(payload),
@@ -63,7 +105,7 @@ export function PacientesPage() {
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
-  const pacientes = toItems<Paciente>(listQ.data as never);
+  const pacientes = listQ.data?.pages.flatMap((page) => toItems<Paciente>(page as never)) ?? [];
 
   function onSubmit(v: PacienteForm) {
     createMut.mutate({
@@ -94,9 +136,59 @@ export function PacientesPage() {
 
       <Card>
         <CardContent className="p-6">
-          <div className="relative mb-4 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Buscar por nome..." onChange={(e) => setBusca(e.target.value)} />
+          <div className="mb-4 flex flex-wrap items-end gap-3">
+            <div className="w-full max-w-sm space-y-1">
+              <Label htmlFor="buscaPaciente">Buscar</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="buscaPaciente"
+                  className="pl-9"
+                  placeholder="Nome ou CPF..."
+                  value={buscaInput}
+                  onChange={(e) => setBuscaInput(e.target.value)}
+                />
+              </div>
+              {buscaEhCpf && <p className="text-xs text-muted-foreground">Buscando por CPF exato</p>}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="nascFiltro">Data de nascimento</Label>
+              <Input
+                id="nascFiltro"
+                type="date"
+                className="w-40"
+                value={nascFiltro}
+                onChange={(e) => setNascFiltro(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Ordenar por</Label>
+              <Select value={sort} onValueChange={(v) => setSort(v as PacienteSort)}>
+                <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SORT_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2 pb-2.5">
+              <Checkbox
+                id="incluirInativos"
+                checked={incluirInativos}
+                onCheckedChange={(c) => setIncluirInativos(!!c)}
+              />
+              <Label htmlFor="incluirInativos" className="cursor-pointer text-sm">Incluir inativos</Label>
+            </div>
+
+            {temFiltros && (
+              <Button variant="ghost" size="sm" className="mb-1.5" onClick={limparFiltros}>
+                <X className="mr-1 h-4 w-4" /> Limpar filtros
+              </Button>
+            )}
           </div>
 
           {listQ.isLoading ? (
@@ -107,6 +199,7 @@ export function PacientesPage() {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>CPF</TableHead>
+                  <TableHead>Nascimento</TableHead>
                   <TableHead>Idade</TableHead>
                   <TableHead>Sexo</TableHead>
                   <TableHead>Telefone</TableHead>
@@ -119,6 +212,7 @@ export function PacientesPage() {
                   <TableRow key={p.id} className="cursor-pointer" onClick={() => navigate(`/pacientes/${p.id}`)}>
                     <TableCell className="font-medium">{p.nome}</TableCell>
                     <TableCell>{formatCpf(p.cpf)}</TableCell>
+                    <TableCell>{formatData(p.dataNascimento)}</TableCell>
                     <TableCell>{idade(p.dataNascimento)}</TableCell>
                     <TableCell>{p.sexo ? SEXO_LABEL[p.sexo] : '—'}</TableCell>
                     <TableCell>{p.telefone || '—'}</TableCell>
@@ -143,11 +237,19 @@ export function PacientesPage() {
                 ))}
                 {pacientes.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum paciente encontrado</TableCell>
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum paciente encontrado</TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+          )}
+
+          {listQ.hasNextPage && (
+            <div className="mt-4 flex justify-center">
+              <Button variant="outline" onClick={() => listQ.fetchNextPage()} disabled={listQ.isFetchingNextPage}>
+                {listQ.isFetchingNextPage ? 'Carregando...' : 'Carregar mais'}
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>

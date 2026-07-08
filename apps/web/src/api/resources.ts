@@ -54,9 +54,14 @@ export const clinicasApi = {
 };
 
 // ---------- Pacientes ----------
+export type PacienteSort = 'recentes' | 'nome_asc' | 'nome_desc' | 'nascimento_asc' | 'nascimento_desc';
+
 export interface ListPacientesParams {
   nome?: string;
   cpf?: string;
+  /** Dia exato de nascimento, YYYY-MM-DD. */
+  dataNascimento?: string;
+  sort?: PacienteSort;
   cursor?: string;
   limit?: number;
   incluirInativos?: boolean;

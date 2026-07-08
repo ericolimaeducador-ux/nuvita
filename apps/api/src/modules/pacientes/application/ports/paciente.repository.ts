@@ -11,11 +11,24 @@ export type UpdatePacienteInput = Partial<
   Omit<Paciente, 'id' | 'clinicaId' | 'ativo' | 'criadoEm' | 'atualizadoEm'>
 >;
 
+export const PACIENTE_SORTS = [
+  'recentes',
+  'nome_asc',
+  'nome_desc',
+  'nascimento_asc',
+  'nascimento_desc',
+] as const;
+
+export type PacienteSort = (typeof PACIENTE_SORTS)[number];
+
 export interface ListPacientesInput extends CursorPaginationInput {
   clinicaId: string;
   incluirInativos?: boolean;
   programaIU?: boolean;
   etapaFluxo?: EtapaFluxoClinico;
+  /** Dia exato de nascimento no formato YYYY-MM-DD. */
+  dataNascimento?: string;
+  sort?: PacienteSort;
 }
 
 export interface SearchPacientesByNameInput extends ListPacientesInput {

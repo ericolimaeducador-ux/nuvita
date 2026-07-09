@@ -33,6 +33,13 @@ const pacienteSchema = z.object({
   telefone: z.string().optional(),
   email: z.string().email('E-mail inválido.').optional().or(z.literal('')),
   consentimento: z.boolean().optional(),
+  logradouro: z.string().optional(),
+  numero: z.string().optional(),
+  complemento: z.string().optional(),
+  bairro: z.string().optional(),
+  cidade: z.string().optional(),
+  estado: z.string().optional(),
+  cep: z.string().optional(),
 });
 type PacienteForm = z.infer<typeof pacienteSchema>;
 
@@ -114,6 +121,17 @@ export function PacientesPage() {
   const pacientes = listQ.data?.pages.flatMap((page) => toItems<Paciente>(page as never)) ?? [];
 
   function onSubmit(v: PacienteForm) {
+    const enderecoCampos = {
+      logradouro: v.logradouro?.trim() || undefined,
+      numero: v.numero?.trim() || undefined,
+      complemento: v.complemento?.trim() || undefined,
+      bairro: v.bairro?.trim() || undefined,
+      cidade: v.cidade?.trim() || undefined,
+      estado: v.estado?.trim() || undefined,
+      cep: v.cep?.trim() || undefined,
+    };
+    const temEndereco = Object.values(enderecoCampos).some(Boolean);
+
     createMut.mutate({
       clinicaId: user?.clinicaId,
       nome: v.nome,
@@ -123,6 +141,7 @@ export function PacientesPage() {
       projeto: v.projeto || undefined,
       telefone: v.telefone || undefined,
       email: v.email || undefined,
+      endereco: temEndereco ? enderecoCampos : undefined,
       consentimentoLGPD: v.consentimento
         ? { aceito: true, dataAceite: new Date().toISOString(), versao: '1.0' }
         : undefined,
@@ -334,6 +353,45 @@ export function PacientesPage() {
                 <Label htmlFor="pacEmail">E-mail</Label>
                 <Input id="pacEmail" type="email" placeholder="paciente@email.com" {...register('email')} />
                 {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+              </div>
+            </div>
+
+            {/* Endereço */}
+            <div className="space-y-3 rounded-lg border border-border p-3">
+              <p className="text-sm font-medium text-foreground">Endereço (opcional)</p>
+              <div className="grid grid-cols-6 gap-3">
+                <div className="space-y-2 col-span-4">
+                  <Label htmlFor="logradouro">Logradouro</Label>
+                  <Input id="logradouro" placeholder="Rua / Avenida" {...register('logradouro')} />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="numero">Número</Label>
+                  <Input id="numero" placeholder="123" {...register('numero')} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="complemento">Complemento</Label>
+                  <Input id="complemento" placeholder="Apto, bloco…" {...register('complemento')} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bairro">Bairro</Label>
+                  <Input id="bairro" {...register('bairro')} />
+                </div>
+              </div>
+              <div className="grid grid-cols-6 gap-3">
+                <div className="space-y-2 col-span-3">
+                  <Label htmlFor="cidade">Cidade</Label>
+                  <Input id="cidade" {...register('cidade')} />
+                </div>
+                <div className="space-y-2 col-span-1">
+                  <Label htmlFor="estado">UF</Label>
+                  <Input id="estado" placeholder="SP" maxLength={2} {...register('estado')} />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="cep">CEP</Label>
+                  <Input id="cep" placeholder="00000-000" {...register('cep')} />
+                </div>
               </div>
             </div>
 

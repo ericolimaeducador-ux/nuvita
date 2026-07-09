@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -39,6 +39,7 @@ import {
   STATUS_PROCESSO_LABEL, StatusEntrega, Modulo, Papel,
   StatusChecklistDocumento, STATUS_CHECKLIST_DOCUMENTO_LABEL, TIPO_DOCUMENTO_LABEL,
   StatusElegibilidade, STATUS_ELEGIBILIDADE_LABEL,
+  StatusAgendamento, TipoAtendimento, TIPO_ATENDIMENTO_POR_AGENDAMENTO,
   type Agendamento, type Prontuario, type Documento, type Paciente,
   type LaudoMedico, type AvaliacaoIU, type Entrega, type ProcessoJuridico,
 } from '@/types';
@@ -85,10 +86,41 @@ function Vazio({ children }: { children: React.ReactNode }) {
 export function PacienteDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const qc = useQueryClient();
   const { permissoes, user } = useAuth();
   const [viewProntuarioId, setViewProntuarioId] = useState<string | null>(null);
   const [novoOpen, setNovoOpen] = useState(false);
+  const [atendimentoPrefill, setAtendimentoPrefill] = useState<{
+    agendamentoId: string; tipo: TipoAtendimento; data: string;
+  } | null>(null);
+
+  function iniciarAtendimentoDeAgendamento(a: Agendamento) {
+    const tipo = TIPO_ATENDIMENTO_POR_AGENDAMENTO[a.tipo];
+    if (!tipo) return;
+    setAtendimentoPrefill({
+      agendamentoId: a.id,
+      tipo,
+      data: dayjs(a.dataHoraInicio).format('YYYY-MM-DDTHH:mm'),
+    });
+    setNovoOpen(true);
+  }
+
+  // "Iniciar atendimento" clicado a partir da Agenda: chega aqui via router state.
+  // Abre o formulário já preenchido e limpa o state pra não reabrir num refresh/voltar.
+  useEffect(() => {
+    const vindoDaAgenda = (location.state as { iniciarAgendamento?: { agendamentoId: string; tipo: TipoAtendimento; data: string } } | null)?.iniciarAgendamento;
+    if (!vindoDaAgenda) return;
+    setAtendimentoPrefill({
+      agendamentoId: vindoDaAgenda.agendamentoId,
+      tipo: vindoDaAgenda.tipo,
+      data: dayjs(vindoDaAgenda.data).format('YYYY-MM-DDTHH:mm'),
+    });
+    setNovoOpen(true);
+    navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
+
   const [novoDocOpen, setNovoDocOpen] = useState(false);
   const [novaAvaliacaoOpen, setNovaAvaliacaoOpen] = useState(false);
   const [avaliacaoEdit, setAvaliacaoEdit] = useState<AvaliacaoIU | null>(null);
@@ -263,6 +295,46 @@ export function PacienteDetailPage() {
         )}
       </Secao>
 
+      {/* Avaliações de incontinência urinária (logo após a consulta de enfermagem, mesma ordem do fluxo clínico) */}
+      <Secao
+        icon={<ClipboardList className="h-4 w-4" />}
+        titulo="Avaliações de incontinência urinária"
+        contagem={avaliacoesQ.data?.length}
+        defaultOpen={false}
+        acao={
+          podeNovaAvaliacao ? (
+            <Button size="sm" variant="outline" onClick={() => { setAvaliacaoEdit(null); setNovaAvaliacaoOpen(true); }}>
+              <Plus className="mr-2 h-4 w-4" /> Nova avaliação
+            </Button>
+          ) : undefined
+        }
+      >
+        {avaliacoesQ.isLoading ? (
+          <Skeleton className="h-20 w-full" />
+        ) : (avaliacoesQ.data ?? []).length === 0 ? (
+          <Vazio>Nenhuma avaliação de IU registrada.</Vazio>
+        ) : (
+          <Table>
+            <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Motivo</TableHead><TableHead>Cateter indicado</TableHead><TableHead className="w-40" /></TableRow></TableHeader>
+            <TableBody>
+              {(avaliacoesQ.data as AvaliacaoIU[]).map((a) => (
+                <TableRow key={a.id}>
+                  <TableCell>{formatData(a.dataAtendimento)}</TableCell>
+                  <TableCell className="text-muted-foreground truncate max-w-xs">{a.motivoIU || '—'}</TableCell>
+                  <TableCell className="text-muted-foreground">{a.produtoIndicado ? `${a.produtoIndicado.sexo} ${a.produtoIndicado.french}Fr` : '—'}</TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    {podeNovaAvaliacao && (
+                      <Button variant="ghost" size="sm" onClick={() => { setAvaliacaoEdit(a); setNovaAvaliacaoOpen(true); }}>Editar</Button>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => navigate(`/fluxo-clinico/${id}/avaliacao/${a.id}/imprimir`)}>Imprimir</Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Secao>
+
       {/* Documentos */}
       <Secao
         icon={<FileText className="h-4 w-4" />}
@@ -341,46 +413,6 @@ export function PacienteDetailPage() {
         )}
       </Secao>
 
-      {/* Avaliações de incontinência urinária */}
-      <Secao
-        icon={<ClipboardList className="h-4 w-4" />}
-        titulo="Avaliações de incontinência urinária"
-        contagem={avaliacoesQ.data?.length}
-        defaultOpen={false}
-        acao={
-          podeNovaAvaliacao ? (
-            <Button size="sm" variant="outline" onClick={() => { setAvaliacaoEdit(null); setNovaAvaliacaoOpen(true); }}>
-              <Plus className="mr-2 h-4 w-4" /> Nova avaliação
-            </Button>
-          ) : undefined
-        }
-      >
-        {avaliacoesQ.isLoading ? (
-          <Skeleton className="h-20 w-full" />
-        ) : (avaliacoesQ.data ?? []).length === 0 ? (
-          <Vazio>Nenhuma avaliação de IU registrada.</Vazio>
-        ) : (
-          <Table>
-            <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Motivo</TableHead><TableHead>Cateter indicado</TableHead><TableHead className="w-40" /></TableRow></TableHeader>
-            <TableBody>
-              {(avaliacoesQ.data as AvaliacaoIU[]).map((a) => (
-                <TableRow key={a.id}>
-                  <TableCell>{formatData(a.dataAtendimento)}</TableCell>
-                  <TableCell className="text-muted-foreground truncate max-w-xs">{a.motivoIU || '—'}</TableCell>
-                  <TableCell className="text-muted-foreground">{a.produtoIndicado ? `${a.produtoIndicado.sexo} ${a.produtoIndicado.french}Fr` : '—'}</TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    {podeNovaAvaliacao && (
-                      <Button variant="ghost" size="sm" onClick={() => { setAvaliacaoEdit(a); setNovaAvaliacaoOpen(true); }}>Editar</Button>
-                    )}
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/fluxo-clinico/${id}/avaliacao/${a.id}/imprimir`)}>Imprimir</Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </Secao>
-
       {/* Follow-up de elegibilidade (ligações do enfermeiro) */}
       {permissoes.includes(Modulo.FLUXO_CLINICO) && <FollowUpSecao pacienteId={id} />}
 
@@ -389,13 +421,6 @@ export function PacienteDetailPage() {
         {entregasQ.isLoading ? <Skeleton className="h-20 w-full" /> : insumosAReceber.length === 0 ? (
           <Vazio>Nenhum insumo pendente.</Vazio>
         ) : <TabelaEntregas entregas={insumosAReceber} />}
-      </Secao>
-
-      {/* Insumos recebidos */}
-      <Secao icon={<PackageCheck className="h-4 w-4" />} titulo="Insumos recebidos" contagem={insumosRecebidos.length} defaultOpen={false}>
-        {entregasQ.isLoading ? <Skeleton className="h-20 w-full" /> : insumosRecebidos.length === 0 ? (
-          <Vazio>Nenhum insumo entregue ainda.</Vazio>
-        ) : <TabelaEntregas entregas={insumosRecebidos} />}
       </Secao>
 
       {/* Processos jurídicos */}
@@ -432,17 +457,36 @@ export function PacienteDetailPage() {
           <Vazio>Nenhum agendamento.</Vazio>
         ) : (
           <Table>
-            <TableHeader><TableRow><TableHead>Início</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Início</TableHead><TableHead>Status</TableHead><TableHead className="w-40" /></TableRow></TableHeader>
             <TableBody>
-              {toItems<Agendamento>(agendaQ.data as never).map((a) => (
-                <TableRow key={a.id}>
-                  <TableCell>{dayjs(a.dataHoraInicio).format('DD/MM/YYYY HH:mm')}</TableCell>
-                  <TableCell><Badge>{STATUS_AGENDAMENTO_LABEL[a.status] ?? a.status}</Badge></TableCell>
-                </TableRow>
-              ))}
+              {toItems<Agendamento>(agendaQ.data as never).map((a) => {
+                const podeIniciar =
+                  (a.status === StatusAgendamento.AGENDADO || a.status === StatusAgendamento.CONFIRMADO) &&
+                  !!TIPO_ATENDIMENTO_POR_AGENDAMENTO[a.tipo];
+                return (
+                  <TableRow key={a.id}>
+                    <TableCell>{dayjs(a.dataHoraInicio).format('DD/MM/YYYY HH:mm')}</TableCell>
+                    <TableCell><Badge>{STATUS_AGENDAMENTO_LABEL[a.status] ?? a.status}</Badge></TableCell>
+                    <TableCell className="text-right">
+                      {podeIniciar && (
+                        <Button variant="ghost" size="sm" onClick={() => iniciarAtendimentoDeAgendamento(a)}>
+                          Iniciar atendimento
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
+      </Secao>
+
+      {/* Insumos recebidos — a pedido do usuário, fica por último: são o que resta após ganhar o processo jurídico */}
+      <Secao icon={<PackageCheck className="h-4 w-4" />} titulo="Insumos recebidos" contagem={insumosRecebidos.length} defaultOpen={false}>
+        {entregasQ.isLoading ? <Skeleton className="h-20 w-full" /> : insumosRecebidos.length === 0 ? (
+          <Vazio>Nenhum insumo entregue ainda.</Vazio>
+        ) : <TabelaEntregas entregas={insumosRecebidos} />}
       </Secao>
 
       <ProntuarioDetailDialog
@@ -455,7 +499,10 @@ export function PacienteDetailPage() {
         pacienteId={id}
         pacienteNome={p.nome}
         open={novoOpen}
-        onOpenChange={setNovoOpen}
+        onOpenChange={(o) => { setNovoOpen(o); if (!o) setAtendimentoPrefill(null); }}
+        agendamentoId={atendimentoPrefill?.agendamentoId}
+        initialTipo={atendimentoPrefill?.tipo}
+        initialData={atendimentoPrefill?.data}
       />
       <NovoDocumentoDialog
         pacienteId={id}

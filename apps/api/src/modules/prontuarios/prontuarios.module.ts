@@ -6,6 +6,7 @@ import { AuditLogMongoRepository } from '../auth/infrastructure/mongo/audit-log-
 import { AuditLogMongo, AuditLogSchema } from '../auth/infrastructure/mongo/audit-log.schema';
 import { JwtAuthGuard } from '../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/presentation/guards/roles.guard';
+import { AgendamentosModule } from '../agendamentos/agendamentos.module';
 import { ProntuariosService } from './application/prontuarios.service';
 import {
   Cid10MongoRepository,
@@ -25,6 +26,7 @@ import { ProntuariosController } from './presentation/prontuarios.controller';
 @Module({
   imports: [
     ConfigModule,
+    AgendamentosModule,
     MongooseModule.forFeature([
       { name: ProntuarioMongo.name, schema: ProntuarioSchema },
       { name: ProntuarioAddendumMongo.name, schema: ProntuarioAddendumSchema },

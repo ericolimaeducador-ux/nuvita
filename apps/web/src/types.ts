@@ -152,6 +152,21 @@ export const TIPO_ATENDIMENTO_LABEL: Record<TipoAtendimento, string> = {
   [TipoAtendimento.CONSULTA_ENFERMAGEM]: 'Consulta de Enfermagem',
 };
 
+/** Mapeia o tipo de agendamento para o tipo de atendimento (prontuário) mais
+ * próximo, usado para pré-preencher "Iniciar atendimento" a partir da agenda.
+ * Tipos jurídicos (atendimento_juridico, audiencia) não têm prontuário clínico
+ * equivalente — ficam de fora do mapa. */
+export const TIPO_ATENDIMENTO_POR_AGENDAMENTO: Partial<Record<TipoAgendamento, TipoAtendimento>> = {
+  [TipoAgendamento.CONSULTA]: TipoAtendimento.CONSULTA,
+  [TipoAgendamento.RETORNO]: TipoAtendimento.RETORNO,
+  [TipoAgendamento.EXAME]: TipoAtendimento.CONSULTA,
+  [TipoAgendamento.PROCEDIMENTO]: TipoAtendimento.CONSULTA,
+  [TipoAgendamento.TELECONSULTA]: TipoAtendimento.TELECONSULTA,
+  [TipoAgendamento.ATENDIMENTO_ENFERMAGEM]: TipoAtendimento.CONSULTA_ENFERMAGEM,
+  [TipoAgendamento.PROCEDIMENTO_ENFERMAGEM]: TipoAtendimento.CONSULTA_ENFERMAGEM,
+  [TipoAgendamento.ENTREVISTA]: TipoAtendimento.CONSULTA_ENFERMAGEM,
+};
+
 // ---- Permissões por módulo (espelho de packages/shared/src/auth/permissao.ts) ----
 
 export enum Modulo {

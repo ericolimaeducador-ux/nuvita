@@ -12,6 +12,7 @@ import { AuthTokenPayload, ehProfissional } from '../../../../../../packages/sha
 import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
+import { AgendamentosService } from '../../agendamentos/application/agendamentos.service';
 import { CreateAddendumDto } from './dto/create-addendum.dto';
 import { CreateProntuarioDto } from './dto/create-prontuario.dto';
 import { ListProntuariosQueryDto } from './dto/list-prontuarios-query.dto';
@@ -33,6 +34,7 @@ export class ProntuariosService {
     @Inject(CID10_REPOSITORY) private readonly cid10: Cid10Repository,
     @Inject(AUDIT_LOG_REPOSITORY) private readonly auditLogs: AuditLogRepository,
     private readonly configService: AppConfigService,
+    private readonly agendamentosService: AgendamentosService,
   ) {}
 
   async create(dto: CreateProntuarioDto, context: ProntuarioRequestContext): Promise<Prontuario> {
@@ -75,6 +77,16 @@ export class ProntuariosService {
       pacienteId: prontuario.pacienteId,
       prontuarioId: prontuario.id,
     });
+
+    if (dto.agendamentoId) {
+      // Fecha o loop agenda→prontuário: registrar o atendimento a partir de um
+      // agendamento marca esse agendamento como concluído automaticamente. Não
+      // deixa a criação do prontuário falhar por causa disso (ex.: agendamento
+      // já cancelado/de outra clínica).
+      await this.agendamentosService
+        .conclude(dto.agendamentoId, clinicaId, context)
+        .catch(() => undefined);
+    }
 
     return prontuario;
   }

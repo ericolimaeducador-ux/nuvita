@@ -6,6 +6,9 @@ import { AppConfigService } from '../../../common/security/config.service';
 import { Prontuario, TipoAtendimento } from '../domain/prontuario.entity';
 import { Cid10Repository, ProntuarioRepository } from './ports/prontuario.repository';
 import { ProntuariosService } from './prontuarios.service';
+import { AgendamentosService } from '../../agendamentos/application/agendamentos.service';
+
+const agendamentosServiceStub = { conclude: jest.fn() } as unknown as AgendamentosService;
 
 describe('ProntuariosService', () => {
   const baseProntuario: Prontuario = {
@@ -43,6 +46,7 @@ describe('ProntuariosService', () => {
       { autocomplete: jest.fn() } as unknown as Cid10Repository,
       { create: jest.fn() } as unknown as AuditLogRepository,
       { getConfig: () => ({ prontuarioSignatureSecret: 'signature-secret' }) } as unknown as AppConfigService,
+      agendamentosServiceStub,
     );
   }
 
@@ -74,6 +78,7 @@ describe('ProntuariosService', () => {
       { autocomplete: jest.fn() } as unknown as Cid10Repository,
       auditLogs as unknown as AuditLogRepository,
       { getConfig: () => ({ prontuarioSignatureSecret: 'signature-secret' }) } as unknown as AppConfigService,
+      agendamentosServiceStub,
     );
 
     await service.sign('prontuario-1', undefined, context);

@@ -17,6 +17,7 @@ import { FluxoPacientePage } from '@/pages/FluxoPacientePage';
 import { LaudoImpressaoPage } from '@/pages/LaudoImpressaoPage';
 import { AvaliacaoImpressaoPage } from '@/pages/AvaliacaoImpressaoPage';
 import { NatjusImpressaoPage } from '@/pages/NatjusImpressaoPage';
+import { ProntuarioImpressaoPage } from '@/pages/ProntuarioImpressaoPage';
 import { MeusProcessosPage } from '@/pages/MeusProcessosPage';
 import { SuperAdminPage } from '@/pages/SuperAdminPage';
 import { Modulo, Papel } from '@/types';
@@ -33,6 +34,7 @@ export function AppRoutes() {
             (sem sidebar/header do site) tanto na tela quanto no print/PDF. */}
         <Route element={<ProtectedRoute modulo={Modulo.PACIENTES} />}>
           <Route path="/pacientes/:id/prontuario/:prontuarioId/natjus/imprimir" element={<NatjusImpressaoPage />} />
+          <Route path="/pacientes/:id/prontuario/:prontuarioId/imprimir" element={<ProntuarioImpressaoPage />} />
         </Route>
         <Route element={<ProtectedRoute modulo={Modulo.FLUXO_CLINICO} />}>
           <Route path="/fluxo-clinico/:id/laudo/:laudoId/imprimir" element={<LaudoImpressaoPage />} />

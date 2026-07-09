@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -306,6 +306,11 @@ export function ProntuarioDetailDialog({
         )}
 
         <DialogFooter>
+          {pr && pacienteId && (
+            <Button variant="outline" onClick={() => navigate(`/pacientes/${pacienteId}/prontuario/${pr.id}/imprimir`)}>
+              <FileText className="mr-2 h-4 w-4" /> Imprimir
+            </Button>
+          )}
           {pr?.relatorioJudicial && pacienteId && (
             <Button variant="outline" onClick={() => navigate(`/pacientes/${pacienteId}/prontuario/${pr.id}/natjus/imprimir`)}>
               <FileText className="mr-2 h-4 w-4" /> Gerar relatório NAT-JUS
@@ -346,23 +351,39 @@ function TextField({ label, value, onChange, rows = 2, placeholder }: {
   );
 }
 
-/** Abre um novo atendimento (ficha SOAP em branco) já vinculado a um paciente. */
+/** Abre um novo atendimento (ficha SOAP em branco) já vinculado a um paciente.
+ * Quando aberto a partir de um agendamento ("Iniciar atendimento"), `agendamentoId`
+ * é enviado junto e o backend conclui o agendamento automaticamente ao salvar. */
 export function NovoAtendimentoDialog({
   pacienteId,
   pacienteNome,
   open,
   onOpenChange,
+  agendamentoId,
+  initialTipo,
+  initialData,
 }: {
   pacienteId: string;
   pacienteNome?: string;
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  agendamentoId?: string;
+  initialTipo?: TipoAtendimento;
+  initialData?: string;
 }) {
   const qc = useQueryClient();
   const { user } = useAuth();
-  const [data, setData] = useState(dayjs().format('YYYY-MM-DDTHH:mm'));
-  const [tipo, setTipo] = useState<TipoAtendimento>(TipoAtendimento.CONSULTA);
+  const [data, setData] = useState(initialData ?? dayjs().format('YYYY-MM-DDTHH:mm'));
+  const [tipo, setTipo] = useState<TipoAtendimento>(initialTipo ?? TipoAtendimento.CONSULTA);
   const isEnfermagem = tipo === TipoAtendimento.CONSULTA_ENFERMAGEM;
+
+  useEffect(() => {
+    if (open) {
+      setData(initialData ?? dayjs().format('YYYY-MM-DDTHH:mm'));
+      setTipo(initialTipo ?? TipoAtendimento.CONSULTA);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialTipo, initialData]);
 
   // Consulta de enfermagem: ligação de acompanhamento + chegada da sonda de teste.
   const [dataLigacao, setDataLigacao] = useState('');
@@ -418,6 +439,7 @@ export function NovoAtendimentoDialog({
       reset();
       onOpenChange(false);
       void qc.invalidateQueries({ queryKey: ['prontuarios'] });
+      void qc.invalidateQueries({ queryKey: ['agenda'] });
     },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
@@ -437,6 +459,7 @@ export function NovoAtendimentoDialog({
       createMut.mutate({
         clinicaId: user?.clinicaId,
         pacienteId,
+        agendamentoId,
         dataAtendimento: dayjs(data).toISOString(),
         tipo,
         registroEnfermagem: clean({
@@ -458,6 +481,7 @@ export function NovoAtendimentoDialog({
     createMut.mutate({
       clinicaId: user?.clinicaId,
       pacienteId,
+      agendamentoId,
       dataAtendimento: dayjs(data).toISOString(),
       tipo,
       subjetivo: { ...subjetivo, queixaPrincipal: subjetivo.queixaPrincipal },

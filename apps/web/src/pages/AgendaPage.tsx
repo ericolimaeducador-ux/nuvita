@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { Plus, MoreVertical } from 'lucide-react';
+import { Plus, MoreVertical, CalendarDays, List } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
+import { AgendaCalendario } from '@/components/AgendaCalendario';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +31,7 @@ import {
   TipoAgendamento,
   TIPOS_POR_MODALIDADE,
   TIPO_AGENDAMENTO_LABEL,
+  TIPO_ATENDIMENTO_POR_AGENDAMENTO,
   type Agendamento,
   type Paciente,
 } from '@/types';
@@ -46,9 +49,11 @@ function statusVariant(s: StatusAgendamento): 'default' | 'success' | 'destructi
 
 export function AgendaPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [dia, setDia] = useState(dayjs().format('YYYY-MM-DD'));
   const [open, setOpen] = useState(false);
+  const [visao, setVisao] = useState<'calendario' | 'lista'>('calendario');
 
   // Form state
   const [fModalidade, setFModalidade] = useState<ModalidadeAtendimento>(ModalidadeAtendimento.MEDICO);
@@ -100,6 +105,18 @@ export function AgendaPage() {
   const agendamentos = toItems<Agendamento>(listQ.data as never);
   const pacientes = toItems<Paciente>(pacientesQ.data as never);
   const tiposDisponiveis = TIPOS_POR_MODALIDADE[fModalidade] ?? Object.values(TipoAgendamento);
+  const nomePorPacienteId = useMemo(
+    () => new Map(pacientes.map((p) => [p.id, p.nome])),
+    [pacientes],
+  );
+
+  function iniciarAtendimento(a: Agendamento) {
+    const tipo = TIPO_ATENDIMENTO_POR_AGENDAMENTO[a.tipo];
+    if (!tipo) return;
+    navigate(`/pacientes/${a.pacienteId}`, {
+      state: { iniciarAgendamento: { agendamentoId: a.id, tipo, data: a.dataHoraInicio } },
+    });
+  }
 
   function resetForm() {
     setFModalidade(ModalidadeAtendimento.MEDICO);
@@ -134,12 +151,41 @@ export function AgendaPage() {
         title="Agenda"
         subtitle="Agendamentos das três modalidades: médica, enfermagem e jurídica"
         extra={
-          <Button onClick={() => setOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Novo agendamento
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-md border border-border p-0.5">
+              <Button
+                size="sm"
+                variant={visao === 'calendario' ? 'default' : 'ghost'}
+                onClick={() => setVisao('calendario')}
+              >
+                <CalendarDays className="mr-2 h-4 w-4" /> Calendário
+              </Button>
+              <Button
+                size="sm"
+                variant={visao === 'lista' ? 'default' : 'ghost'}
+                onClick={() => setVisao('lista')}
+              >
+                <List className="mr-2 h-4 w-4" /> Lista
+              </Button>
+            </div>
+            <Button onClick={() => setOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Novo agendamento
+            </Button>
+          </div>
         }
       />
 
+      {visao === 'calendario' ? (
+        <Card>
+          <CardContent className="p-6">
+            <AgendaCalendario
+              nomePorPacienteId={nomePorPacienteId}
+              podeConcluir={podeConcluir}
+              onIniciarAtendimento={iniciarAtendimento}
+            />
+          </CardContent>
+        </Card>
+      ) : (
       <Card>
         <CardContent className="p-6">
           <div className="mb-4">
@@ -170,12 +216,15 @@ export function AgendaPage() {
               <TableBody>
                 {agendamentos.map((a) => {
                   const encerrado = a.status === StatusAgendamento.CANCELADO || a.status === StatusAgendamento.CONCLUIDO;
+                  const podeIniciar =
+                    (a.status === StatusAgendamento.AGENDADO || a.status === StatusAgendamento.CONFIRMADO) &&
+                    !!TIPO_ATENDIMENTO_POR_AGENDAMENTO[a.tipo];
                   return (
                     <TableRow key={a.id}>
                       <TableCell className="font-medium">
                         {dayjs(a.dataHoraInicio).format('HH:mm')} – {dayjs(a.dataHoraFim).format('HH:mm')}
                       </TableCell>
-                      <TableCell>{a.pacienteId}</TableCell>
+                      <TableCell>{nomePorPacienteId.get(a.pacienteId) ?? a.pacienteId}</TableCell>
                       <TableCell>{MODALIDADE_LABEL[a.modalidade] ?? a.modalidade}</TableCell>
                       <TableCell>{TIPO_AGENDAMENTO_LABEL[a.tipo] ?? a.tipo}</TableCell>
                       <TableCell>
@@ -188,6 +237,14 @@ export function AgendaPage() {
                               <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              {podeIniciar && (
+                                <>
+                                  <DropdownMenuItem onClick={() => iniciarAtendimento(a)}>
+                                    Iniciar atendimento
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
                               {podeConcluir && (
                                 <>
                                   <DropdownMenuItem onClick={() => acaoMut.mutate({ id: a.id, acao: 'concluir' })}>
@@ -219,6 +276,7 @@ export function AgendaPage() {
           )}
         </CardContent>
       </Card>
+      )}
 
       <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
         <DialogContent className="max-w-md">

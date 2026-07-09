@@ -8,6 +8,8 @@ export interface User {
   papel: Papel;
   clinicaId?: string | null;
   twoFactorSecret?: string;
+  /** Registro do conselho profissional: CRM (médico), COREN (enfermeiro), OAB (advogado). */
+  registroProfissional?: string;
   ativo: boolean;
   criadoEm: Date;
   /** Exceções por usuário sobre o padrão do papel (ver resolvePermissoes). */

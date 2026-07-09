@@ -74,6 +74,7 @@ export class SuperAdminService {
       papel: dto.papel,
       clinicaId: dto.clinicaId ?? null,
       twoFactorSecret: twoFactorSetup?.base32,
+      registroProfissional: dto.registroProfissional,
     });
 
     return { ...toPublicUser(user), twoFactorSetup };

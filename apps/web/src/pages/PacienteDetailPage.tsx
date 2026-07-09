@@ -91,6 +91,7 @@ export function PacienteDetailPage() {
   const [novoOpen, setNovoOpen] = useState(false);
   const [novoDocOpen, setNovoDocOpen] = useState(false);
   const [novaAvaliacaoOpen, setNovaAvaliacaoOpen] = useState(false);
+  const [avaliacaoEdit, setAvaliacaoEdit] = useState<AvaliacaoIU | null>(null);
   const [novoLaudoOpen, setNovoLaudoOpen] = useState(false);
 
   const pacQ = useQuery({ queryKey: ['paciente', id], queryFn: () => pacientesApi.get(id), enabled: !!id });
@@ -316,7 +317,7 @@ export function PacienteDetailPage() {
         defaultOpen={false}
         acao={
           podeNovaAvaliacao ? (
-            <Button size="sm" variant="outline" onClick={() => setNovaAvaliacaoOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => { setAvaliacaoEdit(null); setNovaAvaliacaoOpen(true); }}>
               <Plus className="mr-2 h-4 w-4" /> Nova avaliação
             </Button>
           ) : undefined
@@ -328,14 +329,17 @@ export function PacienteDetailPage() {
           <Vazio>Nenhuma avaliação de IU registrada.</Vazio>
         ) : (
           <Table>
-            <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Motivo</TableHead><TableHead>Cateter indicado</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Motivo</TableHead><TableHead>Cateter indicado</TableHead><TableHead className="w-40" /></TableRow></TableHeader>
             <TableBody>
               {(avaliacoesQ.data as AvaliacaoIU[]).map((a) => (
                 <TableRow key={a.id}>
                   <TableCell>{formatData(a.dataAtendimento)}</TableCell>
                   <TableCell className="text-muted-foreground truncate max-w-xs">{a.motivoIU || '—'}</TableCell>
                   <TableCell className="text-muted-foreground">{a.produtoIndicado ? `${a.produtoIndicado.sexo} ${a.produtoIndicado.french}Fr` : '—'}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    {podeNovaAvaliacao && (
+                      <Button variant="ghost" size="sm" onClick={() => { setAvaliacaoEdit(a); setNovaAvaliacaoOpen(true); }}>Editar</Button>
+                    )}
                     <Button variant="ghost" size="sm" onClick={() => navigate(`/fluxo-clinico/${id}/avaliacao/${a.id}/imprimir`)}>Imprimir</Button>
                   </TableCell>
                 </TableRow>
@@ -428,10 +432,12 @@ export function PacienteDetailPage() {
       />
       <NovaAvaliacaoIUDialog
         open={novaAvaliacaoOpen}
-        onOpenChange={setNovaAvaliacaoOpen}
+        onOpenChange={(o) => { setNovaAvaliacaoOpen(o); if (!o) setAvaliacaoEdit(null); }}
         pacienteId={id}
         clinicaId={user?.clinicaId}
         produtos={produtos}
+        avaliacao={avaliacaoEdit ?? undefined}
+        enfermeiroRegistro={user?.registroProfissional}
         onCreated={() => void qc.invalidateQueries({ queryKey: ['avaliacoes-iu', 'paciente', id] })}
       />
       <NovoLaudoDialog

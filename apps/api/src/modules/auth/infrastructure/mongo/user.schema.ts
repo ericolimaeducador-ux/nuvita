@@ -24,6 +24,11 @@ export class UserMongo {
   @Prop({ select: false })
   '2faSecret'?: string;
 
+  // Registro do conselho profissional (CRM/COREN/OAB) — usado para preencher
+  // automaticamente documentos assinados pelo profissional.
+  @Prop({ trim: true })
+  registroProfissional?: string;
+
   @Prop({ default: true, index: true })
   ativo!: boolean;
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthTokenPayload, PAPEIS_PROFISSIONAIS, Papel } from '../../../../../../packages/shared/src/auth';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
@@ -7,6 +7,7 @@ import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
 import { AvaliacaoIUService } from '../application/avaliacao-iu.service';
 import { CreateAvaliacaoIUDto } from '../application/dto/create-avaliacao-iu.dto';
+import { UpdateAvaliacaoIUDto } from '../application/dto/update-avaliacao-iu.dto';
 
 // Leitura (GET) fica aberta também a ADMIN/SECRETARIA — precisam enxergar o
 // pipeline (fluxo clínico) para saber quando agendar o paciente com o médico.
@@ -22,6 +23,17 @@ export class AvaliacaoIUController {
   @Roles(...PAPEIS_PROFISSIONAIS)
   create(@Body() dto: CreateAvaliacaoIUDto, @CurrentUser() user: AuthTokenPayload) {
     return this.service.create(dto, user);
+  }
+
+  @Patch(':id')
+  @Roles(...PAPEIS_PROFISSIONAIS)
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateAvaliacaoIUDto,
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+  ) {
+    return this.service.update(id, dto, clinicaId, user);
   }
 
   @Get('minhas')

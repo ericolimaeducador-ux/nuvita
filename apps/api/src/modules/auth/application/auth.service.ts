@@ -254,6 +254,8 @@ export class AuthService {
       email: user.email,
       papel: user.papel,
       clinicaId: user.clinicaId,
+      nome: user.nome,
+      registroProfissional: user.registroProfissional,
     };
 
     const [accessToken, refreshToken] = await Promise.all([

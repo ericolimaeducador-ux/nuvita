@@ -26,6 +26,7 @@ import { apiErrorMessage } from '@/api/client';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/auth/AuthContext';
 import { cn } from '@/lib/utils';
+import { NovaAvaliacaoIUDialog } from '@/components/FluxoClinicoDialogs';
 import { formatData, toItems } from '@/utils';
 import {
   Papel, LocalAtendimento, PerfilCliente, Destreza, TipoIU, EncaminhamentoIU,
@@ -276,6 +277,7 @@ function AvaliacaoIUStep({ pacienteId, avaliacoes, produtos, user }: {
   pacienteId: string; avaliacoes: AvaliacaoIU[]; produtos: Produto[]; user: ReturnType<typeof useAuth>['user'];
 }) {
   const [open, setOpen] = useState(false);
+  const [editAv, setEditAv] = useState<AvaliacaoIU | null>(null);
   const qc = useQueryClient();
   const { register, handleSubmit, setValue, watch, reset } = useForm<Record<string, unknown>>();
 
@@ -324,9 +326,16 @@ function AvaliacaoIUStep({ pacienteId, avaliacoes, produtos, user }: {
             <span className="text-sm font-medium">{formatData(av.dataAtendimento)}</span>
             <Badge variant="outline" className="text-xs">{PERFIL_LABEL[av.perfilCliente]}</Badge>
             {av.encaminhamento && <Badge variant="outline" className="text-xs">{ENCAMINHAMENTO_LABEL[av.encaminhamento]}</Badge>}
-            <Button size="sm" variant="ghost" className="ml-auto h-7 px-2 text-xs text-muted-foreground" onClick={() => window.open(`/fluxo-clinico/${pacienteId}/avaliacao/${av.id}/imprimir`, '_blank')}>
-              <Printer className="h-3 w-3 mr-1" /> Imprimir ficha
-            </Button>
+            <div className="ml-auto flex items-center gap-1">
+              {podeNovo && (
+                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => setEditAv(av)}>
+                  Editar
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => window.open(`/fluxo-clinico/${pacienteId}/avaliacao/${av.id}/imprimir`, '_blank')}>
+                <Printer className="h-3 w-3 mr-1" /> Imprimir ficha
+              </Button>
+            </div>
           </div>
           <p className="text-xs text-muted-foreground">Motivo: {av.motivoIU}</p>
           {av.produtoIndicado && (
@@ -528,6 +537,18 @@ function AvaliacaoIUStep({ pacienteId, avaliacoes, produtos, user }: {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Edição de ficha já preenchida (ex.: completar COREN) — form reaproveitado */}
+      <NovaAvaliacaoIUDialog
+        open={!!editAv}
+        onOpenChange={(o) => { if (!o) setEditAv(null); }}
+        pacienteId={pacienteId}
+        clinicaId={user?.clinicaId}
+        produtos={produtos}
+        avaliacao={editAv ?? undefined}
+        enfermeiroRegistro={user?.registroProfissional}
+        onCreated={() => void qc.invalidateQueries({ queryKey: ['avaliacao-iu', pacienteId] })}
+      />
     </div>
   );
 }

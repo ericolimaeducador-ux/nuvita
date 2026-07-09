@@ -45,6 +45,8 @@ export interface AvaliacaoIU {
   clinicaId: string;
   pacienteId: string;
   enfermeiroId: string;
+  /** Nome do profissional que preencheu — para a assinatura da ficha impressa. */
+  enfermeiroNome?: string;
   agendamentoId?: string;
   dataAtendimento: Date;
   local: LocalAtendimento;

@@ -147,9 +147,10 @@ export function AvaliacaoImpressaoPage() {
         {/* Assinatura enfermeiro */}
         <div className="mt-12 print:mt-8 flex justify-between items-end break-inside-avoid">
           <div className="text-center min-w-52">
+            <p className="text-sm font-semibold mb-1 min-h-5">{av?.enfermeiroNome ?? ''}</p>
             <div className="border-t-2 border-gray-800 pt-1">
               <p className="font-semibold">Enfermeiro(a) Responsável</p>
-              <p className="text-xs text-gray-600">COREN: {av?.coren ?? '___________'}</p>
+              <p className="text-xs text-gray-600">COREN: {av?.coren || '___________'}</p>
             </div>
           </div>
           <div className="text-center text-xs text-gray-500 min-w-52">

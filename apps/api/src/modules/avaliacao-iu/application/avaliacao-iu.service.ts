@@ -6,6 +6,7 @@ import { AVALIACAO_IU_REPOSITORY } from '../avaliacao-iu.constants';
 import { AvaliacaoIU } from '../domain/avaliacao-iu.entity';
 import { AvaliacaoIURepository } from './ports/avaliacao-iu.repository';
 import { CreateAvaliacaoIUDto } from './dto/create-avaliacao-iu.dto';
+import { UpdateAvaliacaoIUDto } from './dto/update-avaliacao-iu.dto';
 import { Papel } from '../../../../../../packages/shared/src/auth';
 
 @Injectable()
@@ -21,6 +22,9 @@ export class AvaliacaoIUService {
       clinicaId,
       pacienteId: dto.pacienteId,
       enfermeiroId: user.sub,
+      // Nome do profissional para a assinatura da ficha; COREN cai no registro
+      // do perfil se não vier preenchido (evita redigitar toda vez).
+      enfermeiroNome: user.nome,
       agendamentoId: dto.agendamentoId,
       dataAtendimento: new Date(dto.dataAtendimento),
       local: dto.local,
@@ -49,7 +53,7 @@ export class AvaliacaoIUService {
       aceitaInformacoes: dto.aceitaInformacoes,
       emailContato: dto.emailContato,
       whatsappContato: dto.whatsappContato,
-      coren: dto.coren,
+      coren: dto.coren || user.registroProfissional,
       encaminhamento: dto.encaminhamento,
       localEncaminhamento: dto.localEncaminhamento,
       respCuidador: dto.respCuidador,
@@ -62,6 +66,34 @@ export class AvaliacaoIUService {
     });
 
     return avaliacao;
+  }
+
+  /**
+   * Edita uma ficha já preenchida (ex.: completar o COREN esquecido). Não é
+   * append-only: corrige o próprio registro. Faz backfill do nome do
+   * profissional quem edita for o próprio autor da ficha e ela ainda não tiver
+   * o nome gravado (fichas antigas, anteriores a esse campo).
+   */
+  async update(
+    id: string,
+    dto: UpdateAvaliacaoIUDto,
+    clinicaId: string | undefined,
+    user: AuthTokenPayload,
+  ): Promise<AvaliacaoIU> {
+    const resolved = this.resolveClinicaId(user, clinicaId);
+    const atual = await this.repo.findById(resolved, id);
+    if (!atual) throw new NotFoundException('Avaliação de IU não encontrada.');
+
+    const { clinicaId: _ignoraClinica, dataAtendimento, ...resto } = dto;
+    const patch: Partial<AvaliacaoIU> = { ...resto };
+    if (dataAtendimento !== undefined) patch.dataAtendimento = new Date(dataAtendimento);
+    if (!atual.enfermeiroNome && atual.enfermeiroId === user.sub && user.nome) {
+      patch.enfermeiroNome = user.nome;
+    }
+
+    const atualizado = await this.repo.update(resolved, id, patch);
+    if (!atualizado) throw new NotFoundException('Avaliação de IU não encontrada.');
+    return atualizado;
   }
 
   async findOne(id: string, clinicaId: string | undefined, user: AuthTokenPayload): Promise<AvaliacaoIU> {

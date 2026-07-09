@@ -248,6 +248,8 @@ export const produtosApi = {
 export const avaliacaoIUApi = {
   create: (payload: Record<string, unknown>) =>
     api.post<AvaliacaoIU>('/avaliacao-iu', payload).then((r) => r.data),
+  update: (id: string, payload: Record<string, unknown>) =>
+    api.patch<AvaliacaoIU>(`/avaliacao-iu/${id}`, payload).then((r) => r.data),
   listByPaciente: (pacienteId: string) =>
     api.get<AvaliacaoIU[]>('/avaliacao-iu', { params: { pacienteId } }).then((r) => r.data),
   get: (id: string) =>
@@ -362,6 +364,7 @@ export interface UpdateUsuarioPayload {
   papel?: Papel;
   clinicaId?: string | null;
   ativo?: boolean;
+  registroProfissional?: string;
   modulosConcedidos?: Modulo[];
   modulosRevogados?: Modulo[];
 }
@@ -372,6 +375,7 @@ export interface CreateAdminUserPayload {
   password: string;
   papel: Papel;
   clinicaId?: string;
+  registroProfissional?: string;
 }
 
 export interface TwoFactorSetup {

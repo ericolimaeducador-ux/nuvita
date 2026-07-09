@@ -21,6 +21,11 @@ export class AvaliacaoIUMongo {
   @Prop({ required: true, index: true })
   enfermeiroId!: string;
 
+  // Nome do profissional que preencheu, gravado na criação para aparecer na
+  // assinatura da ficha impressa sem depender de lookup do usuário.
+  @Prop()
+  enfermeiroNome?: string;
+
   @Prop({ index: true })
   agendamentoId?: string;
 

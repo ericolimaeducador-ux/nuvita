@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -18,15 +19,16 @@ import {
 } from '@/types';
 
 /**
- * Formulários de "Nova avaliação IU" e "Novo laudo" reaproveitados fora do
- * fluxo clínico — usados também direto na tela do paciente. Backend é
- * append-only: cada submit cria um registro novo, o histórico nunca é
- * sobrescrito. `clinicaId` vem do usuário logado; `onCreated` deixa o chamador
- * revalidar suas próprias queries (as chaves diferem entre telas).
+ * Formulários de avaliação IU e laudo reaproveitados fora do fluxo clínico —
+ * usados também direto na tela do paciente. Criar é append-only (cada submit
+ * novo cria um registro). A avaliação também aceita EDIÇÃO (`avaliacao` prop):
+ * corrige a própria ficha, ex.: completar o COREN esquecido. `onCreated` deixa
+ * o chamador revalidar suas próprias queries (as chaves diferem entre telas).
  */
 
 export function NovaAvaliacaoIUDialog({
   open, onOpenChange, pacienteId, clinicaId, produtos, onCreated,
+  avaliacao, enfermeiroRegistro,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -34,20 +36,60 @@ export function NovaAvaliacaoIUDialog({
   clinicaId?: string;
   produtos: Produto[];
   onCreated: () => void;
+  /** Quando presente, o diálogo edita esta avaliação em vez de criar uma nova. */
+  avaliacao?: AvaliacaoIU;
+  /** COREN/registro do profissional logado — pré-preenche o campo ao criar. */
+  enfermeiroRegistro?: string;
 }) {
+  const editando = !!avaliacao;
   const { register, handleSubmit, setValue, watch, reset } = useForm<Record<string, unknown>>();
 
+  // Preenche o formulário ao abrir: com os dados da ficha (edição) ou só o
+  // COREN do perfil (criação). Reexecuta quando muda o alvo de edição.
+  useEffect(() => {
+    if (!open) return;
+    if (avaliacao) {
+      reset({
+        dataAtendimento: avaliacao.dataAtendimento ? avaliacao.dataAtendimento.slice(0, 10) : '',
+        local: avaliacao.local,
+        planoSaude: avaliacao.planoSaude ?? '',
+        hospitalReferencia: avaliacao.hospitalReferencia ?? '',
+        motivoIU: avaliacao.motivoIU ?? '',
+        inicioSintomas: avaliacao.inicioSintomas ?? '',
+        perfilCliente: avaliacao.perfilCliente,
+        destreza: avaliacao.destreza,
+        tiposIU: avaliacao.tiposIU ?? [],
+        miccaoEspontanea: avaliacao.miccaoEspontanea,
+        realizaCateterismo: avaliacao.realizaCateterismo,
+        cateterismosDia: avaliacao.cateterismosDia,
+        cateterUtilizado: avaliacao.cateterUtilizado ?? '',
+        volumeDrenadoMl: avaliacao.volumeDrenadoMl ?? '',
+        outrasIntercorrencias: avaliacao.outrasIntercorrencias ?? '',
+        produtoIndicado: avaliacao.produtoIndicado,
+        responsavelCateterismo: avaliacao.responsavelCateterismo ?? '',
+        encaminhamento: avaliacao.encaminhamento,
+        coren: avaliacao.coren ?? '',
+        autorizaPesquisa: avaliacao.autorizaPesquisa,
+        aceitaInformacoes: avaliacao.aceitaInformacoes,
+      });
+    } else {
+      reset({ coren: enfermeiroRegistro ?? '', tiposIU: [] });
+    }
+  }, [open, avaliacao, enfermeiroRegistro, reset]);
+
   const mut = useMutation({
-    mutationFn: (payload: Record<string, unknown>) => avaliacaoIUApi.create(payload),
+    mutationFn: (payload: Record<string, unknown>) =>
+      editando ? avaliacaoIUApi.update(avaliacao!.id, payload) : avaliacaoIUApi.create(payload),
     onSuccess: () => {
-      toast.success('Avaliação registrada.');
-      onOpenChange(false); reset();
+      toast.success(editando ? 'Avaliação atualizada.' : 'Avaliação registrada.');
+      onOpenChange(false);
       onCreated();
     },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
   const tiposIU = (watch('tiposIU') as TipoIU[] | undefined) ?? [];
+  const produtoSel = watch('produtoIndicado') as { codigo: number } | undefined;
 
   function toggleTipoIU(tipo: TipoIU) {
     const atual = tiposIU.includes(tipo) ? tiposIU.filter((t) => t !== tipo) : [...tiposIU, tipo];
@@ -55,9 +97,8 @@ export function NovaAvaliacaoIUDialog({
   }
 
   function onSubmit(v: Record<string, unknown>) {
-    mut.mutate({
+    const base = {
       ...v,
-      pacienteId,
       clinicaId,
       tiposIU,
       dntui: !!v.dntui,
@@ -66,14 +107,19 @@ export function NovaAvaliacaoIUDialog({
       emTratamento: !!v.emTratamento,
       autorizaPesquisa: !!v.autorizaPesquisa,
       aceitaInformacoes: !!v.aceitaInformacoes,
-    });
+    };
+    // No PATCH a API rejeita campos fora do DTO (forbidNonWhitelisted): pacienteId
+    // só entra na criação.
+    mut.mutate(editando ? base : { ...base, pacienteId });
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Ficha de Avaliação — Incontinência Urinária</DialogTitle>
+          <DialogTitle>
+            {editando ? 'Editar avaliação' : 'Ficha de Avaliação'} — Incontinência Urinária
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -83,7 +129,7 @@ export function NovaAvaliacaoIUDialog({
             </div>
             <div className="space-y-1">
               <Label>Local</Label>
-              <Select onValueChange={(v) => setValue('local', v)}>
+              <Select value={(watch('local') as string) || undefined} onValueChange={(v) => setValue('local', v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
                   {Object.values(LocalAtendimento).map((l) => (
@@ -113,7 +159,7 @@ export function NovaAvaliacaoIUDialog({
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1">
               <Label>Perfil do cliente</Label>
-              <Select onValueChange={(v) => setValue('perfilCliente', v)}>
+              <Select value={(watch('perfilCliente') as string) || undefined} onValueChange={(v) => setValue('perfilCliente', v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
                   {Object.values(PerfilCliente).map((p) => (
@@ -124,7 +170,7 @@ export function NovaAvaliacaoIUDialog({
             </div>
             <div className="space-y-1">
               <Label>Destreza</Label>
-              <Select onValueChange={(v) => setValue('destreza', v)}>
+              <Select value={(watch('destreza') as string) || undefined} onValueChange={(v) => setValue('destreza', v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
                   {Object.values(Destreza).map((d) => (
@@ -157,11 +203,11 @@ export function NovaAvaliacaoIUDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex items-center gap-2">
-              <Checkbox id="av_miccao" onCheckedChange={(c) => setValue('miccaoEspontanea', !!c)} />
+              <Checkbox id="av_miccao" checked={!!watch('miccaoEspontanea')} onCheckedChange={(c) => setValue('miccaoEspontanea', !!c)} />
               <Label htmlFor="av_miccao" className="cursor-pointer">Micção espontânea</Label>
             </div>
             <div className="flex items-center gap-2">
-              <Checkbox id="av_cateterismo" onCheckedChange={(c) => setValue('realizaCateterismo', !!c)} />
+              <Checkbox id="av_cateterismo" checked={!!watch('realizaCateterismo')} onCheckedChange={(c) => setValue('realizaCateterismo', !!c)} />
               <Label htmlFor="av_cateterismo" className="cursor-pointer">Realiza cateterismo</Label>
             </div>
           </div>
@@ -188,10 +234,13 @@ export function NovaAvaliacaoIUDialog({
 
           <div className="space-y-2">
             <Label>Produto indicado</Label>
-            <Select onValueChange={(v) => {
-              const p = produtos.find((pr) => pr.codigo === Number(v));
-              if (p) setValue('produtoIndicado', { codigo: p.codigo, sexo: p.sexo, french: p.french ?? 0 });
-            }}>
+            <Select
+              value={produtoSel ? String(produtoSel.codigo) : undefined}
+              onValueChange={(v) => {
+                const p = produtos.find((pr) => pr.codigo === Number(v));
+                if (p) setValue('produtoIndicado', { codigo: p.codigo, sexo: p.sexo, french: p.french ?? 0 });
+              }}
+            >
               <SelectTrigger><SelectValue placeholder="Selecione o catéter" /></SelectTrigger>
               <SelectContent>
                 {produtos.map((p) => (
@@ -205,7 +254,7 @@ export function NovaAvaliacaoIUDialog({
 
           <div className="space-y-1">
             <Label>Encaminhamento</Label>
-            <Select onValueChange={(v) => setValue('encaminhamento', v)}>
+            <Select value={(watch('encaminhamento') as string) || undefined} onValueChange={(v) => setValue('encaminhamento', v)}>
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
                 {Object.values(EncaminhamentoIU).map((e) => (
@@ -218,7 +267,7 @@ export function NovaAvaliacaoIUDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label>COREN</Label>
-              <Input {...register('coren')} />
+              <Input placeholder="Seu registro COREN" {...register('coren')} />
             </div>
             <div className="space-y-1">
               <Label>Responsável pelo cateterismo</Label>
@@ -228,13 +277,13 @@ export function NovaAvaliacaoIUDialog({
 
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Checkbox id="av_autoriza" onCheckedChange={(c) => setValue('autorizaPesquisa', !!c)} />
+              <Checkbox id="av_autoriza" checked={!!watch('autorizaPesquisa')} onCheckedChange={(c) => setValue('autorizaPesquisa', !!c)} />
               <Label htmlFor="av_autoriza" className="text-sm cursor-pointer">
                 Paciente autoriza uso de dados para pesquisa
               </Label>
             </div>
             <div className="flex items-center gap-2">
-              <Checkbox id="av_aceita" onCheckedChange={(c) => setValue('aceitaInformacoes', !!c)} />
+              <Checkbox id="av_aceita" checked={!!watch('aceitaInformacoes')} onCheckedChange={(c) => setValue('aceitaInformacoes', !!c)} />
               <Label htmlFor="av_aceita" className="text-sm cursor-pointer">
                 Aceita receber informações por e-mail/WhatsApp
               </Label>
@@ -244,7 +293,7 @@ export function NovaAvaliacaoIUDialog({
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
             <Button type="submit" disabled={mut.isPending}>
-              {mut.isPending ? 'Salvando...' : 'Registrar avaliação'}
+              {mut.isPending ? 'Salvando...' : editando ? 'Salvar alterações' : 'Registrar avaliação'}
             </Button>
           </DialogFooter>
         </form>

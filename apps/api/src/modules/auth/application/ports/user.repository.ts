@@ -8,6 +8,7 @@ export interface CreateUserInput {
   papel: Papel;
   clinicaId?: string | null;
   twoFactorSecret?: string;
+  registroProfissional?: string;
 }
 
 export interface UpdateUserInput {
@@ -18,6 +19,7 @@ export interface UpdateUserInput {
   ativo?: boolean;
   passwordHash?: string;
   twoFactorSecret?: string;
+  registroProfissional?: string;
   modulosConcedidos?: Modulo[];
   modulosRevogados?: Modulo[];
 }

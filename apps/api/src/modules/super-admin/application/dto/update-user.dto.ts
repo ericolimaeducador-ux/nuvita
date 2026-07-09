@@ -22,6 +22,10 @@ export class UpdateUserDto {
   @IsBoolean()
   ativo?: boolean;
 
+  @IsOptional()
+  @IsString()
+  registroProfissional?: string;
+
   // Exceções de permissão por usuário sobre o padrão do papel.
   @IsOptional()
   @IsArray()

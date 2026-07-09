@@ -235,8 +235,24 @@ export interface AuthUser {
   email: string;
   papel: Papel;
   clinicaId?: string;
+  /** Registro do conselho (CRM/COREN/OAB) — usado p/ preencher documentos. Ausente em sessões antigas. */
+  registroProfissional?: string;
   /** Permissões efetivas calculadas pela API; ausente em sessões antigas. */
   permissoes?: Modulo[];
+}
+
+/** Rótulo do registro profissional conforme o papel (CRM/COREN/OAB). */
+export const REGISTRO_LABEL: Partial<Record<Papel, string>> = {
+  [Papel.MEDICO]: 'CRM',
+  [Papel.ENFERMEIRO]: 'COREN',
+  [Papel.ADVOGADO]: 'OAB',
+};
+export function registroLabel(papel?: Papel): string {
+  return (papel && REGISTRO_LABEL[papel]) || 'Registro profissional';
+}
+/** Papéis que possuem registro de conselho profissional. */
+export function papelTemRegistro(papel?: Papel): boolean {
+  return !!papel && papel in REGISTRO_LABEL;
 }
 
 export interface LoginResponse {
@@ -710,6 +726,7 @@ export interface AvaliacaoIU {
   clinicaId: string;
   pacienteId: string;
   enfermeiroId: string;
+  enfermeiroNome?: string;
   agendamentoId?: string;
   dataAtendimento: string;
   local: LocalAtendimento;
@@ -1009,6 +1026,7 @@ export interface UsuarioAdmin {
   clinicaId?: string | null;
   ativo: boolean;
   criadoEm: string;
+  registroProfissional?: string;
   permissoes?: Modulo[];
   modulosConcedidos?: Modulo[];
   modulosRevogados?: Modulo[];

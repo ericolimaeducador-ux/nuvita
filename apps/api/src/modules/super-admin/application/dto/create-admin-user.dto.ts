@@ -18,4 +18,8 @@ export class CreateAdminUserDto {
   @IsOptional()
   @IsString()
   clinicaId?: string;
+
+  @IsOptional()
+  @IsString()
+  registroProfissional?: string;
 }

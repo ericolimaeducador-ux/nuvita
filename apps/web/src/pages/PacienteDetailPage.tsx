@@ -33,7 +33,7 @@ import {
   produtosApi, observacoesPacienteApi,
 } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
-import { formatCpf, formatData, idade, toItems, formatBRL } from '@/utils';
+import { formatCpf, formatData, idade, toItems, formatBRL, formatEndereco } from '@/utils';
 import {
   Sexo, SEXO_LABEL, STATUS_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_LABEL,
   STATUS_PROCESSO_LABEL, StatusEntrega, Modulo, Papel,
@@ -41,7 +41,6 @@ import {
   StatusElegibilidade, STATUS_ELEGIBILIDADE_LABEL,
   type Agendamento, type Prontuario, type Documento, type Paciente,
   type LaudoMedico, type AvaliacaoIU, type Entrega, type ProcessoJuridico,
-  type Endereco,
 } from '@/types';
 
 function DescItem({ label, value }: { label: string; value: string }) {
@@ -656,16 +655,6 @@ const editPacienteSchema = z.object({
   cep: z.string().optional(),
 });
 type EditPacienteForm = z.infer<typeof editPacienteSchema>;
-
-/** Monta o endereço em uma linha legível para exibição, ignorando campos vazios. */
-function formatEndereco(e?: Endereco): string {
-  if (!e) return '—';
-  const linha1 = [e.logradouro, e.numero].filter(Boolean).join(', ');
-  const complemento = e.complemento ? `(${e.complemento})` : '';
-  const cidadeUf = [e.cidade, e.estado].filter(Boolean).join(' - ');
-  const partes = [linha1, complemento, e.bairro, cidadeUf, e.cep].filter(Boolean);
-  return partes.length ? partes.join(' · ') : '—';
-}
 
 /** Dados cadastrais do paciente — muitos só ficam completos após a 1ª consulta
  * (CPF, nascimento, consentimento LGPD), por isso o cadastro inicial não trava

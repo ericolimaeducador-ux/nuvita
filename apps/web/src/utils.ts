@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import type { PageResult } from '@/types';
+import type { Endereco, PageResult } from '@/types';
 
 /** Normaliza respostas de lista que podem vir como array puro ou paginado. */
 export function toItems<T>(data: PageResult<T> | T[] | undefined | null): T[] {
@@ -38,4 +38,14 @@ export function formatData(value?: string | null): string {
 
 export function formatBRL(value: number): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+/** Monta o endereço em uma linha legível, ignorando campos vazios. Retorna '—' se vazio. */
+export function formatEndereco(e?: Endereco): string {
+  if (!e) return '—';
+  const linha1 = [e.logradouro, e.numero].filter(Boolean).join(', ');
+  const complemento = e.complemento ? `(${e.complemento})` : '';
+  const cidadeUf = [e.cidade, e.estado].filter(Boolean).join(' - ');
+  const partes = [linha1, complemento, e.bairro, cidadeUf, e.cep].filter(Boolean);
+  return partes.length ? partes.join(' · ') : '—';
 }

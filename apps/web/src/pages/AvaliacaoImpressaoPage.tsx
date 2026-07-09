@@ -8,7 +8,7 @@ import {
   LOCAL_LABEL, PERFIL_LABEL, DESTREZA_LABEL, TIPO_IU_LABEL, ENCAMINHAMENTO_LABEL,
 } from '@/types';
 import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
-import { formatData } from '@/utils';
+import { formatData, formatEndereco } from '@/utils';
 
 export function AvaliacaoImpressaoPage() {
   const { id: pacienteId, avaliacaoId } = useParams<{ id: string; avaliacaoId: string }>();
@@ -72,8 +72,10 @@ export function AvaliacaoImpressaoPage() {
             <div><span className="font-semibold">CPF:</span> {paciente?.cpf ?? '—'}</div>
             <div><span className="font-semibold">Data de Nascimento:</span> {formatData(paciente?.dataNascimento)}</div>
             <div><span className="font-semibold">Sexo:</span> {paciente?.sexo ?? '—'}</div>
+            {paciente?.telefone && <div><span className="font-semibold">Telefone:</span> {paciente.telefone}</div>}
             {av?.planoSaude && <div><span className="font-semibold">Plano de Saúde:</span> {av.planoSaude}</div>}
             {av?.hospitalReferencia && <div><span className="font-semibold">Hospital Ref.:</span> {av.hospitalReferencia}</div>}
+            <div className="col-span-2"><span className="font-semibold">Endereço:</span> {formatEndereco(paciente?.endereco)}</div>
           </div>
         </section>
 

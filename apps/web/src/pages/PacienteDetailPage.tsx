@@ -35,7 +35,7 @@ import {
 import { apiErrorMessage } from '@/api/client';
 import { formatCpf, formatData, idade, toItems, formatBRL, formatEndereco } from '@/utils';
 import {
-  Sexo, SEXO_LABEL, STATUS_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_LABEL,
+  Sexo, SEXO_LABEL, ProjetoPaciente, PROJETO_LABEL, STATUS_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_LABEL,
   STATUS_PROCESSO_LABEL, StatusEntrega, Modulo, Papel,
   StatusChecklistDocumento, STATUS_CHECKLIST_DOCUMENTO_LABEL, TIPO_DOCUMENTO_LABEL,
   StatusElegibilidade, STATUS_ELEGIBILIDADE_LABEL,
@@ -681,6 +681,7 @@ const editPacienteSchema = z.object({
   cpf: z.string().regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, 'CPF inválido.').optional().or(z.literal('')),
   dataNascimento: z.string().optional(),
   sexo: z.nativeEnum(Sexo).optional().or(z.literal('')),
+  projeto: z.nativeEnum(ProjetoPaciente).optional().or(z.literal('')),
   telefone: z.string().optional(),
   email: z.string().email('E-mail inválido.').optional().or(z.literal('')),
   consentimento: z.boolean().optional(),
@@ -710,6 +711,7 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
       cpf: p.cpf ?? '',
       dataNascimento: p.dataNascimento ? p.dataNascimento.slice(0, 10) : '',
       sexo: p.sexo ?? '',
+      projeto: p.projeto ?? '',
       telefone: p.telefone ?? '',
       email: p.email ?? '',
       consentimento: !!p.consentimentoLGPD?.aceito,
@@ -752,6 +754,7 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
       cpf: v.cpf || undefined,
       dataNascimento: v.dataNascimento ? dayjs(v.dataNascimento).format('YYYY-MM-DD') : undefined,
       sexo: v.sexo || undefined,
+      projeto: v.projeto || undefined,
       telefone: v.telefone || undefined,
       email: v.email || undefined,
       endereco: temEndereco ? enderecoCampos : undefined,
@@ -777,6 +780,7 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
         <DescItem label="CPF" value={formatCpf(p.cpf)} />
         <DescItem label="Nascimento" value={formatData(p.dataNascimento)} />
         <DescItem label="Sexo" value={p.sexo ? SEXO_LABEL[p.sexo] : '—'} />
+        <DescItem label="Projeto" value={p.projeto ? PROJETO_LABEL[p.projeto] : '—'} />
         <DescItem label="Telefone" value={p.telefone || '—'} />
         <DescItem label="E-mail" value={p.email || '—'} />
         <DescItem label="Consentimento LGPD" value={p.consentimentoLGPD?.aceito ? 'Aceito' : 'Pendente'} />
@@ -810,6 +814,16 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Projeto</Label>
+              <Select value={watch('projeto') || undefined} onValueChange={(v) => setValue('projeto', v as ProjetoPaciente)}>
+                <SelectTrigger><SelectValue placeholder="Sem projeto" /></SelectTrigger>
+                <SelectContent>
+                  {Object.values(ProjetoPaciente).map((pj) => <SelectItem key={pj} value={pj}>{PROJETO_LABEL[pj]}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

@@ -1,6 +1,7 @@
 import { IsEnum, IsIn, IsInt, IsMongoId, IsOptional, IsString, Matches, Max, Min } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { EtapaFluxoClinico } from '../../../../../../../packages/shared/src/fluxo-clinico';
+import { ProjetoPaciente } from '../../domain/paciente.entity';
 import { PACIENTE_SORTS, PacienteSort } from '../ports/paciente.repository';
 
 export class ListPacientesQueryDto {
@@ -48,4 +49,8 @@ export class ListPacientesQueryDto {
   @IsOptional()
   @IsEnum(EtapaFluxoClinico)
   etapaFluxo?: EtapaFluxoClinico;
+
+  @IsOptional()
+  @IsEnum(ProjetoPaciente)
+  projeto?: ProjetoPaciente;
 }

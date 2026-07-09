@@ -51,6 +51,7 @@ export class PacienteMongoRepository implements PacienteRepository {
       endereco: this.encryptJsonOptional(input.endereco),
       convenio: this.encryptJsonOptional(input.convenio),
       consentimentoLGPD: input.consentimentoLGPD,
+      projeto: input.projeto,
       etapaFluxo: EtapaFluxoClinico.AGUARDANDO_ATENDIMENTO,
       etapaFluxoDesde: new Date(),
       ativo: true,
@@ -195,6 +196,7 @@ export class PacienteMongoRepository implements PacienteRepository {
     if (input.convenio !== undefined) update.convenio = this.encryptJsonOptional(input.convenio);
     if (input.consentimentoLGPD !== undefined) update.consentimentoLGPD = input.consentimentoLGPD;
     if (input.programaIU !== undefined) update.programaIU = input.programaIU;
+    if (input.projeto !== undefined) update.projeto = input.projeto;
     if (input.observacoes !== undefined) update.observacoes = this.encryptOptional(input.observacoes);
     if (input.etapaFluxo !== undefined) update.etapaFluxo = input.etapaFluxo;
     if (input.etapaFluxoDesde !== undefined) update.etapaFluxoDesde = input.etapaFluxoDesde;
@@ -235,6 +237,7 @@ export class PacienteMongoRepository implements PacienteRepository {
       consentimentoLGPD: object.consentimentoLGPD,
       observacoes: this.decryptOptional(object.observacoes),
       programaIU: object.programaIU ?? false,
+      projeto: object.projeto,
       etapaFluxo: object.etapaFluxo,
       etapaFluxoDesde: object.etapaFluxoDesde,
       ativo: object.ativo,
@@ -254,6 +257,7 @@ export class PacienteMongoRepository implements PacienteRepository {
   private listQuery(input: ListPacientesInput): Record<string, unknown> {
     const query = this.baseQuery(input.clinicaId, input.incluirInativos);
     if (input.programaIU !== undefined) query.programaIU = input.programaIU;
+    if (input.projeto !== undefined) query.projeto = input.projeto;
     if (input.etapaFluxo !== undefined) query.etapaFluxo = input.etapaFluxo;
     if (input.dataNascimento) {
       // Campo gravado como meia-noite UTC; intervalo de 24h cobre o dia inteiro.

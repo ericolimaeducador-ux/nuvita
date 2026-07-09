@@ -17,6 +17,7 @@ import type {
   Modulo,
   ObservacaoPaciente,
   Paciente,
+  ProjetoPaciente,
   PageResult,
   Papel,
   PresignUploadResponse,
@@ -68,6 +69,7 @@ export interface ListPacientesParams {
   incluirInativos?: boolean;
   clinicaId?: string;
   programaIU?: boolean;
+  projeto?: ProjetoPaciente;
   etapaFluxo?: EtapaFluxoClinico;
 }
 export const pacientesApi = {

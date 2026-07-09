@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { Sexo } from '../../domain/paciente.entity';
+import { ProjetoPaciente, Sexo } from '../../domain/paciente.entity';
 import { EtapaFluxoClinico } from '../../../../../../../packages/shared/src/fluxo-clinico';
 
 export type PacienteDocument = HydratedDocument<PacienteMongo>;
@@ -56,6 +56,10 @@ export class PacienteMongo {
 
   @Prop({ default: false, index: true })
   programaIU?: boolean;
+
+  // Rótulo neutro (Alpha/Beta) — não criptografado, não é dado sensível.
+  @Prop({ enum: Object.values(ProjetoPaciente), index: true })
+  projeto?: ProjetoPaciente;
 
   // Texto livre, criptografado (mesmo padrão de telefone/email/endereco) —
   // qualquer profissional de atendimento pode escrever, ver PATCH /observacoes.

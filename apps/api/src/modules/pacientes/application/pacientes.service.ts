@@ -53,6 +53,7 @@ export class PacientesService {
           }
         : undefined,
       programaIU: dto.programaIU ?? false,
+      projeto: dto.projeto,
     });
 
     await this.audit(AuditEvent.PATIENT_CREATED, context, {
@@ -88,6 +89,7 @@ export class PacientesService {
           limit: query.limit,
           incluirInativos: query.incluirInativos,
           programaIU: query.programaIU,
+          projeto: query.projeto,
           etapaFluxo: query.etapaFluxo,
           dataNascimento: query.dataNascimento,
           sort: query.sort,
@@ -98,6 +100,7 @@ export class PacientesService {
           limit: query.limit,
           incluirInativos: query.incluirInativos,
           programaIU: query.programaIU,
+          projeto: query.projeto,
           etapaFluxo: query.etapaFluxo,
           dataNascimento: query.dataNascimento,
           sort: query.sort,

@@ -1,6 +1,6 @@
 import { EtapaFluxoClinico } from '../../../../../../../packages/shared/src/fluxo-clinico';
 import { CursorPaginationInput, CursorPaginationResult } from '../../domain/pagination';
-import { Paciente } from '../../domain/paciente.entity';
+import { Paciente, ProjetoPaciente } from '../../domain/paciente.entity';
 
 export type CreatePacienteInput = Omit<
   Paciente,
@@ -25,6 +25,7 @@ export interface ListPacientesInput extends CursorPaginationInput {
   clinicaId: string;
   incluirInativos?: boolean;
   programaIU?: boolean;
+  projeto?: ProjetoPaciente;
   etapaFluxo?: EtapaFluxoClinico;
   /** Dia exato de nascimento no formato YYYY-MM-DD. */
   dataNascimento?: string;

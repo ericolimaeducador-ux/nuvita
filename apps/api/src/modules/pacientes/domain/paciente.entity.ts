@@ -7,6 +7,14 @@ export enum Sexo {
   NAO_INFORMADO = 'NAO_INFORMADO',
 }
 
+// Classificação interna de projeto (tipo de cateter). Os nomes dos
+// fabricantes são propriedade intelectual e NUNCA aparecem no sistema —
+// só os rótulos neutros Alpha/Beta. O mapeamento fica fora do software.
+export enum ProjetoPaciente {
+  ALPHA = 'ALPHA',
+  BETA = 'BETA',
+}
+
 export interface Endereco {
   logradouro?: string;
   numero?: string;
@@ -42,6 +50,7 @@ export interface Paciente {
   convenio?: Convenio;
   consentimentoLGPD?: ConsentimentoLGPD;
   programaIU?: boolean;
+  projeto?: ProjetoPaciente;
   observacoes?: string;
   etapaFluxo: EtapaFluxoClinico;
   etapaFluxoDesde: Date;

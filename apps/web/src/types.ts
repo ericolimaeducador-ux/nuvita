@@ -53,6 +53,19 @@ export const SEXO_LABEL: Record<Sexo, string> = {
   [Sexo.NAO_INFORMADO]: 'Não informado',
 };
 
+// Classificação interna por projeto (tipo de cateter). Os nomes dos
+// fabricantes são propriedade intelectual e nunca aparecem no sistema —
+// só os rótulos neutros Alpha/Beta.
+export enum ProjetoPaciente {
+  ALPHA = 'ALPHA',
+  BETA = 'BETA',
+}
+
+export const PROJETO_LABEL: Record<ProjetoPaciente, string> = {
+  [ProjetoPaciente.ALPHA]: 'Projeto Alpha',
+  [ProjetoPaciente.BETA]: 'Projeto Beta',
+};
+
 export enum StatusAgendamento {
   AGENDADO = 'agendado',
   CONFIRMADO = 'confirmado',
@@ -288,6 +301,7 @@ export interface Paciente {
   endereco?: Endereco;
   consentimentoLGPD?: ConsentimentoLGPD;
   programaIU?: boolean;
+  projeto?: ProjetoPaciente;
   observacoes?: string;
   etapaFluxo?: EtapaFluxoClinico;
   etapaFluxoDesde?: string;

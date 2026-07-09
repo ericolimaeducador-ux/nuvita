@@ -112,6 +112,30 @@ export function PacienteDetailPage() {
   // Papéis que podem criar cada registro (mesma regra do fluxo clínico, sem depender da etapa).
   const podeNovaAvaliacao = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN;
   const podeNovoLaudo = user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
+  // Export LGPD: mesmos papéis autorizados no backend (GET /pacientes/:id/export).
+  const podeExportar =
+    user?.papel === Papel.SECRETARIA || user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
+
+  // Direito de acesso/portabilidade (LGPD): baixa um JSON com todos os dados do
+  // paciente. Antes o botão só disparava o GET e descartava a resposta (nada
+  // acontecia na tela); agora gera o download de fato e dá retorno.
+  const exportMut = useMutation({
+    mutationFn: () => pacientesApi.export(id),
+    onSuccess: (dados) => {
+      const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const nome = (pacQ.data?.nome ?? 'paciente').replace(/\s+/g, '_');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${nome}-lgpd-${dayjs().format('YYYY-MM-DD')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Exportação concluída', 'O arquivo com os dados do paciente foi baixado.');
+    },
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
 
   const prontuarios = useMemo(() => toItems<Prontuario>(prontQ.data as never), [prontQ.data]);
   const entregas = entregasQ.data ?? [];
@@ -161,9 +185,17 @@ export function PacienteDetailPage() {
             <Button size="sm" onClick={() => setNovoOpen(true)}>
               <Plus className="mr-2 h-4 w-4" /> Novo atendimento
             </Button>
-            <Button variant="outline" size="sm" onClick={() => pacientesApi.export(p.id)}>
-              <Download className="mr-2 h-4 w-4" /> Exportar (LGPD)
-            </Button>
+            {podeExportar && (
+              <Button
+                variant="outline"
+                size="sm"
+                title="Baixa um arquivo com todos os dados do paciente (direito de acesso — LGPD)"
+                disabled={exportMut.isPending}
+                onClick={() => exportMut.mutate()}
+              >
+                <Download className="mr-2 h-4 w-4" /> {exportMut.isPending ? 'Exportando…' : 'Exportar (LGPD)'}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

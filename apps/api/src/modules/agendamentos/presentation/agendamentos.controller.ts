@@ -21,7 +21,7 @@ export class AgendamentosController {
   constructor(private readonly agendamentosService: AgendamentosService) {}
 
   @Post()
-  @Roles(Papel.SECRETARIA, Papel.ADMIN)
+  @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   create(@Body() dto: CreateAgendamentoDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
     return this.agendamentosService.create(dto, this.ctx(req, user));
   }
@@ -67,7 +67,7 @@ export class AgendamentosController {
   }
 
   @Patch(':id')
-  @Roles(Papel.SECRETARIA, Papel.ADMIN)
+  @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   update(
     @Param('id') id: string,
     @Body() dto: UpdateAgendamentoDto,

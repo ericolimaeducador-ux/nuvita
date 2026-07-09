@@ -24,6 +24,7 @@ import { EntregasModule } from './modules/entregas/entregas.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { AnotacoesJuridicasModule } from './modules/anotacoes-juridicas/anotacoes-juridicas.module';
 import { ChecklistDocumentosModule } from './modules/checklist-documentos/checklist-documentos.module';
+import { ObservacoesPacienteModule } from './modules/observacoes-paciente/observacoes-paciente.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { ChecklistDocumentosModule } from './modules/checklist-documentos/checkl
     SuperAdminModule,
     AnotacoesJuridicasModule,
     ChecklistDocumentosModule,
+    ObservacoesPacienteModule,
   ],
 })
 export class AppModule {}

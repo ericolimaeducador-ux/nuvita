@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { ProntuarioDetailDialog, NovoAtendimentoDialog } from '@/components/ProntuarioDialogs';
 import { NovoDocumentoDialog } from '@/components/NovoDocumentoDialog';
+import { NovaAvaliacaoIUDialog, NovoLaudoDialog } from '@/components/FluxoClinicoDialogs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,16 +30,18 @@ import {
   pacientesApi, prontuariosApi, agendaApi, documentosApi,
   laudoMedicoApi, avaliacaoIUApi, entregasApi, processoJuridicoApi,
   anotacaoJuridicaApi, checklistDocumentosApi, followUpApi,
+  produtosApi, observacoesPacienteApi,
 } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { formatCpf, formatData, idade, toItems, formatBRL } from '@/utils';
 import {
   Sexo, SEXO_LABEL, STATUS_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_LABEL,
-  STATUS_PROCESSO_LABEL, StatusEntrega, Modulo,
+  STATUS_PROCESSO_LABEL, StatusEntrega, Modulo, Papel,
   StatusChecklistDocumento, STATUS_CHECKLIST_DOCUMENTO_LABEL, TIPO_DOCUMENTO_LABEL,
   StatusElegibilidade, STATUS_ELEGIBILIDADE_LABEL,
   type Agendamento, type Prontuario, type Documento, type Paciente,
   type LaudoMedico, type AvaliacaoIU, type Entrega, type ProcessoJuridico,
+  type Endereco,
 } from '@/types';
 
 function DescItem({ label, value }: { label: string; value: string }) {
@@ -83,10 +86,13 @@ function Vazio({ children }: { children: React.ReactNode }) {
 export function PacienteDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
-  const { permissoes } = useAuth();
+  const qc = useQueryClient();
+  const { permissoes, user } = useAuth();
   const [viewProntuarioId, setViewProntuarioId] = useState<string | null>(null);
   const [novoOpen, setNovoOpen] = useState(false);
   const [novoDocOpen, setNovoDocOpen] = useState(false);
+  const [novaAvaliacaoOpen, setNovaAvaliacaoOpen] = useState(false);
+  const [novoLaudoOpen, setNovoLaudoOpen] = useState(false);
 
   const pacQ = useQuery({ queryKey: ['paciente', id], queryFn: () => pacientesApi.get(id), enabled: !!id });
   const prontQ = useQuery({ queryKey: ['prontuarios', 'paciente', id], queryFn: () => prontuariosApi.list({ pacienteId: id }), enabled: !!id });
@@ -96,6 +102,16 @@ export function PacienteDetailPage() {
   const avaliacoesQ = useQuery({ queryKey: ['avaliacoes-iu', 'paciente', id], queryFn: () => avaliacaoIUApi.listByPaciente(id), enabled: !!id });
   const entregasQ = useQuery({ queryKey: ['entregas', 'paciente', id], queryFn: () => entregasApi.listByPaciente(id), enabled: !!id });
   const processosQ = useQuery({ queryKey: ['processos', 'paciente', id], queryFn: () => processoJuridicoApi.listByPaciente(id), enabled: !!id });
+  const produtosQ = useQuery({ queryKey: ['produtos'], queryFn: () => produtosApi.list() });
+
+  const produtos = produtosQ.data ?? [];
+  const avaliacoes = (avaliacoesQ.data as AvaliacaoIU[]) ?? [];
+  // Laudo se apoia na última avaliação (produto indicado + vínculo), como no fluxo clínico.
+  const ultimaAvaliacao = avaliacoes[0];
+
+  // Papéis que podem criar cada registro (mesma regra do fluxo clínico, sem depender da etapa).
+  const podeNovaAvaliacao = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN;
+  const podeNovoLaudo = user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
 
   const prontuarios = useMemo(() => toItems<Prontuario>(prontQ.data as never), [prontQ.data]);
   const entregas = entregasQ.data ?? [];
@@ -257,7 +273,19 @@ export function PacienteDetailPage() {
       {permissoes.includes(Modulo.DOCUMENTOS) && <ChecklistDocumentosSecao pacienteId={id} />}
 
       {/* Laudos / relatórios médicos */}
-      <Secao icon={<FileSignature className="h-4 w-4" />} titulo="Laudos e relatórios médicos" contagem={laudosQ.data?.length} defaultOpen={false}>
+      <Secao
+        icon={<FileSignature className="h-4 w-4" />}
+        titulo="Laudos e relatórios médicos"
+        contagem={laudosQ.data?.length}
+        defaultOpen={false}
+        acao={
+          podeNovoLaudo ? (
+            <Button size="sm" variant="outline" onClick={() => setNovoLaudoOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Novo laudo
+            </Button>
+          ) : undefined
+        }
+      >
         {laudosQ.isLoading ? (
           <Skeleton className="h-20 w-full" />
         ) : (laudosQ.data ?? []).length === 0 ? (
@@ -288,8 +316,8 @@ export function PacienteDetailPage() {
         contagem={avaliacoesQ.data?.length}
         defaultOpen={false}
         acao={
-          permissoes.includes(Modulo.FLUXO_CLINICO) ? (
-            <Button size="sm" variant="outline" onClick={() => navigate(`/fluxo-clinico/${id}`)}>
+          podeNovaAvaliacao ? (
+            <Button size="sm" variant="outline" onClick={() => setNovaAvaliacaoOpen(true)}>
               <Plus className="mr-2 h-4 w-4" /> Nova avaliação
             </Button>
           ) : undefined
@@ -398,6 +426,24 @@ export function PacienteDetailPage() {
         pacienteId={id}
         open={novoDocOpen}
         onOpenChange={setNovoDocOpen}
+      />
+      <NovaAvaliacaoIUDialog
+        open={novaAvaliacaoOpen}
+        onOpenChange={setNovaAvaliacaoOpen}
+        pacienteId={id}
+        clinicaId={user?.clinicaId}
+        produtos={produtos}
+        onCreated={() => void qc.invalidateQueries({ queryKey: ['avaliacoes-iu', 'paciente', id] })}
+      />
+      <NovoLaudoDialog
+        open={novoLaudoOpen}
+        onOpenChange={setNovoLaudoOpen}
+        pacienteId={id}
+        clinicaId={user?.clinicaId}
+        produtos={produtos}
+        avaliacaoId={ultimaAvaliacao?.id}
+        produtoIndicado={ultimaAvaliacao?.produtoIndicado}
+        onCreated={() => void qc.invalidateQueries({ queryKey: ['laudos', 'paciente', id] })}
       />
     </div>
   );
@@ -601,8 +647,25 @@ const editPacienteSchema = z.object({
   telefone: z.string().optional(),
   email: z.string().email('E-mail inválido.').optional().or(z.literal('')),
   consentimento: z.boolean().optional(),
+  logradouro: z.string().optional(),
+  numero: z.string().optional(),
+  complemento: z.string().optional(),
+  bairro: z.string().optional(),
+  cidade: z.string().optional(),
+  estado: z.string().optional(),
+  cep: z.string().optional(),
 });
 type EditPacienteForm = z.infer<typeof editPacienteSchema>;
+
+/** Monta o endereço em uma linha legível para exibição, ignorando campos vazios. */
+function formatEndereco(e?: Endereco): string {
+  if (!e) return '—';
+  const linha1 = [e.logradouro, e.numero].filter(Boolean).join(', ');
+  const complemento = e.complemento ? `(${e.complemento})` : '';
+  const cidadeUf = [e.cidade, e.estado].filter(Boolean).join(' - ');
+  const partes = [linha1, complemento, e.bairro, cidadeUf, e.cep].filter(Boolean);
+  return partes.length ? partes.join(' · ') : '—';
+}
 
 /** Dados cadastrais do paciente — muitos só ficam completos após a 1ª consulta
  * (CPF, nascimento, consentimento LGPD), por isso o cadastro inicial não trava
@@ -623,6 +686,13 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
       telefone: p.telefone ?? '',
       email: p.email ?? '',
       consentimento: !!p.consentimentoLGPD?.aceito,
+      logradouro: p.endereco?.logradouro ?? '',
+      numero: p.endereco?.numero ?? '',
+      complemento: p.endereco?.complemento ?? '',
+      bairro: p.endereco?.bairro ?? '',
+      cidade: p.endereco?.cidade ?? '',
+      estado: p.endereco?.estado ?? '',
+      cep: p.endereco?.cep ?? '',
     });
     setOpen(true);
   }
@@ -638,12 +708,26 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
   });
 
   function onSubmit(v: EditPacienteForm) {
+    // Endereço só é enviado se ao menos um campo foi preenchido; senão vai undefined
+    // (o backend interpreta ausência como "não alterar" no PATCH).
+    const enderecoCampos = {
+      logradouro: v.logradouro?.trim() || undefined,
+      numero: v.numero?.trim() || undefined,
+      complemento: v.complemento?.trim() || undefined,
+      bairro: v.bairro?.trim() || undefined,
+      cidade: v.cidade?.trim() || undefined,
+      estado: v.estado?.trim() || undefined,
+      cep: v.cep?.trim() || undefined,
+    };
+    const temEndereco = Object.values(enderecoCampos).some(Boolean);
+
     updateMut.mutate({
       cpf: v.cpf || undefined,
       dataNascimento: v.dataNascimento ? dayjs(v.dataNascimento).format('YYYY-MM-DD') : undefined,
       sexo: v.sexo || undefined,
       telefone: v.telefone || undefined,
       email: v.email || undefined,
+      endereco: temEndereco ? enderecoCampos : undefined,
       consentimentoLGPD: v.consentimento
         ? { aceito: true, dataAceite: p.consentimentoLGPD?.aceito ? p.consentimentoLGPD.dataAceite : new Date().toISOString(), versao: '1.0' }
         : undefined,
@@ -669,10 +753,13 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
         <DescItem label="Telefone" value={p.telefone || '—'} />
         <DescItem label="E-mail" value={p.email || '—'} />
         <DescItem label="Consentimento LGPD" value={p.consentimentoLGPD?.aceito ? 'Aceito' : 'Pendente'} />
+        <div className="col-span-2 sm:col-span-3">
+          <DescItem label="Endereço" value={formatEndereco(p.endereco)} />
+        </div>
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar cadastro</DialogTitle>
           </DialogHeader>
@@ -710,6 +797,45 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
               </div>
             </div>
 
+            {/* Endereço */}
+            <div className="space-y-3 rounded-lg border border-border p-3">
+              <p className="text-sm font-medium text-foreground">Endereço</p>
+              <div className="grid grid-cols-6 gap-3">
+                <div className="space-y-2 col-span-4">
+                  <Label htmlFor="editLogradouro">Logradouro</Label>
+                  <Input id="editLogradouro" placeholder="Rua / Avenida" {...register('logradouro')} />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="editNumero">Número</Label>
+                  <Input id="editNumero" placeholder="123" {...register('numero')} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="editComplemento">Complemento</Label>
+                  <Input id="editComplemento" placeholder="Apto, bloco…" {...register('complemento')} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editBairro">Bairro</Label>
+                  <Input id="editBairro" {...register('bairro')} />
+                </div>
+              </div>
+              <div className="grid grid-cols-6 gap-3">
+                <div className="space-y-2 col-span-3">
+                  <Label htmlFor="editCidade">Cidade</Label>
+                  <Input id="editCidade" {...register('cidade')} />
+                </div>
+                <div className="space-y-2 col-span-1">
+                  <Label htmlFor="editEstado">UF</Label>
+                  <Input id="editEstado" placeholder="SP" maxLength={2} {...register('estado')} />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="editCep">CEP</Label>
+                  <Input id="editCep" placeholder="00000-000" {...register('cep')} />
+                </div>
+              </div>
+            </div>
+
             <div className="flex items-start gap-2">
               <Checkbox id="editConsentimento" checked={watch('consentimento')} onCheckedChange={(c) => setValue('consentimento', !!c)} />
               <Label htmlFor="editConsentimento" className="text-sm leading-tight cursor-pointer">
@@ -728,44 +854,78 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
   );
 }
 
-/** Anotação livre sobre o paciente, editável por qualquer profissional de
- * atendimento (não fica restrita a secretaria/admin como o cadastro geral). */
+/** Timeline de observações sobre o paciente: cada registro é isolado e guarda
+ * quem escreveu e quando (append-only, nada é sobrescrito). Aberta a qualquer
+ * profissional de atendimento. A observação legada (campo único antigo) é
+ * mostrada como registro histórico para não se perder. */
 function ObservacoesSecao({ pacienteId, observacoesAtuais }: { pacienteId: string; observacoesAtuais?: string }) {
   const qc = useQueryClient();
-  const [texto, setTexto] = useState(observacoesAtuais ?? '');
-  const [editando, setEditando] = useState(false);
+  const [texto, setTexto] = useState('');
 
-  const salvarMut = useMutation({
-    mutationFn: () => pacientesApi.updateObservacoes(pacienteId, texto),
+  const listQ = useQuery({
+    queryKey: ['observacoes-paciente', pacienteId],
+    queryFn: () => observacoesPacienteApi.listByPaciente(pacienteId),
+  });
+
+  const createMut = useMutation({
+    mutationFn: () => observacoesPacienteApi.create({ pacienteId, texto: texto.trim() }),
     onSuccess: () => {
-      toast.success('Observações salvas.');
-      setEditando(false);
-      void qc.invalidateQueries({ queryKey: ['paciente', pacienteId] });
+      setTexto('');
+      toast.success('Observação adicionada.');
+      void qc.invalidateQueries({ queryKey: ['observacoes-paciente', pacienteId] });
     },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
+  const observacoes = listQ.data ?? [];
+  const legado = observacoesAtuais?.trim();
+
   return (
-    <Secao icon={<FileText className="h-4 w-4" />} titulo="Observações" defaultOpen={false}>
-      <div className="space-y-2">
-        <Textarea
-          rows={4}
-          placeholder="Informações pertinentes sobre o paciente, visíveis para toda a equipe…"
-          value={texto}
-          onChange={(e) => { setTexto(e.target.value); setEditando(true); }}
-        />
-        {editando && (
-          <div className="flex justify-end gap-2">
+    <Secao
+      icon={<FileText className="h-4 w-4" />}
+      titulo="Observações"
+      contagem={observacoes.length + (legado ? 1 : 0)}
+      defaultOpen={false}
+    >
+      <div className="space-y-3">
+        <div className="space-y-2">
+          <Textarea
+            rows={3}
+            placeholder="Registre uma observação sobre o paciente. Fica com seu nome e a data/hora, visível para toda a equipe…"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+          />
+          <div className="flex justify-end">
             <Button
-              variant="ghost"
               size="sm"
-              onClick={() => { setTexto(observacoesAtuais ?? ''); setEditando(false); }}
+              disabled={texto.trim().length < 1 || createMut.isPending}
+              onClick={() => createMut.mutate()}
             >
-              Cancelar
+              {createMut.isPending ? 'Salvando…' : 'Adicionar observação'}
             </Button>
-            <Button size="sm" disabled={salvarMut.isPending} onClick={() => salvarMut.mutate()}>
-              {salvarMut.isPending ? 'Salvando…' : 'Salvar'}
-            </Button>
+          </div>
+        </div>
+
+        {listQ.isLoading ? (
+          <Skeleton className="h-16 w-full" />
+        ) : observacoes.length === 0 && !legado ? (
+          <Vazio>Nenhuma observação registrada.</Vazio>
+        ) : (
+          <div className="space-y-2">
+            {observacoes.map((o) => (
+              <div key={o.id} className="glass rounded-lg p-3">
+                <p className="text-xs text-muted-foreground mb-1">
+                  {dayjs(o.criadoEm).format('DD/MM/YYYY HH:mm')} · {o.autorEmail}
+                </p>
+                <p className="text-sm text-foreground whitespace-pre-wrap">{o.texto}</p>
+              </div>
+            ))}
+            {legado && (
+              <div className="glass rounded-lg p-3">
+                <p className="text-xs text-muted-foreground mb-1">Observação anterior (registro histórico)</p>
+                <p className="text-sm text-foreground whitespace-pre-wrap">{legado}</p>
+              </div>
+            )}
           </div>
         )}
       </div>

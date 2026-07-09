@@ -15,6 +15,7 @@ import type {
   LoginResponse,
   ModalidadeAtendimento,
   Modulo,
+  ObservacaoPaciente,
   Paciente,
   PageResult,
   Papel,
@@ -305,6 +306,14 @@ export const anotacaoJuridicaApi = {
     api.post<AnotacaoJuridica>('/anotacoes-juridicas', payload).then((r) => r.data),
   listByPaciente: (pacienteId: string) =>
     api.get<AnotacaoJuridica[]>('/anotacoes-juridicas', { params: { pacienteId } }).then((r) => r.data),
+};
+
+// ---------- Observações do paciente (timeline append-only) ----------
+export const observacoesPacienteApi = {
+  create: (payload: { pacienteId: string; texto: string }) =>
+    api.post<ObservacaoPaciente>('/observacoes-paciente', payload).then((r) => r.data),
+  listByPaciente: (pacienteId: string) =>
+    api.get<ObservacaoPaciente[]>('/observacoes-paciente', { params: { pacienteId } }).then((r) => r.data),
 };
 
 // ---------- Checklist de Documentos ----------

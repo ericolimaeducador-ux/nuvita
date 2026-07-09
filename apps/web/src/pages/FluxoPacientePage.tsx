@@ -243,7 +243,7 @@ function Passo({
   if (!visivel) return null;
 
   return (
-    <Card className={cn('border', concluido ? 'border-emerald-500/30' : 'border-white/5')}>
+    <Card className={cn('border', concluido ? 'border-emerald-500/30' : 'border-border')}>
       <CardHeader
         className="cursor-pointer select-none"
         onClick={() => setAberto(!aberto)}
@@ -251,7 +251,7 @@ function Passo({
         <div className="flex items-center gap-3">
           <div className={cn(
             'flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold shrink-0',
-            concluido ? 'bg-emerald-500/20 text-emerald-400' : 'bg-primary/10 text-primary'
+            concluido ? 'bg-emerald-500/20 text-emerald-600' : 'bg-primary/10 text-primary'
           )}>
             {concluido ? <CheckCircle2 className="h-4 w-4" /> : numero}
           </div>
@@ -319,7 +319,7 @@ function AvaliacaoIUStep({ pacienteId, avaliacoes, produtos, user }: {
         <p className="text-sm text-muted-foreground">Nenhuma avaliação registrada ainda.</p>
       )}
       {avaliacoes.map((av) => (
-        <div key={av.id} className="rounded-lg border border-white/5 bg-white/2 p-4 space-y-1">
+        <div key={av.id} className="rounded-lg border border-border bg-muted/40 p-4 space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">{formatData(av.dataAtendimento)}</span>
             <Badge variant="outline" className="text-xs">{PERFIL_LABEL[av.perfilCliente]}</Badge>
@@ -556,7 +556,7 @@ function FollowUpStep({ pacienteId, avaliacaoId, followups, user }: {
     <div className="space-y-3">
       {followups.length === 0 && <p className="text-sm text-muted-foreground">Nenhum follow-up registrado.</p>}
       {followups.map((f) => (
-        <div key={f.id} className="rounded-lg border border-white/5 bg-white/2 p-3 space-y-1">
+        <div key={f.id} className="rounded-lg border border-border bg-muted/40 p-3 space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">{formatData(f.dataFollowup)}</span>
             <StatusBadge value={f.statusElegibilidade} labels={STATUS_ELEGIBILIDADE_LABEL} />
@@ -646,7 +646,7 @@ function LaudoMedicoStep({ pacienteId, avaliacaoId, produtoIndicado, laudos, pro
     <div className="space-y-3">
       {laudos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum laudo registrado.</p>}
       {laudos.map((l) => (
-        <div key={l.id} className="rounded-lg border border-white/5 bg-white/2 p-3 space-y-2">
+        <div key={l.id} className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{formatData(l.dataLaudo)}</span>
@@ -798,7 +798,7 @@ function ProcessoJuridicoStep({ pacienteId, avaliacaoId, laudoId, processos, use
     <div className="space-y-3">
       {processos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum processo registrado.</p>}
       {processos.map((p) => (
-        <div key={p.id} className="rounded-lg border border-white/5 bg-white/2 p-3 space-y-2">
+        <div key={p.id} className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {p.numeroProcesso && <span className="text-sm font-medium">{p.numeroProcesso}</span>}
@@ -950,7 +950,7 @@ function EntregasStep({ pacienteId, processoId, avaliacaoId, entregas, produtos,
     <div className="space-y-3">
       {entregas.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma entrega registrada.</p>}
       {entregas.map((e) => (
-        <div key={e.id} className="rounded-lg border border-white/5 bg-white/2 p-3 space-y-2">
+        <div key={e.id} className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{formatData(e.dataEntrega)}</span>
@@ -1075,13 +1075,13 @@ function EtapaFluxoHeader({
   const podeAvancar = !!proximaEtapa && (papel === Papel.ADMIN || (!!papel && papeisPermitidos.includes(papel)));
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/2 px-4 py-3">
+    <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3">
       <span className="text-sm text-muted-foreground">Etapa atual:</span>
       <Badge variant="outline" className="text-sm">{ETAPA_FLUXO_LABEL[paciente.etapaFluxo]}</Badge>
       {info?.diasLimite !== undefined && (
         info.atrasado
-          ? <span className="text-red-400 text-sm font-medium">Atrasado {Math.abs(info.diasRestantes!)}d</span>
-          : <span className={cn('text-sm font-medium', (info.diasRestantes ?? 99) <= 3 ? 'text-amber-400' : 'text-muted-foreground')}>
+          ? <span className="text-red-600 text-sm font-medium">Atrasado {Math.abs(info.diasRestantes!)}d</span>
+          : <span className={cn('text-sm font-medium', (info.diasRestantes ?? 99) <= 3 ? 'text-amber-600' : 'text-muted-foreground')}>
               {info.diasRestantes}d restantes
             </span>
       )}
@@ -1153,7 +1153,7 @@ function EntrevistaStep({ pacienteId, user }: { pacienteId: string; user: Return
     <div className="space-y-3">
       {entrevistas.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma entrevista agendada.</p>}
       {entrevistas.map((a) => (
-        <div key={a.id} className="rounded-lg border border-white/5 bg-white/2 p-3 flex items-center justify-between">
+        <div key={a.id} className="rounded-lg border border-border bg-muted/40 p-3 flex items-center justify-between">
           <div>
             <p className="text-sm font-medium">{dayjs(a.dataHoraInicio).format('DD/MM/YYYY HH:mm')}</p>
             <Badge variant="outline" className="text-xs mt-1">{STATUS_AGENDAMENTO_LABEL[a.status]}</Badge>
@@ -1229,7 +1229,7 @@ function DocumentacaoStep({ pacienteId, user }: { pacienteId: string; user: Retu
     <div className="space-y-3">
       {itens.length === 0 && <p className="text-sm text-muted-foreground">Nenhum documento no checklist ainda.</p>}
       {(itens as ChecklistDocumentoItem[]).map((item) => (
-        <div key={item.id} className="rounded-lg border border-white/5 bg-white/2 p-3 flex items-center justify-between">
+        <div key={item.id} className="rounded-lg border border-border bg-muted/40 p-3 flex items-center justify-between">
           <span className="text-sm">{item.nome}</span>
           <div className="flex items-center gap-2">
             <Badge variant={item.status === StatusChecklistDocumento.RECEBIDO ? 'success' : 'outline'} className="text-xs">

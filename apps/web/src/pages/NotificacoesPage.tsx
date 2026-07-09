@@ -25,10 +25,10 @@ export function NotificacoesPage() {
   const d = q.data ?? {};
 
   const cards = [
-    { title: 'Enviadas', value: d.enviadas ?? 0, icon: Send, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-    { title: 'Entregues', value: d.entregues ?? 0, icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-    { title: 'Pendentes', value: d.pendentes ?? 0, icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/10' },
-    { title: 'Falhas', value: d.falhas ?? 0, icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10' },
+    { title: 'Enviadas', value: d.enviadas ?? 0, icon: Send, color: 'text-blue-600', bg: 'bg-blue-500/10' },
+    { title: 'Entregues', value: d.entregues ?? 0, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+    { title: 'Pendentes', value: d.pendentes ?? 0, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-500/10' },
+    { title: 'Falhas', value: d.falhas ?? 0, icon: XCircle, color: 'text-red-600', bg: 'bg-red-500/10' },
   ];
 
   const recentes = Array.isArray(d.recentes) ? d.recentes : [];
@@ -41,7 +41,7 @@ export function NotificacoesPage() {
       />
 
       {q.isError && (
-        <div className="flex items-center gap-2 glass rounded-xl p-4 mb-4 text-amber-400 border-amber-500/20">
+        <div className="flex items-center gap-2 glass rounded-xl p-4 mb-4 text-amber-600 border-amber-500/20">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <p className="text-sm">Não foi possível carregar o painel de notificações. {apiErrorMessage(q.error)}</p>
         </div>

@@ -90,7 +90,7 @@ function SalaCard({ sala, onEncerrar, loading }: { sala: SalaTelemedicina; onEnc
           <div className="glass rounded-lg p-3">
             <p className="text-xs text-muted-foreground mb-1">Token do paciente</p>
             <div className="flex items-center gap-2">
-              <code className="text-xs font-mono text-emerald-400 flex-1 truncate">{sala.tokenPaciente.slice(0, 24)}…</code>
+              <code className="text-xs font-mono text-emerald-600 flex-1 truncate">{sala.tokenPaciente.slice(0, 24)}…</code>
               <Button variant="ghost" size="icon" onClick={() => copiar(sala.tokenPaciente)}>
                 <Copy className="h-4 w-4" />
               </Button>
@@ -179,7 +179,7 @@ export function TelemedicinaPage() {
           </div>
 
           {buscarQ.isError && (
-            <p className="mt-3 text-sm text-amber-400">Nenhuma sala encontrada para este agendamento.</p>
+            <p className="mt-3 text-sm text-amber-600">Nenhuma sala encontrada para este agendamento.</p>
           )}
         </CardContent>
       </Card>

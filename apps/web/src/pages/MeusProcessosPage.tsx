@@ -47,12 +47,12 @@ export function MeusProcessosPage() {
       {/* Cards resumo */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total', value: resumo.total, color: 'text-foreground', bg: 'bg-white/5' },
-          { label: 'Em preparação', value: resumo.emPreparacao, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
-          { label: 'Em andamento', value: resumo.emAndamento, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-          { label: 'Ganhos', value: resumo.ganhos, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+          { label: 'Total', value: resumo.total, color: 'text-foreground', bg: 'bg-muted' },
+          { label: 'Em preparação', value: resumo.emPreparacao, color: 'text-yellow-600', bg: 'bg-yellow-500/10' },
+          { label: 'Em andamento', value: resumo.emAndamento, color: 'text-blue-600', bg: 'bg-blue-500/10' },
+          { label: 'Ganhos', value: resumo.ganhos, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
         ].map((s) => (
-          <Card key={s.label} className="border-white/5">
+          <Card key={s.label} className="border-border">
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground">{s.label}</p>
               <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
@@ -105,7 +105,7 @@ function ProcessoRow({ processo, onOpen }: { processo: ProcessoJuridico; onOpen:
   });
 
   return (
-    <TableRow className="cursor-pointer hover:bg-white/5" onClick={onOpen}>
+    <TableRow className="cursor-pointer hover:bg-secondary" onClick={onOpen}>
       <TableCell className="font-medium">
         {pacienteQ.isLoading
           ? <Skeleton className="h-4 w-32" />

@@ -115,14 +115,14 @@ export function FinanceiroPage() {
   const lancamentos = toItems<Lancamento>(listQ.data as never);
 
   const statCards = [
-    { label: 'Receitas', value: dash?.totalReceitas ?? 0, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-    { label: 'Despesas', value: dash?.totalDespesas ?? 0, icon: TrendingDown, color: 'text-red-400', bg: 'bg-red-500/10' },
-    { label: 'Pendente', value: dash?.totalPendente ?? 0, icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+    { label: 'Receitas', value: dash?.totalReceitas ?? 0, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+    { label: 'Despesas', value: dash?.totalDespesas ?? 0, icon: TrendingDown, color: 'text-red-600', bg: 'bg-red-500/10' },
+    { label: 'Pendente', value: dash?.totalPendente ?? 0, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-500/10' },
     {
       label: 'Saldo',
       value: dash?.saldo ?? 0,
       icon: Scale,
-      color: (dash?.saldo ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400',
+      color: (dash?.saldo ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600',
       bg: (dash?.saldo ?? 0) >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10',
     },
   ];
@@ -235,10 +235,10 @@ export function FinanceiroPage() {
                       {l.status === StatusLancamento.PENDENTE && (
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" title="Marcar como recebido" onClick={() => receberMut.mutate(l.id)}>
-                            <Check className="h-4 w-4 text-emerald-400" />
+                            <Check className="h-4 w-4 text-emerald-600" />
                           </Button>
                           <Button variant="ghost" size="icon" title="Cancelar" onClick={() => cancelarMut.mutate(l.id)}>
-                            <X className="h-4 w-4 text-red-400" />
+                            <X className="h-4 w-4 text-red-600" />
                           </Button>
                         </div>
                       )}

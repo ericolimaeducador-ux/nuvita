@@ -30,12 +30,12 @@ import {
 import type { UsuarioAdmin } from '@/types';
 
 const PAPEL_BADGE: Record<Papel, string> = {
-  [Papel.SUPER_ADMIN]: 'bg-purple-500/10 text-purple-400 border border-purple-500/20',
-  [Papel.ADMIN]: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
-  [Papel.MEDICO]: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
-  [Papel.ENFERMEIRO]: 'bg-teal-500/10 text-teal-400 border border-teal-500/20',
-  [Papel.ADVOGADO]: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
-  [Papel.SECRETARIA]: 'bg-slate-500/10 text-slate-400 border border-slate-500/20',
+  [Papel.SUPER_ADMIN]: 'bg-purple-500/10 text-purple-600 border border-purple-500/20',
+  [Papel.ADMIN]: 'bg-blue-500/10 text-blue-600 border border-blue-500/20',
+  [Papel.MEDICO]: 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20',
+  [Papel.ENFERMEIRO]: 'bg-teal-500/10 text-teal-600 border border-teal-500/20',
+  [Papel.ADVOGADO]: 'bg-amber-500/10 text-amber-600 border border-amber-500/20',
+  [Papel.SECRETARIA]: 'bg-slate-500/10 text-slate-600 border border-slate-500/20',
   [Papel.PACIENTE]: 'bg-gray-500/10 text-gray-400 border border-gray-500/20',
 };
 
@@ -236,7 +236,7 @@ export function SuperAdminPage() {
       />
 
       <div className="flex items-start gap-3 glass rounded-xl p-4 border border-purple-500/20 bg-purple-500/5">
-        <Shield className="h-4 w-4 text-purple-400 mt-0.5 shrink-0" />
+        <Shield className="h-4 w-4 text-purple-600 mt-0.5 shrink-0" />
         <div>
           <p className="text-sm font-medium text-foreground">Acesso irrestrito</p>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -333,7 +333,7 @@ export function SuperAdminPage() {
                         {clinicaNome(u.clinicaId) ?? '—'}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={u.ativo ? 'default' : 'secondary'} className={u.ativo ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'}>
+                        <Badge variant={u.ativo ? 'default' : 'secondary'} className={u.ativo ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-red-500/10 text-red-600 border border-red-500/20 hover:bg-red-500/20'}>
                           {u.ativo ? 'Ativo' : 'Inativo'}
                         </Badge>
                       </TableCell>
@@ -417,7 +417,7 @@ export function SuperAdminPage() {
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">{c.totalUsuarios}</TableCell>
                       <TableCell>
-                        <Badge variant={c.ativo ? 'default' : 'secondary'} className={c.ativo ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20'}>
+                        <Badge variant={c.ativo ? 'default' : 'secondary'} className={c.ativo ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-red-500/10 text-red-600 border border-red-500/20 hover:bg-red-500/20'}>
                           {c.ativo ? 'Ativa' : 'Inativa'}
                         </Badge>
                       </TableCell>

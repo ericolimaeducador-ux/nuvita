@@ -208,7 +208,7 @@ export function ProntuarioDetailDialog({
 
             {rj && (
               <div className="glass rounded-xl p-4 border border-amber-500/20">
-                <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-3 flex items-center gap-2">
                   <Scale className="h-3.5 w-3.5" /> Judicialização — NAT-JUS
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -250,7 +250,7 @@ export function ProntuarioDetailDialog({
             )}
 
             {!rj && (
-              <div className="glass rounded-xl p-4 border border-dashed border-white/10 text-center">
+              <div className="glass rounded-xl p-4 border border-dashed border-border text-center">
                 <Scale className="h-4 w-4 text-muted-foreground mx-auto mb-1.5" />
                 <p className="text-sm text-muted-foreground">
                   Este atendimento não tem ficha de judicialização (NAT-JUS) preenchida.
@@ -548,7 +548,7 @@ export function NovoAtendimentoDialog({
               <div className="glass rounded-lg p-1 space-y-0.5 max-h-40 overflow-y-auto">
                 {cidOpts.map((o) => (
                   <button key={o.value} type="button"
-                    className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-white/5 text-foreground"
+                    className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-secondary text-foreground"
                     onClick={() => { setCidSelected((cur) => cur.includes(o.value) ? cur : [...cur, o.value]); setCidSearch(''); setCidOpts([]); }}>
                     {o.label}
                   </button>
@@ -583,7 +583,7 @@ export function NovoAtendimentoDialog({
           <Separator />
           <label className="flex items-center gap-2 cursor-pointer">
             <Checkbox checked={incluirJudicial} onCheckedChange={(c) => setIncluirJudicial(!!c)} />
-            <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+            <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider flex items-center gap-2">
               <Scale className="h-3.5 w-3.5" /> Judicialização — Relatório NAT-JUS
             </span>
           </label>

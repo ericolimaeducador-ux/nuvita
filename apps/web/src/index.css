@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -27,6 +27,14 @@
   --font-sans: 'Inter', system-ui, sans-serif;
   --animate-fade-in: fadeIn 0.3s ease-out;
   --animate-slide-in: slideIn 0.3s ease-out;
+
+  /* Identidade "Energia e Confiança Premium" */
+  --color-brand-cobalt: #0047AB;
+  --color-brand-cobalt-dark: #003380;
+  --color-accent-gold: #FFB800;
+  --color-accent-gold-hover: #E6A600;
+  --color-bg-dark: #0B1120;
+  --color-surface-dark: #1E293B;
 }
 
 @keyframes fadeIn {
@@ -41,25 +49,29 @@
 
 @layer base {
   :root {
-    --background: 222 47% 4%;
-    --foreground: 210 40% 96%;
-    --card: 222 45% 7%;
-    --card-foreground: 210 40% 96%;
-    --popover: 222 45% 7%;
-    --popover-foreground: 210 40% 96%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 4%;
-    --secondary: 217 32% 14%;
-    --secondary-foreground: 210 40% 96%;
-    --muted: 217 32% 12%;
-    --muted-foreground: 215 20% 55%;
-    --accent: 160 84% 39%;
-    --accent-foreground: 210 40% 96%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 96%;
-    --border: 217 32% 13%;
-    --input: 217 32% 13%;
-    --ring: 217 91% 60%;
+    /* Light mode "Profissional Premium": fundo claro azulado, cards brancos,
+       texto cinza-escuro #1F2937, cobalto p/ ações, ouro p/ destaques. */
+    --background: 220 33% 96%;
+    --foreground: 215 28% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 28% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 28% 17%;
+    /* Brand Cobalt #0047AB — legível como texto sobre fundo claro */
+    --primary: 215 100% 34%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 25% 93%;
+    --secondary-foreground: 215 28% 17%;
+    --muted: 217 25% 94%;
+    --muted-foreground: 217 12% 44%;
+    /* Accent Gold #FFB800 */
+    --accent: 43 100% 50%;
+    --accent-foreground: 215 28% 17%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 216 20% 88%;
+    --input: 216 20% 84%;
+    --ring: 215 100% 34%;
     --radius: 0.75rem;
   }
 
@@ -77,15 +89,17 @@
   }
 
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
 }
 
 @layer components {
+  /* Superfície de card no light mode: branco com borda suave e leve blur
+     (o blur só é perceptível em overlays/popovers translúcidos). */
   .glass {
-    background-color: color-mix(in srgb, hsl(var(--card)) 60%, transparent);
+    background-color: color-mix(in srgb, hsl(var(--card)) 92%, transparent);
     backdrop-filter: blur(24px);
-    border: 1px solid rgb(255 255 255 / 0.05);
+    border: 1px solid hsl(var(--border));
   }
 
   .glass-hover {
@@ -93,7 +107,7 @@
   }
 
   .glass-hover:hover {
-    background-color: color-mix(in srgb, hsl(var(--card)) 80%, transparent);
+    background-color: hsl(var(--muted));
   }
 
   .dark {

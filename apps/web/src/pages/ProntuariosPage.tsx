@@ -214,7 +214,7 @@ export function ProntuariosPage() {
                     <button
                       key={o.value}
                       type="button"
-                      className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-white/5 text-foreground"
+                      className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-secondary text-foreground"
                       onClick={() => { setCidSelected(o.value); setCidSearch(o.label); setCidOpts([]); }}
                     >
                       {o.label}

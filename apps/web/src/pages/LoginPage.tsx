@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
-import { brand } from '@/lib/brand';
+import { Logo } from '@/components/Logo';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Informe o e-mail.').email('E-mail inválido.'),
@@ -55,24 +55,29 @@ export function LoginPage() {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Left — hero */}
-      <div className="hidden lg:flex flex-col justify-between w-1/2 bg-gradient-to-br from-blue-900 via-blue-800 to-emerald-900 p-12 relative overflow-hidden">
+      <div className="hidden lg:flex flex-col justify-between w-1/2 bg-gradient-to-br from-bg-dark to-brand-cobalt p-12 relative overflow-hidden">
         {/* Decorative circles */}
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl" />
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-brand-cobalt/30 rounded-full blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-accent-gold/10 rounded-full blur-3xl" />
 
         <div className="relative flex items-center">
-          <img src={brand.logo.light} alt={`${brand.nome} — ${brand.slogan}`} className="h-12 w-auto" />
+          <Logo
+            width={230}
+            iconColor="#FFB800"
+            textColor="#FFFFFF"
+            className="drop-shadow-[0_2px_16px_rgba(255,184,0,0.35)]"
+          />
         </div>
 
         <div className="relative">
-          <h1 className="text-4xl font-black text-white leading-tight mb-4">
+          <h1 className="text-[2.75rem] font-medium text-white leading-tight mb-4">
             Gestão clínica
             <br />
-            <span className="text-emerald-400">que cuida</span> de
+            <span className="text-accent-gold">que cuida</span> de
             <br />
             quem cuida.
           </h1>
-          <p className="text-blue-200 text-lg leading-relaxed">
+          <p className="text-blue-100/90 text-lg leading-relaxed">
             Prontuário eletrônico, agenda, pacientes e documentos
             em uma plataforma segura, multi-tenant e em
             conformidade com a LGPD.
@@ -87,9 +92,9 @@ export function LoginPage() {
       {/* Right — form */}
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-md">
-          {/* Mobile logo */}
+          {/* Mobile logo (fundo claro) */}
           <div className="flex items-center mb-8 lg:hidden">
-            <img src={brand.logo.light} alt={brand.nome} className="h-9 w-auto" />
+            <Logo width={160} iconColor="#E6A600" textColor="#1F2937" />
           </div>
 
           <div className="glass rounded-2xl p-8 shadow-2xl">

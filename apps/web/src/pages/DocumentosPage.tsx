@@ -70,7 +70,7 @@ export function DocumentosPage() {
                   <TableRow key={d.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <File className="h-4 w-4 text-blue-400 shrink-0" />
+                        <File className="h-4 w-4 text-blue-600 shrink-0" />
                         <span className="font-medium">{d.nome}</span>
                       </div>
                     </TableCell>

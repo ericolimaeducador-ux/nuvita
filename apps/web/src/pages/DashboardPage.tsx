@@ -68,38 +68,10 @@ export function DashboardPage() {
     (pacientesQ.data as { total?: number })?.total ?? toItems(pacientesQ.data as never).length;
 
   const stats = [
-    {
-      title: 'Pacientes ativos',
-      value: totalPacientes,
-      icon: Users,
-      color: 'text-blue-400',
-      bg: 'bg-blue-500/10',
-      loading: pacientesQ.isLoading,
-    },
-    {
-      title: 'Agendamentos hoje',
-      value: agendamentos.length,
-      icon: Calendar,
-      color: 'text-cyan-400',
-      bg: 'bg-cyan-500/10',
-      loading: agendaHojeQ.isLoading,
-    },
-    {
-      title: 'Atendimentos realizados',
-      value: realizados,
-      icon: CheckCircle,
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-500/10',
-      loading: agendaHojeQ.isLoading,
-    },
-    {
-      title: 'Prontuários',
-      value: '—',
-      icon: FileText,
-      color: 'text-amber-400',
-      bg: 'bg-amber-500/10',
-      loading: false,
-    },
+    { title: 'Pacientes ativos', value: totalPacientes, icon: Users, loading: pacientesQ.isLoading },
+    { title: 'Agendamentos hoje', value: agendamentos.length, icon: Calendar, loading: agendaHojeQ.isLoading },
+    { title: 'Atendimentos realizados', value: realizados, icon: CheckCircle, loading: agendaHojeQ.isLoading },
+    { title: 'Prontuários', value: '—', icon: FileText, loading: false },
   ];
 
   return (
@@ -113,7 +85,7 @@ export function DashboardPage() {
       {podeVerChecklist && !pendentesDocsQ.isLoading && (pendentesDocsQ.data?.pendentes ?? 0) > 0 && (
         <Link to="/pacientes" className="block mb-6">
           <div className="flex items-center gap-3 glass rounded-xl p-4 border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
-            <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0" />
+            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground">
                 {pendentesDocsQ.data?.pendentes} documento{pendentesDocsQ.data?.pendentes !== 1 ? 's' : ''} pendente{pendentesDocsQ.data?.pendentes !== 1 ? 's' : ''} no checklist
@@ -127,13 +99,13 @@ export function DashboardPage() {
       )}
 
       {/* Pipeline de Incontinência Urinária */}
-      <Card className="mb-6 border-primary/20">
+      <Card className="mb-6 border-brand-cobalt/30">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-primary" />
+            <Activity className="h-4 w-4 text-accent-gold-hover" />
             <CardTitle className="text-sm font-semibold">Pipeline de Incontinência Urinária</CardTitle>
           </div>
-          <Link to="/fluxo-clinico" className="text-xs text-primary hover:underline">
+          <Link to="/fluxo-clinico" className="text-xs font-medium text-primary hover:underline">
             Ver pipeline completo →
           </Link>
         </CardHeader>
@@ -144,30 +116,22 @@ export function DashboardPage() {
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-4">
-              <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <ClipboardList className="h-4 w-4 text-blue-400" />
-                  <span className="text-xs text-blue-400 font-medium">Avaliações</span>
+              {[
+                { icon: ClipboardList, label: 'Avaliações', value: avaliacaoCountQ.data?.total ?? 0, sub: 'total de fichas' },
+                { icon: UserCheck, label: 'Em acompanhamento', value: followupResumoQ.data?.emAvaliacao ?? 0, sub: 'aguardando elegibilidade' },
+                { icon: CheckCircle, label: 'Elegíveis', value: followupResumoQ.data?.elegivel ?? 0, sub: 'prontos para laudo' },
+              ].map(({ icon: BlocoIcon, label, value, sub }) => (
+                <div key={label} className="rounded-xl bg-brand-cobalt p-4 shadow-md shadow-brand-cobalt/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="p-1.5 rounded-lg bg-accent-gold">
+                      <BlocoIcon className="h-4 w-4 text-[#1F2937]" />
+                    </span>
+                    <span className="text-xs text-blue-100 font-medium">{label}</span>
+                  </div>
+                  <p className="text-2xl font-bold text-white">{value}</p>
+                  <p className="text-xs text-blue-200/70 mt-0.5">{sub}</p>
                 </div>
-                <p className="text-2xl font-bold text-blue-300">{avaliacaoCountQ.data?.total ?? 0}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">total de fichas</p>
-              </div>
-              <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <UserCheck className="h-4 w-4 text-yellow-400" />
-                  <span className="text-xs text-yellow-400 font-medium">Em acompanhamento</span>
-                </div>
-                <p className="text-2xl font-bold text-yellow-300">{followupResumoQ.data?.emAvaliacao ?? 0}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">aguardando elegibilidade</p>
-              </div>
-              <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <CheckCircle className="h-4 w-4 text-emerald-400" />
-                  <span className="text-xs text-emerald-400 font-medium">Elegíveis</span>
-                </div>
-                <p className="text-2xl font-bold text-emerald-300">{followupResumoQ.data?.elegivel ?? 0}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">prontos para laudo</p>
-              </div>
+              ))}
             </div>
           )}
         </CardContent>
@@ -177,21 +141,21 @@ export function DashboardPage() {
         {stats.map((s) => {
           const Icon = s.icon;
           return (
-            <Card key={s.title} className="hover:border-white/10 transition-colors">
+            <Card key={s.title} className="border-0 bg-brand-cobalt shadow-md shadow-brand-cobalt/20 hover:shadow-lg transition-shadow">
               <CardContent className="p-6">
                 {s.loading ? (
                   <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-8 w-16" />
+                    <Skeleton className="h-4 w-24 bg-white/20" />
+                    <Skeleton className="h-8 w-16 bg-white/20" />
                   </div>
                 ) : (
                   <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-lg ${s.bg}`}>
-                      <Icon className={`h-5 w-5 ${s.color}`} />
+                    <div className="p-3 rounded-xl bg-accent-gold">
+                      <Icon className="h-5 w-5 text-[#1F2937]" />
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">{s.title}</p>
-                      <p className="text-2xl font-bold text-foreground">{s.value}</p>
+                      <p className="text-xs text-blue-100">{s.title}</p>
+                      <p className="text-2xl font-bold text-white">{s.value}</p>
                     </div>
                   </div>
                 )}
@@ -204,7 +168,7 @@ export function DashboardPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Agenda de hoje</CardTitle>
-          <Link to="/agenda" className="text-sm text-primary hover:underline">
+          <Link to="/agenda" className="text-sm text-accent-gold hover:text-accent-gold-hover hover:underline">
             Ver agenda completa
           </Link>
         </CardHeader>

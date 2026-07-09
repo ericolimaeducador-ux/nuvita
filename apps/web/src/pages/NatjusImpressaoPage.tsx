@@ -90,7 +90,7 @@ export function NatjusImpressaoPage() {
 
   return (
     <>
-      <div className="print:hidden flex items-center gap-3 p-4 border-b border-white/5">
+      <div className="print:hidden flex items-center gap-3 p-4 border-b border-border">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4" />
         </Button>

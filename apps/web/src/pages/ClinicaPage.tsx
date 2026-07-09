@@ -53,7 +53,7 @@ export function ClinicaPage() {
       />
 
       <div className="flex items-start gap-3 glass rounded-xl p-4 mb-6 border-blue-500/20">
-        <Info className="h-4 w-4 text-blue-400 mt-0.5 shrink-0" />
+        <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
         <div>
           <p className="text-sm font-medium text-foreground">Novo usuário da clínica</p>
           <p className="text-sm text-muted-foreground mt-0.5">

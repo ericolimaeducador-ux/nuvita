@@ -31,16 +31,16 @@ const ETAPAS: Array<{ key: 'todos' | EtapaFluxoClinico; label: string; icon: Rea
 ];
 
 const ETAPA_COLOR: Record<EtapaFluxoClinico, string> = {
-  [EtapaFluxoClinico.AGUARDANDO_ATENDIMENTO]: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
-  [EtapaFluxoClinico.AVALIACAO_IU]: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  [EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO]: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-  [EtapaFluxoClinico.ENTREVISTA_AGENDADA]: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-  [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  [EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA]: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-  [EtapaFluxoClinico.AGUARDANDO_ENVIO_JURIDICO]: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  [EtapaFluxoClinico.PROCESSO_JURIDICO]: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-  [EtapaFluxoClinico.NAO_ELEGIVEL]: 'bg-red-500/10 text-red-400 border-red-500/20',
-  [EtapaFluxoClinico.CONCLUIDO]: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  [EtapaFluxoClinico.AGUARDANDO_ATENDIMENTO]: 'bg-slate-500/10 text-slate-600 border-slate-500/20',
+  [EtapaFluxoClinico.AVALIACAO_IU]: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  [EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO]: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
+  [EtapaFluxoClinico.ENTREVISTA_AGENDADA]: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
+  [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  [EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA]: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
+  [EtapaFluxoClinico.AGUARDANDO_ENVIO_JURIDICO]: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+  [EtapaFluxoClinico.PROCESSO_JURIDICO]: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
+  [EtapaFluxoClinico.NAO_ELEGIVEL]: 'bg-red-500/10 text-red-600 border-red-500/20',
+  [EtapaFluxoClinico.CONCLUIDO]: 'bg-accent-gold/15 text-amber-700 border-accent-gold/30',
 };
 
 function EtapaChip({ etapa }: { etapa: EtapaFluxoClinico }) {
@@ -57,10 +57,10 @@ function PrazoBadge({ paciente }: { paciente: Paciente }) {
   if (info.diasLimite === undefined) return <span className="text-muted-foreground text-sm">—</span>;
 
   if (info.atrasado) {
-    return <span className="text-red-400 text-sm font-medium">Atrasado {Math.abs(info.diasRestantes!)}d</span>;
+    return <span className="text-red-600 text-sm font-medium">Atrasado {Math.abs(info.diasRestantes!)}d</span>;
   }
   if ((info.diasRestantes ?? 99) <= 3) {
-    return <span className="text-amber-400 text-sm font-medium">{info.diasRestantes}d restantes</span>;
+    return <span className="text-amber-600 text-sm font-medium">{info.diasRestantes}d restantes</span>;
   }
   return <span className="text-muted-foreground text-sm">{info.diasRestantes}d restantes</span>;
 }
@@ -97,7 +97,7 @@ export function FluxoClinicoPage() {
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-all',
               filtroEtapa === key
                 ? 'bg-primary/10 text-primary border-primary/30'
-                : 'bg-card/40 text-muted-foreground border-white/5 hover:bg-white/5'
+                : 'bg-card text-muted-foreground border-border hover:bg-secondary'
             )}
           >
             <Icon className="h-3.5 w-3.5" />
@@ -131,7 +131,7 @@ export function FluxoClinicoPage() {
               </TableHeader>
               <TableBody>
                 {pacientes.map((p) => (
-                  <TableRow key={p.id} className="cursor-pointer hover:bg-white/5" onClick={() => navigate(`/fluxo-clinico/${p.id}`)}>
+                  <TableRow key={p.id} className="cursor-pointer hover:bg-secondary" onClick={() => navigate(`/fluxo-clinico/${p.id}`)}>
                     <TableCell className="font-medium">{p.nome}</TableCell>
                     <TableCell>{p.dataNascimento ? idade(p.dataNascimento) : '—'}</TableCell>
                     <TableCell>{p.etapaFluxo ? <EtapaChip etapa={p.etapaFluxo} /> : '—'}</TableCell>

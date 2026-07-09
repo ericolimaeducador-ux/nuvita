@@ -16,6 +16,11 @@ export default {
         muted: { DEFAULT: 'hsl(var(--muted))', foreground: 'hsl(var(--muted-foreground))' },
         accent: { DEFAULT: 'hsl(var(--accent))', foreground: 'hsl(var(--accent-foreground))' },
         card: { DEFAULT: 'hsl(var(--card))', foreground: 'hsl(var(--card-foreground))' },
+        // Identidade "Energia e Confiança Premium"
+        'brand-cobalt': { DEFAULT: '#0047AB', dark: '#003380' },
+        'accent-gold': { DEFAULT: '#FFB800', hover: '#E6A600' },
+        'bg-dark': '#0B1120',
+        'surface-dark': '#1E293B',
       },
       borderRadius: { lg: 'var(--radius)', md: 'calc(var(--radius) - 2px)', sm: 'calc(var(--radius) - 4px)' },
       fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },

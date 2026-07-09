@@ -4,9 +4,9 @@ import { useToast, Toast } from './use-toast';
 
 function ToastItem({ toast }: { toast: Toast }) {
   const icons = {
-    success: <CheckCircle className="h-4 w-4 text-emerald-400" />,
-    destructive: <AlertCircle className="h-4 w-4 text-red-400" />,
-    default: <Info className="h-4 w-4 text-blue-400" />,
+    success: <CheckCircle className="h-4 w-4 text-emerald-600" />,
+    destructive: <AlertCircle className="h-4 w-4 text-red-600" />,
+    default: <Info className="h-4 w-4 text-blue-600" />,
   };
   return (
     <div className={cn(

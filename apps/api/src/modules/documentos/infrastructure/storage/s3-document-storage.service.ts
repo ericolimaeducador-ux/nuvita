@@ -32,6 +32,13 @@ export class S3DocumentStorageService implements DocumentStorage {
         accessKeyId: configService.getConfig().documentStorageAccessKeyId,
         secretAccessKey: configService.getConfig().documentStorageSecretAccessKey,
       },
+      // A partir do @aws-sdk/client-s3 3.729 o SDK adiciona checksum CRC32 por
+      // padrão. Em URLs presignadas isso injeta um x-amz-checksum-crc32 calculado
+      // SEM corpo (= CRC32 de vazio) e novos parâmetros que o Cloudflare R2 não
+      // aceita — quebrando o preflight CORS e o PUT do browser. WHEN_REQUIRED
+      // restaura o comportamento anterior (só assina o que precisamos).
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
     });
   }
 

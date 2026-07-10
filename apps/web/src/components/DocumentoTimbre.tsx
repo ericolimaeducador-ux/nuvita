@@ -1,4 +1,5 @@
 import { brand } from '@/lib/brand';
+import { Logo } from '@/components/Logo';
 
 /**
  * Timbre (cabeçalho) padrão da Nuvita para documentos impressos / gerados em PDF.
@@ -7,7 +8,7 @@ import { brand } from '@/lib/brand';
 export function DocumentoTimbre() {
   return (
     <header className="flex items-start justify-between gap-4 mb-5 pb-4 border-b border-gray-300">
-      <img src={brand.logo.color} alt={`${brand.nome} — ${brand.slogan}`} className="h-12 w-auto" />
+      <Logo width={150} iconColor="#E6A600" textColor="#111827" />
       <div className="text-right text-[10px] leading-snug text-gray-600">
         <p className="font-semibold text-gray-800">{brand.nome} — {brand.slogan}</p>
         <p>CNPJ {brand.cnpj}</p>

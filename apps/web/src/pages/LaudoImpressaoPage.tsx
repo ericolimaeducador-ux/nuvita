@@ -1,12 +1,65 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import dayjs from 'dayjs';
-import { Printer, ArrowLeft } from 'lucide-react';
+import { Printer, ArrowLeft, FileDown } from 'lucide-react';
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } from 'docx';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { laudoMedicoApi, pacientesApi } from '@/api/resources';
 import { formatData } from '@/utils';
-import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
+import type { LaudoMedico, Paciente } from '@/types';
+
+/** Monta o .docx do relatório médico — mesmo conteúdo da tela, sem logo/rodapé, assinatura em branco. */
+async function gerarDocxLaudo(laudo: LaudoMedico | undefined, paciente: Paciente | undefined) {
+  const rotulo = (texto: string) => new TextRun({ text: texto, bold: true });
+
+  const linhas: (Paragraph | Table)[] = [
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [new TextRun({ text: '================== RELATÓRIO MÉDICO ======================', bold: true, font: 'Courier New' })],
+      spacing: { after: 300 },
+    }),
+    new Paragraph({ children: [rotulo('Nome: '), new TextRun(paciente?.nome ?? '—')] }),
+    new Paragraph({ children: [rotulo('CPF: '), new TextRun(paciente?.cpf ?? '—')] }),
+    new Paragraph({ children: [rotulo('Data de Nascimento: '), new TextRun(formatData(paciente?.dataNascimento))] }),
+    new Paragraph({ children: [rotulo('Sexo: '), new TextRun(paciente?.sexo ?? '—')], spacing: { after: 200 } }),
+    new Paragraph({ children: [rotulo('Data do Laudo: '), new TextRun(formatData(laudo?.dataLaudo))] }),
+    new Paragraph({ children: [rotulo('CID-10: '), new TextRun(laudo?.cid10?.join(', ') ?? '—')], spacing: { after: 200 } }),
+    new Paragraph({ children: [rotulo('Justificativa Médica')], spacing: { after: 100 } }),
+    new Paragraph({ children: [new TextRun(laudo?.justificativaMedica ?? '—')], spacing: { after: 200 } }),
+    new Paragraph({ children: [rotulo('Fundamento Legal')], spacing: { after: 100 } }),
+    new Paragraph({ children: [new TextRun(laudo?.fundamentoLegal ?? '—')], spacing: { after: 200 } }),
+  ];
+
+  if (laudo?.produtosSolicitados && laudo.produtosSolicitados.length > 0) {
+    const celula = (texto: string, negrito = false) =>
+      new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: texto, bold: negrito })] })] });
+
+    linhas.push(
+      new Paragraph({ children: [rotulo('Produtos Solicitados')], spacing: { before: 100, after: 100 } }),
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({
+            children: [celula('Descrição', true), celula('Código SIAFISICO', true), celula('Quantidade', true), celula('Unidade', true)],
+          }),
+          ...laudo.produtosSolicitados.map(
+            (p) => new TableRow({ children: [celula(p.descricao), celula(p.codigoSiafisico != null ? String(p.codigoSiafisico) : '—'), celula(String(p.quantidade)), celula(p.unidade)] }),
+          ),
+        ],
+      }),
+    );
+  }
+
+  linhas.push(
+    new Paragraph({ text: '', spacing: { before: 800 } }),
+    new Paragraph({ text: '_____________________________________' }),
+    new Paragraph({ children: [new TextRun({ text: 'Médico Responsável', bold: true })] }),
+    new Paragraph({ text: 'CRM: ___________' }),
+  );
+
+  const doc = new Document({ sections: [{ children: linhas }] });
+  return Packer.toBlob(doc);
+}
 
 export function LaudoImpressaoPage() {
   const { id: pacienteId, laudoId } = useParams<{ id: string; laudoId: string }>();
@@ -26,6 +79,16 @@ export function LaudoImpressaoPage() {
   const paciente = pacienteQ.data;
   const laudo = laudoQ.data;
 
+  async function baixarDocx() {
+    const blob = await gerarDocxLaudo(laudo, paciente);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `relatorio-medico-${paciente?.nome?.replace(/\s+/g, '-').toLowerCase() ?? pacienteId}.docx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   if (laudoQ.isLoading || pacienteQ.isLoading) {
     return <div className="p-8 space-y-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-48 w-full" /></div>;
   }
@@ -38,20 +101,21 @@ export function LaudoImpressaoPage() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <span className="text-sm text-muted-foreground">Prévia do Laudo Médico</span>
-        <Button size="sm" className="ml-auto" onClick={() => window.print()}>
+        <Button variant="outline" size="sm" className="ml-auto" onClick={() => void baixarDocx()}>
+          <FileDown className="h-4 w-4 mr-2" /> Baixar .doc
+        </Button>
+        <Button size="sm" onClick={() => window.print()}>
           <Printer className="h-4 w-4 mr-2" /> Imprimir / Salvar PDF
         </Button>
       </div>
 
       {/* Conteúdo imprimível */}
       <div className="laudo-print max-w-3xl mx-auto p-8 text-gray-900 bg-white min-h-screen print:min-h-0 print:max-w-full">
-        {/* Timbre Nuvita */}
-        <DocumentoTimbre />
-
-        {/* Cabeçalho */}
-        <div className="text-center border-b-2 border-gray-800 pb-4 mb-6">
-          <h1 className="text-xl font-bold uppercase tracking-wide">LAUDO MÉDICO</h1>
-          <p className="text-sm text-gray-600 mt-1">Solicitação de Material junto ao SUS — Lei nº 8.080/90</p>
+        {/* Cabeçalho — sem logo nem dados da clínica, apenas o título do documento */}
+        <div className="text-center pb-4 mb-6">
+          <p className="font-mono font-bold text-sm tracking-wide whitespace-pre">
+            ================== RELATÓRIO MÉDICO ======================
+          </p>
         </div>
 
         {/* Dados do paciente */}
@@ -123,14 +187,9 @@ export function LaudoImpressaoPage() {
           </section>
         )}
 
-        {/* Assinatura */}
-        <div className="mt-16 print:mt-10 flex justify-between items-end break-inside-avoid">
+        {/* Assinatura — em branco para carimbo e assinatura física do médico */}
+        <div className="mt-24 print:mt-20 flex justify-between items-end break-inside-avoid">
           <div className="text-center min-w-52">
-            {laudo?.assinado && (
-              <div className="border border-gray-400 rounded px-3 py-1 text-xs text-gray-600 mb-2 inline-block">
-                ✓ Assinado digitalmente em {laudo.assinado.dataAssinatura ? dayjs(laudo.assinado.dataAssinatura).format('DD/MM/YYYY HH:mm') : '—'}
-              </div>
-            )}
             <div className="border-t-2 border-gray-800 pt-1">
               <p className="text-sm font-semibold">Médico Responsável</p>
               <p className="text-xs text-gray-600">CRM: ___________</p>
@@ -141,8 +200,6 @@ export function LaudoImpressaoPage() {
             <p>_____________________________</p>
           </div>
         </div>
-
-        <DocumentoRodape />
       </div>
 
       <style>{`

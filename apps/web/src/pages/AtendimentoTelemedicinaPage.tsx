@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Mic, MicOff, PhoneOff, Video, VideoOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { teleAcessoApi } from '@/api/resources';
-import { brand } from '@/lib/brand';
+import { Logo, LogoIcon } from '@/components/Logo';
 import {
   MODALIDADE_LABEL,
   PapelSala,
@@ -395,7 +395,7 @@ export function AtendimentoTelemedicinaPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950 p-6">
         <div className="max-w-md w-full text-center space-y-4">
-          <img src={brand.logo.light} alt={brand.nome} className="h-10 mx-auto" />
+          <Logo width={125} className="mx-auto" />
           <h1 className="text-xl font-semibold text-white">{tituloModalidade}</h1>
           <p className="text-slate-300">{mensagemFinal}</p>
         </div>
@@ -408,7 +408,7 @@ export function AtendimentoTelemedicinaPage() {
       <div className="min-h-screen flex items-center justify-center bg-slate-950 p-6">
         <div className="max-w-lg w-full space-y-5">
           <div className="text-center space-y-2">
-            <img src={brand.logo.light} alt={brand.nome} className="h-10 mx-auto" />
+            <Logo width={125} className="mx-auto" />
             <h1 className="text-xl font-semibold text-white">{tituloModalidade}</h1>
             <p className="text-sm text-slate-400">
               Confira sua câmera e microfone antes de entrar.
@@ -446,7 +446,7 @@ export function AtendimentoTelemedicinaPage() {
       {!remotoPresente && (
         <div className="absolute inset-0 flex items-center justify-center bg-slate-950">
           <div className="text-center space-y-3">
-            <img src={brand.logo.light} alt={brand.nome} className="h-8 mx-auto opacity-80" />
+            <Logo width={100} className="mx-auto opacity-80" />
             <p className="text-slate-300">{ESTADO_CONEXAO_LABEL[conexao]}</p>
             <p className="text-xs text-slate-500">
               {papel === PapelSala.PROFISSIONAL
@@ -459,7 +459,7 @@ export function AtendimentoTelemedicinaPage() {
 
       <div className="absolute top-0 inset-x-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-slate-950/90 to-transparent">
         <div className="flex items-center gap-3">
-          <img src={brand.mark.light} alt="" className="h-7" />
+          <LogoIcon size={28} />
           <div>
             <p className="text-sm font-medium text-white leading-tight">{tituloModalidade}</p>
             <p className="text-xs text-slate-400 leading-tight">{ESTADO_CONEXAO_LABEL[conexao]}</p>

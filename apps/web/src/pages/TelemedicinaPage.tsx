@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { Plus, Search, Copy, PowerOff } from 'lucide-react';
+import { Plus, Search, Copy, PowerOff, Video, History } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,10 +18,20 @@ import { toast } from '@/components/ui/use-toast';
 import {
   ModalidadeAtendimento,
   MODALIDADE_LABEL,
+  PAPEL_SALA_LABEL,
   StatusSala,
   STATUS_SALA_LABEL,
+  TIPO_EVENTO_SALA_LABEL,
+  TipoEventoSala,
+  type SalaEvento,
   type SalaTelemedicina,
 } from '@/types';
+
+/** URL pública da sala — é este link que o paciente recebe (WhatsApp, e-mail…). */
+function linkDaSala(token: string): string {
+  const base = `${window.location.origin}${import.meta.env.BASE_URL}`;
+  return `${base.replace(/\/+$/, '')}/tele/${token}`;
+}
 
 function salaVariant(s: StatusSala): 'default' | 'success' | 'destructive' | 'secondary' {
   if (s === StatusSala.AGUARDANDO) return 'default';
@@ -30,13 +40,34 @@ function salaVariant(s: StatusSala): 'default' | 'success' | 'destructive' | 'se
   return 'secondary';
 }
 
+function duracaoAtendimento(sala: SalaTelemedicina): string | null {
+  if (!sala.iniciadaEm || !sala.encerradaEm) return null;
+  const minutos = dayjs(sala.encerradaEm).diff(dayjs(sala.iniciadaEm), 'minute');
+  const segundos = dayjs(sala.encerradaEm).diff(dayjs(sala.iniciadaEm), 'second') % 60;
+  return `${minutos}min ${segundos}s`;
+}
+
+function eventoVariant(tipo: TipoEventoSala): 'default' | 'success' | 'destructive' | 'secondary' {
+  if (tipo === TipoEventoSala.ENTROU || tipo === TipoEventoSala.RECONECTOU) return 'success';
+  if (tipo === TipoEventoSala.DESCONECTOU || tipo === TipoEventoSala.FALHA_CONEXAO || tipo === TipoEventoSala.MIDIA_NEGADA)
+    return 'destructive';
+  return 'secondary';
+}
+
 function SalaCard({ sala, onEncerrar, loading }: { sala: SalaTelemedicina; onEncerrar: () => void; loading: boolean }) {
-  function copiar(token: string) {
-    void navigator.clipboard.writeText(token);
-    toast.success('Token copiado.');
+  function copiarLink(token: string, quem: string) {
+    void navigator.clipboard.writeText(linkDaSala(token));
+    toast.success(`Link do ${quem} copiado.`);
   }
 
   const ativa = sala.status === StatusSala.AGUARDANDO || sala.status === StatusSala.EM_ANDAMENTO;
+  const duracao = duracaoAtendimento(sala);
+
+  const eventosQ = useQuery({
+    queryKey: ['telemedicina', 'eventos', sala.id],
+    queryFn: () => telemedicinaApi.eventos(sala.id),
+    refetchInterval: ativa ? 15_000 : false,
+  });
 
   return (
     <Card>
@@ -54,7 +85,7 @@ function SalaCard({ sala, onEncerrar, loading }: { sala: SalaTelemedicina; onEnc
         )}
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
           <div>
             <p className="text-muted-foreground text-xs">Modalidade</p>
             <p className="font-medium">{MODALIDADE_LABEL[sala.modalidade as ModalidadeAtendimento] ?? sala.modalidade}</p>
@@ -73,29 +104,68 @@ function SalaCard({ sala, onEncerrar, loading }: { sala: SalaTelemedicina; onEnc
               <p className="font-medium">{dayjs(sala.iniciadaEm).format('DD/MM/YYYY HH:mm')}</p>
             </div>
           )}
+          {sala.encerradaEm && (
+            <div>
+              <p className="text-muted-foreground text-xs">Encerrada em</p>
+              <p className="font-medium">{dayjs(sala.encerradaEm).format('DD/MM/YYYY HH:mm')}</p>
+            </div>
+          )}
+          {duracao && (
+            <div>
+              <p className="text-muted-foreground text-xs">Duração</p>
+              <p className="font-medium">{duracao}</p>
+            </div>
+          )}
         </div>
+
+        {ativa && (
+          <>
+            <Separator />
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button className="flex-1" onClick={() => window.open(linkDaSala(sala.tokenMedico), '_blank')}>
+                <Video className="mr-2 h-4 w-4" /> Entrar na sala (profissional)
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => copiarLink(sala.tokenPaciente, 'paciente')}
+              >
+                <Copy className="mr-2 h-4 w-4" /> Copiar link do paciente
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Envie o link ao paciente por WhatsApp ou e-mail — ele entra direto pelo navegador, sem login. O link
+              expira em {dayjs(sala.expiresAt).format('HH:mm')}.
+            </p>
+          </>
+        )}
 
         <Separator />
 
-        <div className="space-y-3">
-          <div className="glass rounded-lg p-3">
-            <p className="text-xs text-muted-foreground mb-1">Token do profissional</p>
-            <div className="flex items-center gap-2">
-              <code className="text-xs font-mono text-primary flex-1 truncate">{sala.tokenMedico.slice(0, 24)}…</code>
-              <Button variant="ghost" size="icon" onClick={() => copiar(sala.tokenMedico)}>
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <div className="glass rounded-lg p-3">
-            <p className="text-xs text-muted-foreground mb-1">Token do paciente</p>
-            <div className="flex items-center gap-2">
-              <code className="text-xs font-mono text-emerald-600 flex-1 truncate">{sala.tokenPaciente.slice(0, 24)}…</code>
-              <Button variant="ghost" size="icon" onClick={() => copiar(sala.tokenPaciente)}>
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+        <div>
+          <p className="flex items-center gap-1.5 text-sm font-medium mb-2">
+            <History className="h-4 w-4" /> Registro do atendimento
+          </p>
+          {eventosQ.isLoading && <p className="text-sm text-muted-foreground">Carregando registro…</p>}
+          {eventosQ.data && eventosQ.data.length === 0 && (
+            <p className="text-sm text-muted-foreground">Nenhum evento registrado ainda — o registro começa quando alguém entra na sala.</p>
+          )}
+          {eventosQ.data && eventosQ.data.length > 0 && (
+            <ul className="space-y-1.5">
+              {eventosQ.data.map((ev: SalaEvento) => (
+                <li key={ev.id} className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground font-mono text-xs whitespace-nowrap">
+                    {dayjs(ev.criadoEm).format('DD/MM HH:mm:ss')}
+                  </span>
+                  <Badge variant={eventoVariant(ev.tipo)} className="font-normal">
+                    {TIPO_EVENTO_SALA_LABEL[ev.tipo] ?? ev.tipo}
+                  </Badge>
+                  <span className="text-muted-foreground">{PAPEL_SALA_LABEL[ev.papel] ?? ev.papel}</span>
+                  {ev.detalhes && <span className="text-xs text-muted-foreground truncate">— {ev.detalhes}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </CardContent>
     </Card>

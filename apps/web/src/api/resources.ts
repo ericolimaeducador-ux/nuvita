@@ -24,7 +24,13 @@ import type {
   ProcessoJuridico,
   Produto,
   Prontuario,
+  SalaAcessoInfo,
+  SalaEvento,
   SalaTelemedicina,
+  SinalSala,
+  StatusSala,
+  TipoEventoSala,
+  TipoSinal,
   StatusAgendamento,
   StatusProcesso,
   TipoAgendamento,
@@ -236,6 +242,38 @@ export const telemedicinaApi = {
     api.get<SalaTelemedicina>(`/telemedicina/salas/${id}`).then((r) => r.data),
   encerrar: (id: string) =>
     api.patch(`/telemedicina/salas/${id}/encerrar`).then((r) => r.data),
+  eventos: (salaId: string) =>
+    api.get<SalaEvento[]>(`/telemedicina/salas/${salaId}/eventos`).then((r) => r.data),
+};
+
+// Acesso à sala pelo token do link (paciente entra sem login; o token é a credencial).
+export interface EntrarSalaResponse {
+  salaId: string;
+  papel: string;
+  iceServers: RTCIceServer[];
+}
+
+export const teleAcessoApi = {
+  info: (token: string) =>
+    api.get<SalaAcessoInfo>(`/telemedicina/acesso/${token}`).then((r) => r.data),
+  entrar: (token: string) =>
+    api.post<EntrarSalaResponse>(`/telemedicina/acesso/${token}/entrar`).then((r) => r.data),
+  enviarSinal: (token: string, tipo: TipoSinal, payload: unknown) =>
+    api.post(`/telemedicina/acesso/${token}/sinais`, { tipo, payload }).then((r) => r.data),
+  sinais: (token: string, after?: string) =>
+    api
+      .get<{ status: StatusSala; sinais: SinalSala[] }>(`/telemedicina/acesso/${token}/sinais`, {
+        params: after ? { after } : {},
+      })
+      .then((r) => r.data),
+  evento: (token: string, tipo: TipoEventoSala, detalhes?: string) =>
+    api.post(`/telemedicina/acesso/${token}/eventos`, { tipo, detalhes }).then((r) => r.data),
+  /** Envio confiável ao fechar a aba (sendBeacon sobrevive ao unload). */
+  eventoBeacon: (token: string, tipo: TipoEventoSala) => {
+    const url = `${api.defaults.baseURL ?? ''}/telemedicina/acesso/${token}/eventos`;
+    const body = new Blob([JSON.stringify({ tipo })], { type: 'application/json' });
+    navigator.sendBeacon(url, body);
+  },
 };
 
 // ---------- Produtos ----------

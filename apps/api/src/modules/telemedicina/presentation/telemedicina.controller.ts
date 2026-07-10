@@ -49,6 +49,17 @@ export class TelemedicinaController {
     return this.telemedicinaService.joinSala(token, this.ctx(req, user));
   }
 
+  @Get('salas/:id/eventos')
+  @Roles(...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
+  listarEventos(
+    @Param('id') id: string,
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() req: Request,
+  ) {
+    return this.telemedicinaService.listarEventos(id, clinicaId, this.ctx(req, user));
+  }
+
   @Patch('salas/:id/encerrar')
   @Roles(...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   encerrarSala(

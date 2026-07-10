@@ -11,6 +11,7 @@ import { DocumentosPage } from '@/pages/DocumentosPage';
 import { NotificacoesPage } from '@/pages/NotificacoesPage';
 import { FinanceiroPage } from '@/pages/FinanceiroPage';
 import { TelemedicinaPage } from '@/pages/TelemedicinaPage';
+import { AtendimentoTelemedicinaPage } from '@/pages/AtendimentoTelemedicinaPage';
 import { ClinicaPage } from '@/pages/ClinicaPage';
 import { FluxoClinicoPage } from '@/pages/FluxoClinicoPage';
 import { FluxoPacientePage } from '@/pages/FluxoPacientePage';
@@ -29,6 +30,9 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      {/* Sala de teleatendimento é PÚBLICA: o paciente entra pelo link com o
+          token da sala, sem conta no sistema. O token UUID é a credencial. */}
+      <Route path="/tele/:token" element={<AtendimentoTelemedicinaPage />} />
       <Route element={<ProtectedRoute />}>
         {/* Páginas de impressão FORA do AppLayout: o documento sai limpo
             (sem sidebar/header do site) tanto na tela quanto no print/PDF. */}

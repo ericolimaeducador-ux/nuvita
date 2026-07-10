@@ -684,6 +684,75 @@ export interface SalaTelemedicina {
   criadoEm: string;
 }
 
+export enum PapelSala {
+  PROFISSIONAL = 'profissional',
+  PACIENTE = 'paciente',
+}
+
+export const PAPEL_SALA_LABEL: Record<PapelSala, string> = {
+  [PapelSala.PROFISSIONAL]: 'Profissional',
+  [PapelSala.PACIENTE]: 'Paciente',
+};
+
+export enum TipoEventoSala {
+  ENTROU = 'entrou',
+  SAIU = 'saiu',
+  DESCONECTOU = 'desconectou',
+  RECONECTOU = 'reconectou',
+  FALHA_CONEXAO = 'falha_conexao',
+  MIDIA_NEGADA = 'midia_negada',
+  ENCERRADA = 'encerrada',
+}
+
+export const TIPO_EVENTO_SALA_LABEL: Record<TipoEventoSala, string> = {
+  [TipoEventoSala.ENTROU]: 'Entrou na sala',
+  [TipoEventoSala.SAIU]: 'Saiu da sala',
+  [TipoEventoSala.DESCONECTOU]: 'Conexão perdida',
+  [TipoEventoSala.RECONECTOU]: 'Reconectou',
+  [TipoEventoSala.FALHA_CONEXAO]: 'Falha de conexão',
+  [TipoEventoSala.MIDIA_NEGADA]: 'Câmera/microfone negados',
+  [TipoEventoSala.ENCERRADA]: 'Atendimento encerrado',
+};
+
+export interface SalaEvento {
+  id: string;
+  clinicaId: string;
+  salaId: string;
+  papel: PapelSala;
+  tipo: TipoEventoSala;
+  detalhes?: string;
+  criadoEm: string;
+}
+
+/** Estado da sala visto por quem entra com o token (sem dados sensíveis). */
+export interface SalaAcessoInfo {
+  salaId: string;
+  papel: PapelSala;
+  status: StatusSala;
+  modalidade: ModalidadeAtendimento;
+  expiresAt: string;
+  iniciadaEm?: string;
+  encerradaEm?: string;
+}
+
+export enum TipoSinal {
+  /** Paciente anuncia presença; o profissional responde com uma (re)oferta. */
+  PRONTO = 'pronto',
+  OFFER = 'offer',
+  ANSWER = 'answer',
+  CANDIDATE = 'candidate',
+  BYE = 'bye',
+}
+
+export interface SinalSala {
+  id: string;
+  salaId: string;
+  de: PapelSala;
+  tipo: TipoSinal;
+  payload: unknown;
+  criadoEm: string;
+}
+
 // ---------- Fluxo Clínico — Avaliação de Incontinência Urinária ----------
 
 export enum LocalAtendimento {

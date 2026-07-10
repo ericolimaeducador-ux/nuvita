@@ -1,28 +1,32 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { Plus, Search, Copy, PowerOff, Video, History } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { telemedicinaApi, type CreateSalaPayload } from '@/api/resources';
+import { agendaApi, pacientesApi, telemedicinaApi, type CreateSalaPayload } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
+import { toItems, formatCpf } from '@/utils';
 import {
   ModalidadeAtendimento,
   MODALIDADE_LABEL,
   PAPEL_SALA_LABEL,
+  StatusAgendamento,
   StatusSala,
   STATUS_SALA_LABEL,
+  TIPO_AGENDAMENTO_LABEL,
   TIPO_EVENTO_SALA_LABEL,
   TipoEventoSala,
+  type Agendamento,
+  type Paciente,
   type SalaEvento,
   type SalaTelemedicina,
 } from '@/types';
@@ -54,7 +58,17 @@ function eventoVariant(tipo: TipoEventoSala): 'default' | 'success' | 'destructi
   return 'secondary';
 }
 
-function SalaCard({ sala, onEncerrar, loading }: { sala: SalaTelemedicina; onEncerrar: () => void; loading: boolean }) {
+function SalaCard({
+  sala,
+  paciente,
+  onEncerrar,
+  loading,
+}: {
+  sala: SalaTelemedicina;
+  paciente?: Paciente;
+  onEncerrar: () => void;
+  loading: boolean;
+}) {
   function copiarLink(token: string, quem: string) {
     void navigator.clipboard.writeText(linkDaSala(token));
     toast.success(`Link do ${quem} copiado.`);
@@ -72,11 +86,19 @@ function SalaCard({ sala, onEncerrar, loading }: { sala: SalaTelemedicina; onEnc
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <CardTitle>Sala de telemedicina</CardTitle>
-          <Badge variant={salaVariant(sala.status as StatusSala)}>
-            {STATUS_SALA_LABEL[sala.status as StatusSala] ?? sala.status}
-          </Badge>
+        <div>
+          <div className="flex items-center gap-2">
+            <CardTitle>Sala de telemedicina</CardTitle>
+            <Badge variant={salaVariant(sala.status as StatusSala)}>
+              {STATUS_SALA_LABEL[sala.status as StatusSala] ?? sala.status}
+            </Badge>
+          </div>
+          {paciente && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {paciente.nome}
+              {paciente.cpf && ` — CPF ${formatCpf(paciente.cpf)}`}
+            </p>
+          )}
         </div>
         {ativa && (
           <Button variant="destructive" size="sm" disabled={loading} onClick={onEncerrar}>
@@ -183,6 +205,32 @@ export function TelemedicinaPage() {
   const [fPacId, setFPacId] = useState('');
   const [fModalidade, setFModalidade] = useState<ModalidadeAtendimento | ''>('');
 
+  const janelaInicio = useMemo(() => dayjs().subtract(30, 'day').startOf('day').toISOString(), []);
+  const janelaFim = useMemo(() => dayjs().add(30, 'day').endOf('day').toISOString(), []);
+
+  const agendamentosQ = useQuery({
+    queryKey: ['agenda', 'telemedicina-select', janelaInicio, janelaFim],
+    queryFn: () => agendaApi.list({ dataInicio: janelaInicio, dataFim: janelaFim }),
+  });
+  const pacientesQ = useQuery({ queryKey: ['pacientes', 'select'], queryFn: () => pacientesApi.list({ limit: 100 }) });
+
+  const agendamentos = toItems<Agendamento>(agendamentosQ.data as never);
+  const pacientes = toItems<Paciente>(pacientesQ.data as never);
+  const pacientePorId = useMemo(() => new Map(pacientes.map((p) => [p.id, p])), [pacientes]);
+
+  const agendamentosCriaveis = useMemo(
+    () =>
+      agendamentos.filter(
+        (a) => a.status === StatusAgendamento.AGENDADO || a.status === StatusAgendamento.CONFIRMADO,
+      ),
+    [agendamentos],
+  );
+
+  function labelAgendamento(a: Agendamento): string {
+    const nome = a.pacienteNome ?? pacientePorId.get(a.pacienteId)?.nome ?? a.pacienteId;
+    return `${nome} — ${dayjs(a.dataHoraInicio).format('DD/MM HH:mm')} — ${TIPO_AGENDAMENTO_LABEL[a.tipo]}`;
+  }
+
   const buscarQ = useQuery({
     queryKey: ['telemedicina', 'sala', buscarId],
     queryFn: () => telemedicinaApi.findByAgendamento(buscarId),
@@ -208,9 +256,16 @@ export function TelemedicinaPage() {
   });
 
   function handleBuscar() {
-    if (!agendamentoId.trim()) return;
+    if (!agendamentoId) return;
     setSala(null);
-    setBuscarId(agendamentoId.trim());
+    setBuscarId(agendamentoId);
+  }
+
+  function handleSelecionarAgendamento(id: string) {
+    const ag = agendamentos.find((a) => a.id === id);
+    setFAgId(id);
+    setFPacId(ag?.pacienteId ?? '');
+    if (ag) setFModalidade(ag.modalidade);
   }
 
   function handleCreate() {
@@ -219,6 +274,7 @@ export function TelemedicinaPage() {
   }
 
   const salaExibida = sala ?? (buscarQ.data as SalaTelemedicina | undefined);
+  const pacienteExibido = salaExibida ? pacientePorId.get(salaExibida.pacienteId) : undefined;
 
   return (
     <div className="p-6">
@@ -237,12 +293,16 @@ export function TelemedicinaPage() {
         </CardHeader>
         <CardContent>
           <div className="flex gap-2 max-w-md">
-            <Input
-              placeholder="ID do agendamento"
-              value={agendamentoId}
-              onChange={(e) => setAgendamentoId(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleBuscar()}
-            />
+            <Select value={agendamentoId} onValueChange={setAgendamentoId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o agendamento" />
+              </SelectTrigger>
+              <SelectContent>
+                {agendamentos.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>{labelAgendamento(a)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button variant="outline" onClick={handleBuscar} disabled={buscarQ.isFetching}>
               <Search className="h-4 w-4 mr-2" /> Buscar
             </Button>
@@ -257,6 +317,7 @@ export function TelemedicinaPage() {
       {salaExibida && (
         <SalaCard
           sala={salaExibida}
+          paciente={pacienteExibido}
           onEncerrar={() => encerrarMut.mutate(salaExibida.id)}
           loading={encerrarMut.isPending}
         />
@@ -269,12 +330,17 @@ export function TelemedicinaPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="fAgId">ID do agendamento</Label>
-              <Input id="fAgId" placeholder="ID do agendamento" value={fAgId} onChange={(e) => setFAgId(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="fPacId">ID do paciente</Label>
-              <Input id="fPacId" placeholder="ID do paciente" value={fPacId} onChange={(e) => setFPacId(e.target.value)} />
+              <Label>Agendamento</Label>
+              <Select value={fAgId} onValueChange={handleSelecionarAgendamento}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o agendamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {agendamentosCriaveis.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{labelAgendamento(a)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Modalidade</Label>

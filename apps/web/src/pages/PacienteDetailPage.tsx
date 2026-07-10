@@ -869,6 +869,7 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
     >
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 glass rounded-xl p-4">
         <DescItem label="Nome" value={p.nome} />
+        <DescItem label="ID do paciente" value={pacienteId} />
         <DescItem label="CPF" value={formatCpf(p.cpf)} />
         <DescItem label="Nascimento" value={formatData(p.dataNascimento)} />
         <DescItem label="Sexo" value={p.sexo ? SEXO_LABEL[p.sexo] : '—'} />

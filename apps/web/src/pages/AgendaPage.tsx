@@ -18,7 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { agendaApi, pacientesApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
-import { toItems } from '@/utils';
+import { toItems, formatCpf } from '@/utils';
 import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import {
@@ -224,7 +224,10 @@ export function AgendaPage() {
                       <TableCell className="font-medium">
                         {dayjs(a.dataHoraInicio).format('HH:mm')} – {dayjs(a.dataHoraFim).format('HH:mm')}
                       </TableCell>
-                      <TableCell>{nomePorPacienteId.get(a.pacienteId) ?? a.pacienteId}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">{a.pacienteNome ?? nomePorPacienteId.get(a.pacienteId) ?? a.pacienteId}</div>
+                        {a.pacienteCpf && <div className="text-xs text-muted-foreground">CPF {formatCpf(a.pacienteCpf)}</div>}
+                      </TableCell>
                       <TableCell>{MODALIDADE_LABEL[a.modalidade] ?? a.modalidade}</TableCell>
                       <TableCell>{TIPO_AGENDAMENTO_LABEL[a.tipo] ?? a.tipo}</TableCell>
                       <TableCell>

@@ -131,6 +131,21 @@ export class PacientesService {
     return paciente;
   }
 
+  /**
+   * Resumo (nome + CPF) de vários pacientes por id, em lote e sem auditar cada
+   * acesso individualmente — usado para identificar pacientes com segurança em
+   * telas como a Agenda (nome completo + CPF eliminam erro de paciente errado).
+   */
+  async resumoPorIds(
+    clinicaId: string,
+    pacienteIds: string[],
+  ): Promise<Map<string, { nome: string; cpf?: string }>> {
+    const unicos = [...new Set(pacienteIds.filter(Boolean))];
+    if (unicos.length === 0) return new Map();
+    const pacientes = await this.pacientes.findManyByIds(clinicaId, unicos);
+    return new Map(pacientes.map((p) => [p.id, { nome: p.nome, cpf: p.cpf }]));
+  }
+
   async update(
     pacienteId: string,
     dto: UpdatePacienteDto,

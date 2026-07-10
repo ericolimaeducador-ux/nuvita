@@ -70,7 +70,7 @@ export class AgendamentosService {
     });
 
     await this.audit(AuditEvent.APPOINTMENT_LISTED, context, { clinicaId, quantidade: agendamentos.length });
-    return agendamentos;
+    return this.comDadosDoPaciente(clinicaId, agendamentos);
   }
 
   async findOne(id: string, clinicaId: string | undefined, context: RequestAuditContext) {
@@ -80,7 +80,8 @@ export class AgendamentosService {
     if (!agendamento) throw new NotFoundException('Agendamento nao encontrado.');
 
     await this.audit(AuditEvent.APPOINTMENT_VIEWED, context, { clinicaId: resolvedClinicaId, agendamentoId: id });
-    return agendamento;
+    const [enriquecido] = await this.comDadosDoPaciente(resolvedClinicaId, [agendamento]);
+    return enriquecido;
   }
 
   async update(id: string, dto: UpdateAgendamentoDto, clinicaId: string | undefined, context: RequestAuditContext) {
@@ -183,6 +184,24 @@ export class AgendamentosService {
 
   private resolveClinicaId(user: AuthTokenPayload, requestedClinicaId?: string): string {
     return resolveTenantClinicaId(user, requestedClinicaId);
+  }
+
+  /** Anexa nome e CPF do paciente a cada agendamento p/ identificação segura na
+   * agenda — resolve em lote (evita N consultas) e tolera paciente inativado. */
+  private async comDadosDoPaciente<T extends { pacienteId: string }>(
+    clinicaId: string,
+    agendamentos: T[],
+  ): Promise<Array<T & { pacienteNome?: string; pacienteCpf?: string }>> {
+    if (agendamentos.length === 0) return [];
+    const resumo = await this.pacientesService.resumoPorIds(
+      clinicaId,
+      agendamentos.map((a) => a.pacienteId),
+    );
+    return agendamentos.map((a) => ({
+      ...a,
+      pacienteNome: resumo.get(a.pacienteId)?.nome,
+      pacienteCpf: resumo.get(a.pacienteId)?.cpf,
+    }));
   }
 
   private async audit(event: AuditEvent, context: RequestAuditContext, metadata: Record<string, unknown>) {

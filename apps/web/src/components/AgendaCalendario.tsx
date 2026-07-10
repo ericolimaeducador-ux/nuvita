@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { agendaApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toast } from '@/components/ui/use-toast';
-import { toItems } from '@/utils';
+import { toItems, formatCpf } from '@/utils';
 import {
   ModalidadeAtendimento, MODALIDADE_LABEL, StatusAgendamento, STATUS_AGENDAMENTO_LABEL,
   TIPO_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_POR_AGENDAMENTO,
@@ -80,7 +80,7 @@ export function AgendaCalendario({
   const eventos = useMemo<RBCEvent[]>(
     () =>
       agendamentos.map((a) => ({
-        title: `${dayjs(a.dataHoraInicio).format('HH:mm')} ${nomePorPacienteId.get(a.pacienteId) ?? ''}`.trim(),
+        title: `${dayjs(a.dataHoraInicio).format('HH:mm')} ${a.pacienteNome ?? nomePorPacienteId.get(a.pacienteId) ?? ''}`.trim(),
         start: new Date(a.dataHoraInicio),
         end: new Date(a.dataHoraFim),
         resource: a,
@@ -164,11 +164,12 @@ export function AgendaCalendario({
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  {nomePorPacienteId.get(selecionado.pacienteId) ?? selecionado.pacienteId}
+                  {selecionado.pacienteNome ?? nomePorPacienteId.get(selecionado.pacienteId) ?? selecionado.pacienteId}
                   <Badge variant="secondary">{STATUS_AGENDAMENTO_LABEL[selecionado.status]}</Badge>
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-2 text-sm">
+                {selecionado.pacienteCpf && <p><span className="text-muted-foreground">CPF:</span> {formatCpf(selecionado.pacienteCpf)}</p>}
                 <p><span className="text-muted-foreground">Data/hora:</span> {dayjs(selecionado.dataHoraInicio).format('DD/MM/YYYY HH:mm')} – {dayjs(selecionado.dataHoraFim).format('HH:mm')}</p>
                 <p><span className="text-muted-foreground">Modalidade:</span> {MODALIDADE_LABEL[selecionado.modalidade]}</p>
                 <p><span className="text-muted-foreground">Tipo:</span> {TIPO_AGENDAMENTO_LABEL[selecionado.tipo]}</p>

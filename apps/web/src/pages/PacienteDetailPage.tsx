@@ -122,6 +122,7 @@ export function PacienteDetailPage() {
   }, [location.state]);
 
   const [novoDocOpen, setNovoDocOpen] = useState(false);
+  const [docParaExcluir, setDocParaExcluir] = useState<Documento | null>(null);
   const [novaAvaliacaoOpen, setNovaAvaliacaoOpen] = useState(false);
   const [avaliacaoEdit, setAvaliacaoEdit] = useState<AvaliacaoIU | null>(null);
   const [novoLaudoOpen, setNovoLaudoOpen] = useState(false);
@@ -130,6 +131,15 @@ export function PacienteDetailPage() {
   const prontQ = useQuery({ queryKey: ['prontuarios', 'paciente', id], queryFn: () => prontuariosApi.list({ pacienteId: id }), enabled: !!id });
   const agendaQ = useQuery({ queryKey: ['agenda', 'paciente', id], queryFn: () => agendaApi.list({ pacienteId: id }), enabled: !!id });
   const docsQ = useQuery({ queryKey: ['documentos', 'paciente', id], queryFn: () => documentosApi.list({ pacienteId: id }), enabled: !!id });
+  const excluirDocMut = useMutation({
+    mutationFn: (docId: string) => documentosApi.excluir(docId),
+    onSuccess: () => {
+      toast.success('Documento excluído.');
+      setDocParaExcluir(null);
+      void qc.invalidateQueries({ queryKey: ['documentos', 'paciente', id] });
+    },
+    onError: (e) => toast.error('Erro ao excluir', apiErrorMessage(e)),
+  });
   const laudosQ = useQuery({ queryKey: ['laudos', 'paciente', id], queryFn: () => laudoMedicoApi.listByPaciente(id), enabled: !!id });
   const avaliacoesQ = useQuery({ queryKey: ['avaliacoes-iu', 'paciente', id], queryFn: () => avaliacaoIUApi.listByPaciente(id), enabled: !!id });
   const entregasQ = useQuery({ queryKey: ['entregas', 'paciente', id], queryFn: () => entregasApi.listByPaciente(id), enabled: !!id });
@@ -353,7 +363,7 @@ export function PacienteDetailPage() {
           <Vazio>Nenhum documento anexado.</Vazio>
         ) : (
           <Table>
-            <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Categoria</TableHead><TableHead>Data</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Categoria</TableHead><TableHead>Data</TableHead><TableHead className="w-32 text-right">Ações</TableHead></TableRow></TableHeader>
             <TableBody>
               {toItems<Documento>(docsQ.data as never).map((d) => (
                 <TableRow key={d.id}>
@@ -361,10 +371,21 @@ export function PacienteDetailPage() {
                   <TableCell className="text-muted-foreground">{d.tipo ? TIPO_DOCUMENTO_LABEL[d.tipo] : '—'}</TableCell>
                   <TableCell className="text-muted-foreground">{d.criadoEm ? dayjs(d.criadoEm).format('DD/MM/YYYY') : '—'}</TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" onClick={async () => {
-                      const r = await documentosApi.accessUrl(d.id);
-                      if (r?.accessUrl) window.open(r.accessUrl, '_blank');
-                    }}>Abrir</Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="sm" onClick={async () => {
+                        const r = await documentosApi.accessUrl(d.id);
+                        if (r?.accessUrl) window.open(r.accessUrl, '_blank');
+                      }}>Abrir</Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive"
+                        title="Excluir documento"
+                        onClick={() => setDocParaExcluir(d)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -506,9 +527,33 @@ export function PacienteDetailPage() {
       />
       <NovoDocumentoDialog
         pacienteId={id}
+        pacienteNome={p.nome}
         open={novoDocOpen}
         onOpenChange={setNovoDocOpen}
       />
+      <Dialog open={!!docParaExcluir} onOpenChange={(o) => { if (!o) setDocParaExcluir(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Excluir documento</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Tem certeza que deseja excluir <span className="font-medium text-foreground">{docParaExcluir?.nome}</span>?
+            O arquivo será removido do armazenamento e esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDocParaExcluir(null)} disabled={excluirDocMut.isPending}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => docParaExcluir && excluirDocMut.mutate(docParaExcluir.id)}
+              disabled={excluirDocMut.isPending}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> {excluirDocMut.isPending ? 'Excluindo…' : 'Excluir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <NovaAvaliacaoIUDialog
         open={novaAvaliacaoOpen}
         onOpenChange={(o) => { setNovaAvaliacaoOpen(o); if (!o) setAvaliacaoEdit(null); }}

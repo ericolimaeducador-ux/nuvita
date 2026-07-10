@@ -20,6 +20,12 @@ export class CreateUploadUrlDto {
   @IsString()
   nome!: string;
 
+  // Nome do paciente (já descriptografado no cliente) para compor um nome de
+  // arquivo legível no storage. Opcional para compatibilidade retroativa.
+  @IsOptional()
+  @IsString()
+  nomePaciente?: string;
+
   @IsEnum(TipoDocumento)
   tipo!: TipoDocumento;
 

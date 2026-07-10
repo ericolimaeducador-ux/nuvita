@@ -151,6 +151,20 @@ export class PacienteMongoRepository implements PacienteRepository {
     return document ? this.toEntity(document) : null;
   }
 
+  async findManyByIds(clinicaId: string, pacienteIds: string[]): Promise<Paciente[]> {
+    if (pacienteIds.length === 0) return [];
+    // Sem filtro de `ativo`: um agendamento pode referenciar paciente inativado,
+    // e ainda assim precisamos exibir o nome para identificá-lo com segurança.
+    const ids = pacienteIds
+      .filter((id) => Types.ObjectId.isValid(id))
+      .map((id) => new Types.ObjectId(id));
+    const documents = await this.pacienteModel
+      .find({ clinicaId, _id: { $in: ids } })
+      .exec();
+
+    return documents.map((document) => this.toEntity(document));
+  }
+
   async update(
     clinicaId: string,
     pacienteId: string,

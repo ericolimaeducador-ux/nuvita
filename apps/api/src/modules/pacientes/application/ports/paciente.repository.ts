@@ -42,6 +42,8 @@ export interface PacienteRepository {
   searchByName(input: SearchPacientesByNameInput): Promise<CursorPaginationResult<Paciente>>;
   findByCpf(clinicaId: string, cpf: string, incluirInativos?: boolean): Promise<Paciente | null>;
   findById(clinicaId: string, pacienteId: string, incluirInativos?: boolean): Promise<Paciente | null>;
+  /** Busca vários pacientes por id (inclui inativos) — usado p/ resolver nome/CPF em lote. */
+  findManyByIds(clinicaId: string, pacienteIds: string[]): Promise<Paciente[]>;
   update(clinicaId: string, pacienteId: string, input: UpdatePacienteInput): Promise<Paciente | null>;
   deactivate(clinicaId: string, pacienteId: string): Promise<Paciente | null>;
 }

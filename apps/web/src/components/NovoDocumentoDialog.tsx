@@ -24,12 +24,18 @@ async function sha256Hex(file: File): Promise<string> {
   return Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Deve espelhar MAX_DOCUMENT_SIZE_BYTES no backend (economia de armazenamento no R2).
+const MAX_TAMANHO_MB = 10;
+const MAX_TAMANHO_BYTES = MAX_TAMANHO_MB * 1024 * 1024;
+
 export function NovoDocumentoDialog({
   pacienteId,
+  pacienteNome,
   open,
   onOpenChange,
 }: {
   pacienteId: string;
+  pacienteNome?: string;
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
@@ -54,6 +60,9 @@ export function NovoDocumentoDialog({
       if (!file) throw new Error('Selecione um arquivo.');
       if (!nome.trim()) throw new Error('Informe o nome do documento.');
       if (!user?.clinicaId) throw new Error('Sessão sem clínica associada.');
+      if (file.size > MAX_TAMANHO_BYTES) {
+        throw new Error(`Arquivo maior que ${MAX_TAMANHO_MB}MB. Reduza o tamanho antes de enviar.`);
+      }
 
       setEtapa('hash');
       const hash = await sha256Hex(file);
@@ -62,6 +71,7 @@ export function NovoDocumentoDialog({
         clinicaId: user.clinicaId,
         pacienteId,
         nome: nome.trim(),
+        nomePaciente: pacienteNome,
         tipo,
         mimeType: file.type,
         tamanho: file.size,
@@ -124,7 +134,7 @@ export function NovoDocumentoDialog({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Arquivo (PDF, JPEG, PNG ou DICOM — máx. 50MB)</Label>
+            <Label>Arquivo (PDF, JPEG, PNG ou DICOM — máx. {MAX_TAMANHO_MB}MB)</Label>
             <Input
               type="file"
               accept="application/pdf,image/jpeg,image/png,application/dicom"

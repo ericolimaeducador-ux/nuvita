@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -82,6 +83,17 @@ export class S3DocumentStorageService implements DocumentStorage {
     );
 
     return this.privateUrl(thumbnailKey);
+  }
+
+  async deleteObject(privateUrl: string): Promise<void> {
+    const key = this.keyFromPrivateUrl(privateUrl);
+    // Apaga o objeto principal e o thumbnail derivado (gerado em
+    // createThumbnailIfSupported como `${key}.thumb.jpg`). Best-effort: se um
+    // deles não existir, o R2/S3 responde 204 mesmo assim.
+    await Promise.all([
+      this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key })),
+      this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: `${key}.thumb.jpg` })),
+    ]);
   }
 
   private privateUrl(key: string): string {

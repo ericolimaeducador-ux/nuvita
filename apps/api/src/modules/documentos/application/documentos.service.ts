@@ -12,6 +12,15 @@ import {
   MAX_PATIENT_STORAGE_BYTES,
 } from '../documentos.constants';
 import { ALLOWED_DOCUMENT_MIME_TYPES } from '../domain/documento.entity';
+
+// Extensão de arquivo por MIME type permitido — usada para nomear o objeto no
+// storage de forma legível ao baixar.
+const EXTENSAO_POR_MIME: Record<string, string> = {
+  'application/pdf': '.pdf',
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'application/dicom': '.dcm',
+};
 import { CreateUploadUrlDto } from './dto/create-upload-url.dto';
 import { ListDocumentosQueryDto } from './dto/list-documentos-query.dto';
 import { DocumentStorage } from './ports/document-storage';
@@ -40,7 +49,7 @@ export class DocumentosService {
       throw new BadRequestException('Limite de 500MB por paciente excedido.');
     }
 
-    const key = this.buildObjectKey(clinicaId, dto.pacienteId, dto.nome);
+    const key = this.buildObjectKey(clinicaId, dto.pacienteId, dto.nomePaciente, dto.nome, dto.mimeType);
     const presigned = await this.storage.createUploadUrl({
       key,
       mimeType: dto.mimeType,
@@ -149,6 +158,15 @@ export class DocumentosService {
       throw new NotFoundException('Documento nao encontrado.');
     }
 
+    // Libera o armazenamento no R2 de fato (o registro no banco fica como soft
+    // delete p/ trilha de auditoria). Best-effort: se a remoção física falhar,
+    // a exclusão lógica já ocorreu — não derrubamos a requisição por isso.
+    try {
+      await this.storage.deleteObject(documento.url);
+    } catch {
+      // objeto pode já não existir; a auditoria abaixo registra a exclusão lógica
+    }
+
     await this.audit(AuditEvent.DOCUMENT_SOFT_DELETED, context, {
       clinicaId: resolvedClinicaId,
       pacienteId: documento.pacienteId,
@@ -184,9 +202,31 @@ export class DocumentosService {
     return resolveTenantClinicaId(user, requestedClinicaId);
   }
 
-  private buildObjectKey(clinicaId: string, pacienteId: string, nome: string): string {
-    const safeName = nome.replace(/[^a-zA-Z0-9._-]/g, '_');
-    return `${clinicaId}/pacientes/${pacienteId}/${randomUUID()}-${safeName}`;
+  private buildObjectKey(
+    clinicaId: string,
+    pacienteId: string,
+    nomePaciente: string | undefined,
+    nomeDocumento: string,
+    mimeType: string,
+  ): string {
+    // Nome legível do arquivo = "<nome do paciente> - <titulo do documento>",
+    // para que o download traga um nome que faz sentido. O UUID garante unicidade
+    // da chave mesmo que dois documentos tenham o mesmo nome.
+    const partes = [nomePaciente, nomeDocumento].map((p) => this.slug(p)).filter(Boolean);
+    const base = partes.join('-') || 'documento';
+    const extensao = EXTENSAO_POR_MIME[mimeType] ?? '';
+    return `${clinicaId}/pacientes/${pacienteId}/${randomUUID()}-${base}${extensao}`;
+  }
+
+  // Remove acentos e caracteres inseguros para chaves de objeto S3/R2, mantendo
+  // legibilidade (espaços viram "_").
+  private slug(value: string | undefined): string {
+    if (!value) return '';
+    return value
+      .normalize('NFD')
+      .replace(new RegExp('[\\u0300-\\u036f]', 'g'), '')
+      .replace(/[^a-zA-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
   }
 
   private async audit(

@@ -42,6 +42,10 @@ export interface Agendamento {
   criadoPor: string;
   criadoEm: Date;
   atualizadoEm?: Date;
+  // Preenchidos apenas na leitura (list/findOne) para identificar o paciente com
+  // segurança na agenda — nome completo + CPF evitam atender o paciente errado.
+  pacienteNome?: string;
+  pacienteCpf?: string;
 }
 
 export interface BloqueioAgenda {

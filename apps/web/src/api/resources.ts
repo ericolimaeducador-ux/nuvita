@@ -160,7 +160,7 @@ export const documentosApi = {
       .then((r) => r.data),
   presignUpload: (payload: {
     clinicaId: string; pacienteId: string; prontuarioId?: string;
-    nome: string; tipo: TipoDocumento; mimeType: string; tamanho: number; hash: string;
+    nome: string; nomePaciente?: string; tipo: TipoDocumento; mimeType: string; tamanho: number; hash: string;
   }) =>
     api.post<PresignUploadResponse>('/documentos/presign-upload', payload).then((r) => r.data),
   confirmarUpload: (id: string) =>

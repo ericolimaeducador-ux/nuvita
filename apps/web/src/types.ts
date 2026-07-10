@@ -343,6 +343,9 @@ export interface Agendamento {
   status: StatusAgendamento;
   observacoes?: string;
   motivoCancelamento?: string;
+  /** Enriquecidos pelo backend na leitura — identificação segura do paciente. */
+  pacienteNome?: string;
+  pacienteCpf?: string;
 }
 
 export interface SinaisVitais {

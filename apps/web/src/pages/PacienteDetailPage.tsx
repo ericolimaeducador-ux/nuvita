@@ -245,9 +245,6 @@ export function PacienteDetailPage() {
       {/* Dados cadastrais */}
       <DadosCadastraisSecao paciente={p} pacienteId={id} />
 
-      {/* Observações gerais — campo livre p/ qualquer profissional de atendimento */}
-      <ObservacoesSecao pacienteId={id} observacoesAtuais={p.observacoes} />
-
       {/* Prontuários / atendimentos */}
       <Secao
         icon={<Stethoscope className="h-4 w-4" />}
@@ -305,6 +302,9 @@ export function PacienteDetailPage() {
         )}
       </Secao>
 
+      {/* Observações gerais — campo livre p/ qualquer profissional de atendimento */}
+      <ObservacoesSecao pacienteId={id} observacoesAtuais={p.observacoes} />
+
       {/* Avaliações de incontinência urinária (logo após a consulta de enfermagem, mesma ordem do fluxo clínico) */}
       <Secao
         icon={<ClipboardList className="h-4 w-4" />}
@@ -344,6 +344,12 @@ export function PacienteDetailPage() {
           </Table>
         )}
       </Secao>
+
+      {/* Follow-up de elegibilidade (ligações do enfermeiro) */}
+      {permissoes.includes(Modulo.FLUXO_CLINICO) && <FollowUpSecao pacienteId={id} />}
+
+      {/* Checklist de documentos (secretaria/admin) */}
+      {permissoes.includes(Modulo.DOCUMENTOS) && <ChecklistDocumentosSecao pacienteId={id} />}
 
       {/* Documentos */}
       <Secao
@@ -394,9 +400,6 @@ export function PacienteDetailPage() {
         )}
       </Secao>
 
-      {/* Checklist de documentos (secretaria/admin) */}
-      {permissoes.includes(Modulo.DOCUMENTOS) && <ChecklistDocumentosSecao pacienteId={id} />}
-
       {/* Laudos / relatórios médicos */}
       <Secao
         icon={<FileSignature className="h-4 w-4" />}
@@ -432,16 +435,6 @@ export function PacienteDetailPage() {
             </TableBody>
           </Table>
         )}
-      </Secao>
-
-      {/* Follow-up de elegibilidade (ligações do enfermeiro) */}
-      {permissoes.includes(Modulo.FLUXO_CLINICO) && <FollowUpSecao pacienteId={id} />}
-
-      {/* Insumos a receber */}
-      <Secao icon={<Package className="h-4 w-4" />} titulo="Insumos a receber" contagem={insumosAReceber.length} defaultOpen={false}>
-        {entregasQ.isLoading ? <Skeleton className="h-20 w-full" /> : insumosAReceber.length === 0 ? (
-          <Vazio>Nenhum insumo pendente.</Vazio>
-        ) : <TabelaEntregas entregas={insumosAReceber} />}
       </Secao>
 
       {/* Processos jurídicos */}
@@ -503,11 +496,18 @@ export function PacienteDetailPage() {
         )}
       </Secao>
 
-      {/* Insumos recebidos — a pedido do usuário, fica por último: são o que resta após ganhar o processo jurídico */}
+      {/* Insumos recebidos — o que já foi entregue ao paciente */}
       <Secao icon={<PackageCheck className="h-4 w-4" />} titulo="Insumos recebidos" contagem={insumosRecebidos.length} defaultOpen={false}>
         {entregasQ.isLoading ? <Skeleton className="h-20 w-full" /> : insumosRecebidos.length === 0 ? (
           <Vazio>Nenhum insumo entregue ainda.</Vazio>
         ) : <TabelaEntregas entregas={insumosRecebidos} />}
+      </Secao>
+
+      {/* Insumos a receber — pendentes de entrega, ficam por último */}
+      <Secao icon={<Package className="h-4 w-4" />} titulo="Insumos a receber" contagem={insumosAReceber.length} defaultOpen={false}>
+        {entregasQ.isLoading ? <Skeleton className="h-20 w-full" /> : insumosAReceber.length === 0 ? (
+          <Vazio>Nenhum insumo pendente.</Vazio>
+        ) : <TabelaEntregas entregas={insumosAReceber} />}
       </Secao>
 
       <ProntuarioDetailDialog

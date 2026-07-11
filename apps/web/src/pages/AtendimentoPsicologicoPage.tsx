@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import dayjs from 'dayjs';
-import { Brain, CalendarPlus, ClipboardList, History, Loader2, PenLine, User } from 'lucide-react';
+import { Brain, CalendarPlus, ClipboardList, History, Loader2, PenLine, User, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,11 +18,12 @@ import {
 } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/auth/AuthContext';
-import { agendaApi, pacientesApi, prontuariosApi } from '@/api/resources';
+import { agendaApi, pacientesApi, prontuariosApi, telemedicinaApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { formatData, formatEndereco, toItems } from '@/utils';
 import {
   Agendamento, ModalidadeAtendimento, Paciente, Papel, Prontuario, RegistroPsicologico,
+  REGISTRO_PSICOLOGICO_CAMPOS,
   StatusAgendamento, STATUS_AGENDAMENTO_LABEL, TipoAgendamento, TipoAtendimento,
   TIPO_AGENDAMENTO_LABEL, TIPOS_POR_MODALIDADE,
 } from '@/types';
@@ -105,6 +107,36 @@ function RegistroSessaoDialog({
   });
   const paciente: Paciente | undefined = pacienteQ.data;
 
+  // Resumo dos atendimentos anteriores — pré-preenche os campos "estáveis"
+  // (que raramente mudam de sessão pra sessão) e mostra a última evolução
+  // como contexto. Versão simples por ora; será refinada depois.
+  const sessoesAnterioresQ = useQuery({
+    queryKey: ['sessoes-psicologia-anteriores', agendamento?.pacienteId],
+    queryFn: () => prontuariosApi.list({ pacienteId: agendamento!.pacienteId }),
+    enabled: open && !!agendamento?.pacienteId,
+  });
+  const ultimaSessao = useMemo(() => {
+    const itens = toItems<Prontuario>(sessoesAnterioresQ.data)
+      .filter((p) => p.tipo === TipoAtendimento.PSICOTERAPIA)
+      .sort((a, b) => dayjs(b.dataAtendimento).valueOf() - dayjs(a.dataAtendimento).valueOf());
+    return itens[0];
+  }, [sessoesAnterioresQ.data]);
+
+  useEffect(() => {
+    if (!open || !ultimaSessao) return;
+    const anterior = ultimaSessao.registroPsicologico ?? {};
+    setReg((r) => ({
+      ...r,
+      doencasPrevias: r.doencasPrevias ?? anterior.doencasPrevias,
+      diagnosticosSaudeMental: r.diagnosticosSaudeMental ?? anterior.diagnosticosSaudeMental,
+      medicamentosEmUso: r.medicamentosEmUso ?? anterior.medicamentosEmUso,
+      historicoFamiliarSaudeMental: r.historicoFamiliarSaudeMental ?? anterior.historicoFamiliarSaudeMental,
+      redeApoio: r.redeApoio ?? anterior.redeApoio,
+      objetivosTrabalho: r.objetivosTrabalho ?? anterior.objetivosTrabalho,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, ultimaSessao?.id]);
+
   const salvarM = useMutation({
     mutationFn: async (assinar: boolean) => {
       const prontuario = await prontuariosApi.create({
@@ -165,6 +197,25 @@ function RegistroSessaoDialog({
             </>
           )}
         </div>
+
+        {/* Resumo do atendimento anterior — só contexto, não editável aqui. */}
+        {ultimaSessao && (
+          <div className="rounded-xl border border-dashed p-4 space-y-1 text-sm bg-muted/30">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Última sessão — {dayjs(ultimaSessao.dataAtendimento).format('DD/MM/YYYY')}
+            </p>
+            {ultimaSessao.registroPsicologico?.evolucao && (
+              <p className="text-muted-foreground whitespace-pre-wrap line-clamp-3">
+                {ultimaSessao.registroPsicologico.evolucao}
+              </p>
+            )}
+            {!ultimaSessao.registroPsicologico?.evolucao && ultimaSessao.registroPsicologico?.anotacoesLivres && (
+              <p className="text-muted-foreground whitespace-pre-wrap line-clamp-3">
+                {ultimaSessao.registroPsicologico.anotacoesLivres}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="space-y-4">
           <SecaoTitulo>Demanda</SecaoTitulo>
@@ -242,28 +293,7 @@ function RegistroSessaoDialog({
 // Dialog: histórico de sessões do paciente
 // ---------------------------------------------------------------------------
 
-const CAMPO_LABEL: Array<[keyof RegistroPsicologico, string]> = [
-  ['motivoAtendimento', 'Motivo do atendimento'],
-  ['avaliacaoDemanda', 'Avaliação de demanda'],
-  ['doencasPrevias', 'Doenças prévias'],
-  ['diagnosticosSaudeMental', 'Diagnósticos de saúde mental'],
-  ['medicamentosEmUso', 'Medicamentos em uso'],
-  ['historicoFamiliarSaudeMental', 'Histórico familiar de saúde mental'],
-  ['qualidadeSono', 'Qualidade do sono'],
-  ['apetiteAlimentacao', 'Apetite / alimentação'],
-  ['atividadeFisica', 'Atividade física'],
-  ['usoSubstancias', 'Uso de substâncias'],
-  ['estadoEmocional', 'Estado emocional'],
-  ['escalaDor', 'Dor (0-10)'],
-  ['avaliacaoRisco', 'Avaliação de risco'],
-  ['redeApoio', 'Rede de apoio'],
-  ['objetivosTrabalho', 'Objetivos do acompanhamento'],
-  ['procedimentoTecnica', 'Procedimento / técnica'],
-  ['evolucao', 'Evolução'],
-  ['encaminhamentos', 'Encaminhamentos'],
-  ['anotacoesLivres', 'Anotações livres'],
-  ['crp', 'CRP'],
-];
+const CAMPO_LABEL = REGISTRO_PSICOLOGICO_CAMPOS;
 
 function HistoricoSessoesDialog({
   pacienteId, pacienteNome, open, onClose,
@@ -460,12 +490,50 @@ const STATUS_BADGE: Partial<Record<StatusAgendamento, string>> = {
 
 export function AtendimentoPsicologicoPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const ehPsicologo = user?.papel === Papel.PSICOLOGO;
 
   const [status, setStatus] = useState<'ativos' | StatusAgendamento>('ativos');
   const [novoAberto, setNovoAberto] = useState(false);
-  const [atendendo, setAtendendo] = useState<Agendamento | null>(null);
+  const [relatorioDe, setRelatorioDe] = useState<Agendamento | null>(null);
   const [historicoDe, setHistoricoDe] = useState<Agendamento | null>(null);
+  const [salaCarregandoId, setSalaCarregandoId] = useState<string | null>(null);
+
+  // Atendimento é 100% online por ora: "Atender" já cria (ou reaproveita) a
+  // sala de telemedicina do agendamento e leva o psicólogo direto pra lá —
+  // de onde ele clica em "Entrar" e copia o link pro paciente.
+  const atenderMut = useMutation({
+    mutationFn: async (a: Agendamento) => {
+      try {
+        await telemedicinaApi.findByAgendamento(a.id);
+      } catch (e) {
+        if (axios.isAxiosError(e) && e.response?.status === 404) {
+          await telemedicinaApi.createSala({
+            clinicaId: user?.clinicaId ?? '',
+            agendamentoId: a.id,
+            pacienteId: a.pacienteId,
+            modalidade: ModalidadeAtendimento.PSICOLOGIA,
+          });
+        } else {
+          throw e;
+        }
+      }
+      return a;
+    },
+    onSuccess: (a) => {
+      setSalaCarregandoId(null);
+      navigate('/telemedicina', { state: { agendamentoId: a.id } });
+    },
+    onError: (e) => {
+      setSalaCarregandoId(null);
+      toast({ title: 'Erro ao abrir a sala de telemedicina', description: apiErrorMessage(e), variant: 'destructive' });
+    },
+  });
+
+  function atender(a: Agendamento) {
+    setSalaCarregandoId(a.id);
+    atenderMut.mutate(a);
+  }
 
   const agendamentosQ = useQuery({
     queryKey: ['agendamentos-psicologia', ehPsicologo ? user?.id : 'todos'],
@@ -546,9 +614,17 @@ export function AtendimentoPsicologicoPage() {
                   <History className="h-4 w-4 mr-2" /> Histórico
                 </Button>
                 {(a.status === StatusAgendamento.AGENDADO || a.status === StatusAgendamento.CONFIRMADO) && (
-                  <Button size="sm" onClick={() => setAtendendo(a)}>
-                    <ClipboardList className="h-4 w-4 mr-2" /> Atender
-                  </Button>
+                  <>
+                    <Button variant="outline" size="sm" onClick={() => setRelatorioDe(a)}>
+                      <ClipboardList className="h-4 w-4 mr-2" /> Relatório
+                    </Button>
+                    <Button size="sm" disabled={salaCarregandoId === a.id} onClick={() => atender(a)}>
+                      {salaCarregandoId === a.id
+                        ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        : <Video className="h-4 w-4 mr-2" />}
+                      Atender
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -557,7 +633,7 @@ export function AtendimentoPsicologicoPage() {
       )}
 
       <NovoAgendamentoDialog open={novoAberto} onClose={() => setNovoAberto(false)} />
-      <RegistroSessaoDialog agendamento={atendendo} open={!!atendendo} onClose={() => setAtendendo(null)} />
+      <RegistroSessaoDialog agendamento={relatorioDe} open={!!relatorioDe} onClose={() => setRelatorioDe(null)} />
       <HistoricoSessoesDialog
         pacienteId={historicoDe?.pacienteId ?? null}
         pacienteNome={historicoDe?.pacienteNome}

@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { prontuariosApi, pacientesApi } from '@/api/resources';
 import { formatData, formatEndereco } from '@/utils';
 import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
-import { TipoAtendimento, TIPO_ATENDIMENTO_LABEL, type ExameSegmentar } from '@/types';
+import { TipoAtendimento, TIPO_ATENDIMENTO_LABEL, REGISTRO_PSICOLOGICO_CAMPOS, type ExameSegmentar } from '@/types';
 
 const EXAME_SEGMENTAR_CAMPOS: { key: keyof ExameSegmentar; label: string }[] = [
   { key: 'cabecaPescoco', label: 'Cabeça e pescoço' },
@@ -53,6 +53,7 @@ export function ProntuarioImpressaoPage() {
   }
 
   const isEnfermagem = pr?.tipo === TipoAtendimento.CONSULTA_ENFERMAGEM;
+  const isPsicoterapia = pr?.tipo === TipoAtendimento.PSICOTERAPIA;
   const sv = pr?.objetivo?.sinaisVitais;
   const sinais = sv
     ? [
@@ -76,7 +77,7 @@ export function ProntuarioImpressaoPage() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <span className="text-sm text-muted-foreground">
-          Prévia do {isEnfermagem ? 'Registro de Enfermagem' : 'Prontuário (SOAP)'}
+          Prévia do {isEnfermagem ? 'Registro de Enfermagem' : isPsicoterapia ? 'Registro de Atendimento Psicológico' : 'Prontuário (SOAP)'}
         </span>
         <Button size="sm" className="ml-auto" onClick={() => window.print()}>
           <Printer className="h-4 w-4 mr-2" /> Imprimir / Salvar PDF
@@ -91,7 +92,7 @@ export function ProntuarioImpressaoPage() {
         <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4 mb-6">
           <div>
             <h1 className="text-base font-bold uppercase tracking-wide">
-              {isEnfermagem ? 'Registro de Enfermagem' : 'Prontuário — SOAP'}
+              {isEnfermagem ? 'Registro de Enfermagem' : isPsicoterapia ? 'Registro de Atendimento Psicológico' : 'Prontuário — SOAP'}
             </h1>
             <p className="text-xs text-gray-500 mt-0.5">{pr ? (TIPO_ATENDIMENTO_LABEL[pr.tipo] ?? pr.tipo) : '—'}</p>
           </div>
@@ -121,6 +122,15 @@ export function ProntuarioImpressaoPage() {
               <Campo label="Chegada da sonda">{pr?.registroEnfermagem?.sondaChegouEm && formatData(pr.registroEnfermagem.sondaChegouEm)}</Campo>
             </div>
             <p className="whitespace-pre-line">{pr?.registroEnfermagem?.observacoes || '—'}</p>
+          </section>
+        ) : isPsicoterapia ? (
+          <section className="mb-5">
+            <h2 className="text-xs font-bold uppercase text-gray-500 mb-2 border-b border-gray-300 pb-1">Registro de Atendimento Psicológico</h2>
+            <div className="space-y-1.5">
+              {REGISTRO_PSICOLOGICO_CAMPOS.map(([key, label]) => (
+                <Campo key={key} label={label}>{pr?.registroPsicologico?.[key]}</Campo>
+              ))}
+            </div>
           </section>
         ) : (
           <>

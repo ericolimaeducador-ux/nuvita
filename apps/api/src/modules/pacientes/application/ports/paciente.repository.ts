@@ -26,6 +26,8 @@ export interface ListPacientesInput extends CursorPaginationInput {
   incluirInativos?: boolean;
   programaIU?: boolean;
   projeto?: ProjetoPaciente;
+  /** Exclui um projeto do resultado (usado p/ esconder pacientes do Projeto PSI de quem não é psicólogo). Ignorado se `projeto` também for informado. */
+  projetoExcluir?: ProjetoPaciente;
   etapaFluxo?: EtapaFluxoClinico;
   /** Dia exato de nascimento no formato YYYY-MM-DD. */
   dataNascimento?: string;

@@ -22,7 +22,7 @@ import { apiErrorMessage } from '@/api/client';
 import { toItems, formatCpf, formatData, idade } from '@/utils';
 import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
-import { Sexo, SEXO_LABEL, ProjetoPaciente, PROJETO_LABEL, type Paciente } from '@/types';
+import { Sexo, SEXO_LABEL, ProjetoPaciente, PROJETO_LABEL, Papel, type Paciente } from '@/types';
 
 const pacienteSchema = z.object({
   nome: z.string().min(1, 'Informe o nome.'),
@@ -55,6 +55,9 @@ export function PacientesPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
+  // Psicólogo só enxerga/cadastra pacientes do Projeto PSI — o backend já
+  // filtra a lista; aqui só simplificamos a UI (sem seletor de projeto).
+  const ehPsicologo = user?.papel === Papel.PSICOLOGO;
   const [buscaInput, setBuscaInput] = useState('');
   const [busca, setBusca] = useState('');
   const [nascFiltro, setNascFiltro] = useState('');
@@ -138,7 +141,7 @@ export function PacientesPage() {
       cpf: v.cpf || undefined,
       dataNascimento: v.dataNascimento ? dayjs(v.dataNascimento).format('YYYY-MM-DD') : undefined,
       sexo: v.sexo || undefined,
-      projeto: v.projeto || undefined,
+      projeto: ehPsicologo ? ProjetoPaciente.PSI : (v.projeto || undefined),
       telefone: v.telefone || undefined,
       email: v.email || undefined,
       endereco: temEndereco ? enderecoCampos : undefined,
@@ -201,18 +204,20 @@ export function PacientesPage() {
               </Select>
             </div>
 
-            <div className="space-y-1">
-              <Label>Projeto</Label>
-              <Select value={projetoFiltro} onValueChange={(v) => setProjetoFiltro(v as ProjetoPaciente | 'all')}>
-                <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os projetos</SelectItem>
-                  {Object.values(ProjetoPaciente).map((pj) => (
-                    <SelectItem key={pj} value={pj}>{PROJETO_LABEL[pj]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!ehPsicologo && (
+              <div className="space-y-1">
+                <Label>Projeto</Label>
+                <Select value={projetoFiltro} onValueChange={(v) => setProjetoFiltro(v as ProjetoPaciente | 'all')}>
+                  <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os projetos</SelectItem>
+                    {Object.values(ProjetoPaciente).map((pj) => (
+                      <SelectItem key={pj} value={pj}>{PROJETO_LABEL[pj]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 pb-2.5">
               <Checkbox
@@ -336,15 +341,17 @@ export function PacientesPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Projeto (opcional)</Label>
-                <Select onValueChange={(v) => setValue('projeto', v as ProjetoPaciente)}>
-                  <SelectTrigger><SelectValue placeholder="Sem projeto" /></SelectTrigger>
-                  <SelectContent>
-                    {Object.values(ProjetoPaciente).map((pj) => <SelectItem key={pj} value={pj}>{PROJETO_LABEL[pj]}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!ehPsicologo && (
+                <div className="space-y-2">
+                  <Label>Projeto (opcional)</Label>
+                  <Select onValueChange={(v) => setValue('projeto', v as ProjetoPaciente)}>
+                    <SelectTrigger><SelectValue placeholder="Sem projeto" /></SelectTrigger>
+                    <SelectContent>
+                      {Object.values(ProjetoPaciente).map((pj) => <SelectItem key={pj} value={pj}>{PROJETO_LABEL[pj]}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="telefone">Telefone</Label>
                 <Input id="telefone" placeholder="(00) 00000-0000" {...register('telefone')} />

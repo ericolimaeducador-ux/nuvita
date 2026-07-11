@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { Plus, Search, Copy, PowerOff, Video, History } from 'lucide-react';
@@ -196,10 +197,25 @@ function SalaCard({
 
 export function TelemedicinaPage() {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [openCreate, setOpenCreate] = useState(false);
   const [agendamentoId, setAgendamentoId] = useState('');
   const [buscarId, setBuscarId] = useState('');
   const [sala, setSala] = useState<SalaTelemedicina | null>(null);
+
+  // Vindo do "Atender" do Atendimento Psicológico: a sala já foi criada lá,
+  // aqui só abrimos ela direto (mesmo padrão do "iniciarAgendamento" em
+  // PacienteDetailPage) — limpa o state pra não reabrir num refresh/voltar.
+  useEffect(() => {
+    const agId = (location.state as { agendamentoId?: string } | null)?.agendamentoId;
+    if (!agId) return;
+    setAgendamentoId(agId);
+    setSala(null);
+    setBuscarId(agId);
+    navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   const [fAgId, setFAgId] = useState('');
   const [fPacId, setFPacId] = useState('');

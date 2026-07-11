@@ -271,7 +271,11 @@ export class PacienteMongoRepository implements PacienteRepository {
   private listQuery(input: ListPacientesInput): Record<string, unknown> {
     const query = this.baseQuery(input.clinicaId, input.incluirInativos);
     if (input.programaIU !== undefined) query.programaIU = input.programaIU;
-    if (input.projeto !== undefined) query.projeto = input.projeto;
+    if (input.projeto !== undefined) {
+      query.projeto = input.projeto;
+    } else if (input.projetoExcluir !== undefined) {
+      query.projeto = { $ne: input.projetoExcluir };
+    }
     if (input.etapaFluxo !== undefined) query.etapaFluxo = input.etapaFluxo;
     if (input.dataNascimento) {
       // Campo gravado como meia-noite UTC; intervalo de 24h cobre o dia inteiro.

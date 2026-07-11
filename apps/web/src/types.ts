@@ -64,11 +64,15 @@ export const SEXO_LABEL: Record<Sexo, string> = {
 export enum ProjetoPaciente {
   ALPHA = 'ALPHA',
   BETA = 'BETA',
+  // Pacientes de atendimento psicológico — só aparecem para o papel PSICOLOGO
+  // (o backend filtra); nunca aparecem para os demais profissionais.
+  PSI = 'PSI',
 }
 
 export const PROJETO_LABEL: Record<ProjetoPaciente, string> = {
   [ProjetoPaciente.ALPHA]: 'Projeto Alpha',
   [ProjetoPaciente.BETA]: 'Projeto Beta',
+  [ProjetoPaciente.PSI]: 'Projeto PSI (Psicologia)',
 };
 
 export enum StatusAgendamento {
@@ -554,6 +558,31 @@ export interface RegistroPsicologico {
   anotacoesLivres?: string;
   crp?: string;
 }
+
+/** Ordem/rótulos de exibição do registro psicológico — usado no histórico de
+ * sessões, no relatório e na impressão do prontuário de psicoterapia. */
+export const REGISTRO_PSICOLOGICO_CAMPOS: Array<[keyof RegistroPsicologico, string]> = [
+  ['motivoAtendimento', 'Motivo do atendimento'],
+  ['avaliacaoDemanda', 'Avaliação de demanda'],
+  ['doencasPrevias', 'Doenças prévias'],
+  ['diagnosticosSaudeMental', 'Diagnósticos de saúde mental'],
+  ['medicamentosEmUso', 'Medicamentos em uso'],
+  ['historicoFamiliarSaudeMental', 'Histórico familiar de saúde mental'],
+  ['qualidadeSono', 'Qualidade do sono'],
+  ['apetiteAlimentacao', 'Apetite / alimentação'],
+  ['atividadeFisica', 'Atividade física'],
+  ['usoSubstancias', 'Uso de substâncias'],
+  ['estadoEmocional', 'Estado emocional'],
+  ['escalaDor', 'Dor (0-10)'],
+  ['avaliacaoRisco', 'Avaliação de risco'],
+  ['redeApoio', 'Rede de apoio'],
+  ['objetivosTrabalho', 'Objetivos do acompanhamento'],
+  ['procedimentoTecnica', 'Procedimento / técnica'],
+  ['evolucao', 'Evolução'],
+  ['encaminhamentos', 'Encaminhamentos'],
+  ['anotacoesLivres', 'Anotações livres'],
+  ['crp', 'CRP'],
+];
 
 export interface Prontuario {
   id: string;

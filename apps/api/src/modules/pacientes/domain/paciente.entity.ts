@@ -13,6 +13,10 @@ export enum Sexo {
 export enum ProjetoPaciente {
   ALPHA = 'ALPHA',
   BETA = 'BETA',
+  // Pacientes de atendimento psicológico — visibilidade restrita ao papel
+  // PSICOLOGO (ver PacientesService.list/findOne). Não faz parte do
+  // programa de cateterismo/incontinência urinária.
+  PSI = 'PSI',
 }
 
 export interface Endereco {

@@ -15,8 +15,11 @@ import { ListPacientesQueryDto } from './dto/list-pacientes-query.dto';
 import { UpdatePacienteDto } from './dto/update-paciente.dto';
 import { UpdateObservacoesPacienteDto } from './dto/update-observacoes-paciente.dto';
 import { PACIENTE_REPOSITORY } from '../pacientes.constants';
-import { Paciente } from '../domain/paciente.entity';
+import { Paciente, ProjetoPaciente } from '../domain/paciente.entity';
 import { PacienteRepository } from './ports/paciente.repository';
+
+/** Papéis profissionais que NUNCA veem pacientes do Projeto PSI (exclusivo do psicólogo). */
+const PAPEIS_SEM_ACESSO_PSI: Papel[] = [Papel.MEDICO, Papel.ENFERMEIRO, Papel.ADVOGADO];
 
 export interface RequestAuditContext {
   ip: string;
@@ -66,17 +69,19 @@ export class PacientesService {
 
   async list(query: ListPacientesQueryDto, context: RequestAuditContext) {
     const clinicaId = this.resolveClinicaId(context.user, query.clinicaId);
+    const { projeto, projetoExcluir } = this.resolveVisibilidadeProjeto(context.user.papel, query.projeto);
 
     if (query.cpf) {
       const paciente = await this.pacientes.findByCpf(clinicaId, query.cpf, query.incluirInativos);
+      const visivel = paciente && this.podeVerPaciente(context.user.papel, paciente.projeto);
       await this.audit(AuditEvent.PATIENT_SEARCHED, context, {
         clinicaId,
         criterio: 'cpf',
-        pacienteId: paciente?.id,
+        pacienteId: visivel ? paciente!.id : undefined,
       });
 
       return {
-        items: paciente ? [paciente] : [],
+        items: visivel ? [paciente!] : [],
         hasMore: false,
       };
     }
@@ -89,7 +94,8 @@ export class PacientesService {
           limit: query.limit,
           incluirInativos: query.incluirInativos,
           programaIU: query.programaIU,
-          projeto: query.projeto,
+          projeto,
+          projetoExcluir,
           etapaFluxo: query.etapaFluxo,
           dataNascimento: query.dataNascimento,
           sort: query.sort,
@@ -100,7 +106,8 @@ export class PacientesService {
           limit: query.limit,
           incluirInativos: query.incluirInativos,
           programaIU: query.programaIU,
-          projeto: query.projeto,
+          projeto,
+          projetoExcluir,
           etapaFluxo: query.etapaFluxo,
           dataNascimento: query.dataNascimento,
           sort: query.sort,
@@ -119,7 +126,7 @@ export class PacientesService {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
     const paciente = await this.pacientes.findById(resolvedClinicaId, pacienteId);
 
-    if (!paciente) {
+    if (!paciente || !this.podeVerPaciente(context.user.papel, paciente.projeto)) {
       throw new NotFoundException('Paciente nao encontrado.');
     }
 
@@ -153,6 +160,7 @@ export class PacientesService {
     context: RequestAuditContext,
   ): Promise<Paciente> {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+    await this.assertPacienteVisivel(resolvedClinicaId, pacienteId, context.user.papel);
     const paciente = await this.pacientes.update(resolvedClinicaId, pacienteId, {
       ...dto,
       dataNascimento: dto.dataNascimento ? new Date(dto.dataNascimento) : undefined,
@@ -185,6 +193,7 @@ export class PacientesService {
     context: RequestAuditContext,
   ): Promise<Paciente> {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+    await this.assertPacienteVisivel(resolvedClinicaId, pacienteId, context.user.papel);
     const paciente = await this.pacientes.update(resolvedClinicaId, pacienteId, { observacoes: dto.observacoes });
 
     if (!paciente) {
@@ -202,6 +211,7 @@ export class PacientesService {
 
   async deactivate(pacienteId: string, clinicaId: string | undefined, context: RequestAuditContext): Promise<Paciente> {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+    await this.assertPacienteVisivel(resolvedClinicaId, pacienteId, context.user.papel);
     const paciente = await this.pacientes.deactivate(resolvedClinicaId, pacienteId);
 
     if (!paciente) {
@@ -327,6 +337,36 @@ export class PacientesService {
 
   private resolveClinicaId(user: AuthTokenPayload, requestedClinicaId?: string): string {
     return resolveTenantClinicaId(user, requestedClinicaId);
+  }
+
+  /**
+   * Pacientes do Projeto PSI (atendimento psicológico) ficam isolados dos
+   * demais: só o PSICOLOGO os enxerga, e os outros profissionais de
+   * atendimento (médico/enfermeiro/advogado) nunca os veem — mesmo pedindo
+   * `projeto` explicitamente na query. ADMIN/SECRETARIA continuam sem
+   * restrição (visão administrativa da clínica inteira).
+   */
+  private resolveVisibilidadeProjeto(
+    papel: Papel,
+    projetoSolicitado?: ProjetoPaciente,
+  ): { projeto?: ProjetoPaciente; projetoExcluir?: ProjetoPaciente } {
+    if (papel === Papel.PSICOLOGO) return { projeto: ProjetoPaciente.PSI };
+    if (PAPEIS_SEM_ACESSO_PSI.includes(papel)) return { projetoExcluir: ProjetoPaciente.PSI };
+    return { projeto: projetoSolicitado };
+  }
+
+  private podeVerPaciente(papel: Papel, projetoPaciente?: ProjetoPaciente): boolean {
+    if (papel === Papel.PSICOLOGO) return projetoPaciente === ProjetoPaciente.PSI;
+    if (PAPEIS_SEM_ACESSO_PSI.includes(papel)) return projetoPaciente !== ProjetoPaciente.PSI;
+    return true;
+  }
+
+  /** Barra update/desativação de paciente fora da visibilidade do papel, mesmo sabendo o ID direto. */
+  private async assertPacienteVisivel(clinicaId: string, pacienteId: string, papel: Papel): Promise<void> {
+    const paciente = await this.pacientes.findById(clinicaId, pacienteId);
+    if (!paciente || !this.podeVerPaciente(papel, paciente.projeto)) {
+      throw new NotFoundException('Paciente nao encontrado.');
+    }
   }
 
   private async audit(

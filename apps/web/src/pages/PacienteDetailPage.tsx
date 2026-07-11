@@ -89,6 +89,9 @@ export function PacienteDetailPage() {
   const location = useLocation();
   const qc = useQueryClient();
   const { permissoes, user } = useAuth();
+  // Psicólogo atende fora do fluxo clínico da Mais Quali Vida: só enxerga
+  // dados cadastrais, os próprios atendimentos (psicoterapia) e documentos.
+  const ehPsicologo = user?.papel === Papel.PSICOLOGO;
   const [viewProntuarioId, setViewProntuarioId] = useState<string | null>(null);
   const [novoOpen, setNovoOpen] = useState(false);
   const [atendimentoPrefill, setAtendimentoPrefill] = useState<{
@@ -224,9 +227,11 @@ export function PacienteDetailPage() {
                 </Badge>
               </div>
             </div>
-            <Button size="sm" onClick={() => setNovoOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Novo atendimento
-            </Button>
+            {!ehPsicologo && (
+              <Button size="sm" onClick={() => setNovoOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" /> Novo atendimento
+              </Button>
+            )}
             {podeExportar && (
               <Button
                 variant="outline"
@@ -302,54 +307,56 @@ export function PacienteDetailPage() {
         )}
       </Secao>
 
-      {/* Observações gerais — campo livre p/ qualquer profissional de atendimento */}
-      <ObservacoesSecao pacienteId={id} observacoesAtuais={p.observacoes} />
+      {/* Observações gerais — campo livre p/ qualquer profissional de atendimento (fora do escopo do psicólogo) */}
+      {!ehPsicologo && <ObservacoesSecao pacienteId={id} observacoesAtuais={p.observacoes} />}
 
-      {/* Avaliações de incontinência urinária (logo após a consulta de enfermagem, mesma ordem do fluxo clínico) */}
-      <Secao
-        icon={<ClipboardList className="h-4 w-4" />}
-        titulo="Avaliações de incontinência urinária"
-        contagem={avaliacoesQ.data?.length}
-        defaultOpen={false}
-        acao={
-          podeNovaAvaliacao ? (
-            <Button size="sm" variant="outline" onClick={() => { setAvaliacaoEdit(null); setNovaAvaliacaoOpen(true); }}>
-              <Plus className="mr-2 h-4 w-4" /> Nova avaliação
-            </Button>
-          ) : undefined
-        }
-      >
-        {avaliacoesQ.isLoading ? (
-          <Skeleton className="h-20 w-full" />
-        ) : (avaliacoesQ.data ?? []).length === 0 ? (
-          <Vazio>Nenhuma avaliação de IU registrada.</Vazio>
-        ) : (
-          <Table>
-            <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Motivo</TableHead><TableHead>Cateter indicado</TableHead><TableHead className="w-40" /></TableRow></TableHeader>
-            <TableBody>
-              {(avaliacoesQ.data as AvaliacaoIU[]).map((a) => (
-                <TableRow key={a.id}>
-                  <TableCell>{formatData(a.dataAtendimento)}</TableCell>
-                  <TableCell className="text-muted-foreground truncate max-w-xs">{a.motivoIU || '—'}</TableCell>
-                  <TableCell className="text-muted-foreground">{a.produtoIndicado ? `${a.produtoIndicado.sexo} ${a.produtoIndicado.french}Fr` : '—'}</TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    {podeNovaAvaliacao && (
-                      <Button variant="ghost" size="sm" onClick={() => { setAvaliacaoEdit(a); setNovaAvaliacaoOpen(true); }}>Editar</Button>
-                    )}
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/fluxo-clinico/${id}/avaliacao/${a.id}/imprimir`)}>Imprimir</Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </Secao>
+      {/* Avaliações de incontinência urinária — fluxo da Mais Quali Vida, fora do escopo do psicólogo */}
+      {!ehPsicologo && (
+        <Secao
+          icon={<ClipboardList className="h-4 w-4" />}
+          titulo="Avaliações de incontinência urinária"
+          contagem={avaliacoesQ.data?.length}
+          defaultOpen={false}
+          acao={
+            podeNovaAvaliacao ? (
+              <Button size="sm" variant="outline" onClick={() => { setAvaliacaoEdit(null); setNovaAvaliacaoOpen(true); }}>
+                <Plus className="mr-2 h-4 w-4" /> Nova avaliação
+              </Button>
+            ) : undefined
+          }
+        >
+          {avaliacoesQ.isLoading ? (
+            <Skeleton className="h-20 w-full" />
+          ) : (avaliacoesQ.data ?? []).length === 0 ? (
+            <Vazio>Nenhuma avaliação de IU registrada.</Vazio>
+          ) : (
+            <Table>
+              <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Motivo</TableHead><TableHead>Cateter indicado</TableHead><TableHead className="w-40" /></TableRow></TableHeader>
+              <TableBody>
+                {(avaliacoesQ.data as AvaliacaoIU[]).map((a) => (
+                  <TableRow key={a.id}>
+                    <TableCell>{formatData(a.dataAtendimento)}</TableCell>
+                    <TableCell className="text-muted-foreground truncate max-w-xs">{a.motivoIU || '—'}</TableCell>
+                    <TableCell className="text-muted-foreground">{a.produtoIndicado ? `${a.produtoIndicado.sexo} ${a.produtoIndicado.french}Fr` : '—'}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      {podeNovaAvaliacao && (
+                        <Button variant="ghost" size="sm" onClick={() => { setAvaliacaoEdit(a); setNovaAvaliacaoOpen(true); }}>Editar</Button>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/fluxo-clinico/${id}/avaliacao/${a.id}/imprimir`)}>Imprimir</Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </Secao>
+      )}
 
       {/* Follow-up de elegibilidade (ligações do enfermeiro) */}
-      {permissoes.includes(Modulo.FLUXO_CLINICO) && <FollowUpSecao pacienteId={id} />}
+      {!ehPsicologo && permissoes.includes(Modulo.FLUXO_CLINICO) && <FollowUpSecao pacienteId={id} />}
 
       {/* Checklist de documentos (secretaria/admin) */}
-      {permissoes.includes(Modulo.DOCUMENTOS) && <ChecklistDocumentosSecao pacienteId={id} />}
+      {!ehPsicologo && permissoes.includes(Modulo.DOCUMENTOS) && <ChecklistDocumentosSecao pacienteId={id} />}
 
       {/* Documentos */}
       <Secao
@@ -400,115 +407,124 @@ export function PacienteDetailPage() {
         )}
       </Secao>
 
-      {/* Laudos / relatórios médicos */}
-      <Secao
-        icon={<FileSignature className="h-4 w-4" />}
-        titulo="Laudos e relatórios médicos"
-        contagem={laudosQ.data?.length}
-        defaultOpen={false}
-        acao={
-          podeNovoLaudo ? (
-            <Button size="sm" variant="outline" onClick={() => setNovoLaudoOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Novo laudo
-            </Button>
-          ) : undefined
-        }
-      >
-        {laudosQ.isLoading ? (
-          <Skeleton className="h-20 w-full" />
-        ) : (laudosQ.data ?? []).length === 0 ? (
-          <Vazio>Nenhum laudo emitido.</Vazio>
-        ) : (
-          <Table>
-            <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>CID-10</TableHead><TableHead>Situação</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
-            <TableBody>
-              {(laudosQ.data as LaudoMedico[]).map((l) => (
-                <TableRow key={l.id}>
-                  <TableCell>{formatData(l.dataLaudo)}</TableCell>
-                  <TableCell className="text-muted-foreground">{l.cid10?.join(', ') || '—'}</TableCell>
-                  <TableCell><Badge variant={l.assinado ? 'success' : 'warning'}>{l.assinado ? 'Assinado' : 'Rascunho'}</Badge></TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/fluxo-clinico/${id}/laudo/${l.id}/imprimir`)}>Imprimir</Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </Secao>
-
-      {/* Processos jurídicos */}
-      <Secao icon={<Scale className="h-4 w-4" />} titulo="Processos jurídicos" contagem={processosQ.data?.length} defaultOpen={false}>
-        {processosQ.isLoading ? (
-          <Skeleton className="h-20 w-full" />
-        ) : (processosQ.data ?? []).length === 0 ? (
-          <Vazio>Nenhum processo jurídico.</Vazio>
-        ) : (
-          <Table>
-            <TableHeader><TableRow><TableHead>Nº do processo</TableHead><TableHead>Tribunal</TableHead><TableHead>Status</TableHead><TableHead>Protocolo</TableHead></TableRow></TableHeader>
-            <TableBody>
-              {(processosQ.data as ProcessoJuridico[]).map((pr) => (
-                <TableRow key={pr.id}>
-                  <TableCell className="font-medium">{pr.numeroProcesso || '—'}</TableCell>
-                  <TableCell className="text-muted-foreground">{pr.tribunal || '—'}</TableCell>
-                  <TableCell><Badge>{STATUS_PROCESSO_LABEL[pr.status] ?? pr.status}</Badge></TableCell>
-                  <TableCell className="text-muted-foreground">{pr.dataProtocolo ? dayjs(pr.dataProtocolo).format('DD/MM/YYYY') : '—'}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </Secao>
-
-      {/* Anotações jurídicas (campo livre do advogado, fora do prontuário clínico) */}
-      {permissoes.includes(Modulo.PROCESSOS) && <AnotacoesJuridicasSecao pacienteId={id} />}
-
-      {/* Histórico de agenda */}
-      <Secao icon={<CalendarClock className="h-4 w-4" />} titulo="Histórico de agenda" contagem={toItems<Agendamento>(agendaQ.data as never).length} defaultOpen={false}>
-        {agendaQ.isLoading ? (
-          <Skeleton className="h-20 w-full" />
-        ) : toItems<Agendamento>(agendaQ.data as never).length === 0 ? (
-          <Vazio>Nenhum agendamento.</Vazio>
-        ) : (
-          <Table>
-            <TableHeader><TableRow><TableHead>Início</TableHead><TableHead>Status</TableHead><TableHead className="w-40" /></TableRow></TableHeader>
-            <TableBody>
-              {toItems<Agendamento>(agendaQ.data as never).map((a) => {
-                const podeIniciar =
-                  (a.status === StatusAgendamento.AGENDADO || a.status === StatusAgendamento.CONFIRMADO) &&
-                  !!TIPO_ATENDIMENTO_POR_AGENDAMENTO[a.tipo];
-                return (
-                  <TableRow key={a.id}>
-                    <TableCell>{dayjs(a.dataHoraInicio).format('DD/MM/YYYY HH:mm')}</TableCell>
-                    <TableCell><Badge>{STATUS_AGENDAMENTO_LABEL[a.status] ?? a.status}</Badge></TableCell>
-                    <TableCell className="text-right">
-                      {podeIniciar && (
-                        <Button variant="ghost" size="sm" onClick={() => iniciarAtendimentoDeAgendamento(a)}>
-                          Iniciar atendimento
-                        </Button>
-                      )}
+      {/* Laudos / relatórios médicos — fora do escopo do psicólogo */}
+      {!ehPsicologo && (
+        <Secao
+          icon={<FileSignature className="h-4 w-4" />}
+          titulo="Laudos e relatórios médicos"
+          contagem={laudosQ.data?.length}
+          defaultOpen={false}
+          acao={
+            podeNovoLaudo ? (
+              <Button size="sm" variant="outline" onClick={() => setNovoLaudoOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" /> Novo laudo
+              </Button>
+            ) : undefined
+          }
+        >
+          {laudosQ.isLoading ? (
+            <Skeleton className="h-20 w-full" />
+          ) : (laudosQ.data ?? []).length === 0 ? (
+            <Vazio>Nenhum laudo emitido.</Vazio>
+          ) : (
+            <Table>
+              <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>CID-10</TableHead><TableHead>Situação</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
+              <TableBody>
+                {(laudosQ.data as LaudoMedico[]).map((l) => (
+                  <TableRow key={l.id}>
+                    <TableCell>{formatData(l.dataLaudo)}</TableCell>
+                    <TableCell className="text-muted-foreground">{l.cid10?.join(', ') || '—'}</TableCell>
+                    <TableCell><Badge variant={l.assinado ? 'success' : 'warning'}>{l.assinado ? 'Assinado' : 'Rascunho'}</Badge></TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/fluxo-clinico/${id}/laudo/${l.id}/imprimir`)}>Imprimir</Button>
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
-      </Secao>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </Secao>
+      )}
 
-      {/* Insumos recebidos — o que já foi entregue ao paciente */}
-      <Secao icon={<PackageCheck className="h-4 w-4" />} titulo="Insumos recebidos" contagem={insumosRecebidos.length} defaultOpen={false}>
-        {entregasQ.isLoading ? <Skeleton className="h-20 w-full" /> : insumosRecebidos.length === 0 ? (
-          <Vazio>Nenhum insumo entregue ainda.</Vazio>
-        ) : <TabelaEntregas entregas={insumosRecebidos} />}
-      </Secao>
+      {/* Processos jurídicos — fora do escopo do psicólogo */}
+      {!ehPsicologo && (
+        <Secao icon={<Scale className="h-4 w-4" />} titulo="Processos jurídicos" contagem={processosQ.data?.length} defaultOpen={false}>
+          {processosQ.isLoading ? (
+            <Skeleton className="h-20 w-full" />
+          ) : (processosQ.data ?? []).length === 0 ? (
+            <Vazio>Nenhum processo jurídico.</Vazio>
+          ) : (
+            <Table>
+              <TableHeader><TableRow><TableHead>Nº do processo</TableHead><TableHead>Tribunal</TableHead><TableHead>Status</TableHead><TableHead>Protocolo</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {(processosQ.data as ProcessoJuridico[]).map((pr) => (
+                  <TableRow key={pr.id}>
+                    <TableCell className="font-medium">{pr.numeroProcesso || '—'}</TableCell>
+                    <TableCell className="text-muted-foreground">{pr.tribunal || '—'}</TableCell>
+                    <TableCell><Badge>{STATUS_PROCESSO_LABEL[pr.status] ?? pr.status}</Badge></TableCell>
+                    <TableCell className="text-muted-foreground">{pr.dataProtocolo ? dayjs(pr.dataProtocolo).format('DD/MM/YYYY') : '—'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </Secao>
+      )}
 
-      {/* Insumos a receber — pendentes de entrega, ficam por último */}
-      <Secao icon={<Package className="h-4 w-4" />} titulo="Insumos a receber" contagem={insumosAReceber.length} defaultOpen={false}>
-        {entregasQ.isLoading ? <Skeleton className="h-20 w-full" /> : insumosAReceber.length === 0 ? (
-          <Vazio>Nenhum insumo pendente.</Vazio>
-        ) : <TabelaEntregas entregas={insumosAReceber} />}
-      </Secao>
+      {/* Anotações jurídicas (campo livre do advogado, fora do prontuário clínico) */}
+      {!ehPsicologo && permissoes.includes(Modulo.PROCESSOS) && <AnotacoesJuridicasSecao pacienteId={id} />}
+
+      {/* Histórico de agenda — fora do escopo do psicólogo (agenda dele fica em Atendimento Psicológico) */}
+      {!ehPsicologo && (
+        <Secao icon={<CalendarClock className="h-4 w-4" />} titulo="Histórico de agenda" contagem={toItems<Agendamento>(agendaQ.data as never).length} defaultOpen={false}>
+          {agendaQ.isLoading ? (
+            <Skeleton className="h-20 w-full" />
+          ) : toItems<Agendamento>(agendaQ.data as never).length === 0 ? (
+            <Vazio>Nenhum agendamento.</Vazio>
+          ) : (
+            <Table>
+              <TableHeader><TableRow><TableHead>Início</TableHead><TableHead>Status</TableHead><TableHead className="w-40" /></TableRow></TableHeader>
+              <TableBody>
+                {toItems<Agendamento>(agendaQ.data as never).map((a) => {
+                  const podeIniciar =
+                    (a.status === StatusAgendamento.AGENDADO || a.status === StatusAgendamento.CONFIRMADO) &&
+                    !!TIPO_ATENDIMENTO_POR_AGENDAMENTO[a.tipo];
+                  return (
+                    <TableRow key={a.id}>
+                      <TableCell>{dayjs(a.dataHoraInicio).format('DD/MM/YYYY HH:mm')}</TableCell>
+                      <TableCell><Badge>{STATUS_AGENDAMENTO_LABEL[a.status] ?? a.status}</Badge></TableCell>
+                      <TableCell className="text-right">
+                        {podeIniciar && (
+                          <Button variant="ghost" size="sm" onClick={() => iniciarAtendimentoDeAgendamento(a)}>
+                            Iniciar atendimento
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </Secao>
+      )}
+
+      {/* Insumos — programa de cateterismo, fora do escopo do psicólogo */}
+      {!ehPsicologo && (
+        <>
+          <Secao icon={<PackageCheck className="h-4 w-4" />} titulo="Insumos recebidos" contagem={insumosRecebidos.length} defaultOpen={false}>
+            {entregasQ.isLoading ? <Skeleton className="h-20 w-full" /> : insumosRecebidos.length === 0 ? (
+              <Vazio>Nenhum insumo entregue ainda.</Vazio>
+            ) : <TabelaEntregas entregas={insumosRecebidos} />}
+          </Secao>
+
+          <Secao icon={<Package className="h-4 w-4" />} titulo="Insumos a receber" contagem={insumosAReceber.length} defaultOpen={false}>
+            {entregasQ.isLoading ? <Skeleton className="h-20 w-full" /> : insumosAReceber.length === 0 ? (
+              <Vazio>Nenhum insumo pendente.</Vazio>
+            ) : <TabelaEntregas entregas={insumosAReceber} />}
+          </Secao>
+        </>
+      )}
 
       <ProntuarioDetailDialog
         prontuarioId={viewProntuarioId}
@@ -792,6 +808,10 @@ type EditPacienteForm = z.infer<typeof editPacienteSchema>;
  * nesses campos e esta seção permite completá-los/corrigi-los a qualquer momento. */
 function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente; pacienteId: string }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  // Psicólogo só cuida de pacientes do Projeto PSI — trava o campo em vez de
+  // expor o seletor (evita que o paciente suma da lista dele por engano).
+  const ehPsicologo = user?.papel === Papel.PSICOLOGO;
   const [open, setOpen] = useState(false);
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<EditPacienteForm>({
@@ -803,7 +823,7 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
       cpf: p.cpf ?? '',
       dataNascimento: p.dataNascimento ? p.dataNascimento.slice(0, 10) : '',
       sexo: p.sexo ?? '',
-      projeto: p.projeto ?? '',
+      projeto: ehPsicologo ? ProjetoPaciente.PSI : (p.projeto ?? ''),
       telefone: p.telefone ?? '',
       email: p.email ?? '',
       consentimento: !!p.consentimentoLGPD?.aceito,
@@ -909,15 +929,17 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Projeto</Label>
-              <Select value={watch('projeto') || undefined} onValueChange={(v) => setValue('projeto', v as ProjetoPaciente)}>
-                <SelectTrigger><SelectValue placeholder="Sem projeto" /></SelectTrigger>
-                <SelectContent>
-                  {Object.values(ProjetoPaciente).map((pj) => <SelectItem key={pj} value={pj}>{PROJETO_LABEL[pj]}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+            {!ehPsicologo && (
+              <div className="space-y-2">
+                <Label>Projeto</Label>
+                <Select value={watch('projeto') || undefined} onValueChange={(v) => setValue('projeto', v as ProjetoPaciente)}>
+                  <SelectTrigger><SelectValue placeholder="Sem projeto" /></SelectTrigger>
+                  <SelectContent>
+                    {Object.values(ProjetoPaciente).map((pj) => <SelectItem key={pj} value={pj}>{PROJETO_LABEL[pj]}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">

@@ -52,6 +52,7 @@ export class ProntuariosService {
       avaliacao: dto.avaliacao ?? {},
       plano: dto.plano ?? {},
       fichaAvaliacaoIU: dto.fichaAvaliacaoIU,
+      registroPsicologico: dto.registroPsicologico,
       registroEnfermagem: dto.registroEnfermagem
         ? {
             ...dto.registroEnfermagem,
@@ -311,6 +312,7 @@ export class ProntuariosService {
         plano: prontuario.plano,
         fichaAvaliacaoIU: prontuario.fichaAvaliacaoIU ?? null,
         registroEnfermagem: prontuario.registroEnfermagem ?? null,
+        registroPsicologico: prontuario.registroPsicologico ?? null,
         relatorioJudicial: this.normalizeJudicial(prontuario.relatorioJudicial),
         arquivos: prontuario.arquivos,
       },

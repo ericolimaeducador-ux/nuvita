@@ -308,3 +308,27 @@ export class RegistroEnfermagemDto {
   @IsOptional() @IsISO8601() sondaChegouEm?: string;
   @IsOptional() @IsString() observacoes?: string;
 }
+
+/** Registro de atendimento psicológico / psicoterapia (Res. CFP 006/2019). */
+export class RegistroPsicologicoDto {
+  @IsOptional() @IsString() motivoAtendimento?: string;
+  @IsOptional() @IsString() avaliacaoDemanda?: string;
+  @IsOptional() @IsString() doencasPrevias?: string;
+  @IsOptional() @IsString() diagnosticosSaudeMental?: string;
+  @IsOptional() @IsString() medicamentosEmUso?: string;
+  @IsOptional() @IsString() historicoFamiliarSaudeMental?: string;
+  @IsOptional() @IsString() qualidadeSono?: string;
+  @IsOptional() @IsString() apetiteAlimentacao?: string;
+  @IsOptional() @IsString() atividadeFisica?: string;
+  @IsOptional() @IsString() usoSubstancias?: string;
+  @IsOptional() @IsString() estadoEmocional?: string;
+  @IsOptional() @IsInt() @Min(0) @Max(10) escalaDor?: number;
+  @IsOptional() @IsString() avaliacaoRisco?: string;
+  @IsOptional() @IsString() redeApoio?: string;
+  @IsOptional() @IsString() objetivosTrabalho?: string;
+  @IsOptional() @IsString() procedimentoTecnica?: string;
+  @IsOptional() @IsString() evolucao?: string;
+  @IsOptional() @IsString() encaminhamentos?: string;
+  @IsOptional() @IsString() anotacoesLivres?: string;
+  @IsOptional() @IsString() crp?: string;
+}

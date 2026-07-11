@@ -4,6 +4,7 @@ export enum TipoAtendimento {
   URGENCIA = 'urgencia',
   TELECONSULTA = 'teleconsulta',
   CONSULTA_ENFERMAGEM = 'consulta_enfermagem',
+  PSICOTERAPIA = 'psicoterapia',
 }
 
 export interface Subjetivo {
@@ -198,6 +199,54 @@ export interface RegistroEnfermagem {
   observacoes?: string;
 }
 
+/**
+ * Registro de atendimento psicológico / sessão de psicoterapia.
+ * Estruturado conforme o registro documental da Resolução CFP nº 006/2019
+ * (avaliação de demanda, objetivos, evolução, procedimento adotado,
+ * encaminhamentos) + anamnese de saúde mental e hábitos de vida.
+ */
+export interface RegistroPsicologico {
+  /** Motivo do atendimento / queixa principal. */
+  motivoAtendimento?: string;
+  /** Avaliação de demanda (Res. CFP 006/2019). */
+  avaliacaoDemanda?: string;
+  /** Doenças prévias / condições de saúde relevantes. */
+  doencasPrevias?: string;
+  /** Diagnósticos de saúde mental (prévios ou atuais). */
+  diagnosticosSaudeMental?: string;
+  /** Medicamentos em uso (psicotrópicos e demais). */
+  medicamentosEmUso?: string;
+  /** Histórico familiar de saúde mental. */
+  historicoFamiliarSaudeMental?: string;
+  // Hábitos de vida
+  qualidadeSono?: string;
+  apetiteAlimentacao?: string;
+  atividadeFisica?: string;
+  /** Uso de álcool, tabaco e outras substâncias. */
+  usoSubstancias?: string;
+  // Estado na sessão
+  /** Humor/sentimentos relatados e afeto observado. */
+  estadoEmocional?: string;
+  /** Dor de 0 a 10 (escala visual analógica). */
+  escalaDor?: number;
+  /** Avaliação de risco: ideação suicida, autolesão, risco a terceiros. */
+  avaliacaoRisco?: string;
+  /** Rede de apoio familiar/social. */
+  redeApoio?: string;
+  // Trabalho realizado
+  /** Objetivos do acompanhamento (Res. CFP 006/2019). */
+  objetivosTrabalho?: string;
+  /** Procedimento técnico-científico adotado na sessão. */
+  procedimentoTecnica?: string;
+  /** Registro da evolução (Res. CFP 006/2019). */
+  evolucao?: string;
+  encaminhamentos?: string;
+  /** Anotações livres da sessão. */
+  anotacoesLivres?: string;
+  /** CRP do psicólogo responsável. */
+  crp?: string;
+}
+
 export interface ArquivoProntuario {
   nome: string;
   url: string;
@@ -225,6 +274,7 @@ export interface Prontuario {
   plano: Plano;
   fichaAvaliacaoIU?: FichaAvaliacaoIU;
   registroEnfermagem?: RegistroEnfermagem;
+  registroPsicologico?: RegistroPsicologico;
   relatorioJudicial?: RelatorioJudicial;
   arquivos: ArquivoProntuario[];
   assinado?: AssinaturaProntuario;

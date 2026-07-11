@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, Calendar, Bell, DollarSign,
-  Video, Building2, LogOut, ChevronLeft, ChevronRight, Activity, Scale, Shield,
+  Video, Building2, LogOut, ChevronLeft, ChevronRight, Activity, Scale, Shield, Brain,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -18,6 +18,7 @@ const navItems: { to: string; icon: React.ElementType; label: string; modulo: Mo
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', modulo: Modulo.DASHBOARD },
   { to: '/pacientes', icon: Users, label: 'Pacientes', modulo: Modulo.PACIENTES },
   { to: '/fluxo-clinico', icon: Activity, label: 'Fluxo Clínico', modulo: Modulo.FLUXO_CLINICO },
+  { to: '/atendimento-psicologico', icon: Brain, label: 'Atend. Psicológico', modulo: Modulo.ATENDIMENTO_PSICOLOGICO },
   { to: '/meus-processos', icon: Scale, label: 'Meus Processos', modulo: Modulo.PROCESSOS },
   { to: '/agenda', icon: Calendar, label: 'Agenda', modulo: Modulo.AGENDA },
   { to: '/notificacoes', icon: Bell, label: 'Notificações', modulo: Modulo.NOTIFICACOES },

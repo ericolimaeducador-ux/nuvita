@@ -4,6 +4,7 @@ export enum Papel {
   MEDICO = 'MEDICO',
   ENFERMEIRO = 'ENFERMEIRO',
   ADVOGADO = 'ADVOGADO',
+  PSICOLOGO = 'PSICOLOGO',
   SECRETARIA = 'SECRETARIA',
   PACIENTE = 'PACIENTE',
 }
@@ -12,7 +13,12 @@ export enum Papel {
  * Papeis que prestam atendimento direto (cada um vinculado a uma modalidade).
  * Usado para autorizacao em agenda, prontuario e telemedicina.
  */
-export const PAPEIS_PROFISSIONAIS = [Papel.MEDICO, Papel.ENFERMEIRO, Papel.ADVOGADO] as const;
+export const PAPEIS_PROFISSIONAIS = [
+  Papel.MEDICO,
+  Papel.ENFERMEIRO,
+  Papel.ADVOGADO,
+  Papel.PSICOLOGO,
+] as const;
 
 export const PAPEIS_COM_2FA_OBRIGATORIO = [
   Papel.SUPER_ADMIN,
@@ -20,6 +26,7 @@ export const PAPEIS_COM_2FA_OBRIGATORIO = [
   Papel.MEDICO,
   Papel.ENFERMEIRO,
   Papel.ADVOGADO,
+  Papel.PSICOLOGO,
 ] as const;
 
 export function exigeTwoFactor(papel: Papel): boolean {

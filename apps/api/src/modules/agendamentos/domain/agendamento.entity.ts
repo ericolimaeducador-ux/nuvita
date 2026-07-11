@@ -24,6 +24,9 @@ export enum TipoAgendamento {
   AUDIENCIA = 'audiencia',
   // Fluxo clínico
   ENTREVISTA = 'entrevista',
+  // Psicologia
+  AVALIACAO_PSICOLOGICA = 'avaliacao_psicologica',
+  SESSAO_PSICOTERAPIA = 'sessao_psicoterapia',
 }
 
 export interface Agendamento {

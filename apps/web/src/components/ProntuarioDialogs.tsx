@@ -161,7 +161,35 @@ export function ProntuarioDetailDialog({
               )}
             </div>
 
-            {pr.tipo !== TipoAtendimento.CONSULTA_ENFERMAGEM && (
+            {pr.tipo === TipoAtendimento.PSICOTERAPIA && pr.registroPsicologico && (
+              <div className="glass rounded-xl p-4 space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Registro de atendimento psicológico
+                </p>
+                <CampoSe label="Motivo do atendimento">{pr.registroPsicologico.motivoAtendimento}</CampoSe>
+                <CampoSe label="Avaliação de demanda">{pr.registroPsicologico.avaliacaoDemanda}</CampoSe>
+                <CampoSe label="Doenças prévias">{pr.registroPsicologico.doencasPrevias}</CampoSe>
+                <CampoSe label="Diagnósticos de saúde mental">{pr.registroPsicologico.diagnosticosSaudeMental}</CampoSe>
+                <CampoSe label="Medicamentos em uso">{pr.registroPsicologico.medicamentosEmUso}</CampoSe>
+                <CampoSe label="Histórico familiar de saúde mental">{pr.registroPsicologico.historicoFamiliarSaudeMental}</CampoSe>
+                <CampoSe label="Qualidade do sono">{pr.registroPsicologico.qualidadeSono}</CampoSe>
+                <CampoSe label="Apetite / alimentação">{pr.registroPsicologico.apetiteAlimentacao}</CampoSe>
+                <CampoSe label="Atividade física">{pr.registroPsicologico.atividadeFisica}</CampoSe>
+                <CampoSe label="Uso de substâncias">{pr.registroPsicologico.usoSubstancias}</CampoSe>
+                <CampoSe label="Estado emocional">{pr.registroPsicologico.estadoEmocional}</CampoSe>
+                <CampoSe label="Dor (0-10)">{pr.registroPsicologico.escalaDor !== undefined ? String(pr.registroPsicologico.escalaDor) : undefined}</CampoSe>
+                <CampoSe label="Avaliação de risco">{pr.registroPsicologico.avaliacaoRisco}</CampoSe>
+                <CampoSe label="Rede de apoio">{pr.registroPsicologico.redeApoio}</CampoSe>
+                <CampoSe label="Objetivos do acompanhamento">{pr.registroPsicologico.objetivosTrabalho}</CampoSe>
+                <CampoSe label="Procedimento / técnica">{pr.registroPsicologico.procedimentoTecnica}</CampoSe>
+                <CampoSe label="Evolução">{pr.registroPsicologico.evolucao}</CampoSe>
+                <CampoSe label="Encaminhamentos">{pr.registroPsicologico.encaminhamentos}</CampoSe>
+                <CampoSe label="Anotações livres">{pr.registroPsicologico.anotacoesLivres}</CampoSe>
+                <CampoSe label="CRP">{pr.registroPsicologico.crp}</CampoSe>
+              </div>
+            )}
+
+            {pr.tipo !== TipoAtendimento.CONSULTA_ENFERMAGEM && pr.tipo !== TipoAtendimento.PSICOTERAPIA && (
             <>
             <SecaoSOAP letra="S" titulo="Subjetivo / Anamnese">
               <Campo label="Queixa principal">{pr.subjetivo?.queixaPrincipal}</Campo>
@@ -517,7 +545,8 @@ export function NovoAtendimentoDialog({
               <Select value={tipo} onValueChange={(v) => setTipo(v as TipoAtendimento)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.values(TipoAtendimento).map((t) => <SelectItem key={t} value={t}>{TIPO_ATENDIMENTO_LABEL[t]}</SelectItem>)}
+                  {/* Psicoterapia tem formulário próprio na aba Atendimento Psicológico. */}
+                  {Object.values(TipoAtendimento).filter((t) => t !== TipoAtendimento.PSICOTERAPIA).map((t) => <SelectItem key={t} value={t}>{TIPO_ATENDIMENTO_LABEL[t]}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

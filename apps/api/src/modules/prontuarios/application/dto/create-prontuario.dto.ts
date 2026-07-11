@@ -8,11 +8,15 @@ import {
   ObjetivoDto,
   PlanoDto,
   RegistroEnfermagemDto,
+  RegistroPsicologicoDto,
   RelatorioJudicialDto,
   SubjetivoDto,
 } from './soap.dto';
 
-const naoEhConsultaEnfermagem = (o: CreateProntuarioDto) => o.tipo !== TipoAtendimento.CONSULTA_ENFERMAGEM;
+// Consulta de enfermagem e psicoterapia não são SOAPs tradicionais — os 4
+// blocos SOAP ficam dispensados de validação/obrigatoriedade nesses tipos.
+const ehAtendimentoSoap = (o: CreateProntuarioDto) =>
+  o.tipo !== TipoAtendimento.CONSULTA_ENFERMAGEM && o.tipo !== TipoAtendimento.PSICOTERAPIA;
 
 export class CreateProntuarioDto {
   @IsMongoId()
@@ -31,24 +35,22 @@ export class CreateProntuarioDto {
   @IsEnum(TipoAtendimento)
   tipo!: TipoAtendimento;
 
-  // Consulta de enfermagem não é um SOAP tradicional — esses 4 campos ficam
-  // dispensados de validação/obrigatoriedade só para esse tipo de atendimento.
-  @ValidateIf(naoEhConsultaEnfermagem)
+  @ValidateIf(ehAtendimentoSoap)
   @ValidateNested()
   @Type(() => SubjetivoDto)
   subjetivo?: SubjetivoDto;
 
-  @ValidateIf(naoEhConsultaEnfermagem)
+  @ValidateIf(ehAtendimentoSoap)
   @ValidateNested()
   @Type(() => ObjetivoDto)
   objetivo?: ObjetivoDto;
 
-  @ValidateIf(naoEhConsultaEnfermagem)
+  @ValidateIf(ehAtendimentoSoap)
   @ValidateNested()
   @Type(() => AvaliacaoDto)
   avaliacao?: AvaliacaoDto;
 
-  @ValidateIf(naoEhConsultaEnfermagem)
+  @ValidateIf(ehAtendimentoSoap)
   @ValidateNested()
   @Type(() => PlanoDto)
   plano?: PlanoDto;
@@ -62,6 +64,11 @@ export class CreateProntuarioDto {
   @ValidateNested()
   @Type(() => RegistroEnfermagemDto)
   registroEnfermagem?: RegistroEnfermagemDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RegistroPsicologicoDto)
+  registroPsicologico?: RegistroPsicologicoDto;
 
   @IsOptional()
   @ValidateNested()

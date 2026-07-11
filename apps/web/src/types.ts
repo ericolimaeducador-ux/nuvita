@@ -6,6 +6,7 @@ export enum Papel {
   MEDICO = 'MEDICO',
   ENFERMEIRO = 'ENFERMEIRO',
   ADVOGADO = 'ADVOGADO',
+  PSICOLOGO = 'PSICOLOGO',
   SECRETARIA = 'SECRETARIA',
   PACIENTE = 'PACIENTE',
 }
@@ -16,6 +17,7 @@ export const PAPEL_LABEL: Record<Papel, string> = {
   [Papel.MEDICO]: 'Médico(a)',
   [Papel.ENFERMEIRO]: 'Enfermeiro(a)',
   [Papel.ADVOGADO]: 'Advogado(a)',
+  [Papel.PSICOLOGO]: 'Psicólogo(a)',
   [Papel.SECRETARIA]: 'Secretaria',
   [Papel.PACIENTE]: 'Paciente',
 };
@@ -25,18 +27,21 @@ export const PAPEIS_PROFISSIONAIS: Papel[] = [
   Papel.MEDICO,
   Papel.ENFERMEIRO,
   Papel.ADVOGADO,
+  Papel.PSICOLOGO,
 ];
 
 export enum ModalidadeAtendimento {
   MEDICO = 'medico',
   ENFERMAGEM = 'enfermagem',
   JURIDICO = 'juridico',
+  PSICOLOGIA = 'psicologia',
 }
 
 export const MODALIDADE_LABEL: Record<ModalidadeAtendimento, string> = {
   [ModalidadeAtendimento.MEDICO]: 'Médico',
   [ModalidadeAtendimento.ENFERMAGEM]: 'Enfermagem',
   [ModalidadeAtendimento.JURIDICO]: 'Jurídico',
+  [ModalidadeAtendimento.PSICOLOGIA]: 'Psicologia',
 };
 
 export enum Sexo {
@@ -101,6 +106,8 @@ export enum TipoAgendamento {
   ATENDIMENTO_JURIDICO = 'atendimento_juridico',
   AUDIENCIA = 'audiencia',
   ENTREVISTA = 'entrevista',
+  AVALIACAO_PSICOLOGICA = 'avaliacao_psicologica',
+  SESSAO_PSICOTERAPIA = 'sessao_psicoterapia',
 }
 
 export const TIPO_AGENDAMENTO_LABEL: Record<TipoAgendamento, string> = {
@@ -114,6 +121,8 @@ export const TIPO_AGENDAMENTO_LABEL: Record<TipoAgendamento, string> = {
   [TipoAgendamento.ATENDIMENTO_JURIDICO]: 'Atend. Jurídico',
   [TipoAgendamento.AUDIENCIA]: 'Audiência',
   [TipoAgendamento.ENTREVISTA]: 'Entrevista (Fluxo Clínico)',
+  [TipoAgendamento.AVALIACAO_PSICOLOGICA]: 'Avaliação Psicológica',
+  [TipoAgendamento.SESSAO_PSICOTERAPIA]: 'Sessão de Psicoterapia',
 };
 
 // Tipos de agendamento sugeridos por modalidade (para filtrar o formulário).
@@ -134,6 +143,10 @@ export const TIPOS_POR_MODALIDADE: Record<ModalidadeAtendimento, TipoAgendamento
     TipoAgendamento.ATENDIMENTO_JURIDICO,
     TipoAgendamento.AUDIENCIA,
   ],
+  [ModalidadeAtendimento.PSICOLOGIA]: [
+    TipoAgendamento.AVALIACAO_PSICOLOGICA,
+    TipoAgendamento.SESSAO_PSICOTERAPIA,
+  ],
 };
 
 export enum TipoAtendimento {
@@ -142,6 +155,7 @@ export enum TipoAtendimento {
   URGENCIA = 'urgencia',
   TELECONSULTA = 'teleconsulta',
   CONSULTA_ENFERMAGEM = 'consulta_enfermagem',
+  PSICOTERAPIA = 'psicoterapia',
 }
 
 export const TIPO_ATENDIMENTO_LABEL: Record<TipoAtendimento, string> = {
@@ -150,6 +164,7 @@ export const TIPO_ATENDIMENTO_LABEL: Record<TipoAtendimento, string> = {
   [TipoAtendimento.URGENCIA]: 'Urgência',
   [TipoAtendimento.TELECONSULTA]: 'Teleconsulta',
   [TipoAtendimento.CONSULTA_ENFERMAGEM]: 'Consulta de Enfermagem',
+  [TipoAtendimento.PSICOTERAPIA]: 'Atendimento Psicológico',
 };
 
 /** Mapeia o tipo de agendamento para o tipo de atendimento (prontuário) mais
@@ -165,6 +180,8 @@ export const TIPO_ATENDIMENTO_POR_AGENDAMENTO: Partial<Record<TipoAgendamento, T
   [TipoAgendamento.ATENDIMENTO_ENFERMAGEM]: TipoAtendimento.CONSULTA_ENFERMAGEM,
   [TipoAgendamento.PROCEDIMENTO_ENFERMAGEM]: TipoAtendimento.CONSULTA_ENFERMAGEM,
   [TipoAgendamento.ENTREVISTA]: TipoAtendimento.CONSULTA_ENFERMAGEM,
+  [TipoAgendamento.AVALIACAO_PSICOLOGICA]: TipoAtendimento.PSICOTERAPIA,
+  [TipoAgendamento.SESSAO_PSICOTERAPIA]: TipoAtendimento.PSICOTERAPIA,
 };
 
 // ---- Permissões por módulo (espelho de packages/shared/src/auth/permissao.ts) ----
@@ -184,6 +201,7 @@ export enum Modulo {
   AVALIACOES = 'AVALIACOES',
   ANALYTICS = 'ANALYTICS',
   FLUXO_CLINICO = 'FLUXO_CLINICO',
+  ATENDIMENTO_PSICOLOGICO = 'ATENDIMENTO_PSICOLOGICO',
   CLINICA = 'CLINICA',
   SUPER_ADMIN = 'SUPER_ADMIN',
 }
@@ -205,6 +223,7 @@ export const MODULO_LABEL: Record<Modulo, string> = {
   [Modulo.AVALIACOES]: 'Avaliações de IU',
   [Modulo.ANALYTICS]: 'Relatórios / analytics',
   [Modulo.FLUXO_CLINICO]: 'Fluxo clínico',
+  [Modulo.ATENDIMENTO_PSICOLOGICO]: 'Atendimento psicológico',
   [Modulo.CLINICA]: 'Configuração da clínica',
   [Modulo.SUPER_ADMIN]: 'Super Admin',
 };
@@ -230,6 +249,12 @@ export const PERMISSOES_PADRAO_POR_PAPEL: Record<Papel, Modulo[]> = {
   [Papel.ADVOGADO]: [
     M.DASHBOARD, M.PACIENTES, M.PRONTUARIOS, M.PROCESSOS, M.ENTREGAS, M.DOCUMENTOS,
     M.FLUXO_CLINICO,
+  ],
+  // Atendimento psicológico é um extra: só o psicólogo enxerga por padrão;
+  // outros usuários ganham por concessão individual no painel super-admin.
+  [Papel.PSICOLOGO]: [
+    M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS, M.TELEMEDICINA,
+    M.ATENDIMENTO_PSICOLOGICO,
   ],
   [Papel.SECRETARIA]: [
     M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS, M.FINANCEIRO, M.NOTIFICACOES, M.FLUXO_CLINICO,
@@ -274,6 +299,7 @@ export const REGISTRO_LABEL: Partial<Record<Papel, string>> = {
   [Papel.MEDICO]: 'CRM',
   [Papel.ENFERMEIRO]: 'COREN',
   [Papel.ADVOGADO]: 'OAB',
+  [Papel.PSICOLOGO]: 'CRP',
 };
 export function registroLabel(papel?: Papel): string {
   return (papel && REGISTRO_LABEL[papel]) || 'Registro profissional';
@@ -505,6 +531,30 @@ export interface RegistroEnfermagem {
   observacoes?: string;
 }
 
+/** Registro de atendimento psicológico / psicoterapia (Res. CFP 006/2019). */
+export interface RegistroPsicologico {
+  motivoAtendimento?: string;
+  avaliacaoDemanda?: string;
+  doencasPrevias?: string;
+  diagnosticosSaudeMental?: string;
+  medicamentosEmUso?: string;
+  historicoFamiliarSaudeMental?: string;
+  qualidadeSono?: string;
+  apetiteAlimentacao?: string;
+  atividadeFisica?: string;
+  usoSubstancias?: string;
+  estadoEmocional?: string;
+  escalaDor?: number;
+  avaliacaoRisco?: string;
+  redeApoio?: string;
+  objetivosTrabalho?: string;
+  procedimentoTecnica?: string;
+  evolucao?: string;
+  encaminhamentos?: string;
+  anotacoesLivres?: string;
+  crp?: string;
+}
+
 export interface Prontuario {
   id: string;
   clinicaId: string;
@@ -518,6 +568,7 @@ export interface Prontuario {
   plano?: ProntuarioPlano;
   fichaAvaliacaoIU?: FichaAvaliacaoIU;
   registroEnfermagem?: RegistroEnfermagem;
+  registroPsicologico?: RegistroPsicologico;
   relatorioJudicial?: RelatorioJudicial;
 }
 

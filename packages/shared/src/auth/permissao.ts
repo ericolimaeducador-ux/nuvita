@@ -21,6 +21,7 @@ export enum Modulo {
   AVALIACOES = 'AVALIACOES',
   ANALYTICS = 'ANALYTICS',
   FLUXO_CLINICO = 'FLUXO_CLINICO',
+  ATENDIMENTO_PSICOLOGICO = 'ATENDIMENTO_PSICOLOGICO',
   CLINICA = 'CLINICA',
   SUPER_ADMIN = 'SUPER_ADMIN',
 }
@@ -42,6 +43,7 @@ export const MODULO_LABEL: Record<Modulo, string> = {
   [Modulo.AVALIACOES]: 'Avaliações de IU',
   [Modulo.ANALYTICS]: 'Relatórios / analytics',
   [Modulo.FLUXO_CLINICO]: 'Fluxo clínico',
+  [Modulo.ATENDIMENTO_PSICOLOGICO]: 'Atendimento psicológico',
   [Modulo.CLINICA]: 'Configuração da clínica',
   [Modulo.SUPER_ADMIN]: 'Super Admin',
 };
@@ -67,6 +69,13 @@ export const PERMISSOES_PADRAO_POR_PAPEL: Record<Papel, Modulo[]> = {
   [Papel.ADVOGADO]: [
     M.DASHBOARD, M.PACIENTES, M.PRONTUARIOS, M.PROCESSOS, M.ENTREGAS, M.DOCUMENTOS,
     M.FLUXO_CLINICO,
+  ],
+  // Atendimento psicológico é um extra do sistema: só o psicólogo enxerga o
+  // módulo por padrão; para outros usuários (ex.: admin da clínica demo) a
+  // liberação é feita por concessão individual no painel super-admin.
+  [Papel.PSICOLOGO]: [
+    M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS, M.TELEMEDICINA,
+    M.ATENDIMENTO_PSICOLOGICO,
   ],
   [Papel.SECRETARIA]: [
     M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS, M.FINANCEIRO, M.NOTIFICACOES, M.FLUXO_CLINICO,

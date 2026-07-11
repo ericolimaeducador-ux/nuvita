@@ -20,6 +20,7 @@ import { AvaliacaoImpressaoPage } from '@/pages/AvaliacaoImpressaoPage';
 import { NatjusImpressaoPage } from '@/pages/NatjusImpressaoPage';
 import { ProntuarioImpressaoPage } from '@/pages/ProntuarioImpressaoPage';
 import { MeusProcessosPage } from '@/pages/MeusProcessosPage';
+import { AtendimentoPsicologicoPage } from '@/pages/AtendimentoPsicologicoPage';
 import { SuperAdminPage } from '@/pages/SuperAdminPage';
 import { Modulo, Papel } from '@/types';
 
@@ -76,6 +77,9 @@ export function AppRoutes() {
           </Route>
           <Route element={<ProtectedRoute modulo={Modulo.PROCESSOS} />}>
             <Route path="/meus-processos" element={<MeusProcessosPage />} />
+          </Route>
+          <Route element={<ProtectedRoute modulo={Modulo.ATENDIMENTO_PSICOLOGICO} />}>
+            <Route path="/atendimento-psicologico" element={<AtendimentoPsicologicoPage />} />
           </Route>
           <Route element={<ProtectedRoute modulo={Modulo.CLINICA} />}>
             <Route path="/clinica" element={<ClinicaPage />} />

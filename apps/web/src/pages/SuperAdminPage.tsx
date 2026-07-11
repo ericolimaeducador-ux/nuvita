@@ -35,6 +35,7 @@ const PAPEL_BADGE: Record<Papel, string> = {
   [Papel.MEDICO]: 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20',
   [Papel.ENFERMEIRO]: 'bg-teal-500/10 text-teal-600 border border-teal-500/20',
   [Papel.ADVOGADO]: 'bg-amber-500/10 text-amber-600 border border-amber-500/20',
+  [Papel.PSICOLOGO]: 'bg-rose-500/10 text-rose-600 border border-rose-500/20',
   [Papel.SECRETARIA]: 'bg-slate-500/10 text-slate-600 border border-slate-500/20',
   [Papel.PACIENTE]: 'bg-gray-500/10 text-gray-400 border border-gray-500/20',
 };

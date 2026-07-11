@@ -32,6 +32,9 @@ function statusVariant(s: StatusAgendamento): 'default' | 'success' | 'destructi
 export function DashboardPage() {
   const { user, permissoes } = useAuth();
   const podeVerChecklist = permissoes.includes(Modulo.DOCUMENTOS);
+  // Pipeline de IU é o fluxo da clínica de cateterismo — quem não tem o módulo
+  // (ex.: psicólogo, que atende fora do fluxo clínico) não vê o card.
+  const podeVerFluxoClinico = permissoes.includes(Modulo.FLUXO_CLINICO);
 
   const pendentesDocsQ = useQuery({
     queryKey: ['checklist-documentos', 'resumo-pendentes'],
@@ -50,11 +53,13 @@ export function DashboardPage() {
   const avaliacaoCountQ = useQuery({
     queryKey: ['avaliacao-iu', 'count'],
     queryFn: () => avaliacaoIUApi.count(),
+    enabled: podeVerFluxoClinico,
   });
 
   const followupResumoQ = useQuery({
     queryKey: ['followup', 'resumo'],
     queryFn: () => followUpApi.resumo(),
+    enabled: podeVerFluxoClinico,
   });
 
   const agendaHojeQ = useQuery({
@@ -99,6 +104,7 @@ export function DashboardPage() {
       )}
 
       {/* Pipeline de Incontinência Urinária */}
+      {podeVerFluxoClinico && (
       <Card className="mb-6 border-brand-cobalt/30">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div className="flex items-center gap-2">
@@ -136,6 +142,7 @@ export function DashboardPage() {
           )}
         </CardContent>
       </Card>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         {stats.map((s) => {

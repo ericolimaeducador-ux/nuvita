@@ -35,6 +35,24 @@ function formatarDuracao(inicio: Date, agora: Date): string {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
+/** Mensagem específica por tipo de falha de mídia — a genérica esconde a causa
+ * (permissão negada × sem dispositivo × câmera ocupada) e impede o usuário de agir. */
+function mensagemErroMidia(nome: string): string {
+  switch (nome) {
+    case 'NotAllowedError':
+    case 'PermissionDeniedError':
+      return 'O navegador está sem permissão para usar câmera e microfone. Clique no ícone de cadeado (ou de câmera) na barra de endereço, permita o acesso e toque em "Tentar novamente". No Windows, confira também Configurações → Privacidade → Câmera e Microfone.';
+    case 'NotFoundError':
+    case 'DevicesNotFoundError':
+      return 'Nenhuma câmera ou microfone foi encontrado neste aparelho. Conecte um dispositivo e tente novamente.';
+    case 'NotReadableError':
+    case 'TrackStartError':
+      return 'A câmera ou o microfone estão em uso por outro aplicativo (Teams, Zoom, outra aba de vídeo…). Feche o outro aplicativo e tente novamente.';
+    default:
+      return `Não foi possível acessar câmera e microfone (${nome}). Verifique as permissões do navegador e tente novamente.`;
+  }
+}
+
 /**
  * Sala de atendimento por vídeo (WebRTC ponto-a-ponto).
  *
@@ -54,6 +72,7 @@ export function AtendimentoTelemedicinaPage() {
   const [mensagemFinal, setMensagemFinal] = useState('');
   const [info, setInfo] = useState<SalaAcessoInfo | null>(null);
   const [erroMidia, setErroMidia] = useState('');
+  const [avisoMidia, setAvisoMidia] = useState('');
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const [conexao, setConexao] = useState<EstadoConexao>('aguardando');
@@ -107,23 +126,63 @@ export function AtendimentoTelemedicinaPage() {
   }, [token]);
 
   // ---- lobby: liga a câmera para o participante se ver antes de entrar ----
+  const solicitarMidia = useCallback(async () => {
+    setErroMidia('');
+    setAvisoMidia('');
+
+    // Fora de HTTPS (ou navegador muito antigo) a API nem existe.
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setErroMidia(
+        'Este navegador bloqueia câmera e microfone fora de HTTPS. Abra o link exatamente como foi enviado (começando com https://).',
+      );
+      void teleAcessoApi
+        .evento(token, TipoEventoSala.MIDIA_NEGADA, 'mediaDevices indisponível (sem HTTPS?)')
+        .catch(() => undefined);
+      return;
+    }
+
+    // Cascata: HD → qualquer câmera → só áudio (permite atender sem webcam).
+    const tentativas: Array<{ constraints: MediaStreamConstraints; aviso?: string }> = [
+      { constraints: { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true } },
+      { constraints: { video: true, audio: true } },
+      {
+        constraints: { video: false, audio: true },
+        aviso: 'Câmera indisponível — você entrará somente com áudio.',
+      },
+    ];
+
+    let ultimoErro: DOMException | undefined;
+    for (const { constraints, aviso } of tentativas) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        localStreamRef.current = stream;
+        if (lobbyVideoRef.current) lobbyVideoRef.current.srcObject = stream;
+        if (aviso) {
+          setAvisoMidia(aviso);
+          setCamOn(false);
+        }
+        return;
+      } catch (err) {
+        ultimoErro = err as DOMException;
+        // Permissão negada não muda trocando constraint — encerra a cascata.
+        if (ultimoErro?.name === 'NotAllowedError' || ultimoErro?.name === 'PermissionDeniedError') break;
+      }
+    }
+
+    const nome = ultimoErro?.name ?? 'erro desconhecido';
+    setErroMidia(mensagemErroMidia(nome));
+    // O motivo real vai pro registro da sala — o profissional vê no histórico
+    // por que o paciente não conseguiu entrar.
+    void teleAcessoApi
+      .evento(token, TipoEventoSala.MIDIA_NEGADA, `${nome}: ${ultimoErro?.message ?? ''}`.slice(0, 500))
+      .catch(() => undefined);
+  }, [token]);
+
   useEffect(() => {
     if (fase !== 'lobby' || midiaSolicitadaRef.current) return;
     midiaSolicitadaRef.current = true;
-
-    navigator.mediaDevices
-      .getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true })
-      .then((stream) => {
-        localStreamRef.current = stream;
-        if (lobbyVideoRef.current) lobbyVideoRef.current.srcObject = stream;
-      })
-      .catch(() => {
-        setErroMidia(
-          'Não foi possível acessar câmera e microfone. Verifique as permissões do navegador e recarregue a página.',
-        );
-        void teleAcessoApi.evento(token, TipoEventoSala.MIDIA_NEGADA).catch(() => undefined);
-      });
-  }, [fase, token]);
+    void solicitarMidia();
+  }, [fase, solicitarMidia]);
 
   const limparConexao = useCallback(() => {
     if (pollRef.current !== null) {
@@ -424,11 +483,16 @@ export function AtendimentoTelemedicinaPage() {
               className="h-full w-full object-cover -scale-x-100"
             />
             {erroMidia && (
-              <div className="absolute inset-0 flex items-center justify-center p-6 bg-slate-900/95">
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 bg-slate-900/95">
                 <p className="text-sm text-amber-400 text-center">{erroMidia}</p>
+                <Button variant="secondary" size="sm" onClick={() => void solicitarMidia()}>
+                  Tentar novamente
+                </Button>
               </div>
             )}
           </div>
+
+          {avisoMidia && <p className="text-sm text-amber-400 text-center">{avisoMidia}</p>}
 
           <Button className="w-full" size="lg" disabled={!!erroMidia} onClick={() => void entrarNaChamada()}>
             Entrar no atendimento
@@ -441,7 +505,9 @@ export function AtendimentoTelemedicinaPage() {
   // fase === 'chamada'
   return (
     <div className="min-h-screen bg-slate-950 relative overflow-hidden">
-      <video ref={remoteVideoRef} autoPlay playsInline className="absolute inset-0 h-full w-full object-cover" />
+      {/* object-contain, não cover: celular em pé manda vídeo vertical e o
+          cover ampliaria até cortar o rosto — melhor barras laterais. */}
+      <video ref={remoteVideoRef} autoPlay playsInline className="absolute inset-0 h-full w-full object-contain" />
 
       {!remotoPresente && (
         <div className="absolute inset-0 flex items-center justify-center bg-slate-950">

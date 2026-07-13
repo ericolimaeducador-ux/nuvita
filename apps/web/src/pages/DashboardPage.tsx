@@ -1,20 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
-import { Users, Calendar, CheckCircle, FileText, Activity, UserCheck, ClipboardList, AlertTriangle } from 'lucide-react';
+import { Users, Calendar, CheckCircle, FileText, Activity, UserCheck, ClipboardList, AlertTriangle, Brain } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { agendaApi, pacientesApi, avaliacaoIUApi, followUpApi, checklistDocumentosApi } from '@/api/resources';
+import {
+  agendaApi, pacientesApi, avaliacaoIUApi, followUpApi, checklistDocumentosApi, psicoFinanceiroApi,
+} from '@/api/resources';
 import { toItems } from '@/utils';
 import { useAuth } from '@/auth/AuthContext';
 import {
   StatusAgendamento,
   STATUS_AGENDAMENTO_LABEL,
+  StatusCiclo,
+  STATUS_CICLO_LABEL,
   TIPO_AGENDAMENTO_LABEL,
   Modulo,
+  rotuloProximaSessao,
   type Agendamento,
 } from '@/types';
 
@@ -35,6 +40,14 @@ export function DashboardPage() {
   // Pipeline de IU é o fluxo da clínica de cateterismo — quem não tem o módulo
   // (ex.: psicólogo, que atende fora do fluxo clínico) não vê o card.
   const podeVerFluxoClinico = permissoes.includes(Modulo.FLUXO_CLINICO);
+  const podeVerPsicologia = permissoes.includes(Modulo.FINANCEIRO_PSICOLOGIA);
+
+  const painelPsiQ = useQuery({
+    queryKey: ['painel-psicologia'],
+    queryFn: () => psicoFinanceiroApi.painel(),
+    enabled: podeVerPsicologia,
+    retry: false,
+  });
 
   const pendentesDocsQ = useQuery({
     queryKey: ['checklist-documentos', 'resumo-pendentes'],
@@ -101,6 +114,61 @@ export function DashboardPage() {
             </div>
           </div>
         </Link>
+      )}
+
+      {/* Psicoterapia: em que sessão cada paciente está e como está o ciclo de cobrança */}
+      {podeVerPsicologia && painelPsiQ.data && painelPsiQ.data.pacientes.length > 0 && (
+        <Card className="mb-6 border-brand-cobalt/30">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div className="flex items-center gap-2">
+              <Brain className="h-4 w-4 text-accent-gold-hover" />
+              <CardTitle className="text-sm font-semibold">Psicoterapia — sessões e ciclos</CardTitle>
+            </div>
+            <Link to="/financeiro-psicologia" className="text-xs font-medium text-primary hover:underline">
+              Ver financeiro →
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {painelPsiQ.data.ciclosACobrar > 0 && (
+              <p className="mb-3 flex items-center gap-2 text-sm text-amber-700">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                {painelPsiQ.data.ciclosACobrar === 1
+                  ? 'Um paciente fechou o ciclo de 4 sessões — hora de renovar o pagamento.'
+                  : `${painelPsiQ.data.ciclosACobrar} pacientes fecharam o ciclo de 4 sessões — hora de renovar o pagamento.`}
+              </p>
+            )}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Paciente</TableHead>
+                  <TableHead>Próximo atendimento</TableHead>
+                  <TableHead>Ciclo</TableHead>
+                  <TableHead>Pagamento</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {painelPsiQ.data.pacientes.slice(0, 8).map((p) => (
+                  <TableRow key={p.pacienteId}>
+                    <TableCell className="font-medium">
+                      <Link to={`/pacientes/${p.pacienteId}`} className="hover:underline">
+                        {p.pacienteNome ?? p.pacienteId}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{rotuloProximaSessao(p)}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      Ciclo {p.cicloAtual} · {p.sessoesNoCiclo}/{painelPsiQ.data!.sessoesPorCiclo} sessões
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={p.statusCiclo === StatusCiclo.EM_DIA ? 'success' : 'warning'}>
+                        {STATUS_CICLO_LABEL[p.statusCiclo]}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
 
       {/* Pipeline de Incontinência Urinária */}

@@ -17,6 +17,7 @@ import type {
   Modulo,
   ObservacaoPaciente,
   Paciente,
+  PainelPsicologia,
   ProjetoPaciente,
   PageResult,
   Papel,
@@ -221,6 +222,29 @@ export const financeiroApi = {
       .then((r) => r.data),
   cancelar: (id: string) =>
     api.patch(`/financeiro/lancamentos/${id}/cancelar`).then((r) => r.data),
+};
+
+// ---------- Financeiro da psicologia ----------
+export interface CobrarCicloPayload {
+  pacienteId: string;
+  ciclo: number;
+  valor: number;
+  formaPagamento?: string;
+  vencimento?: string;
+  descricao?: string;
+  observacoes?: string;
+}
+
+export const psicoFinanceiroApi = {
+  painel: () => api.get<PainelPsicologia>('/financeiro/psicologia/painel').then((r) => r.data),
+  salvarConfig: (valorSessao: number) =>
+    api.post('/financeiro/psicologia/configuracao', { valorSessao }).then((r) => r.data),
+  cobrar: (payload: CobrarCicloPayload) =>
+    api.post<Lancamento>('/financeiro/psicologia/cobrancas', payload).then((r) => r.data),
+  receber: (id: string) =>
+    api.patch(`/financeiro/psicologia/cobrancas/${id}/receber`).then((r) => r.data),
+  cancelar: (id: string) =>
+    api.patch(`/financeiro/psicologia/cobrancas/${id}/cancelar`).then((r) => r.data),
 };
 
 // ---------- Telemedicina ----------

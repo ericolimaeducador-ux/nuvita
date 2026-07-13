@@ -19,7 +19,7 @@ import {
 import { toast } from '@/components/ui/use-toast';
 import { SalaVideo } from '@/components/SalaVideo';
 import { useAuth } from '@/auth/AuthContext';
-import { agendaApi, pacientesApi, prontuariosApi, telemedicinaApi } from '@/api/resources';
+import { agendaApi, pacientesApi, prontuariosApi, psicoFinanceiroApi, telemedicinaApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { formatData, formatEndereco, linkDaSala, toItems } from '@/utils';
 import {
@@ -27,7 +27,7 @@ import {
   REGISTRO_PSICOLOGICO_CAMPOS,
   SalaTelemedicina, StatusAgendamento, StatusSala, STATUS_AGENDAMENTO_LABEL,
   TipoAgendamento, TipoAtendimento,
-  TIPO_AGENDAMENTO_LABEL, TIPOS_POR_MODALIDADE,
+  TIPO_AGENDAMENTO_LABEL, TIPOS_POR_MODALIDADE, rotuloProximaSessao,
 } from '@/types';
 
 /**
@@ -209,6 +209,8 @@ function RegistroSessao({
       toast({ title: assinar ? 'Sessão registrada e assinada.' : 'Sessão registrada como rascunho.' });
       queryClient.invalidateQueries({ queryKey: ['agendamentos-psicologia'] });
       queryClient.invalidateQueries({ queryKey: ['sessoes-psicologia'] });
+      // A sessão que acabou de entrar muda a numeração e pode fechar o ciclo.
+      queryClient.invalidateQueries({ queryKey: ['painel-psicologia'] });
       onClose();
     },
     onError: (e) => toast({ title: 'Erro ao registrar sessão', description: apiErrorMessage(e), variant: 'destructive' }),
@@ -737,6 +739,19 @@ export function AtendimentoPsicologicoPage() {
     atenderMut.mutate(a);
   }
 
+  // Em que sessão cada paciente está — vem do mesmo painel do financeiro, então
+  // a numeração aqui e a cobrança lá nunca divergem. Paciente ausente do painel
+  // é paciente sem sessão: é a primeira consulta dele.
+  const painelQ = useQuery({
+    queryKey: ['painel-psicologia'],
+    queryFn: () => psicoFinanceiroApi.painel(),
+    retry: false,
+  });
+  const situacaoPorPaciente = useMemo(
+    () => new Map((painelQ.data?.pacientes ?? []).map((p) => [p.pacienteId, p])),
+    [painelQ.data],
+  );
+
   const agendamentosQ = useQuery({
     queryKey: ['agendamentos-psicologia', ehPsicologo ? user?.id : 'todos'],
     queryFn: () =>
@@ -802,7 +817,9 @@ export function AtendimentoPsicologicoPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {agendamentos.map((a) => (
+          {agendamentos.map((a) => {
+            const situacao = situacaoPorPaciente.get(a.pacienteId);
+            return (
             <div key={a.id} className="rounded-xl border p-4 flex flex-wrap items-center gap-4">
               <div className="min-w-40">
                 <p className="font-medium">{dayjs(a.dataHoraInicio).format('DD/MM/YYYY')}</p>
@@ -817,6 +834,16 @@ export function AtendimentoPsicologicoPage() {
                 <p className="text-sm text-muted-foreground">
                   {a.pacienteCpf ? `CPF ${a.pacienteCpf} · ` : ''}{TIPO_AGENDAMENTO_LABEL[a.tipo]}
                 </p>
+              </div>
+              <div className="text-sm">
+                <p className="font-medium">
+                  {situacao ? rotuloProximaSessao(situacao) : '1ª consulta'}
+                </p>
+                {situacao && situacao.sessoesRealizadas > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Ciclo {situacao.cicloAtual} · {situacao.sessoesNoCiclo}/{painelQ.data?.sessoesPorCiclo ?? 4} sessões
+                  </p>
+                )}
               </div>
               <Badge variant="outline" className={STATUS_BADGE[a.status]}>
                 {STATUS_AGENDAMENTO_LABEL[a.status]}
@@ -840,7 +867,8 @@ export function AtendimentoPsicologicoPage() {
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

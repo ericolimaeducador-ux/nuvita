@@ -7,7 +7,13 @@ import {
   LancamentoRepository,
   ListLancamentosInput,
 } from '../../application/ports/lancamento.repository';
-import { DashboardFinanceiro, Lancamento, StatusLancamento, TipoLancamento } from '../../domain/lancamento.entity';
+import {
+  DashboardFinanceiro,
+  Lancamento,
+  OrigemLancamento,
+  StatusLancamento,
+  TipoLancamento,
+} from '../../domain/lancamento.entity';
 import { LancamentoDocument, LancamentoMongo } from './lancamento.schema';
 
 @Injectable()
@@ -28,6 +34,9 @@ export class LancamentoMongoRepository implements LancamentoRepository {
       status: StatusLancamento.PENDENTE,
       vencimento: input.vencimento,
       observacoes: input.observacoes,
+      origem: input.origem ?? OrigemLancamento.GERAL,
+      profissionalId: input.profissionalId,
+      ciclo: input.ciclo,
       criadoPor: input.criadoPor,
     });
 
@@ -46,6 +55,13 @@ export class LancamentoMongoRepository implements LancamentoRepository {
     if (input.agendamentoId) query.agendamentoId = input.agendamentoId;
     if (input.tipo) query.tipo = input.tipo;
     if (input.status) query.status = input.status;
+    if (input.profissionalId) query.profissionalId = input.profissionalId;
+    // Lançamentos antigos não têm o campo: origem "geral" inclui os sem origem.
+    if (input.origem === OrigemLancamento.GERAL) {
+      query.origem = { $in: [OrigemLancamento.GERAL, null] };
+    } else if (input.origem) {
+      query.origem = input.origem;
+    }
     if (input.dataInicio || input.dataFim) {
       query.criadoEm = {};
       if (input.dataInicio) (query.criadoEm as Record<string, unknown>).$gte = input.dataInicio;
@@ -72,14 +88,20 @@ export class LancamentoMongoRepository implements LancamentoRepository {
   }
 
   async dashboard(input: DashboardInput): Promise<DashboardFinanceiro> {
+    const match: Record<string, unknown> = {
+      clinicaId: input.clinicaId,
+      status: { $ne: StatusLancamento.CANCELADO },
+      criadoEm: { $gte: input.dataInicio, $lte: input.dataFim },
+    };
+    // Sem origem gravada = lançamento antigo, que é do caixa geral.
+    if (input.origem === OrigemLancamento.GERAL) {
+      match.origem = { $in: [OrigemLancamento.GERAL, null] };
+    } else if (input.origem) {
+      match.origem = input.origem;
+    }
+
     const pipeline = [
-      {
-        $match: {
-          clinicaId: input.clinicaId,
-          status: { $ne: StatusLancamento.CANCELADO },
-          criadoEm: { $gte: input.dataInicio, $lte: input.dataFim },
-        },
-      },
+      { $match: match },
       {
         $group: {
           _id: { tipo: '$tipo', formaPagamento: '$formaPagamento', status: '$status' },
@@ -140,6 +162,9 @@ export class LancamentoMongoRepository implements LancamentoRepository {
       vencimento: obj.vencimento,
       recebidoEm: obj.recebidoEm,
       observacoes: obj.observacoes,
+      origem: obj.origem ?? OrigemLancamento.GERAL,
+      profissionalId: obj.profissionalId,
+      ciclo: obj.ciclo,
       criadoPor: obj.criadoPor,
       criadoEm: obj.criadoEm,
       atualizadoEm: obj.atualizadoEm,

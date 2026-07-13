@@ -206,6 +206,7 @@ export enum Modulo {
   ANALYTICS = 'ANALYTICS',
   FLUXO_CLINICO = 'FLUXO_CLINICO',
   ATENDIMENTO_PSICOLOGICO = 'ATENDIMENTO_PSICOLOGICO',
+  FINANCEIRO_PSICOLOGIA = 'FINANCEIRO_PSICOLOGIA',
   CLINICA = 'CLINICA',
   SUPER_ADMIN = 'SUPER_ADMIN',
 }
@@ -228,6 +229,7 @@ export const MODULO_LABEL: Record<Modulo, string> = {
   [Modulo.ANALYTICS]: 'Relatórios / analytics',
   [Modulo.FLUXO_CLINICO]: 'Fluxo clínico',
   [Modulo.ATENDIMENTO_PSICOLOGICO]: 'Atendimento psicológico',
+  [Modulo.FINANCEIRO_PSICOLOGIA]: 'Financeiro da psicologia',
   [Modulo.CLINICA]: 'Configuração da clínica',
   [Modulo.SUPER_ADMIN]: 'Super Admin',
 };
@@ -256,9 +258,11 @@ export const PERMISSOES_PADRAO_POR_PAPEL: Record<Papel, Modulo[]> = {
   ],
   // Atendimento psicológico é um extra: só o psicólogo enxerga por padrão;
   // outros usuários ganham por concessão individual no painel super-admin.
+  // O financeiro da psicologia é o caixa do próprio psicólogo (autônomo) — não
+  // se confunde com o M.FINANCEIRO da clínica, que ele não enxerga.
   [Papel.PSICOLOGO]: [
     M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS, M.TELEMEDICINA,
-    M.ATENDIMENTO_PSICOLOGICO,
+    M.ATENDIMENTO_PSICOLOGICO, M.FINANCEIRO_PSICOLOGIA,
   ],
   [Papel.SECRETARIA]: [
     M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS, M.FINANCEIRO, M.NOTIFICACOES, M.FLUXO_CLINICO,
@@ -724,6 +728,63 @@ export interface DashboardFinanceiro {
   totalPendente: number;
   saldo: number;
   porFormaPagamento: Array<{ forma: string; total: number; quantidade: number }>;
+}
+
+// ---------- Financeiro da psicologia (psicólogo autônomo) ----------
+
+/** O acompanhamento é vendido em pacotes fechados de sessões, pagos adiantado. */
+export const SESSOES_POR_CICLO = 4;
+
+export enum StatusCiclo {
+  A_COBRAR = 'a_cobrar',
+  AGUARDANDO_PAGAMENTO = 'aguardando_pagamento',
+  EM_DIA = 'em_dia',
+}
+
+export const STATUS_CICLO_LABEL: Record<StatusCiclo, string> = {
+  [StatusCiclo.A_COBRAR]: 'Cobrar ciclo',
+  [StatusCiclo.AGUARDANDO_PAGAMENTO]: 'Aguardando pagamento',
+  [StatusCiclo.EM_DIA]: 'Em dia',
+};
+
+export interface CobrancaCiclo {
+  id: string;
+  ciclo: number;
+  valor: number;
+  status: StatusLancamento;
+  formaPagamento?: FormaPagamento;
+  vencimento?: string;
+  recebidoEm?: string;
+  criadoEm: string;
+}
+
+export interface PacientePsicologia {
+  pacienteId: string;
+  pacienteNome?: string;
+  sessoesRealizadas: number;
+  proximaSessao: number;
+  cicloAtual: number;
+  sessoesNoCiclo: number;
+  sessoesAteFecharCiclo: number;
+  statusCiclo: StatusCiclo;
+  valorEmAberto: number;
+  primeiraSessaoEm?: string;
+  ultimaSessaoEm?: string;
+  cobrancas: CobrancaCiclo[];
+}
+
+export interface PainelPsicologia {
+  valorSessao?: number;
+  sessoesPorCiclo: number;
+  recebidoNoMes: number;
+  aReceber: number;
+  ciclosACobrar: number;
+  pacientes: PacientePsicologia[];
+}
+
+/** "1ª consulta" na estreia; depois, o número da sessão que vem. */
+export function rotuloProximaSessao(p: { sessoesRealizadas: number; proximaSessao: number }): string {
+  return p.sessoesRealizadas === 0 ? '1ª consulta' : `${p.proximaSessao}ª sessão`;
 }
 
 // ---------- Telemedicina ----------

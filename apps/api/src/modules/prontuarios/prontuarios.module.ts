@@ -43,6 +43,8 @@ import { ProntuariosController } from './presentation/prontuarios.controller';
     { provide: CID10_REPOSITORY, useClass: Cid10MongoRepository },
     { provide: AUDIT_LOG_REPOSITORY, useClass: AuditLogMongoRepository },
   ],
-  exports: [ProntuariosService],
+  // O repositório sai do módulo porque o financeiro do psicólogo conta as
+  // sessões pelos prontuários de psicoterapia.
+  exports: [ProntuariosService, PRONTUARIO_REPOSITORY],
 })
 export class ProntuariosModule {}

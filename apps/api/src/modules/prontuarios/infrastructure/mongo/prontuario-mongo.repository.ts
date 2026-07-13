@@ -5,6 +5,7 @@ import {
   Cid10Repository,
   CreateProntuarioInput,
   ProntuarioRepository,
+  ResumoSessoesPaciente,
   SignProntuarioInput,
   UpdateProntuarioInput,
 } from '../../application/ports/prontuario.repository';
@@ -12,6 +13,7 @@ import {
   Cid10,
   Prontuario,
   ProntuarioAddendum,
+  TipoAtendimento,
 } from '../../domain/prontuario.entity';
 import {
   Cid10Document,
@@ -54,6 +56,36 @@ export class ProntuarioMongoRepository implements ProntuarioRepository {
       .exec();
 
     return documents.map((document) => this.toProntuario(document));
+  }
+
+  async resumoSessoesPorPaciente(
+    clinicaId: string,
+    tipo: TipoAtendimento,
+    medicoId?: string,
+  ): Promise<ResumoSessoesPaciente[]> {
+    const match: Record<string, unknown> = { clinicaId, tipo };
+    if (medicoId) match.medicoId = medicoId;
+
+    const linhas = await this.prontuarioModel
+      .aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: '$pacienteId',
+            total: { $sum: 1 },
+            primeiraEm: { $min: '$dataAtendimento' },
+            ultimaEm: { $max: '$dataAtendimento' },
+          },
+        },
+      ])
+      .exec() as Array<{ _id: string; total: number; primeiraEm: Date; ultimaEm: Date }>;
+
+    return linhas.map((l) => ({
+      pacienteId: l._id,
+      total: l.total,
+      primeiraEm: l.primeiraEm,
+      ultimaEm: l.ultimaEm,
+    }));
   }
 
   async updateDraft(

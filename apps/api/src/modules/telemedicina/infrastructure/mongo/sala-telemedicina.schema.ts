@@ -24,4 +24,7 @@ export const SalaTelemedicinaSchema = SchemaFactory.createForClass(SalaTelemedic
 
 SalaTelemedicinaSchema.index({ clinicaId: 1, agendamentoId: 1 });
 SalaTelemedicinaSchema.index({ clinicaId: 1, status: 1 });
-SalaTelemedicinaSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+SalaTelemedicinaSchema.index({ clinicaId: 1, criadoEm: -1 });
+// Sem TTL em expiresAt: o campo só invalida o link de acesso (ver
+// salaAtivaPorToken/joinSala), a sala é o registro permanente do atendimento
+// — apagá-la automaticamente órfã os eventos em eventos_telemedicina.

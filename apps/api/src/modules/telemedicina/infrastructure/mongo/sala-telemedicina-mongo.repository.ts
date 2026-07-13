@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
   CreateSalaInput,
+  FindAllSalasFiltro,
   SalaTelemedicinaRepository,
 } from '../../application/ports/sala-telemedicina.repository';
 import { SalaTelemedicina, StatusSala } from '../../domain/sala-telemedicina.entity';
@@ -58,6 +59,20 @@ export class SalaTelemedicinaMongoRepository implements SalaTelemedicinaReposito
       .exec();
 
     return doc ? this.toEntity(doc) : null;
+  }
+
+  async findAll(clinicaId: string, filtro: FindAllSalasFiltro): Promise<SalaTelemedicina[]> {
+    const query: Record<string, unknown> = { clinicaId };
+
+    if (filtro.dataInicio || filtro.dataFim) {
+      const criadoEm: Record<string, Date> = {};
+      if (filtro.dataInicio) criadoEm.$gte = filtro.dataInicio;
+      if (filtro.dataFim) criadoEm.$lte = filtro.dataFim;
+      query.criadoEm = criadoEm;
+    }
+
+    const docs = await this.model.find(query).sort({ criadoEm: -1 }).limit(500).exec();
+    return docs.map((doc) => this.toEntity(doc));
   }
 
   async updateStatus(clinicaId: string, id: string, status: StatusSala, timestamp?: Date): Promise<SalaTelemedicina | null> {

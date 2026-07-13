@@ -9,6 +9,7 @@ import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
 import { TelemedicinaService, RequestAuditContext } from '../application/telemedicina.service';
 import { CreateSalaDto } from '../application/dto/create-sala.dto';
+import { ListSalasQueryDto } from '../application/dto/list-salas-query.dto';
 
 @Controller('telemedicina')
 @UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
@@ -19,6 +20,16 @@ export class TelemedicinaController {
   @Roles(...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   createSala(@Body() dto: CreateSalaDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
     return this.telemedicinaService.createSala(dto, this.ctx(req, user));
+  }
+
+  @Get('salas')
+  @Roles(...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
+  listar(
+    @Query() query: ListSalasQueryDto,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() req: Request,
+  ) {
+    return this.telemedicinaService.listar(query, this.ctx(req, user));
   }
 
   @Get('salas/agendamento/:agendamentoId')

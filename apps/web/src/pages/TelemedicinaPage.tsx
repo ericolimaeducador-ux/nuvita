@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { Plus, Search, Copy, PowerOff, Video, History } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
@@ -189,10 +189,94 @@ function SalaCard({
   );
 }
 
+function HistoricoTelemedicina({
+  salas,
+  pacientePorId,
+  onEncerrar,
+  encerrarLoading,
+}: {
+  salas: SalaTelemedicina[];
+  pacientePorId: Map<string, Paciente>;
+  onEncerrar: (id: string) => void;
+  encerrarLoading: boolean;
+}) {
+  const [dataSelecionada, setDataSelecionada] = useState<string | null>(null);
+  const [salaSelecionadaId, setSalaSelecionadaId] = useState<string | null>(null);
+
+  const porData = useMemo(() => {
+    const grupos = new Map<string, SalaTelemedicina[]>();
+    for (const s of salas) {
+      const chave = dayjs(s.criadoEm).format('YYYY-MM-DD');
+      const lista = grupos.get(chave) ?? [];
+      lista.push(s);
+      grupos.set(chave, lista);
+    }
+    return [...grupos.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+  }, [salas]);
+
+  const salasDoDia = porData.find(([data]) => data === dataSelecionada)?.[1] ?? [];
+  const salaSelecionada = salas.find((s) => s.id === salaSelecionadaId) ?? null;
+
+  if (salas.length === 0) {
+    return <p className="text-sm text-muted-foreground">Nenhum atendimento registrado no período.</p>;
+  }
+
+  return (
+    <div className="grid gap-4 md:grid-cols-[180px_220px_1fr]">
+      <div className="space-y-1">
+        <p className="text-xs font-medium text-muted-foreground mb-1">Datas</p>
+        {porData.map(([data, lista]) => (
+          <button
+            key={data}
+            type="button"
+            onClick={() => { setDataSelecionada(data); setSalaSelecionadaId(null); }}
+            className={`w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted ${dataSelecionada === data ? 'bg-muted font-medium' : ''}`}
+          >
+            {dayjs(data).format('DD/MM/YYYY')}
+            <span className="ml-1.5 text-xs text-muted-foreground">({lista.length})</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-1">
+        <p className="text-xs font-medium text-muted-foreground mb-1">Pacientes</p>
+        {!dataSelecionada && <p className="text-sm text-muted-foreground">Selecione uma data.</p>}
+        {dataSelecionada && salasDoDia.map((s) => {
+          const paciente = pacientePorId.get(s.pacienteId);
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setSalaSelecionadaId(s.id)}
+              className={`w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted ${salaSelecionadaId === s.id ? 'bg-muted font-medium' : ''}`}
+            >
+              {paciente?.nome ?? s.pacienteId}
+              <span className="block text-xs text-muted-foreground">{dayjs(s.criadoEm).format('HH:mm')} — {STATUS_SALA_LABEL[s.status as StatusSala] ?? s.status}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div>
+        {!salaSelecionada && <p className="text-sm text-muted-foreground">Selecione um paciente para ver o registro do atendimento.</p>}
+        {salaSelecionada && (
+          <SalaCard
+            sala={salaSelecionada}
+            paciente={pacientePorId.get(salaSelecionada.pacienteId)}
+            onEncerrar={() => onEncerrar(salaSelecionada.id)}
+            loading={encerrarLoading}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function TelemedicinaPage() {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [openCreate, setOpenCreate] = useState(false);
   const [agendamentoId, setAgendamentoId] = useState('');
   const [buscarId, setBuscarId] = useState('');
@@ -223,6 +307,13 @@ export function TelemedicinaPage() {
     queryFn: () => agendaApi.list({ dataInicio: janelaInicio, dataFim: janelaFim }),
   });
   const pacientesQ = useQuery({ queryKey: ['pacientes', 'select'], queryFn: () => pacientesApi.list({ limit: 100 }) });
+
+  const historicoInicio = useMemo(() => dayjs().subtract(90, 'day').startOf('day').toISOString(), []);
+  const historicoFim = useMemo(() => dayjs().endOf('day').toISOString(), []);
+  const historicoQ = useQuery({
+    queryKey: ['telemedicina', 'historico', historicoInicio, historicoFim],
+    queryFn: () => telemedicinaApi.listar({ dataInicio: historicoInicio, dataFim: historicoFim }),
+  });
 
   const agendamentos = toItems<Agendamento>(agendamentosQ.data as never);
   const pacientes = toItems<Paciente>(pacientesQ.data as never);
@@ -261,7 +352,11 @@ export function TelemedicinaPage() {
 
   const encerrarMut = useMutation({
     mutationFn: (id: string) => telemedicinaApi.encerrar(id),
-    onSuccess: (data) => { toast.success('Sala encerrada.'); setSala(data as SalaTelemedicina); },
+    onSuccess: (data) => {
+      toast.success('Sala encerrada.');
+      if (salaExibida?.id === data.id) setSala(data as SalaTelemedicina);
+      void qc.invalidateQueries({ queryKey: ['telemedicina', 'historico'] });
+    },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
@@ -325,13 +420,34 @@ export function TelemedicinaPage() {
       </Card>
 
       {salaExibida && (
-        <SalaCard
-          sala={salaExibida}
-          paciente={pacienteExibido}
-          onEncerrar={() => encerrarMut.mutate(salaExibida.id)}
-          loading={encerrarMut.isPending}
-        />
+        <div className="mb-6">
+          <SalaCard
+            sala={salaExibida}
+            paciente={pacienteExibido}
+            onEncerrar={() => encerrarMut.mutate(salaExibida.id)}
+            loading={encerrarMut.isPending}
+          />
+        </div>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <History className="h-4 w-4" /> Histórico de atendimentos
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {historicoQ.isLoading && <p className="text-sm text-muted-foreground">Carregando histórico…</p>}
+          {historicoQ.data && (
+            <HistoricoTelemedicina
+              salas={historicoQ.data}
+              pacientePorId={pacientePorId}
+              onEncerrar={(id) => encerrarMut.mutate(id)}
+              encerrarLoading={encerrarMut.isPending}
+            />
+          )}
+        </CardContent>
+      </Card>
 
       <Dialog open={openCreate} onOpenChange={setOpenCreate}>
         <DialogContent className="max-w-sm">

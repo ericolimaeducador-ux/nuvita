@@ -258,6 +258,8 @@ export interface CreateSalaPayload {
 export const telemedicinaApi = {
   createSala: (payload: CreateSalaPayload) =>
     api.post<SalaTelemedicina>('/telemedicina/salas', payload).then((r) => r.data),
+  listar: (params?: { dataInicio?: string; dataFim?: string }) =>
+    api.get<SalaTelemedicina[]>('/telemedicina/salas', { params }).then((r) => r.data),
   findByAgendamento: (agendamentoId: string) =>
     api
       .get<SalaTelemedicina>(`/telemedicina/salas/agendamento/${agendamentoId}`)

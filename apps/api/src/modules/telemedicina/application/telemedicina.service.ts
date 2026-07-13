@@ -21,6 +21,7 @@ import { PapelSala, TipoEventoSala } from '../domain/sala-evento.entity';
 import { TipoSinal } from '../domain/sinal-sala.entity';
 import { CreateSalaDto } from './dto/create-sala.dto';
 import { EnviarSinalDto } from './dto/enviar-sinal.dto';
+import { ListSalasQueryDto } from './dto/list-salas-query.dto';
 import { RegistrarEventoDto } from './dto/registrar-evento.dto';
 import { SalaTelemedicinaRepository } from './ports/sala-telemedicina.repository';
 import { SalaEventoRepository } from './ports/sala-evento.repository';
@@ -87,6 +88,16 @@ export class TelemedicinaService {
 
     if (!sala) throw new NotFoundException('Sala nao encontrada para este agendamento.');
     return sala;
+  }
+
+  /** Histórico de salas da clínica (comprovação de atendimento) — data/paciente na tela. */
+  async listar(query: ListSalasQueryDto, context: RequestAuditContext) {
+    const clinicaId = this.resolveClinicaId(context.user, query.clinicaId);
+
+    return this.salas.findAll(clinicaId, {
+      dataInicio: query.dataInicio ? new Date(query.dataInicio) : undefined,
+      dataFim: query.dataFim ? new Date(query.dataFim) : undefined,
+    });
   }
 
   async joinSala(id: string, context: RequestAuditContext) {

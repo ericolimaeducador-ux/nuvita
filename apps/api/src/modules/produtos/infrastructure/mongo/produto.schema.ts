@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { EmbalagemProduto, SexoProduto, TipoProduto } from '../../domain/produto.entity';
+import { EmbalagemProduto, ProjetoCatalogo, SexoProduto, TipoProduto } from '../../domain/produto.entity';
 
 export type ProdutoDocument = HydratedDocument<ProdutoMongo>;
 
@@ -8,6 +8,9 @@ export type ProdutoDocument = HydratedDocument<ProdutoMongo>;
 export class ProdutoMongo {
   @Prop({ required: true, unique: true, index: true })
   codigo!: number;
+
+  @Prop()
+  codigoFabricante?: string;
 
   @Prop({ required: true, index: true })
   nome!: string;
@@ -20,6 +23,9 @@ export class ProdutoMongo {
 
   @Prop({ required: true, enum: Object.values(EmbalagemProduto) })
   embalagem!: EmbalagemProduto;
+
+  @Prop({ required: true, enum: Object.values(ProjetoCatalogo), index: true })
+  projeto!: ProjetoCatalogo;
 
   @Prop()
   french?: number;

@@ -149,7 +149,7 @@ export function PacienteDetailPage() {
   const processosQ = useQuery({ queryKey: ['processos', 'paciente', id], queryFn: () => processoJuridicoApi.listByPaciente(id), enabled: !!id });
   const produtosQ = useQuery({ queryKey: ['produtos'], queryFn: () => produtosApi.list() });
 
-  const produtos = produtosQ.data ?? [];
+  const produtos = (produtosQ.data ?? []).filter((p) => p.projeto === pacQ.data?.projeto);
   const avaliacoes = (avaliacoesQ.data as AvaliacaoIU[]) ?? [];
   // Laudo se apoia na última avaliação (produto indicado + vínculo), como no fluxo clínico.
   const ultimaAvaliacao = avaliacoes[0];

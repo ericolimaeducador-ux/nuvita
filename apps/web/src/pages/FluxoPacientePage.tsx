@@ -86,7 +86,7 @@ export function FluxoPacientePage() {
   const laudos = laudosQ.data ?? [];
   const processos = processosQ.data ?? [];
   const entregas = entregasQ.data ?? [];
-  const produtos = produtosQ.data ?? [];
+  const produtos = (produtosQ.data ?? []).filter((p) => p.projeto === paciente?.projeto);
 
   if (pacienteQ.isLoading) {
     return (

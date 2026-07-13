@@ -1247,10 +1247,12 @@ export const PAPEIS_AVANCO_MANUAL: Partial<Record<EtapaFluxoClinico, Papel[]>> =
 export interface Produto {
   id: string;
   codigo: number;
+  codigoFabricante?: string;
   nome: string;
   tipo: string;
   sexo: string;
   embalagem: string;
+  projeto: 'ALPHA' | 'BETA';
   french?: number;
   comprimentoCm?: number;
   descricaoTecnica: string;

@@ -49,8 +49,11 @@ export class SalaTelemedicinaMongoRepository implements SalaTelemedicinaReposito
   }
 
   async findByAgendamento(clinicaId: string, agendamentoId: string): Promise<SalaTelemedicina | null> {
+    // Um agendamento pode ter mais de uma sala (a anterior encerrou e o
+    // profissional abriu outra) — vale sempre a mais recente.
     const doc = await this.model
       .findOne({ clinicaId, agendamentoId })
+      .sort({ criadoEm: -1 })
       .select('+tokenMedico +tokenPaciente')
       .exec();
 

@@ -40,6 +40,12 @@ export function formatBRL(value: number): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+/** URL pública da sala de telemedicina — o profissional abre a dele; o paciente recebe a sua por WhatsApp/e-mail. */
+export function linkDaSala(token: string): string {
+  const base = `${window.location.origin}${import.meta.env.BASE_URL}`;
+  return `${base.replace(/\/+$/, '')}/tele/${token}`;
+}
+
 /** Monta o endereço em uma linha legível, ignorando campos vazios. Retorna '—' se vazio. */
 export function formatEndereco(e?: Endereco): string {
   if (!e) return '—';

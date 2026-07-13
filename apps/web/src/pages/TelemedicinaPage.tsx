@@ -15,7 +15,7 @@ import { agendaApi, pacientesApi, telemedicinaApi, type CreateSalaPayload } from
 import { apiErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
-import { toItems, formatCpf } from '@/utils';
+import { toItems, formatCpf, linkDaSala } from '@/utils';
 import {
   ModalidadeAtendimento,
   MODALIDADE_LABEL,
@@ -31,12 +31,6 @@ import {
   type SalaEvento,
   type SalaTelemedicina,
 } from '@/types';
-
-/** URL pública da sala — é este link que o paciente recebe (WhatsApp, e-mail…). */
-function linkDaSala(token: string): string {
-  const base = `${window.location.origin}${import.meta.env.BASE_URL}`;
-  return `${base.replace(/\/+$/, '')}/tele/${token}`;
-}
 
 function salaVariant(s: StatusSala): 'default' | 'success' | 'destructive' | 'secondary' {
   if (s === StatusSala.AGUARDANDO) return 'default';

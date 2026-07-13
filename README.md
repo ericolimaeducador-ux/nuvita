@@ -117,7 +117,6 @@ apps/web          Frontend React (workspace @nuvita/web)
 packages/shared   Contratos, enums e regras compartilhadas (papéis, permissões)
 scripts/          Bootstrap, seeds de demonstração e utilitários (TOTP, GCP)
 infra/            Notas de integração e PRODUCTION-CHECKLIST.md
-docs/inpi/        Dossiês de registro de marca e de software no INPI
 ```
 
 ### API — arquitetura hexagonal / DDD
@@ -305,8 +304,6 @@ A lista completa e comentada está em [`.env.example`](.env.example).
 - [`apps/web/README.md`](apps/web/README.md) — detalhes do frontend
 - [`infra/`](infra/) — notas de integração por módulo (auth, documentos,
   notificações, pacientes, prontuários) e checklist de produção
-- [`docs/inpi/`](docs/inpi/) — dossiês de **registro da marca Nuvita** e de
-  **registro do software** junto ao INPI
 
 ## 📄 Propriedade intelectual
 

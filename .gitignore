@@ -19,3 +19,7 @@ Thumbs.db
 
 # Graphify – artefatos locais (caminhos absolutos, não portáveis)
 .graphify/
+
+# INPI – documentos particulares de registro e pacotes gerados para depósito
+docs/inpi/
+inpi-deposito/

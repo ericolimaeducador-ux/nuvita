@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { MutableRefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import dayjs from 'dayjs';
-import { Brain, CalendarPlus, ClipboardList, Copy, History, Loader2, PenLine, User, Video } from 'lucide-react';
+import { Brain, CalendarPlus, ClipboardList, Copy, History, Loader2, PenLine, User, Video, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
+import { SalaVideo } from '@/components/SalaVideo';
 import { useAuth } from '@/auth/AuthContext';
 import { agendaApi, pacientesApi, prontuariosApi, telemedicinaApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
@@ -107,14 +108,20 @@ function BlocoContexto({ label, valor }: { label: string; valor?: string }) {
   );
 }
 
-function RegistroSessaoDialog({
-  agendamento, sala, open, onClose,
+/**
+ * Formulário de registro da sessão. Vive em dois lugares: no diálogo do botão
+ * "Prontuário" e ao lado do vídeo, na tela de atendimento — por isso não traz
+ * moldura própria.
+ */
+function RegistroSessao({
+  agendamento, open, onClose, fecharRef,
 }: {
-  agendamento: Agendamento | null;
-  /** Sala criada pelo "Atender" — dá acesso ao vídeo e ao link do paciente sem sair do formulário. */
-  sala?: SalaTelemedicina | null;
+  agendamento: Agendamento;
+  /** Falso enquanto o diálogo está fechado — zera o formulário entre pacientes. */
   open: boolean;
   onClose: () => void;
+  /** Recebe o fechar "guardado" (confirma se há anotação não salva) para o X e o ESC do diálogo. */
+  fecharRef?: MutableRefObject<() => void>;
 }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -227,69 +234,40 @@ function RegistroSessaoDialog({
     onClose();
   }
 
-  function copiarLinkPaciente() {
-    if (!sala) return;
-    void navigator.clipboard.writeText(linkDaSala(sala.tokenPaciente));
-    toast({ title: 'Link do paciente copiado.' });
-  }
+  useEffect(() => {
+    if (fecharRef) fecharRef.current = fechar;
+  });
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && fechar()}>
-      <DialogContent
-        className="max-w-3xl max-h-[90vh] overflow-y-auto"
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-      >
-        <DialogHeader>
-          <DialogTitle>
-            {carregando ? 'Registro de atendimento psicológico'
-              : completo ? 'Primeira consulta — prontuário psicológico'
-                : `Consulta de seguimento — ${sessoes.length + 1}ª sessão`}
-          </DialogTitle>
-          <DialogDescription>
-            {carregando ? 'Carregando o histórico do paciente…'
-              : completo
-                ? 'Anamnese psicológica completa. Registro documental conforme a Resolução CFP nº 006/2019 — após assinado, fica imutável (correções só por adendo).'
-                : 'Contexto da primeira consulta e anotações livres da psicoterapia. Após assinado, o registro fica imutável.'}
-          </DialogDescription>
-        </DialogHeader>
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        {carregando ? 'Carregando o histórico do paciente…'
+          : completo
+            ? `${ehSeguimento ? 'Prontuário completo' : 'Primeira consulta'} — anamnese psicológica. Registro documental conforme a Resolução CFP nº 006/2019: após assinado, fica imutável (correções só por adendo).`
+            : `Consulta de seguimento — ${sessoes.length + 1}ª sessão. Contexto da primeira consulta e anotações livres da psicoterapia.`}
+      </p>
 
-        {/* Sala de vídeo — só quando o formulário foi aberto pelo "Atender". */}
-        {sala && (
-          <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 flex flex-wrap items-center gap-2">
-            <p className="text-sm flex-1 min-w-48 flex items-center gap-2">
-              <Video className="h-4 w-4" /> Sala de teleconsulta aberta em outra janela.
+      {/* Dados do paciente */}
+      <div className="rounded-xl border p-4 space-y-1 text-sm">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+          <User className="h-3.5 w-3.5" /> Paciente
+        </p>
+        {pacienteQ.isLoading ? (
+          <Skeleton className="h-16 w-full" />
+        ) : (
+          <>
+            <p className="font-medium text-base">{paciente?.nome ?? agendamento?.pacienteNome ?? '—'}</p>
+            <p className="text-muted-foreground">
+              CPF: {paciente?.cpf ?? agendamento?.pacienteCpf ?? '—'} · Nascimento: {formatData(paciente?.dataNascimento)} · Sexo: {paciente?.sexo ?? '—'}
             </p>
-            <Button variant="outline" size="sm" onClick={copiarLinkPaciente}>
-              <Copy className="h-4 w-4 mr-2" /> Copiar link do paciente
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => window.open(linkDaSala(sala.tokenMedico), 'nuvita-teleconsulta')}>
-              <Video className="h-4 w-4 mr-2" /> Reabrir vídeo
-            </Button>
-          </div>
+            <p className="text-muted-foreground">
+              Telefone: {paciente?.telefone ?? '—'}{paciente?.endereco ? ` · ${formatEndereco(paciente.endereco)}` : ''}
+            </p>
+          </>
         )}
+      </div>
 
-        {/* Dados do paciente */}
-        <div className="rounded-xl border p-4 space-y-1 text-sm">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-            <User className="h-3.5 w-3.5" /> Paciente
-          </p>
-          {pacienteQ.isLoading ? (
-            <Skeleton className="h-16 w-full" />
-          ) : (
-            <>
-              <p className="font-medium text-base">{paciente?.nome ?? agendamento?.pacienteNome ?? '—'}</p>
-              <p className="text-muted-foreground">
-                CPF: {paciente?.cpf ?? agendamento?.pacienteCpf ?? '—'} · Nascimento: {formatData(paciente?.dataNascimento)} · Sexo: {paciente?.sexo ?? '—'}
-              </p>
-              <p className="text-muted-foreground">
-                Telefone: {paciente?.telefone ?? '—'}{paciente?.endereco ? ` · ${formatEndereco(paciente.endereco)}` : ''}
-              </p>
-            </>
-          )}
-        </div>
-
-        {carregando ? (
+      {carregando ? (
           <div className="space-y-2 py-4">
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-40 w-full" />
@@ -422,18 +400,93 @@ function RegistroSessaoDialog({
           </div>
         )}
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={fechar} disabled={salvarM.isPending}>Fechar</Button>
-          <Button variant="secondary" onClick={() => salvar(false)} disabled={salvarM.isPending || carregando}>
-            {salvarM.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Salvar rascunho
-          </Button>
-          <Button onClick={() => salvar(true)} disabled={salvarM.isPending || carregando}>
-            {salvarM.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PenLine className="h-4 w-4 mr-2" />}
-            Salvar e assinar
-          </Button>
-        </DialogFooter>
+      <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+        <Button variant="outline" onClick={fechar} disabled={salvarM.isPending}>Fechar</Button>
+        <Button variant="secondary" onClick={() => salvar(false)} disabled={salvarM.isPending || carregando}>
+          {salvarM.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Salvar rascunho
+        </Button>
+        <Button onClick={() => salvar(true)} disabled={salvarM.isPending || carregando}>
+          {salvarM.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PenLine className="h-4 w-4 mr-2" />}
+          Salvar e assinar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** O mesmo formulário, aberto pelo botão "Prontuário" — sem vídeo, para registrar depois. */
+function RegistroSessaoDialog({
+  agendamento, open, onClose,
+}: { agendamento: Agendamento | null; open: boolean; onClose: () => void }) {
+  // Fechar por clique fora ou ESC no meio de uma anotação é perda de trabalho:
+  // ambos passam pelo fechar do formulário, que confirma antes de descartar.
+  const fechar = useRef<() => void>(() => onClose());
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && fechar.current()}>
+      <DialogContent
+        className="max-w-3xl max-h-[90vh] overflow-y-auto"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
+        <DialogHeader>
+          <DialogTitle>Registro de atendimento psicológico</DialogTitle>
+          <DialogDescription className="sr-only">
+            Formulário de registro da sessão de psicoterapia.
+          </DialogDescription>
+        </DialogHeader>
+        {agendamento && (
+          <RegistroSessao agendamento={agendamento} open={open} onClose={onClose} fecharRef={fechar} />
+        )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tela de atendimento: vídeo do paciente e prontuário lado a lado
+// ---------------------------------------------------------------------------
+
+function SessaoAtendimento({
+  agendamento, sala, onSair,
+}: { agendamento: Agendamento; sala: SalaTelemedicina; onSair: () => void }) {
+  const fechar = useRef<() => void>(() => onSair());
+
+  function copiarLinkPaciente() {
+    void navigator.clipboard.writeText(linkDaSala(sala.tokenPaciente));
+    toast({ title: 'Link do paciente copiado.', description: 'Envie por WhatsApp ou e-mail — o paciente entra sem login.' });
+  }
+
+  // Ocupa a janela inteira: durante a consulta a tela é do atendimento, e o
+  // psicólogo escreve no prontuário sem tirar o paciente da vista.
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+      <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
+        <div className="flex-1 min-w-48">
+          <p className="font-medium flex items-center gap-2">
+            <Brain className="h-4 w-4" /> {agendamento.pacienteNome ?? 'Atendimento psicológico'}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {TIPO_AGENDAMENTO_LABEL[agendamento.tipo]} · {dayjs(agendamento.dataHoraInicio).format('DD/MM/YYYY HH:mm')}
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={copiarLinkPaciente}>
+          <Copy className="h-4 w-4 mr-2" /> Copiar link do paciente
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => fechar.current()}>
+          <X className="h-4 w-4 mr-2" /> Sair do atendimento
+        </Button>
+      </div>
+
+      <div className="flex-1 grid gap-4 overflow-hidden p-4 lg:grid-cols-2">
+        <div className="min-h-64 overflow-hidden rounded-xl border">
+          <SalaVideo token={sala.tokenMedico} embutido />
+        </div>
+        <div className="overflow-y-auto rounded-xl border p-4">
+          <RegistroSessao agendamento={agendamento} open onClose={onSair} fecharRef={fechar} />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -643,17 +696,13 @@ export function AtendimentoPsicologicoPage() {
   const [status, setStatus] = useState<'ativos' | StatusAgendamento>('ativos');
   const [novoAberto, setNovoAberto] = useState(false);
   const [registroDe, setRegistroDe] = useState<Agendamento | null>(null);
-  const [salaDoRegistro, setSalaDoRegistro] = useState<SalaTelemedicina | null>(null);
   const [historicoDe, setHistoricoDe] = useState<Agendamento | null>(null);
   const [salaCarregandoId, setSalaCarregandoId] = useState<string | null>(null);
-
-  // A janela do vídeo precisa ser aberta no próprio clique — se esperássemos a
-  // sala voltar da API, o navegador trataria o window.open como pop-up e bloquearia.
-  const janelaVideo = useRef<Window | null>(null);
+  const [sessao, setSessao] = useState<{ agendamento: Agendamento; sala: SalaTelemedicina } | null>(null);
 
   // Atendimento é 100% online por ora: "Atender" cria (ou reaproveita) a sala do
-  // agendamento, joga o vídeo numa janela à parte e deixa o prontuário aberto
-  // aqui, para o psicólogo tomar notas durante a consulta.
+  // agendamento e abre a tela de sessão — vídeo e prontuário na mesma janela,
+  // para o psicólogo tomar notas sem perder o paciente de vista.
   const atenderMut = useMutation({
     mutationFn: async (a: Agendamento) => {
       let sala: SalaTelemedicina | null = null;
@@ -675,28 +724,17 @@ export function AtendimentoPsicologicoPage() {
     },
     onSuccess: ({ agendamento, sala }) => {
       setSalaCarregandoId(null);
-      const url = linkDaSala(sala.tokenMedico);
-      if (janelaVideo.current && !janelaVideo.current.closed) janelaVideo.current.location.href = url;
-      else toast({ title: 'Libere os pop-ups para abrir o vídeo automaticamente.', description: 'Use "Reabrir vídeo" no formulário para entrar na sala.' });
-      setSalaDoRegistro(sala);
-      setRegistroDe(agendamento);
+      setSessao({ agendamento, sala });
     },
     onError: (e) => {
       setSalaCarregandoId(null);
-      janelaVideo.current?.close();
       toast({ title: 'Erro ao abrir a sala de telemedicina', description: apiErrorMessage(e), variant: 'destructive' });
     },
   });
 
   function atender(a: Agendamento) {
     setSalaCarregandoId(a.id);
-    janelaVideo.current = window.open('', 'nuvita-teleconsulta');
     atenderMut.mutate(a);
-  }
-
-  function fecharRegistro() {
-    setRegistroDe(null);
-    setSalaDoRegistro(null);
   }
 
   const agendamentosQ = useQuery({
@@ -716,6 +754,16 @@ export function AtendimentoPsicologicoPage() {
       : itens.filter((a) => a.status === status);
     return [...filtrados].sort((a, b) => dayjs(a.dataHoraInicio).valueOf() - dayjs(b.dataHoraInicio).valueOf());
   }, [agendamentosQ.data, status]);
+
+  if (sessao) {
+    return (
+      <SessaoAtendimento
+        agendamento={sessao.agendamento}
+        sala={sessao.sala}
+        onSair={() => setSessao(null)}
+      />
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -779,7 +827,7 @@ export function AtendimentoPsicologicoPage() {
                 </Button>
                 {(a.status === StatusAgendamento.AGENDADO || a.status === StatusAgendamento.CONFIRMADO) && (
                   <>
-                    <Button variant="outline" size="sm" onClick={() => { setSalaDoRegistro(null); setRegistroDe(a); }}>
+                    <Button variant="outline" size="sm" onClick={() => setRegistroDe(a)}>
                       <ClipboardList className="h-4 w-4 mr-2" /> Prontuário
                     </Button>
                     <Button size="sm" disabled={salaCarregandoId === a.id} onClick={() => atender(a)}>
@@ -797,12 +845,7 @@ export function AtendimentoPsicologicoPage() {
       )}
 
       <NovoAgendamentoDialog open={novoAberto} onClose={() => setNovoAberto(false)} />
-      <RegistroSessaoDialog
-        agendamento={registroDe}
-        sala={salaDoRegistro}
-        open={!!registroDe}
-        onClose={fecharRegistro}
-      />
+      <RegistroSessaoDialog agendamento={registroDe} open={!!registroDe} onClose={() => setRegistroDe(null)} />
       <HistoricoSessoesDialog
         pacienteId={historicoDe?.pacienteId ?? null}
         pacienteNome={historicoDe?.pacienteNome}

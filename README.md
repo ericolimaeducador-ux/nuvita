@@ -1,29 +1,115 @@
-# Nuvita
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="apps/web/src/assets/nuvita-logo-light.png">
+  <img src="apps/web/src/assets/nuvita-logo.png" alt="Nuvita — gestão de saúde na nuvem" width="420">
+</picture>
+
+### Gestão de saúde na nuvem
+
+**Plataforma SaaS multi-tenant de gestão clínica** — do agendamento ao prontuário assinado,
+da telemedicina ao fornecimento de produtos pelo SUS.
 
 [![CI](https://github.com/ericolimaeducador-ux/nuvita/actions/workflows/ci.yml/badge.svg)](https://github.com/ericolimaeducador-ux/nuvita/actions/workflows/ci.yml)
 [![Deploy API](https://github.com/ericolimaeducador-ux/nuvita/actions/workflows/deploy-api.yml/badge.svg)](https://github.com/ericolimaeducador-ux/nuvita/actions/workflows/deploy-api.yml)
 [![Deploy Web](https://github.com/ericolimaeducador-ux/nuvita/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/ericolimaeducador-ux/nuvita/actions/workflows/deploy-pages.yml)
 
-SaaS multi-tenant de **gestão clínica** com foco no fluxo de atendimento de
-**incontinência urinária**: da avaliação de enfermagem ao fornecimento do
-produto pelo SUS, passando por follow-up de elegibilidade, laudo médico
-assinado, processo jurídico e entrega.
+[**www.nuvita.app.br**](https://www.nuvita.app.br) · [API `api.nuvita.app.br`](https://api.nuvita.app.br/health)
 
-Inclui os módulos clássicos de uma clínica — pacientes (com criptografia
-LGPD), agenda, prontuário eletrônico (SOAP e consulta de enfermagem, com
-assinatura imutável), documentos, financeiro, telemedicina, notificações
-(e-mail/WhatsApp via fila) e um painel super-admin de permissões.
+[Funcionalidades](#-funcionalidades) ·
+[Fluxo clínico](#-o-fluxo-clínico-pipeline-de-incontinência-urinária) ·
+[Arquitetura](#%EF%B8%8F-arquitetura) ·
+[Segurança](#-segurança--lgpd) ·
+[Rodando localmente](#-rodando-localmente) ·
+[Documentação](#-documentação-complementar)
 
-## Stack
+</div>
+
+---
+
+## 💡 O que é o Nuvita
+
+O **Nuvita** é uma plataforma completa de gestão clínica na nuvem, projetada para
+clínicas e equipes multidisciplinares (médicos, enfermeiros, psicólogos, advogados
+e secretariado). Além dos módulos clássicos de gestão — pacientes, agenda,
+prontuário eletrônico, financeiro e telemedicina — o Nuvita implementa um fluxo
+especializado e único: o **pipeline de atendimento de incontinência urinária**,
+que acompanha o paciente da avaliação de enfermagem até o fornecimento do produto
+pelo SUS, passando por follow-up de elegibilidade, laudo médico assinado
+digitalmente, processo jurídico e entrega.
+
+Cada clínica é um **tenant isolado**: dados, usuários, agenda e financeiro são
+segregados por clínica, com um painel **super-admin** global para provisionamento
+e gestão fina de permissões.
+
+## ✨ Funcionalidades
+
+### Gestão clínica
+
+| Módulo | O que faz |
+|---|---|
+| 🧑‍⚕️ **Pacientes** | Cadastro completo com **criptografia de dados pessoais (LGPD)** em repouso; busca por hash cego; observações clínicas |
+| 📅 **Agenda** | Calendário por profissional e visão geral da clínica; cada profissional vê a própria agenda; status de atendimento |
+| 📋 **Prontuário eletrônico** | Evoluções **SOAP** e consulta de enfermagem; **assinatura digital imutável** — prontuário assinado não se altera, correções entram como addendum |
+| 🧠 **Psicologia** | Sessão com vídeo e prontuário lado a lado; financeiro por **ciclos de 4 sessões**; sessão atual no dashboard |
+| 🎥 **Telemedicina** | Vídeo **WebRTC P2P** com sinalização própria; paciente entra **sem login** via link tokenizado (`/tele/:token`); eventos de sala auditados |
+| 📄 **Documentos** | Upload/download seguro via **presigned URLs** (Cloudflare R2/S3); checklist de documentos por paciente |
+| 💰 **Financeiro** | Lançamentos, recebimentos e visão por competência; integração com ciclos de sessões |
+| 🔔 **Notificações** | E-mail (Resend) e **WhatsApp** (Z-API/Evolution/Twilio) processados por **fila** (BullMQ), com janela de envio 8h–22h |
+| 📊 **Analytics** | Painéis e indicadores operacionais da clínica |
+| 🛒 **Produtos** | Catálogo dos produtos (cateteres etc.) indicados no fluxo clínico |
+
+### Pipeline de incontinência urinária (diferencial)
+
+| Etapa | Módulo | Responsável |
+|---|---|---|
+| 1. Avaliação IU | `avaliacao-iu` | Enfermeiro preenche a ficha e indica o produto |
+| 2. Follow-up | `followup` | Enfermeiro acompanha e define **elegibilidade** |
+| 3. Laudo médico | `laudo-medico` | Médico emite e **assina** o laudo para solicitação ao SUS |
+| 4. Processo jurídico | `processo-juridico` + `anotacoes-juridicas` | Advogado protocola e acompanha a ação de fornecimento |
+| 5. Entrega | `entregas` | Registro dos produtos enviados ao paciente |
+
+Secretária e admin enxergam o pipeline (leitura); as **mutações são restritas ao
+papel responsável** por cada etapa. Laudo, ficha de avaliação e relatório NAT-JUS
+têm páginas de impressão dedicadas (rotas `/imprimir`, fora do layout do app,
+com **timbre oficial** e prontas para PDF pelo navegador).
+
+### Administração e acesso
+
+- **Papéis**: `SUPER_ADMIN`, `ADMIN`, `MEDICO`, `ENFERMEIRO`, `ADVOGADO`,
+  `SECRETARIA`, `PACIENTE`.
+- **2FA TOTP obrigatório** para super-admin, admin e profissionais.
+- **Permissões por módulo** (`packages/shared/src/auth/permissao.ts`): cada papel
+  tem um conjunto padrão; o super-admin concede/revoga **exceções por usuário**
+  (o banco guarda apenas as exceções e `resolvePermissoes()` calcula o efetivo).
+  Frontend e API compartilham a mesma regra via `packages/shared`.
+- **Multi-tenancy**: quase toda rota exige tenant (clínica) resolvido por
+  `TenantMiddleware` + `TenantRequiredGuard`; rotas globais usam
+  `@AllowWithoutTenant`.
+
+## 🏥 O fluxo clínico (pipeline de incontinência urinária)
+
+```mermaid
+flowchart LR
+    A["🩺 Avaliação IU<br/><i>enfermeiro</i>"] --> B["🔄 Follow-up<br/><i>enfermeiro</i>"]
+    B -->|elegível| C["📝 Laudo médico<br/><i>médico assina</i>"]
+    C --> D["⚖️ Processo jurídico<br/><i>advogado</i>"]
+    D --> E["📦 Entrega<br/><i>produtos ao paciente</i>"]
+    B -.->|não elegível| F["Encerramento"]
+```
+
+## 🏗️ Arquitetura
+
+### Stack
 
 | Camada | Tecnologias |
 |---|---|
-| API | NestJS 10 · TypeScript · MongoDB (Mongoose) · Redis + BullMQ (filas) |
-| Web | React 18 · Vite · TypeScript · Ant Design 5 (pt-BR) · React Router 6 · TanStack Query · axios |
-| Infra | Docker Compose (dev) · Cloud Run (API) · GitHub Pages (web) · Cloudflare R2/S3 (documentos) |
-| Segurança | JWT access + refresh httpOnly · 2FA TOTP · bcrypt · Helmet/CSP/HSTS · criptografia de dados de paciente (LGPD) |
+| **API** | NestJS 10 · TypeScript · MongoDB (Mongoose) · Redis + BullMQ (filas) |
+| **Web** | React 18 · Vite · TypeScript · Ant Design 5 (pt-BR) · React Router 6 · TanStack Query · axios |
+| **Infra** | Docker Compose (dev) · Cloud Run (API) · GitHub Pages + Firebase Hosting (web/api) · Cloudflare R2/S3 (documentos) |
+| **Segurança** | JWT access + refresh httpOnly · 2FA TOTP · bcrypt · Helmet/CSP/HSTS · criptografia de dados de paciente (LGPD) |
 
-## Estrutura do monorepo (npm workspaces)
+### Estrutura do monorepo (npm workspaces)
 
 ```text
 apps/api          API NestJS (workspace @nuvita/api)
@@ -31,9 +117,10 @@ apps/web          Frontend React (workspace @nuvita/web)
 packages/shared   Contratos, enums e regras compartilhadas (papéis, permissões)
 scripts/          Bootstrap, seeds de demonstração e utilitários (TOTP, GCP)
 infra/            Notas de integração e PRODUCTION-CHECKLIST.md
+docs/inpi/        Dossiês de registro de marca e de software no INPI
 ```
 
-### Arquitetura da API — hexagonal / DDD
+### API — arquitetura hexagonal / DDD
 
 Cada módulo em `apps/api/src/modules/<nome>/` segue a mesma anatomia:
 
@@ -47,40 +134,49 @@ presentation/     Controllers, guards e decorators HTTP
 Módulos: `auth`, `clinicas`, `pacientes`, `agendamentos`, `prontuarios`,
 `documentos`, `notificacoes`, `financeiro`, `telemedicina`, `analytics`,
 `produtos`, `avaliacao-iu`, `followup`, `laudo-medico`, `processo-juridico`,
-`entregas`, `anotacoes-juridicas`, `checklist-documentos`, `super-admin`,
-`health` — mais `common/tenancy` (resolução de tenant por request) e
-`common/security`.
+`entregas`, `anotacoes-juridicas`, `checklist-documentos`,
+`observacoes-paciente`, `super-admin`, `health` — mais `common/tenancy`
+(resolução de tenant por request) e `common/security`.
 
-### O fluxo clínico (pipeline de incontinência urinária)
-
-```text
-1. Avaliação IU        enfermeiro preenche a ficha e indica o produto (cateter)
-2. Follow-up           enfermeiro acompanha e define elegibilidade
-3. Laudo médico        médico emite e ASSINA o laudo para solicitação ao SUS
-4. Processo jurídico   advogado protocola e acompanha a ação de fornecimento
-5. Entrega             registro dos produtos enviados ao paciente
+```mermaid
+flowchart TB
+    subgraph Cliente
+        W["🖥️ Web — React 18 + Ant Design<br/>www.nuvita.app.br"]
+        T["📱 Paciente sem login<br/>/tele/:token"]
+    end
+    subgraph "Cloud Run — api.nuvita.app.br"
+        API["⚙️ API NestJS<br/>hexagonal / DDD · multi-tenant"]
+    end
+    subgraph Dados
+        M[("🍃 MongoDB Atlas<br/>dados criptografados LGPD")]
+        R[("⚡ Redis / BullMQ<br/>filas de notificação")]
+        S3[("☁️ Cloudflare R2<br/>documentos · presigned URLs")]
+    end
+    N["📨 Resend (e-mail)<br/>💬 Z-API (WhatsApp)"]
+    W -->|"JWT + refresh httpOnly + 2FA"| API
+    T -->|"token de sala"| API
+    API --> M
+    API --> R
+    API --> S3
+    R --> N
 ```
 
-Secretária e admin enxergam o pipeline (leitura); as mutações são restritas
-ao papel responsável por cada etapa. Documentos do fluxo (laudo, ficha de
-avaliação, relatório NAT-JUS) têm páginas de impressão dedicadas — rotas
-`/imprimir` fora do layout do app, prontas para PDF pelo navegador.
+## 🔐 Segurança & LGPD
 
-### Papéis e permissões
+- **Dados de paciente criptografados** em repouso (`PATIENT_DATA_ENCRYPTION_KEY`),
+  com hash cego (`PATIENT_DATA_HASH_KEY`) para busca sem descriptografar.
+- **Prontuário assinado é imutável** (`PRONTUARIO_SIGNATURE_SECRET`) — qualquer
+  correção entra como addendum, preservando a trilha de auditoria.
+- **Autenticação**: JWT de acesso curto + refresh em cookie `httpOnly`
+  (`path=/auth`), senhas com bcrypt e **2FA TOTP obrigatório** para papéis
+  privilegiados.
+- **Hardening HTTP**: Helmet, CSP e HSTS ligados em produção; Swagger fechado
+  fora de desenvolvimento.
+- **Segredos**: `CONFIG_SOURCE` desacopla a fonte de segredos do `NODE_ENV` —
+  produção usa **GCP Secret Manager**; nada de segredo em repositório.
+- **Deploy sem chave**: CD autentica no GCP via **Workload Identity Federation**.
 
-- **Papéis**: `SUPER_ADMIN`, `ADMIN`, `MEDICO`, `ENFERMEIRO`, `ADVOGADO`,
-  `SECRETARIA`, `PACIENTE`. 2FA TOTP é **obrigatório** para super-admin,
-  admin e profissionais (médico/enfermeiro/advogado).
-- **Permissões por módulo** (`packages/shared/src/auth/permissao.ts`): cada
-  papel tem um conjunto padrão de módulos; o super-admin concede/revoga
-  exceções por usuário (o banco guarda apenas as exceções e
-  `resolvePermissoes()` calcula o efetivo). Frontend e API compartilham essa
-  regra via `packages/shared`.
-- **Multi-tenancy**: quase toda rota exige tenant (clínica) resolvido pelo
-  `TenantMiddleware` + `TenantRequiredGuard`; rotas globais usam
-  `@AllowWithoutTenant`.
-
-## Rodando localmente
+## 🚀 Rodando localmente
 
 Pré-requisitos: **Node 20+**, **Docker** (para MongoDB e Redis) e npm.
 
@@ -120,9 +216,7 @@ node scripts/bootstrap-direto.mjs
 
 # Popula o pipeline completo: 10 pacientes, avaliações, follow-ups,
 # laudos assinados, processos e entregas + equipe (médico, enfermeiro,
-# advogado, secretária). Requer BOOTSTRAP_SECRET no ambiente e o admin
-# com o TOTP de dev (o seed informa o comando de bootstrap oficial via
-# CLI bootstrap-admin caso a clínica não exista).
+# advogado, secretária). Requer BOOTSTRAP_SECRET no ambiente.
 BOOTSTRAP_SECRET="<o mesmo do .env>" node scripts/seed-fluxo-clinico.mjs
 ```
 
@@ -141,7 +235,7 @@ cp .env.example .env    # docker compose lê o .env da raiz
 docker compose up -d    # mongodb + redis + api (:3000) + web via nginx (:8080)
 ```
 
-## Convenções importantes (leia antes de mexer)
+## 📏 Convenções importantes (leia antes de mexer)
 
 - **`packages/shared` é importado por caminho relativo** (ex.:
   `../../../../packages/shared/src/auth`), não por alias. Por isso o build da
@@ -159,10 +253,13 @@ docker compose up -d    # mongodb + redis + api (:3000) + web via nginx (:8080)
   (formatar com dayjs local mostraria o dia anterior no fuso do Brasil).
   Timestamps de evento (`criadoEm`, `dataProtocolo`…) usam dayjs local normal.
 - **Prontuário assinado é imutável** — correções entram como addendum.
+- **Identidade visual**: fonte única de marca em `apps/web/src/lib/brand.ts`
+  (logos, CNPJ, endereço); documentos impressos usam
+  `DocumentoTimbre`/`DocumentoRodape`.
 - **Commits**: conventional commits em pt-BR (`fix(followup): …`,
   `feat(web): …`), como no histórico.
 
-## Qualidade e CI/CD
+## ✅ Qualidade e CI/CD
 
 ```bash
 npm run build -w @nuvita/api        # build (o workspace api não tem typecheck)
@@ -179,11 +276,12 @@ npm run build -w @nuvita/web        # build de produção do front
   `node scripts/gen-cloudrun-env.cjs` (liga `NODE_ENV=production`, CSP/HSTS,
   fecha o Swagger).
 - **CD do Web** (`deploy-pages.yml`): push em `main` publica no GitHub Pages
-  (domínio alvo `www.nuvita.app.br`; API em `api.nuvita.app.br`).
+  (domínio `www.nuvita.app.br`; API em `api.nuvita.app.br` via Firebase
+  Hosting → Cloud Run).
 - Pendências de go-live e rotação de segredos: veja
   [`infra/PRODUCTION-CHECKLIST.md`](infra/PRODUCTION-CHECKLIST.md).
 
-## Variáveis de ambiente (principais)
+## ⚙️ Variáveis de ambiente (principais)
 
 | Variável | Para quê |
 |---|---|
@@ -202,8 +300,22 @@ A lista completa e comentada está em [`.env.example`](.env.example).
 **Nunca** commite segredos; produção usa GCP Secret Manager ou
 `--env-vars-file` do Cloud Run.
 
-## Documentação complementar
+## 📚 Documentação complementar
 
 - [`apps/web/README.md`](apps/web/README.md) — detalhes do frontend
 - [`infra/`](infra/) — notas de integração por módulo (auth, documentos,
   notificações, pacientes, prontuários) e checklist de produção
+- [`docs/inpi/`](docs/inpi/) — dossiês de **registro da marca Nuvita** e de
+  **registro do software** junto ao INPI
+
+## 📄 Propriedade intelectual
+
+© Nuvita — CNPJ 55.747.955/0001-07 · Rua Levindo Lopes, 391 – Funcionários,
+Belo Horizonte/MG. Software proprietário; todos os direitos reservados.
+Este repositório não concede licença de uso, cópia ou distribuição.
+
+---
+
+<div align="center">
+<sub>Feito com 💚 em Belo Horizonte · <b>Nuvita — gestão de saúde na nuvem</b></sub>
+</div>

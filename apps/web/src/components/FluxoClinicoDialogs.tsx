@@ -266,8 +266,8 @@ export function NovaAvaliacaoIUDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>COREN</Label>
-              <Input placeholder="Seu registro COREN" {...register('coren')} />
+              <Label>COREN/CRM</Label>
+              <Input placeholder="Seu registro profissional" {...register('coren')} />
             </div>
             <div className="space-y-1">
               <Label>Responsável pelo cateterismo</Label>

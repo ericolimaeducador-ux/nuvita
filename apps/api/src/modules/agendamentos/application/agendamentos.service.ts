@@ -140,6 +140,10 @@ export class AgendamentosService {
       await this.pacientesService.avancarEtapaFluxo(
         resolvedClinicaId, agendamento.pacienteId, EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS, context,
       );
+    } else if (agendamento.tipo === TipoAgendamento.ATENDIMENTO_ENFERMAGEM) {
+      await this.pacientesService.avancarEtapaFluxo(
+        resolvedClinicaId, agendamento.pacienteId, EtapaFluxoClinico.AVALIACAO_IU, context,
+      );
     }
 
     return agendamento;

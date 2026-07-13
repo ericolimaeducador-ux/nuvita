@@ -119,10 +119,10 @@ export function FluxoPacientePage() {
         <Passo
           numero={1}
           titulo="Avaliação de Incontinência Urinária"
-          subtitulo="Ficha de avaliação — preenchida pelo enfermeiro na consulta"
+          subtitulo="Ficha de avaliação — preenchida pelo enfermeiro ou médico na consulta"
           icon={ClipboardList}
           concluido={avaliacoes.length > 0}
-          visivel={user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN || !!avaliacoes.length}
+          visivel={user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN || !!avaliacoes.length}
         >
           <AvaliacaoIUStep
             pacienteId={pacienteId!}
@@ -313,7 +313,7 @@ function AvaliacaoIUStep({ pacienteId, avaliacoes, produtos, user }: {
     });
   }
 
-  const podeNovo = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN;
+  const podeNovo = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
 
   return (
     <div className="space-y-3">
@@ -504,7 +504,7 @@ function AvaliacaoIUStep({ pacienteId, avaliacoes, produtos, user }: {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label>COREN</Label>
+                <Label>COREN/CRM</Label>
                 <Input {...register('coren')} />
               </div>
               <div className="space-y-1">

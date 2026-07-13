@@ -155,7 +155,7 @@ export function PacienteDetailPage() {
   const ultimaAvaliacao = avaliacoes[0];
 
   // Papéis que podem criar cada registro (mesma regra do fluxo clínico, sem depender da etapa).
-  const podeNovaAvaliacao = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN;
+  const podeNovaAvaliacao = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
   const podeNovoLaudo = user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
   // Export LGPD: mesmos papéis autorizados no backend (GET /pacientes/:id/export).
   const podeExportar =

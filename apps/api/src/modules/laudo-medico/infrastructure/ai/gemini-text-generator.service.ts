@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AppConfigService } from '../../../../common/security/config.service';
 import { AiTextGenerator } from '../../application/ports/ai-text-generator';
 
-const MODEL = 'gemini-1.5-flash';
+const MODEL = 'gemini-flash-latest';
 
 @Injectable()
 export class GeminiTextGeneratorService implements AiTextGenerator {

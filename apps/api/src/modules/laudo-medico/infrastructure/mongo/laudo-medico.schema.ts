@@ -19,6 +19,15 @@ class AssinaturaLaudoMongo {
   hash!: string;
 }
 
+@Schema({ _id: false, versionKey: false })
+class CateterExternoConfigMongo {
+  @Prop({ required: true })
+  incluirDescricaoTecnica!: boolean;
+
+  @Prop({ required: true })
+  incluirCodigoSiafisico!: boolean;
+}
+
 @Schema({ collection: 'laudos_medicos', versionKey: false })
 export class LaudoMedicoMongo {
   @Prop({ required: true, index: true })
@@ -51,14 +60,107 @@ export class LaudoMedicoMongo {
   @Prop({ type: [String], default: [] })
   cid10!: string[];
 
-  @Prop({ required: true })
-  justificativaMedica!: string;
+  @Prop()
+  contextoSocial?: string;
 
   @Prop({ required: true })
-  fundamentoLegal!: string;
+  etiologia!: string;
+
+  @Prop()
+  nivelLesao?: string;
+
+  @Prop({ required: true })
+  diagnosticoFuncional!: string;
+
+  @Prop({ required: true })
+  regimeCil!: string;
+
+  @Prop({ required: true })
+  insumoAtual!: string;
+
+  @Prop()
+  fornecedorAtual?: string;
+
+  @Prop({ required: true })
+  riscoEsvaziamento!: boolean;
+
+  @Prop({ required: true })
+  riscoItuAtual!: boolean;
+
+  @Prop({ required: true })
+  riscoAntibioticoterapia!: boolean;
+
+  @Prop({ required: true })
+  riscoTratoSuperior!: boolean;
+
+  @Prop({ required: true })
+  riscoInsuficienciaRenal!: boolean;
+
+  @Prop({ required: true })
+  riscoLesaoUretral!: boolean;
+
+  @Prop({ required: true })
+  riscoPerdasNoturnas!: boolean;
+
+  @Prop({ required: true })
+  deficienciaLubrificacao!: boolean;
+
+  @Prop({ required: true })
+  deficienciaPontaProtetora!: boolean;
+
+  @Prop({ required: true })
+  deficienciaMangaProtetora!: boolean;
+
+  @Prop({ required: true })
+  deficienciaDor!: boolean;
+
+  @Prop({ required: true })
+  deficienciaAlergiaLidocaina!: boolean;
+
+  @Prop({ required: true })
+  deficienciaFrascoReutilizado!: boolean;
+
+  @Prop({ required: true })
+  deficienciaRiscoInternacao!: boolean;
+
+  @Prop({ required: true })
+  prescricaoIncluirCodigoFabricante!: boolean;
+
+  @Prop({ required: true })
+  prescricaoEmbalagemPocket!: boolean;
+
+  @Prop({ required: true })
+  prescricaoClausulaMarca!: boolean;
+
+  @Prop({ required: true })
+  prescricaoCateterExterno!: boolean;
+
+  @Prop({ required: true })
+  prescricaoIncluirObjetivo!: boolean;
+
+  @Prop({ required: true })
+  prescricaoIncluirConclusao!: boolean;
+
+  @Prop({ type: SchemaFactory.createForClass(CateterExternoConfigMongo) })
+  cateterExterno?: CateterExternoConfigMongo;
 
   @Prop({ type: [MongooseSchema.Types.Mixed], default: [] })
   produtosSolicitados!: Record<string, unknown>[];
+
+  @Prop({ enum: ['speedicath', 'gentlecath'] })
+  comparativoAnvisa?: 'speedicath' | 'gentlecath';
+
+  @Prop()
+  medicoNomeExibicao?: string;
+
+  @Prop()
+  medicoEspecialidade?: string;
+
+  @Prop()
+  crmExibicao?: string;
+
+  @Prop()
+  cidadeEmissao?: string;
 
   @Prop({ type: SchemaFactory.createForClass(AssinaturaLaudoMongo) })
   assinado?: AssinaturaLaudoMongo;

@@ -1,64 +1,99 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Printer, ArrowLeft, FileDown } from 'lucide-react';
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType } from 'docx';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { laudoMedicoApi, pacientesApi } from '@/api/resources';
-import { formatData } from '@/utils';
-import type { LaudoMedico, Paciente } from '@/types';
+import { laudoMedicoApi, pacientesApi, produtosApi } from '@/api/resources';
+import { montarLaudoNarrativa, type LaudoNode, type Run } from '@/utils/laudoMedicoTexto';
 
-/** Monta o .docx do relatório médico — mesmo conteúdo da tela, sem logo/rodapé, assinatura em branco. */
-async function gerarDocxLaudo(laudo: LaudoMedico | undefined, paciente: Paciente | undefined) {
-  const rotulo = (texto: string) => new TextRun({ text: texto, bold: true });
+function runsToDocxTextRuns(runs: Run[]): TextRun[] {
+  return runs.map((r) => new TextRun({ text: r.text, bold: r.bold, italics: r.missing }));
+}
 
-  const linhas: (Paragraph | Table)[] = [
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      children: [new TextRun({ text: '================== RELATÓRIO MÉDICO ======================', bold: true, font: 'Courier New' })],
-      spacing: { after: 300 },
-    }),
-    new Paragraph({ children: [rotulo('Nome: '), new TextRun(paciente?.nome ?? '—')] }),
-    new Paragraph({ children: [rotulo('CPF: '), new TextRun(paciente?.cpf ?? '—')] }),
-    new Paragraph({ children: [rotulo('Data de Nascimento: '), new TextRun(formatData(paciente?.dataNascimento))] }),
-    new Paragraph({ children: [rotulo('Sexo: '), new TextRun(paciente?.sexo ?? '—')], spacing: { after: 200 } }),
-    new Paragraph({ children: [rotulo('Data do Laudo: '), new TextRun(formatData(laudo?.dataLaudo))] }),
-    new Paragraph({ children: [rotulo('CID-10: '), new TextRun(laudo?.cid10?.join(', ') ?? '—')], spacing: { after: 200 } }),
-    new Paragraph({ children: [rotulo('Justificativa Médica')], spacing: { after: 100 } }),
-    new Paragraph({ children: [new TextRun(laudo?.justificativaMedica ?? '—')], spacing: { after: 200 } }),
-    new Paragraph({ children: [rotulo('Fundamento Legal')], spacing: { after: 100 } }),
-    new Paragraph({ children: [new TextRun(laudo?.fundamentoLegal ?? '—')], spacing: { after: 200 } }),
-  ];
+/** Monta o .docx do relatório — mesmo texto narrativo da tela, sem logo/rodapé, assinatura em branco. */
+async function gerarDocxLaudo(nodes: LaudoNode[]) {
+  const linhas: Paragraph[] = [];
 
-  if (laudo?.produtosSolicitados && laudo.produtosSolicitados.length > 0) {
-    const celula = (texto: string, negrito = false) =>
-      new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: texto, bold: negrito })] })] });
-
-    linhas.push(
-      new Paragraph({ children: [rotulo('Produtos Solicitados')], spacing: { before: 100, after: 100 } }),
-      new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        rows: [
-          new TableRow({
-            children: [celula('Descrição', true), celula('Código SIAFISICO', true), celula('Quantidade', true), celula('Unidade', true)],
-          }),
-          ...laudo.produtosSolicitados.map(
-            (p) => new TableRow({ children: [celula(p.descricao), celula(p.codigoSiafisico != null ? String(p.codigoSiafisico) : '—'), celula(String(p.quantidade)), celula(p.unidade)] }),
-          ),
-        ],
-      }),
-    );
+  for (const node of nodes) {
+    if (node.type === 'heading') {
+      linhas.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: node.text, bold: true })], spacing: { after: 300 } }));
+    } else if (node.type === 'objetivoBox') {
+      linhas.push(new Paragraph({ children: runsToDocxTextRuns(node.runs), spacing: { after: 200 }, border: { top: { style: 'single', size: 4, color: 'AAAAAA' }, bottom: { style: 'single', size: 4, color: 'AAAAAA' }, left: { style: 'single', size: 4, color: 'AAAAAA' }, right: { style: 'single', size: 4, color: 'AAAAAA' } } }));
+    } else if (node.type === 'subheading') {
+      linhas.push(new Paragraph({ children: [new TextRun({ text: node.text, bold: true })], spacing: { before: 200, after: 100 } }));
+    } else if (node.type === 'paragraph') {
+      linhas.push(new Paragraph({ children: runsToDocxTextRuns(node.runs), alignment: AlignmentType.JUSTIFIED, spacing: { after: 150 } }));
+    } else if (node.type === 'list') {
+      for (const item of node.items) {
+        linhas.push(new Paragraph({ children: runsToDocxTextRuns(item), bullet: { level: 0 }, spacing: { after: 100 } }));
+      }
+    } else if (node.type === 'signature') {
+      linhas.push(
+        new Paragraph({ text: '', spacing: { before: 600 } }),
+        new Paragraph({ alignment: AlignmentType.CENTER, children: runsToDocxTextRuns(node.local) }),
+        new Paragraph({ text: '_____________________________________', alignment: AlignmentType.CENTER }),
+        new Paragraph({ alignment: AlignmentType.CENTER, children: node.nomeMedico.map((r) => new TextRun({ text: r.text, bold: true, italics: r.missing })) }),
+        new Paragraph({ alignment: AlignmentType.CENTER, children: runsToDocxTextRuns(node.especialidadeCrm) }),
+      );
+    }
   }
-
-  linhas.push(
-    new Paragraph({ text: '', spacing: { before: 800 } }),
-    new Paragraph({ text: '_____________________________________' }),
-    new Paragraph({ children: [new TextRun({ text: 'Médico Responsável', bold: true })] }),
-    new Paragraph({ text: 'CRM: ___________' }),
-  );
 
   const doc = new Document({ sections: [{ children: linhas }] });
   return Packer.toBlob(doc);
+}
+
+function RunsView({ runs }: { runs: Run[] }) {
+  return (
+    <>
+      {runs.map((r, i) => (
+        <span key={i} className={r.missing ? 'bg-amber-100 text-amber-800 italic px-0.5 print:bg-transparent print:text-inherit print:not-italic' : undefined}>
+          {r.bold ? <strong>{r.text}</strong> : r.text}
+        </span>
+      ))}
+    </>
+  );
+}
+
+function LaudoNodeView({ node }: { node: LaudoNode }) {
+  if (node.type === 'heading') {
+    return <h2 className="text-center text-lg tracking-widest border-b-2 border-gray-800 pb-2 mb-6 font-semibold">{node.text}</h2>;
+  }
+  if (node.type === 'objetivoBox') {
+    return (
+      <p className="text-sm border border-gray-300 bg-gray-50 rounded p-3 mb-4">
+        <RunsView runs={node.runs} />
+      </p>
+    );
+  }
+  if (node.type === 'subheading') {
+    return <h3 className="text-sm font-bold uppercase mt-6 mb-2">{node.text}</h3>;
+  }
+  if (node.type === 'paragraph') {
+    return (
+      <p className={`text-sm leading-relaxed text-justify my-3 ${node.noIndent ? '' : 'indent-8'}`}>
+        <RunsView runs={node.runs} />
+      </p>
+    );
+  }
+  if (node.type === 'list') {
+    return (
+      <ul className="list-disc ml-8 my-3 space-y-2">
+        {node.items.map((item, i) => (
+          <li key={i} className="text-sm text-justify"><RunsView runs={item} /></li>
+        ))}
+      </ul>
+    );
+  }
+  // signature
+  return (
+    <div className="mt-16 text-center break-inside-avoid">
+      <p className="text-sm mb-8"><RunsView runs={node.local} /></p>
+      <div className="border-t border-gray-800 w-80 mx-auto mb-1" />
+      <p className="text-sm font-semibold"><RunsView runs={node.nomeMedico} /></p>
+      <p className="text-xs text-gray-600"><RunsView runs={node.especialidadeCrm} /></p>
+    </div>
+  );
 }
 
 export function LaudoImpressaoPage() {
@@ -75,12 +110,19 @@ export function LaudoImpressaoPage() {
     queryFn: () => laudoMedicoApi.get(laudoId!),
     enabled: !!laudoId,
   });
+  const produtosQ = useQuery({
+    queryKey: ['produtos'],
+    queryFn: () => produtosApi.list(),
+  });
 
   const paciente = pacienteQ.data;
   const laudo = laudoQ.data;
+  const produtos = produtosQ.data ?? [];
+
+  const nodes = laudo && paciente ? montarLaudoNarrativa(laudo, paciente, produtos) : [];
 
   async function baixarDocx() {
-    const blob = await gerarDocxLaudo(laudo, paciente);
+    const blob = await gerarDocxLaudo(nodes);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -89,7 +131,7 @@ export function LaudoImpressaoPage() {
     URL.revokeObjectURL(url);
   }
 
-  if (laudoQ.isLoading || pacienteQ.isLoading) {
+  if (laudoQ.isLoading || pacienteQ.isLoading || produtosQ.isLoading) {
     return <div className="p-8 space-y-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-48 w-full" /></div>;
   }
 
@@ -100,7 +142,7 @@ export function LaudoImpressaoPage() {
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <span className="text-sm text-muted-foreground">Prévia do Laudo Médico</span>
+        <span className="text-sm text-muted-foreground">Prévia do Relatório Médico Judiciário</span>
         <Button variant="outline" size="sm" className="ml-auto" onClick={() => void baixarDocx()}>
           <FileDown className="h-4 w-4 mr-2" /> Baixar .doc
         </Button>
@@ -111,95 +153,7 @@ export function LaudoImpressaoPage() {
 
       {/* Conteúdo imprimível */}
       <div className="laudo-print max-w-3xl mx-auto p-8 text-gray-900 bg-white min-h-screen print:min-h-0 print:max-w-full">
-        {/* Cabeçalho — sem logo nem dados da clínica, apenas o título do documento */}
-        <div className="text-center pb-4 mb-6">
-          <p className="font-mono font-bold text-sm tracking-wide whitespace-pre">
-            ================== RELATÓRIO MÉDICO ======================
-          </p>
-        </div>
-
-        {/* Dados do paciente */}
-        <section className="mb-6">
-          <h2 className="text-sm font-bold uppercase text-gray-500 mb-2 border-b border-gray-300 pb-1">
-            Identificação do Paciente
-          </h2>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
-            <div><span className="font-semibold">Nome:</span> {paciente?.nome ?? '—'}</div>
-            <div><span className="font-semibold">CPF:</span> {paciente?.cpf ?? '—'}</div>
-            <div><span className="font-semibold">Data de Nascimento:</span> {formatData(paciente?.dataNascimento)}</div>
-            <div><span className="font-semibold">Sexo:</span> {paciente?.sexo ?? '—'}</div>
-          </div>
-        </section>
-
-        {/* Dados do laudo */}
-        <section className="mb-6">
-          <h2 className="text-sm font-bold uppercase text-gray-500 mb-2 border-b border-gray-300 pb-1">
-            Dados do Laudo
-          </h2>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm mb-3">
-            <div><span className="font-semibold">Data:</span> {formatData(laudo?.dataLaudo)}</div>
-            <div><span className="font-semibold">CID-10:</span> {laudo?.cid10?.join(', ') ?? '—'}</div>
-          </div>
-        </section>
-
-        {/* Justificativa */}
-        <section className="mb-6">
-          <h2 className="text-sm font-bold uppercase text-gray-500 mb-2 border-b border-gray-300 pb-1">
-            Justificativa Médica
-          </h2>
-          <p className="text-sm leading-relaxed whitespace-pre-line">{laudo?.justificativaMedica ?? '—'}</p>
-        </section>
-
-        {/* Fundamento legal */}
-        <section className="mb-6">
-          <h2 className="text-sm font-bold uppercase text-gray-500 mb-2 border-b border-gray-300 pb-1">
-            Fundamento Legal
-          </h2>
-          <p className="text-sm leading-relaxed">{laudo?.fundamentoLegal ?? '—'}</p>
-        </section>
-
-        {/* Produtos */}
-        {laudo?.produtosSolicitados && laudo.produtosSolicitados.length > 0 && (
-          <section className="mb-8">
-            <h2 className="text-sm font-bold uppercase text-gray-500 mb-2 border-b border-gray-300 pb-1">
-              Produtos Solicitados
-            </h2>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="text-left p-2 font-semibold">Descrição</th>
-                  <th className="text-center p-2 font-semibold">Código SIAFISICO</th>
-                  <th className="text-center p-2 font-semibold">Quantidade</th>
-                  <th className="text-right p-2 font-semibold">Unidade</th>
-                </tr>
-              </thead>
-              <tbody>
-                {laudo.produtosSolicitados.map((p, i) => (
-                  <tr key={i} className="border-b border-gray-200">
-                    <td className="p-2">{p.descricao}</td>
-                    <td className="p-2 text-center">{p.codigoSiafisico ?? '—'}</td>
-                    <td className="p-2 text-center">{p.quantidade}</td>
-                    <td className="p-2 text-right">{p.unidade}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        )}
-
-        {/* Assinatura — em branco para carimbo e assinatura física do médico */}
-        <div className="mt-24 print:mt-20 flex justify-between items-end break-inside-avoid">
-          <div className="text-center min-w-52">
-            <div className="border-t-2 border-gray-800 pt-1">
-              <p className="text-sm font-semibold">Médico Responsável</p>
-              <p className="text-xs text-gray-600">CRM: ___________</p>
-            </div>
-          </div>
-          <div className="text-sm text-gray-500 text-right">
-            <p>Local e data:</p>
-            <p>_____________________________</p>
-          </div>
-        </div>
+        {nodes.map((node, i) => <LaudoNodeView key={i} node={node} />)}
       </div>
 
       <style>{`

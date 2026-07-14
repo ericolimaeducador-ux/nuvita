@@ -1040,6 +1040,15 @@ export const STATUS_LAUDO_MEDICO_LABEL: Record<StatusLaudoMedico, string> = {
   [StatusLaudoMedico.ASSINADO]: 'Assinado',
 };
 
+/** Só relevante quando `prescricaoCateterExterno=true`; tamanho/faixa/código do
+ * cateter externo vêm do catálogo via `produtosSolicitados`, não duplicados aqui. */
+export interface CateterExternoConfig {
+  incluirDescricaoTecnica: boolean;
+  incluirCodigoSiafisico: boolean;
+}
+
+export type ComparativoAnvisa = 'speedicath' | 'gentlecath';
+
 export interface LaudoMedico {
   id: string;
   clinicaId: string;
@@ -1052,17 +1061,67 @@ export interface LaudoMedico {
   avaliacaoIuId: string;
   dataLaudo: string;
   cid10: string[];
-  justificativaMedica: string;
-  fundamentoLegal: string;
+
+  // ---- Texto narrativo (Relatório Médico Circunstanciado — CIL) ----
+  contextoSocial?: string;
+  etiologia: string;
+  nivelLesao?: string;
+  diagnosticoFuncional: string;
+  regimeCil: string;
+  insumoAtual: string;
+  fornecedorAtual?: string;
+
+  // ---- Quadro clínico e riscos (manuais, não-IA) ----
+  riscoEsvaziamento: boolean;
+  riscoItuAtual: boolean;
+  riscoAntibioticoterapia: boolean;
+  riscoTratoSuperior: boolean;
+  riscoInsuficienciaRenal: boolean;
+  riscoLesaoUretral: boolean;
+  riscoPerdasNoturnas: boolean;
+
+  // ---- Deficiências do insumo atual (manuais) ----
+  deficienciaLubrificacao: boolean;
+  deficienciaPontaProtetora: boolean;
+  deficienciaMangaProtetora: boolean;
+  deficienciaDor: boolean;
+  deficienciaAlergiaLidocaina: boolean;
+  deficienciaFrascoReutilizado: boolean;
+  deficienciaRiscoInternacao: boolean;
+
+  // ---- Prescrição indicada (toggles manuais) ----
+  prescricaoIncluirCodigoFabricante: boolean;
+  prescricaoEmbalagemPocket: boolean;
+  prescricaoClausulaMarca: boolean;
+  prescricaoCateterExterno: boolean;
+  prescricaoIncluirObjetivo: boolean;
+  prescricaoIncluirConclusao: boolean;
+  cateterExterno?: CateterExternoConfig;
+
   produtosSolicitados: Array<{ codigo: number; descricao: string; quantidade: number; unidade: string; codigoSiafisico?: number }>;
-  assinado?: { medicoId: string; dataAssinatura: string };
+
+  // ---- Comparativo técnico ANVISA (seleção manual) ----
+  comparativoAnvisa?: ComparativoAnvisa;
+
+  // ---- Profissional e fecho — texto livre editável, independente da assinatura de auditoria ----
+  medicoNomeExibicao?: string;
+  medicoEspecialidade?: string;
+  crmExibicao?: string;
+  cidadeEmissao?: string;
+
+  assinado?: { medicoId: string; crmNumero?: string; dataAssinatura: string };
   criadoEm: string;
 }
 
 export interface RascunhoLaudoIA {
   cid10: string[];
-  justificativaMedica: string;
-  fundamentoLegal: string;
+  contextoSocial: string;
+  etiologia: string;
+  nivelLesao: string;
+  diagnosticoFuncional: string;
+  regimeCil: string;
+  insumoAtual: string;
+  fornecedorAtual: string;
 }
 
 export enum StatusProcesso {

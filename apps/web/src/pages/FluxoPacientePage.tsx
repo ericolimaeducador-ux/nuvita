@@ -26,7 +26,7 @@ import { apiErrorMessage } from '@/api/client';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/auth/AuthContext';
 import { cn } from '@/lib/utils';
-import { NovaAvaliacaoIUDialog } from '@/components/FluxoClinicoDialogs';
+import { NovaAvaliacaoIUDialog, NovoLaudoDialog } from '@/components/FluxoClinicoDialogs';
 import { formatData, toItems } from '@/utils';
 import {
   Papel, LocalAtendimento, PerfilCliente, Destreza, TipoIU, EncaminhamentoIU,
@@ -36,6 +36,7 @@ import {
   EtapaFluxoClinico, ETAPA_FLUXO_LABEL, calcularPrazoEtapa, PROXIMA_ETAPA_MANUAL, PAPEIS_AVANCO_MANUAL,
   ModalidadeAtendimento, TipoAgendamento, StatusAgendamento, STATUS_AGENDAMENTO_LABEL,
   StatusChecklistDocumento, STATUS_CHECKLIST_DOCUMENTO_LABEL,
+  StatusLaudoMedico, STATUS_LAUDO_MEDICO_LABEL,
   type AvaliacaoIU, type FollowUp, type LaudoMedico, type ProcessoJuridico, type Entrega, type Produto,
   type Agendamento, type ChecklistDocumentoItem,
 } from '@/types';
@@ -189,6 +190,7 @@ export function FluxoPacientePage() {
             laudos={laudos}
             produtos={produtos}
             user={user}
+            clinicaId={user?.clinicaId}
           />
         </Passo>
 
@@ -634,59 +636,38 @@ function FollowUpStep({ pacienteId, avaliacaoId, followups, user }: {
 }
 
 // ---- Passo 3: Laudo Médico ----
-function LaudoMedicoStep({ pacienteId, avaliacaoId, produtoIndicado, laudos, produtos, user }: {
+function LaudoMedicoStep({ pacienteId, avaliacaoId, produtoIndicado, laudos, produtos, user, clinicaId }: {
   pacienteId: string; avaliacaoId?: string; produtoIndicado?: AvaliacaoIU['produtoIndicado'];
-  laudos: LaudoMedico[]; produtos: Produto[]; user: ReturnType<typeof useAuth>['user'];
+  laudos: LaudoMedico[]; produtos: Produto[]; user: ReturnType<typeof useAuth>['user']; clinicaId?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [laudoEmEdicao, setLaudoEmEdicao] = useState<LaudoMedico | null>(null);
   const qc = useQueryClient();
-  const { register, handleSubmit, setValue, watch, reset } = useForm<Record<string, unknown>>();
 
-  const mut = useMutation({
-    mutationFn: (payload: Record<string, unknown>) => laudoMedicoApi.create(payload),
-    onSuccess: () => {
-      toast.success('Laudo criado.');
-      setOpen(false); reset();
-      void qc.invalidateQueries({ queryKey: ['laudo-medico', pacienteId] });
-    },
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
-  });
-
-  const assinarMut = useMutation({
-    mutationFn: (id: string) => laudoMedicoApi.assinar(id),
-    onSuccess: () => {
-      toast.success('Laudo assinado digitalmente.');
-      void qc.invalidateQueries({ queryKey: ['laudo-medico', pacienteId] });
-    },
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
-  });
-
-  const podeCriar = user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
+  const podeCriar = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
 
   return (
     <div className="space-y-3">
-      {laudos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum laudo registrado.</p>}
+      {laudos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum relatório médico judiciário registrado.</p>}
       {laudos.map((l) => (
         <div key={l.id} className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{formatData(l.dataLaudo)}</span>
-              {l.assinado
-                ? <Badge variant="success" className="text-xs">Assinado</Badge>
-                : <Badge variant="outline" className="text-xs">Rascunho</Badge>}
+              <Badge variant={l.status === StatusLaudoMedico.ASSINADO ? 'success' : l.status === StatusLaudoMedico.AGUARDANDO_REVISAO ? 'secondary' : 'warning'}>
+                {STATUS_LAUDO_MEDICO_LABEL[l.status]}
+              </Badge>
             </div>
             <div className="flex items-center gap-2">
-              {!l.assinado && podeCriar && (
-                <Button size="sm" variant="outline" onClick={() => assinarMut.mutate(l.id)} disabled={assinarMut.isPending}>
-                  Assinar digitalmente
-                </Button>
+              {podeCriar && l.status !== StatusLaudoMedico.ASSINADO && (
+                <Button size="sm" variant="ghost" onClick={() => { setLaudoEmEdicao(l); setOpen(true); }}>Revisar</Button>
               )}
               <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => window.open(`/fluxo-clinico/${pacienteId}/laudo/${l.id}/imprimir`, '_blank')}>
                 <Printer className="h-3 w-3 mr-1" /> Imprimir
               </Button>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground line-clamp-2">{l.justificativaMedica}</p>
+          <p className="text-xs text-muted-foreground line-clamp-2">{l.diagnosticoFuncional}</p>
           {l.produtosSolicitados.length > 0 && (
             <p className="text-xs text-primary">
               Produtos: {l.produtosSolicitados.map((p) => `${p.descricao} (${p.quantidade}x)`).join(', ')}
@@ -695,74 +676,21 @@ function LaudoMedicoStep({ pacienteId, avaliacaoId, produtoIndicado, laudos, pro
         </div>
       ))}
       {podeCriar && (
-        <Button size="sm" onClick={() => {
-          if (produtoIndicado) setValue(`prod_${produtoIndicado.codigo}`, true);
-          setOpen(true);
-        }}>
-          <Plus className="h-4 w-4 mr-1" /> Novo laudo
+        <Button size="sm" onClick={() => { setLaudoEmEdicao(null); setOpen(true); }}>
+          <Plus className="h-4 w-4 mr-1" /> Novo Relatório Médico Judiciário
         </Button>
       )}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Laudo Médico — Solicitação SUS</DialogTitle></DialogHeader>
-          <form onSubmit={handleSubmit((v) => mut.mutate({
-            pacienteId, avaliacaoIuId: avaliacaoId, clinicaId: user?.clinicaId,
-            dataLaudo: v.dataLaudo,
-            justificativaMedica: v.justificativaMedica,
-            fundamentoLegal: v.fundamentoLegal,
-            cid10: String(v.cid10 ?? '').split(',').map((s: string) => s.trim()).filter(Boolean),
-            produtosSolicitados: produtos.filter((p) => v[`prod_${p.codigo}`]).map((p) => ({
-              codigo: p.codigo, descricao: p.nome,
-              quantidade: Number(v[`qty_${p.codigo}`] ?? 1) || 1,
-              unidade: 'unidade', codigoSiafisico: p.codigoSiafisico,
-            })),
-          }))} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Data do laudo</Label>
-                <Input type="date" {...register('dataLaudo', { required: true })} />
-              </div>
-              <div className="space-y-1">
-                <Label>CID-10 (separados por vírgula)</Label>
-                <Input placeholder="G82.2, N31.2" {...register('cid10')} />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label>Justificativa médica</Label>
-              <Textarea rows={4} placeholder="Descreva a condição clínica e necessidade médica..." {...register('justificativaMedica', { required: true })} />
-            </div>
-            <div className="space-y-1">
-              <Label>Fundamento legal</Label>
-              <Textarea rows={2} placeholder="Lei nº 8.080/90, art. 6º — direito à assistência terapêutica integral..." {...register('fundamentoLegal', { required: true })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Produtos solicitados</Label>
-              {produtos.map((p) => (
-                <div key={p.codigo} className="flex items-center gap-3">
-                  <Checkbox
-                    id={`prod_${p.codigo}`}
-                    checked={!!watch(`prod_${p.codigo}`)}
-                    onCheckedChange={(c) => setValue(`prod_${p.codigo}`, !!c)}
-                  />
-                  <Label htmlFor={`prod_${p.codigo}`} className="text-sm flex-1 cursor-pointer">
-                    {p.nome}
-                    {produtoIndicado?.codigo === p.codigo && (
-                      <Badge variant="success" className="ml-2 text-xs">Indicado na avaliação</Badge>
-                    )}
-                  </Label>
-                  {!!watch(`prod_${p.codigo}`) && (
-                    <Input type="number" min={1} defaultValue={1} className="w-20" {...register(`qty_${p.codigo}`, { valueAsNumber: true })} />
-                  )}
-                </div>
-              ))}
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={mut.isPending}>{mut.isPending ? 'Salvando...' : 'Criar laudo'}</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <NovoLaudoDialog
+        open={open}
+        onOpenChange={(o) => { setOpen(o); if (!o) setLaudoEmEdicao(null); }}
+        pacienteId={pacienteId}
+        clinicaId={clinicaId}
+        produtos={produtos}
+        avaliacaoId={avaliacaoId}
+        produtoIndicado={produtoIndicado}
+        laudo={laudoEmEdicao ?? undefined}
+        onCreated={() => void qc.invalidateQueries({ queryKey: ['laudo-medico', pacienteId] })}
+      />
     </div>
   );
 }

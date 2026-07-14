@@ -15,18 +15,28 @@ const PLACEHOLDER = '[preenchimento do enfermeiro sobre: <tema>]';
 
 export interface RascunhoLaudoIA {
   cid10: string[];
-  justificativaMedica: string;
-  fundamentoLegal: string;
+  contextoSocial: string;
+  etiologia: string;
+  nivelLesao: string;
+  diagnosticoFuncional: string;
+  regimeCil: string;
+  insumoAtual: string;
+  fornecedorAtual: string;
 }
 
 const RESPONSE_SCHEMA = {
   type: SchemaType.OBJECT,
   properties: {
     cid10: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-    justificativaMedica: { type: SchemaType.STRING },
-    fundamentoLegal: { type: SchemaType.STRING },
+    contextoSocial: { type: SchemaType.STRING },
+    etiologia: { type: SchemaType.STRING },
+    nivelLesao: { type: SchemaType.STRING },
+    diagnosticoFuncional: { type: SchemaType.STRING },
+    regimeCil: { type: SchemaType.STRING },
+    insumoAtual: { type: SchemaType.STRING },
+    fornecedorAtual: { type: SchemaType.STRING },
   },
-  required: ['cid10', 'justificativaMedica', 'fundamentoLegal'],
+  required: ['cid10', 'etiologia', 'diagnosticoFuncional', 'regimeCil', 'insumoAtual'],
 };
 
 @Injectable()
@@ -87,14 +97,19 @@ export class LaudoMedicoIaService {
       anotacoes.length ? `Anotações jurídicas: ${JSON.stringify(anotacoes)}` : 'Sem anotações jurídicas.',
     ].join('\n\n');
 
-    return `Você ajuda um enfermeiro a redigir o RASCUNHO de um Relatório Médico Judiciário (solicitação de insumo/medicamento/procedimento ao SUS ou à Justiça), que depois será revisado e assinado por um médico. NUNCA invente dado clínico. Use somente os dados fornecidos abaixo sobre o paciente.
+    return `Você ajuda um enfermeiro a redigir o RASCUNHO de um Relatório Médico Circunstanciado (CIL — Cateterismo Intermitente Limpo), que depois será revisado e assinado por um médico. O texto final é um documento narrativo fixo em que cada campo abaixo é encaixado dentro de frases prontas — por isso cada campo deve ser um FRAGMENTO GRAMATICAL (não uma frase completa com sujeito próprio), sem ponto final, sem maiúscula inicial (exceto siglas/nomes próprios), no mesmo registro técnico-jurídico dos exemplos abaixo. NUNCA invente dado clínico — use somente os dados fornecidos sobre o paciente.
 
 Preencha:
 - "cid10": lista de códigos CID-10 já mencionados nos dados (vazio se nenhum constar).
-- "justificativaMedica": texto corrido justificando a necessidade médica, com base nos dados existentes (histórico, diagnóstico, tratamentos realizados, tentativas anteriores).
-- "fundamentoLegal": base legal (ex.: Lei 8.080/90, jurisprudência do NAT-JUS, direito à saúde constitucional) apropriada ao tipo de solicitação identificado nos dados.
+- "etiologia": causa primária da disfunção. Ex.: "trauma raquimedular com lesão medular irreversível decorrente de acidente automobilístico".
+- "nivelLesao": nível da lesão medular, se houver e estiver documentado. Ex.: "em terceira e quarta vértebras cervicais (C3–C4)". Retorne "" se não houver nível medular aplicável/documentado.
+- "diagnosticoFuncional": diagnóstico funcional resultante. Ex.: "Disfunção Neurogênica do Trato Urinário Inferior (DNTUI — CID N31), com bexiga neurogênica secundária".
+- "regimeCil": regime de cateterismo intermitente limpo prescrito/necessário. Ex.: "a cada 4 (quatro) horas, totalizando 6 (seis) cateterismos ao dia".
+- "insumoAtual": o cateter/insumo em uso atualmente e suas características. Ex.: "cateter convencional (sonda uretral), sem lubrificação ou proteção".
+- "fornecedorAtual": preposição + quem fornece o insumo atual, se mencionado (o texto final é "...fornecido {fornecedorAtual}"). Ex.: "pelo SUS". Retorne "" se não houver menção.
+- "contextoSocial": contexto social/laboral do paciente, se relevante e documentado. Ex.: "vida social ativa e exerce atividade laboral". Retorne "" se não houver dado sobre isso.
 
-Regra obrigatória: para qualquer informação juridicamente relevante (ex.: urgência do caso, imprescindibilidade do item solicitado, consequências da não utilização, benefícios esperados, tentativas de tratamento alternativas) que NÃO esteja sustentada pelos dados abaixo, escreva literalmente dentro do texto o marcador "${PLACEHOLDER}" substituindo <tema> pelo assunto específico que falta (ex.: "${PLACEHOLDER.replace('<tema>', 'urgência do caso')}"). Não tente adivinhar ou inferir isso.
+Regra obrigatória: para "etiologia", "diagnosticoFuncional", "regimeCil" e "insumoAtual" — indispensáveis à validade do relatório — se a informação não estiver sustentada pelos dados abaixo, retorne literalmente o marcador "${PLACEHOLDER}" como valor do campo, substituindo <tema> pelo assunto específico que falta (ex.: "${PLACEHOLDER.replace('<tema>', 'etiologia/causa da lesão medular')}"). Não tente adivinhar ou inferir. Para os campos opcionais ("nivelLesao", "fornecedorAtual", "contextoSocial"), prefira retornar "" a usar o marcador, a menos que o dado seja claramente relevante e esteja só parcialmente ausente.
 
 Dados disponíveis:
 

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
+import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,10 +13,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { toast } from '@/components/ui/use-toast';
 import { avaliacaoIUApi, laudoMedicoApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
+import { useAuth } from '@/auth/AuthContext';
 import {
-  LocalAtendimento, PerfilCliente, Destreza, TipoIU, EncaminhamentoIU,
+  LocalAtendimento, PerfilCliente, Destreza, TipoIU, EncaminhamentoIU, Papel, StatusLaudoMedico,
   LOCAL_LABEL, PERFIL_LABEL, DESTREZA_LABEL, TIPO_IU_LABEL, ENCAMINHAMENTO_LABEL,
-  type AvaliacaoIU, type Produto,
+  type AvaliacaoIU, type LaudoMedico, type Produto,
 } from '@/types';
 
 /**
@@ -303,7 +305,7 @@ export function NovaAvaliacaoIUDialog({
 }
 
 export function NovoLaudoDialog({
-  open, onOpenChange, pacienteId, clinicaId, produtos, avaliacaoId, produtoIndicado, onCreated,
+  open, onOpenChange, pacienteId, clinicaId, produtos, avaliacaoId, produtoIndicado, laudo, onCreated,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -312,46 +314,117 @@ export function NovoLaudoDialog({
   produtos: Produto[];
   avaliacaoId?: string;
   produtoIndicado?: AvaliacaoIU['produtoIndicado'];
+  /** Quando presente, o diálogo revisa este relatório (rascunho/aguardando revisão) em vez de criar um novo. */
+  laudo?: LaudoMedico;
   onCreated: () => void;
 }) {
+  const { user } = useAuth();
+  const editando = !!laudo;
+  const podeAssinar = user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
+  const avaliacaoIuId = avaliacaoId ?? laudo?.avaliacaoIuId;
   const { register, handleSubmit, setValue, watch, reset } = useForm<Record<string, unknown>>();
 
+  // Preenche o formulário ao abrir: com os dados do relatório (revisão) ou em
+  // branco (criação). Reexecuta quando muda o alvo de edição.
+  useEffect(() => {
+    if (!open) return;
+    if (laudo) {
+      const base: Record<string, unknown> = {
+        dataLaudo: laudo.dataLaudo ? laudo.dataLaudo.slice(0, 10) : '',
+        cid10: laudo.cid10.join(', '),
+        justificativaMedica: laudo.justificativaMedica,
+        fundamentoLegal: laudo.fundamentoLegal,
+      };
+      laudo.produtosSolicitados.forEach((p) => {
+        base[`prod_${p.codigo}`] = true;
+        base[`qty_${p.codigo}`] = p.quantidade;
+      });
+      reset(base);
+    } else {
+      reset({});
+      if (produtoIndicado) setValue(`prod_${produtoIndicado.codigo}`, true);
+    }
+  }, [open, laudo, produtoIndicado, reset, setValue]);
+
   const mut = useMutation({
-    mutationFn: (payload: Record<string, unknown>) => laudoMedicoApi.create(payload),
-    onSuccess: () => {
-      toast.success('Laudo criado.');
+    mutationFn: async ({ payload, acao }: { payload: Record<string, unknown>; acao: 'salvar' | 'encaminhar' | 'assinar' }) => {
+      const salvo = editando ? await laudoMedicoApi.update(laudo!.id, payload) : await laudoMedicoApi.create(payload);
+      const id = editando ? laudo!.id : salvo.id;
+      if (acao === 'encaminhar') return laudoMedicoApi.encaminhar(id);
+      if (acao === 'assinar') return laudoMedicoApi.assinar(id);
+      return salvo;
+    },
+    onSuccess: (_r, { acao }) => {
+      toast.success(
+        acao === 'assinar' ? 'Relatório assinado.'
+        : acao === 'encaminhar' ? 'Relatório encaminhado para revisão médica.'
+        : 'Rascunho salvo.',
+      );
       onOpenChange(false); reset();
       onCreated();
     },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
+  const iaMut = useMutation({
+    mutationFn: () => laudoMedicoApi.preencherComIA(pacienteId, avaliacaoIuId!),
+    onSuccess: (r) => {
+      setValue('cid10', r.cid10.join(', '));
+      setValue('justificativaMedica', r.justificativaMedica);
+      setValue('fundamentoLegal', r.fundamentoLegal);
+      toast.success('Rascunho pré-preenchido pela IA', 'Revise o texto — trechos entre colchetes precisam ser completados.');
+    },
+    onError: (e) => toast.error('Não foi possível pré-preencher com IA', apiErrorMessage(e)),
+  });
+
+  function montarPayload(v: Record<string, unknown>): Record<string, unknown> {
+    const base = {
+      dataLaudo: v.dataLaudo,
+      justificativaMedica: v.justificativaMedica,
+      fundamentoLegal: v.fundamentoLegal,
+      cid10: String(v.cid10 ?? '').split(',').map((s: string) => s.trim()).filter(Boolean),
+      produtosSolicitados: produtos.filter((p) => v[`prod_${p.codigo}`]).map((p) => ({
+        codigo: p.codigo, descricao: p.nome,
+        quantidade: Number(v[`qty_${p.codigo}`] ?? 1) || 1,
+        unidade: 'unidade', codigoSiafisico: p.codigoSiafisico,
+      })),
+    };
+    // No PATCH (revisão) a API rejeita campos fora do UpdateLaudoMedicoDto
+    // (forbidNonWhitelisted): pacienteId/avaliacaoIuId/clinicaId só entram na criação.
+    return editando ? base : { ...base, pacienteId, avaliacaoIuId, clinicaId };
+  }
+
+  const enviar = (acao: 'salvar' | 'encaminhar' | 'assinar') =>
+    handleSubmit((v) => mut.mutate({ payload: montarPayload(v), acao }))();
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        onOpenChange(o);
-        // Ao abrir, marca por padrão o produto indicado na avaliação (se houver).
-        if (o && produtoIndicado) setValue(`prod_${produtoIndicado.codigo}`, true);
-      }}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Laudo Médico — Solicitação SUS</DialogTitle></DialogHeader>
-        <form onSubmit={handleSubmit((v) => mut.mutate({
-          pacienteId, avaliacaoIuId: avaliacaoId, clinicaId,
-          dataLaudo: v.dataLaudo,
-          justificativaMedica: v.justificativaMedica,
-          fundamentoLegal: v.fundamentoLegal,
-          cid10: String(v.cid10 ?? '').split(',').map((s: string) => s.trim()).filter(Boolean),
-          produtosSolicitados: produtos.filter((p) => v[`prod_${p.codigo}`]).map((p) => ({
-            codigo: p.codigo, descricao: p.nome,
-            quantidade: Number(v[`qty_${p.codigo}`] ?? 1) || 1,
-            unidade: 'unidade', codigoSiafisico: p.codigoSiafisico,
-          })),
-        }))} className="space-y-4">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3">
+            {editando ? 'Revisar' : 'Novo'} Relatório Médico Judiciário
+            {laudo && (
+              <Badge variant={laudo.status === StatusLaudoMedico.ASSINADO ? 'success' : laudo.status === StatusLaudoMedico.AGUARDANDO_REVISAO ? 'secondary' : 'warning'}>
+                {laudo.status === StatusLaudoMedico.ASSINADO ? 'Assinado' : laudo.status === StatusLaudoMedico.AGUARDANDO_REVISAO ? 'Aguardando revisão' : 'Rascunho'}
+              </Badge>
+            )}
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+          {avaliacaoIuId && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={iaMut.isPending}
+              onClick={() => iaMut.mutate()}
+            >
+              <Sparkles className="mr-2 h-4 w-4" /> {iaMut.isPending ? 'Pré-preenchendo…' : 'Pré-preencher com IA'}
+            </Button>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>Data do laudo</Label>
+              <Label>Data do relatório</Label>
               <Input type="date" {...register('dataLaudo', { required: true })} />
             </div>
             <div className="space-y-1">
@@ -389,8 +462,19 @@ export function NovoLaudoDialog({
             ))}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" disabled={mut.isPending}>{mut.isPending ? 'Salvando...' : 'Criar laudo'}</Button>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="button" variant="outline" disabled={mut.isPending} onClick={() => enviar('salvar')}>
+              {mut.isPending ? 'Salvando...' : 'Salvar rascunho'}
+            </Button>
+            {podeAssinar ? (
+              <Button type="button" disabled={mut.isPending} onClick={() => enviar('assinar')}>
+                {mut.isPending ? 'Salvando...' : 'Salvar e assinar'}
+              </Button>
+            ) : (
+              <Button type="button" disabled={mut.isPending} onClick={() => enviar('encaminhar')}>
+                {mut.isPending ? 'Salvando...' : 'Salvar e encaminhar para revisão'}
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

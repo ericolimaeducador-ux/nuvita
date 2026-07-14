@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  agendaApi, pacientesApi, avaliacaoIUApi, followUpApi, checklistDocumentosApi, psicoFinanceiroApi,
+  agendaApi, pacientesApi, avaliacaoIUApi, followUpApi, checklistDocumentosApi, psicoFinanceiroApi, laudoMedicoApi,
 } from '@/api/resources';
 import { toItems } from '@/utils';
 import { useAuth } from '@/auth/AuthContext';
@@ -19,6 +19,7 @@ import {
   STATUS_CICLO_LABEL,
   TIPO_AGENDAMENTO_LABEL,
   Modulo,
+  Papel,
   rotuloProximaSessao,
   type Agendamento,
 } from '@/types';
@@ -53,6 +54,13 @@ export function DashboardPage() {
     queryKey: ['checklist-documentos', 'resumo-pendentes'],
     queryFn: () => checklistDocumentosApi.resumoPendentes(),
     enabled: podeVerChecklist,
+  });
+
+  const podeRevisarLaudos = user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
+  const laudosPendentesQ = useQuery({
+    queryKey: ['laudo-medico', 'pendentes-revisao'],
+    queryFn: () => laudoMedicoApi.pendentesRevisao(),
+    enabled: podeRevisarLaudos,
   });
 
   const hojeIni = dayjs().startOf('day').toISOString();
@@ -110,6 +118,23 @@ export function DashboardPage() {
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Abra o cadastro do paciente para ver quais documentos faltam receber.
+              </p>
+            </div>
+          </div>
+        </Link>
+      )}
+
+      {/* Relatórios médicos judiciários aguardando revisão do médico */}
+      {podeRevisarLaudos && !laudosPendentesQ.isLoading && (laudosPendentesQ.data?.length ?? 0) > 0 && (
+        <Link to="/pacientes" className="block mb-6">
+          <div className="flex items-center gap-3 glass rounded-xl p-4 border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
+            <FileText className="h-5 w-5 text-amber-600 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground">
+                {laudosPendentesQ.data?.length} relatório{laudosPendentesQ.data?.length !== 1 ? 's' : ''} médico{laudosPendentesQ.data?.length !== 1 ? 's' : ''} judiciário{laudosPendentesQ.data?.length !== 1 ? 's' : ''} aguardando revisão
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Abra o cadastro do paciente para revisar e assinar o rascunho encaminhado pelo enfermeiro.
               </p>
             </div>
           </div>

@@ -1028,11 +1028,27 @@ export interface FollowUp {
   criadoEm: string;
 }
 
+export enum StatusLaudoMedico {
+  RASCUNHO = 'RASCUNHO',
+  AGUARDANDO_REVISAO = 'AGUARDANDO_REVISAO',
+  ASSINADO = 'ASSINADO',
+}
+
+export const STATUS_LAUDO_MEDICO_LABEL: Record<StatusLaudoMedico, string> = {
+  [StatusLaudoMedico.RASCUNHO]: 'Rascunho',
+  [StatusLaudoMedico.AGUARDANDO_REVISAO]: 'Aguardando revisão',
+  [StatusLaudoMedico.ASSINADO]: 'Assinado',
+};
+
 export interface LaudoMedico {
   id: string;
   clinicaId: string;
   pacienteId: string;
-  medicoId: string;
+  medicoId?: string;
+  criadoPorId: string;
+  criadoPorNome?: string;
+  criadoPorPapel: string;
+  status: StatusLaudoMedico;
   avaliacaoIuId: string;
   dataLaudo: string;
   cid10: string[];
@@ -1041,6 +1057,12 @@ export interface LaudoMedico {
   produtosSolicitados: Array<{ codigo: number; descricao: string; quantidade: number; unidade: string; codigoSiafisico?: number }>;
   assinado?: { medicoId: string; dataAssinatura: string };
   criadoEm: string;
+}
+
+export interface RascunhoLaudoIA {
+  cid10: string[];
+  justificativaMedica: string;
+  fundamentoLegal: string;
 }
 
 export enum StatusProcesso {

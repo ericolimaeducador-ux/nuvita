@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
+import { StatusLaudoMedico } from '../../domain/laudo-medico.entity';
 
 export type LaudoMedicoDocument = HydratedDocument<LaudoMedicoMongo>;
 
@@ -26,8 +27,20 @@ export class LaudoMedicoMongo {
   @Prop({ required: true, index: true })
   pacienteId!: string;
 
+  @Prop({ index: true })
+  medicoId?: string;
+
   @Prop({ required: true, index: true })
-  medicoId!: string;
+  criadoPorId!: string;
+
+  @Prop()
+  criadoPorNome?: string;
+
+  @Prop({ required: true })
+  criadoPorPapel!: string;
+
+  @Prop({ required: true, enum: StatusLaudoMedico, default: StatusLaudoMedico.RASCUNHO, index: true })
+  status!: StatusLaudoMedico;
 
   @Prop({ required: true, index: true })
   avaliacaoIuId!: string;
@@ -59,6 +72,7 @@ export class LaudoMedicoMongo {
 
 export const LaudoMedicoSchema = SchemaFactory.createForClass(LaudoMedicoMongo);
 LaudoMedicoSchema.index({ clinicaId: 1, pacienteId: 1, dataLaudo: -1 });
+LaudoMedicoSchema.index({ clinicaId: 1, status: 1 });
 
 function rejectDelete(next: (error?: Error) => void): void {
   next(new Error('Laudos médicos têm retenção obrigatória e não podem ser deletados.'));

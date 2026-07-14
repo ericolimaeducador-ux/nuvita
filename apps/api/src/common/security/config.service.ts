@@ -104,6 +104,9 @@ export interface AppConfig {
 
   // Logging
   logLevel: 'debug' | 'info' | 'warn' | 'error';
+
+  // IA (pré-preenchimento de relatório médico judiciário)
+  geminiApiKey?: string;
 }
 
 @Injectable()
@@ -164,6 +167,7 @@ export class AppConfigService {
         appRootDomain,
         bootstrapSecret,
         prontuarioSignatureSecret,
+        geminiApiKey,
       ] = await Promise.all([
         this.getSecretOrThrow('mongodb-uri'),
         this.getSecretOrThrow('redis-url'),
@@ -191,6 +195,7 @@ export class AppConfigService {
         this.getSecretOrThrow('app-root-domain'),
         this.getSecretOrThrow('bootstrap-secret'),
         this.getSecretOrThrow('prontuario-signature-secret'),
+        this.getSecretOrDefault('gemini-api-key', undefined),
       ]);
 
       const config: AppConfig = {
@@ -225,6 +230,7 @@ export class AppConfigService {
         appRootDomain,
         bootstrapSecret,
         prontuarioSignatureSecret,
+        geminiApiKey,
         allowPublicRegistration: resolveAllowPublicRegistration(
           (process.env.NODE_ENV as AppConfig['nodeEnv']) || 'production',
         ),
@@ -309,6 +315,7 @@ export class AppConfigService {
       appRootDomain: process.env.APP_ROOT_DOMAIN!,
       bootstrapSecret: process.env.BOOTSTRAP_SECRET!,
       prontuarioSignatureSecret: process.env.PRONTUARIO_SIGNATURE_SECRET!,
+      geminiApiKey: process.env.GEMINI_API_KEY,
       allowPublicRegistration: resolveAllowPublicRegistration(
         (process.env.NODE_ENV as AppConfig['nodeEnv']) || 'development',
       ),

@@ -19,5 +19,6 @@ import { AnotacoesJuridicasController } from './presentation/anotacoes-juridicas
     RolesGuard,
     { provide: ANOTACAO_JURIDICA_REPOSITORY, useClass: AnotacaoJuridicaMongoRepository },
   ],
+  exports: [AnotacoesJuridicasService],
 })
 export class AnotacoesJuridicasModule {}

@@ -19,5 +19,6 @@ import { ObservacoesPacienteController } from './presentation/observacoes-pacien
     RolesGuard,
     { provide: OBSERVACAO_PACIENTE_REPOSITORY, useClass: ObservacaoPacienteMongoRepository },
   ],
+  exports: [ObservacoesPacienteService],
 })
 export class ObservacoesPacienteModule {}

@@ -25,6 +25,7 @@ import type {
   ProcessoJuridico,
   Produto,
   Prontuario,
+  RascunhoLaudoIA,
   SalaAcessoInfo,
   SalaEvento,
   SalaTelemedicina,
@@ -342,12 +343,20 @@ export const followUpApi = {
 export const laudoMedicoApi = {
   create: (payload: Record<string, unknown>) =>
     api.post<LaudoMedico>('/laudo-medico', payload).then((r) => r.data),
+  update: (id: string, payload: Record<string, unknown>) =>
+    api.patch<LaudoMedico>(`/laudo-medico/${id}`, payload).then((r) => r.data),
   listByPaciente: (pacienteId: string) =>
     api.get<LaudoMedico[]>('/laudo-medico', { params: { pacienteId } }).then((r) => r.data),
+  pendentesRevisao: () =>
+    api.get<LaudoMedico[]>('/laudo-medico/pendentes-revisao').then((r) => r.data),
   get: (id: string) =>
     api.get<LaudoMedico>(`/laudo-medico/${id}`).then((r) => r.data),
+  encaminhar: (id: string) =>
+    api.post<LaudoMedico>(`/laudo-medico/${id}/encaminhar`, {}).then((r) => r.data),
   assinar: (id: string, crm?: string) =>
     api.post(`/laudo-medico/${id}/assinar`, {}, { params: crm ? { crm } : {} }).then((r) => r.data),
+  preencherComIA: (pacienteId: string, avaliacaoIuId: string) =>
+    api.post<RascunhoLaudoIA>('/laudo-medico/pre-preenchimento', { pacienteId, avaliacaoIuId }).then((r) => r.data),
 };
 
 // ---------- Processo Jurídico ----------

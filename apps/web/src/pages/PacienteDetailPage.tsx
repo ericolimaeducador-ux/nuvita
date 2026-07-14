@@ -39,6 +39,7 @@ import {
   STATUS_PROCESSO_LABEL, StatusEntrega, Modulo, Papel,
   StatusChecklistDocumento, STATUS_CHECKLIST_DOCUMENTO_LABEL, TIPO_DOCUMENTO_LABEL,
   StatusElegibilidade, STATUS_ELEGIBILIDADE_LABEL,
+  StatusLaudoMedico, STATUS_LAUDO_MEDICO_LABEL,
   StatusAgendamento, TipoAtendimento, TIPO_ATENDIMENTO_POR_AGENDAMENTO,
   type Agendamento, type Prontuario, type Documento, type Paciente,
   type LaudoMedico, type AvaliacaoIU, type Entrega, type ProcessoJuridico,
@@ -129,6 +130,7 @@ export function PacienteDetailPage() {
   const [novaAvaliacaoOpen, setNovaAvaliacaoOpen] = useState(false);
   const [avaliacaoEdit, setAvaliacaoEdit] = useState<AvaliacaoIU | null>(null);
   const [novoLaudoOpen, setNovoLaudoOpen] = useState(false);
+  const [laudoEmEdicao, setLaudoEmEdicao] = useState<LaudoMedico | null>(null);
 
   const pacQ = useQuery({ queryKey: ['paciente', id], queryFn: () => pacientesApi.get(id), enabled: !!id });
   const prontQ = useQuery({ queryKey: ['prontuarios', 'paciente', id], queryFn: () => prontuariosApi.list({ pacienteId: id }), enabled: !!id });
@@ -156,7 +158,7 @@ export function PacienteDetailPage() {
 
   // Papéis que podem criar cada registro (mesma regra do fluxo clínico, sem depender da etapa).
   const podeNovaAvaliacao = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
-  const podeNovoLaudo = user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
+  const podeNovoLaudo = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
   // Export LGPD: mesmos papéis autorizados no backend (GET /pacientes/:id/export).
   const podeExportar =
     user?.papel === Papel.SECRETARIA || user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
@@ -416,8 +418,8 @@ export function PacienteDetailPage() {
           defaultOpen={false}
           acao={
             podeNovoLaudo ? (
-              <Button size="sm" variant="outline" onClick={() => setNovoLaudoOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" /> Novo laudo
+              <Button size="sm" variant="outline" onClick={() => { setLaudoEmEdicao(null); setNovoLaudoOpen(true); }}>
+                <Plus className="mr-2 h-4 w-4" /> Novo Relatório Médico Judiciário
               </Button>
             ) : undefined
           }
@@ -425,17 +427,24 @@ export function PacienteDetailPage() {
           {laudosQ.isLoading ? (
             <Skeleton className="h-20 w-full" />
           ) : (laudosQ.data ?? []).length === 0 ? (
-            <Vazio>Nenhum laudo emitido.</Vazio>
+            <Vazio>Nenhum relatório médico judiciário emitido.</Vazio>
           ) : (
             <Table>
-              <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>CID-10</TableHead><TableHead>Situação</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>CID-10</TableHead><TableHead>Situação</TableHead><TableHead className="w-40" /></TableRow></TableHeader>
               <TableBody>
                 {(laudosQ.data as LaudoMedico[]).map((l) => (
                   <TableRow key={l.id}>
                     <TableCell>{formatData(l.dataLaudo)}</TableCell>
                     <TableCell className="text-muted-foreground">{l.cid10?.join(', ') || '—'}</TableCell>
-                    <TableCell><Badge variant={l.assinado ? 'success' : 'warning'}>{l.assinado ? 'Assinado' : 'Rascunho'}</Badge></TableCell>
                     <TableCell>
+                      <Badge variant={l.status === StatusLaudoMedico.ASSINADO ? 'success' : l.status === StatusLaudoMedico.AGUARDANDO_REVISAO ? 'secondary' : 'warning'}>
+                        {STATUS_LAUDO_MEDICO_LABEL[l.status]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="space-x-1">
+                      {podeNovoLaudo && l.status !== StatusLaudoMedico.ASSINADO && (
+                        <Button variant="ghost" size="sm" onClick={() => { setLaudoEmEdicao(l); setNovoLaudoOpen(true); }}>Revisar</Button>
+                      )}
                       <Button variant="ghost" size="sm" onClick={() => navigate(`/fluxo-clinico/${id}/laudo/${l.id}/imprimir`)}>Imprimir</Button>
                     </TableCell>
                   </TableRow>
@@ -582,12 +591,13 @@ export function PacienteDetailPage() {
       />
       <NovoLaudoDialog
         open={novoLaudoOpen}
-        onOpenChange={setNovoLaudoOpen}
+        onOpenChange={(o) => { setNovoLaudoOpen(o); if (!o) setLaudoEmEdicao(null); }}
         pacienteId={id}
         clinicaId={user?.clinicaId}
         produtos={produtos}
         avaliacaoId={ultimaAvaliacao?.id}
         produtoIndicado={ultimaAvaliacao?.produtoIndicado}
+        laudo={laudoEmEdicao ?? undefined}
         onCreated={() => void qc.invalidateQueries({ queryKey: ['laudos', 'paciente', id] })}
       />
     </div>

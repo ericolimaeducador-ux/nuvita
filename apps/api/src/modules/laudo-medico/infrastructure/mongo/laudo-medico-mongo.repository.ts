@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { AssinaturaLaudo, LaudoMedico } from '../../domain/laudo-medico.entity';
+import { AssinaturaLaudo, LaudoMedico, StatusLaudoMedico } from '../../domain/laudo-medico.entity';
 import { LaudoMedicoRepository } from '../../application/ports/laudo-medico.repository';
 import { LaudoMedicoDocument, LaudoMedicoMongo } from './laudo-medico.schema';
 
@@ -29,6 +29,11 @@ export class LaudoMedicoMongoRepository implements LaudoMedicoRepository {
     return docs.map((d) => this.toEntity(d));
   }
 
+  async listByStatus(clinicaId: string, status: StatusLaudoMedico): Promise<LaudoMedico[]> {
+    const docs = await this.model.find({ clinicaId, status }).sort({ atualizadoEm: -1 }).lean();
+    return docs.map((d) => this.toEntity(d));
+  }
+
   async update(clinicaId: string, id: string, data: Partial<LaudoMedico>): Promise<LaudoMedico | null> {
     const doc = await this.model
       .findOneAndUpdate({ _id: id, clinicaId }, { $set: { ...data, atualizadoEm: new Date() } }, { new: true, lean: true })
@@ -39,8 +44,15 @@ export class LaudoMedicoMongoRepository implements LaudoMedicoRepository {
   async assinar(clinicaId: string, id: string, assinatura: AssinaturaLaudo): Promise<LaudoMedico | null> {
     const doc = await this.model
       .findOneAndUpdate(
-        { _id: id, clinicaId, assinado: { $exists: false } },
-        { $set: { assinado: assinatura, atualizadoEm: new Date() } },
+        { _id: id, clinicaId, status: { $ne: StatusLaudoMedico.ASSINADO } },
+        {
+          $set: {
+            assinado: assinatura,
+            medicoId: assinatura.medicoId,
+            status: StatusLaudoMedico.ASSINADO,
+            atualizadoEm: new Date(),
+          },
+        },
         { new: true, lean: true },
       )
       .lean();

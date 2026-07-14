@@ -1,13 +1,21 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
+import { AuthTokenPayload, PAPEIS_PROFISSIONAIS, Papel } from '../../../../../../packages/shared/src/auth';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
+import { Roles } from '../../auth/presentation/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
 import { EntregasService } from '../application/entregas.service';
 import { CreateEntregaDto } from '../application/dto/create-entrega.dto';
 
+// Entregas de insumo são operadas pela equipe da clínica (profissionais,
+// secretaria e admin). Antes não havia @Roles nenhum aqui — qualquer papel
+// autenticado, inclusive PACIENTE, conseguia criar/confirmar entregas.
+const EQUIPE_CLINICA = [...PAPEIS_PROFISSIONAIS, Papel.ADMIN, Papel.SECRETARIA];
+
 @Controller('entregas')
-@UseGuards(JwtAuthGuard, TenantRequiredGuard)
+@UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
+@Roles(...EQUIPE_CLINICA)
 export class EntregasController {
   constructor(private readonly service: EntregasService) {}
 

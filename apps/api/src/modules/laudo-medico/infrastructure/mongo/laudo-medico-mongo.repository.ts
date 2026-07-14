@@ -15,7 +15,7 @@ export class LaudoMedicoMongoRepository implements LaudoMedicoRepository {
   }
 
   async findById(clinicaId: string, id: string): Promise<LaudoMedico | null> {
-    const doc = await this.model.findOne({ _id: id, clinicaId }).lean();
+    const doc = await this.model.findOne({ _id: id, clinicaId, excluidoEm: { $exists: false } }).lean();
     return doc ? this.toEntity(doc) : null;
   }
 
@@ -36,7 +36,7 @@ export class LaudoMedicoMongoRepository implements LaudoMedicoRepository {
 
   async update(clinicaId: string, id: string, data: Partial<LaudoMedico>): Promise<LaudoMedico | null> {
     const doc = await this.model
-      .findOneAndUpdate({ _id: id, clinicaId }, { $set: { ...data, atualizadoEm: new Date() } }, { new: true, lean: true })
+      .findOneAndUpdate({ _id: id, clinicaId, excluidoEm: { $exists: false } }, { $set: { ...data, atualizadoEm: new Date() } }, { new: true, lean: true })
       .lean();
     return doc ? this.toEntity(doc) : null;
   }
@@ -44,7 +44,7 @@ export class LaudoMedicoMongoRepository implements LaudoMedicoRepository {
   async assinar(clinicaId: string, id: string, assinatura: AssinaturaLaudo): Promise<LaudoMedico | null> {
     const doc = await this.model
       .findOneAndUpdate(
-        { _id: id, clinicaId, status: { $ne: StatusLaudoMedico.ASSINADO } },
+        { _id: id, clinicaId, status: { $ne: StatusLaudoMedico.ASSINADO }, excluidoEm: { $exists: false } },
         {
           $set: {
             assinado: assinatura,

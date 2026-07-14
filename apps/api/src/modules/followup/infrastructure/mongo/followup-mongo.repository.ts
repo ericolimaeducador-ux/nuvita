@@ -15,7 +15,7 @@ export class FollowUpMongoRepository implements FollowUpRepository {
   }
 
   async findById(clinicaId: string, id: string): Promise<FollowUp | null> {
-    const doc = await this.model.findOne({ _id: id, clinicaId }).lean();
+    const doc = await this.model.findOne({ _id: id, clinicaId, excluidoEm: { $exists: false } }).lean();
     return doc ? this.toEntity(doc) : null;
   }
 
@@ -32,7 +32,7 @@ export class FollowUpMongoRepository implements FollowUpRepository {
   async updateStatus(clinicaId: string, id: string, status: StatusElegibilidade, observacoes: string): Promise<FollowUp | null> {
     const doc = await this.model
       .findOneAndUpdate(
-        { _id: id, clinicaId },
+        { _id: id, clinicaId, excluidoEm: { $exists: false } },
         { $set: { status, observacoes, atualizadoEm: new Date() } },
         { new: true, lean: true },
       )

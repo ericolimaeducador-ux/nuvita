@@ -11,8 +11,11 @@ import { UpdateAvaliacaoIUDto } from '../application/dto/update-avaliacao-iu.dto
 
 // Leitura (GET) fica aberta também a ADMIN/SECRETARIA — precisam enxergar o
 // pipeline (fluxo clínico) para saber quando agendar o paciente com o médico.
-// Mutações (POST) continuam restritas aos profissionais de atendimento.
+// Mutações incluem ADMIN além dos profissionais de atendimento: o frontend
+// sempre ofereceu criar/editar/excluir ao ADMIN (mesma regra de PODE_ASSINAR
+// e do checklist), mas o backend negava com 403 por usar só PAPEIS_PROFISSIONAIS.
 const LEITURA_PIPELINE = [...PAPEIS_PROFISSIONAIS, Papel.ADMIN, Papel.SECRETARIA];
+const MUTACAO_PIPELINE = [...PAPEIS_PROFISSIONAIS, Papel.ADMIN];
 
 @Controller('avaliacao-iu')
 @UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
@@ -20,13 +23,13 @@ export class AvaliacaoIUController {
   constructor(private readonly service: AvaliacaoIUService) {}
 
   @Post()
-  @Roles(...PAPEIS_PROFISSIONAIS)
+  @Roles(...MUTACAO_PIPELINE)
   create(@Body() dto: CreateAvaliacaoIUDto, @CurrentUser() user: AuthTokenPayload) {
     return this.service.create(dto, user);
   }
 
   @Patch(':id')
-  @Roles(...PAPEIS_PROFISSIONAIS)
+  @Roles(...MUTACAO_PIPELINE)
   update(
     @Param('id') id: string,
     @Body() dto: UpdateAvaliacaoIUDto,
@@ -37,7 +40,7 @@ export class AvaliacaoIUController {
   }
 
   @Patch(':id/excluir')
-  @Roles(...PAPEIS_PROFISSIONAIS)
+  @Roles(...MUTACAO_PIPELINE)
   excluir(
     @Param('id') id: string,
     @Query('clinicaId') clinicaId: string | undefined,

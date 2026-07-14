@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtAuthGuard } from '../auth/presentation/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/presentation/guards/roles.guard';
 import { PacientesModule } from '../pacientes/pacientes.module';
 import { ProcessoJuridicoModule } from '../processo-juridico/processo-juridico.module';
 import { EntregasService } from './application/entregas.service';
@@ -19,6 +20,7 @@ import { EntregasController } from './presentation/entregas.controller';
   providers: [
     EntregasService,
     JwtAuthGuard,
+    RolesGuard,
     { provide: ENTREGA_REPOSITORY, useClass: EntregaMongoRepository },
   ],
   exports: [EntregasService],

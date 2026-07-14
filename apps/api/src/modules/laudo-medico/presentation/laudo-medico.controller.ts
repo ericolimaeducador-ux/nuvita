@@ -13,8 +13,10 @@ import { PrePreenchimentoIaDto } from '../application/dto/pre-preenchimento-ia.d
 
 // Leitura (GET) fica aberta também a ADMIN/SECRETARIA — precisam enxergar o
 // pipeline (fluxo clínico) para saber quando agendar o paciente com o médico.
-// Mutações (POST) continuam restritas aos profissionais de atendimento.
 const LEITURA_PIPELINE = [...PAPEIS_PROFISSIONAIS, Papel.ADMIN, Papel.SECRETARIA];
+// Mutações incluem ADMIN além dos profissionais de atendimento (o frontend
+// sempre ofereceu criar/editar/excluir ao ADMIN; o backend negava com 403).
+const MUTACAO_PIPELINE = [...PAPEIS_PROFISSIONAIS, Papel.ADMIN];
 // Assinatura é ato médico — só médico/admin, diferente das demais mutações
 // (rascunho/edição/encaminhamento), que qualquer profissional pode fazer.
 const PODE_ASSINAR = [Papel.MEDICO, Papel.ADMIN];
@@ -28,13 +30,13 @@ export class LaudoMedicoController {
   ) {}
 
   @Post()
-  @Roles(...PAPEIS_PROFISSIONAIS)
+  @Roles(...MUTACAO_PIPELINE)
   create(@Body() dto: CreateLaudoMedicoDto, @CurrentUser() user: AuthTokenPayload) {
     return this.service.create(dto, user);
   }
 
   @Post('pre-preenchimento')
-  @Roles(...PAPEIS_PROFISSIONAIS)
+  @Roles(...MUTACAO_PIPELINE)
   prePreenchimento(@Body() dto: PrePreenchimentoIaDto, @CurrentUser() user: AuthTokenPayload) {
     return this.iaService.gerarRascunho(dto.pacienteId, dto.avaliacaoIuId, dto.clinicaId, user);
   }
@@ -66,7 +68,7 @@ export class LaudoMedicoController {
   }
 
   @Patch(':id')
-  @Roles(...PAPEIS_PROFISSIONAIS)
+  @Roles(...MUTACAO_PIPELINE)
   update(
     @Param('id') id: string,
     @Body() dto: UpdateLaudoMedicoDto,
@@ -77,7 +79,7 @@ export class LaudoMedicoController {
   }
 
   @Patch(':id/excluir')
-  @Roles(...PAPEIS_PROFISSIONAIS)
+  @Roles(...MUTACAO_PIPELINE)
   excluir(
     @Param('id') id: string,
     @Query('clinicaId') clinicaId: string | undefined,
@@ -87,7 +89,7 @@ export class LaudoMedicoController {
   }
 
   @Post(':id/encaminhar')
-  @Roles(...PAPEIS_PROFISSIONAIS)
+  @Roles(...MUTACAO_PIPELINE)
   encaminhar(
     @Param('id') id: string,
     @Query('clinicaId') clinicaId: string | undefined,

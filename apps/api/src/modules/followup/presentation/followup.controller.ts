@@ -10,8 +10,10 @@ import { CreateFollowUpDto } from '../application/dto/create-followup.dto';
 
 // Leitura (GET) fica aberta também a ADMIN/SECRETARIA — precisam enxergar o
 // pipeline (fluxo clínico) para saber quando agendar o paciente com o médico.
-// Mutações (POST) continuam restritas aos profissionais de atendimento.
+// Mutações incluem ADMIN além dos profissionais de atendimento (o frontend
+// sempre ofereceu essas ações ao ADMIN; o backend negava com 403).
 const LEITURA_PIPELINE = [...PAPEIS_PROFISSIONAIS, Papel.ADMIN, Papel.SECRETARIA];
+const MUTACAO_PIPELINE = [...PAPEIS_PROFISSIONAIS, Papel.ADMIN];
 
 @Controller('followup')
 @UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
@@ -19,13 +21,13 @@ export class FollowUpController {
   constructor(private readonly service: FollowUpService) {}
 
   @Post()
-  @Roles(...PAPEIS_PROFISSIONAIS)
+  @Roles(...MUTACAO_PIPELINE)
   create(@Body() dto: CreateFollowUpDto, @CurrentUser() user: AuthTokenPayload) {
     return this.service.create(dto, user);
   }
 
   @Patch(':id/excluir')
-  @Roles(...PAPEIS_PROFISSIONAIS)
+  @Roles(...MUTACAO_PIPELINE)
   excluir(
     @Param('id') id: string,
     @Query('clinicaId') clinicaId: string | undefined,

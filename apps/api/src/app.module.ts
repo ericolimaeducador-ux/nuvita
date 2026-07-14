@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { SecurityModule } from './common/security/security.module';
 import { TenancyModule } from './common/tenancy/tenancy.module';
 import { AppConfigService } from './common/security/config.service';
@@ -34,6 +35,9 @@ import { ObservacoesPacienteModule } from './modules/observacoes-paciente/observ
     }),
     SecurityModule,
     TenancyModule,
+    // Limite padrão para onde o AuthThrottlerGuard for aplicado (hoje, só as
+    // rotas de /auth). Rotas específicas apertam com @Throttle().
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 30 }]),
     MongooseModule.forRootAsync({
       imports: [SecurityModule],
       inject: [AppConfigService],

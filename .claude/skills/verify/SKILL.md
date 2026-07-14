@@ -5,11 +5,20 @@ Como subir e dirigir o app localmente para verificar mudanças.
 ## Subir a stack
 
 1. Docker Desktop precisa estar rodando (`docker info`); senão: `Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"` e aguardar ~60s.
-2. `docker compose up -d mongodb redis` (um mongod local pode já servir 27017).
-3. **ATENÇÃO:** `apps/api/.env` aponta `MONGODB_URI` para o **Atlas (produção)**. Para verificar local, sobrescreva antes de subir:
-   `$env:MONGODB_URI='mongodb://127.0.0.1:27017/nuvita'; npm run api:dev` (env var vence o .env). Nunca dirigir testes contra o Atlas.
-4. Web: `cd apps/web; npm run dev` → :5173. O proxy do Vite já encaminha as rotas da API (inclui `/telemedicina`); navegação (Accept: text/html) fica no SPA.
-5. Health: `GET http://127.0.0.1:3000/health`.
+2. `docker compose up -d mongodb redis`.
+3. **ATENÇÃO — mongod nativo grudado em 27017:** existe um `mongod.exe` nativo do Windows (serviço esquecido, dados antigos) que fica ligado especificamente em `127.0.0.1:27017`, enquanto o container Docker publica em `0.0.0.0:27017`. No Windows, o bind mais específico (127.0.0.1) vence o wildcard — então `mongodb://127.0.0.1:27017` do host **cai no mongod nativo, não no container**, mesmo com `docker compose ps` mostrando o mapeamento "certo". Sintoma: dados antigos/inesperados, ou uma migração/seed que "não fez nada" porque rodou no banco errado. Confirmar com `docker exec nuvita-mongodb-1 mongosh nuvita --eval "db.<collection>.findOne()"` (esse comando *sempre* fala com o container) e comparar com uma conexão do host — se os `_id`/campos forem diferentes, é o conflito.
+   Fix reprodutível sem mexer no serviço nativo: crie `docker-compose.override.yml` (não commitar) remapeando a porta —
+   ```yaml
+   services:
+     mongodb:
+       ports:
+         - "27018:27017"
+   ```
+   depois `docker compose up -d mongodb` (recria o container) e use `MONGODB_URI=mongodb://127.0.0.1:27018/nuvita`. Ao terminar, apague o override e rode `docker compose up -d mongodb` de novo para voltar à porta 27017 padrão.
+4. **ATENÇÃO:** `apps/api/.env` aponta `MONGODB_URI` para o **Atlas (produção)**. Para verificar local, sobrescreva antes de subir:
+   `$env:MONGODB_URI='mongodb://127.0.0.1:27018/nuvita'; npm run api:dev` (env var vence o .env; use a porta do passo 3). Nunca dirigir testes contra o Atlas.
+5. Web: `cd apps/web; npm run dev` → :5173. O proxy do Vite já encaminha as rotas da API (inclui `/telemedicina`); navegação (Accept: text/html) fica no SPA.
+6. Health: `GET http://127.0.0.1:3000/health`.
 
 ## Login programático
 

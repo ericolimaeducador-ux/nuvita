@@ -120,6 +120,13 @@ export class AvaliacaoIUService {
     return { total: await this.repo.countByClinica(clinicaId) };
   }
 
+  async excluir(id: string, clinicaId: string | undefined, user: AuthTokenPayload): Promise<AvaliacaoIU> {
+    const resolved = this.resolveClinicaId(user, clinicaId);
+    const excluida = await this.repo.softDelete(resolved, id, user.sub);
+    if (!excluida) throw new NotFoundException('Avaliação de IU não encontrada.');
+    return excluida;
+  }
+
   private resolveClinicaId(user: AuthTokenPayload, requested?: string): string {
     if (user.clinicaId) return user.clinicaId;
     if (requested) return requested;

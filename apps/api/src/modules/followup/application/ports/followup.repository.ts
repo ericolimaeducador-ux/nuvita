@@ -7,4 +7,5 @@ export interface FollowUpRepository {
   listByAvaliacaoIU(clinicaId: string, avaliacaoIuId: string): Promise<FollowUp[]>;
   updateStatus(clinicaId: string, id: string, status: StatusElegibilidade, observacoes: string): Promise<FollowUp | null>;
   countByStatus(clinicaId: string, status: StatusElegibilidade): Promise<number>;
+  softDelete(clinicaId: string, id: string, excluidoPor: string): Promise<FollowUp | null>;
 }

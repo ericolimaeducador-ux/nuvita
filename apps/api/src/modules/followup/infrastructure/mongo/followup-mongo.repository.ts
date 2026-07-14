@@ -20,12 +20,12 @@ export class FollowUpMongoRepository implements FollowUpRepository {
   }
 
   async listByPaciente(clinicaId: string, pacienteId: string): Promise<FollowUp[]> {
-    const docs = await this.model.find({ clinicaId, pacienteId }).sort({ dataFollowup: -1 }).lean();
+    const docs = await this.model.find({ clinicaId, pacienteId, excluidoEm: { $exists: false } }).sort({ dataFollowup: -1 }).lean();
     return docs.map((d) => this.toEntity(d));
   }
 
   async listByAvaliacaoIU(clinicaId: string, avaliacaoIuId: string): Promise<FollowUp[]> {
-    const docs = await this.model.find({ clinicaId, avaliacaoIuId }).sort({ dataFollowup: -1 }).lean();
+    const docs = await this.model.find({ clinicaId, avaliacaoIuId, excluidoEm: { $exists: false } }).sort({ dataFollowup: -1 }).lean();
     return docs.map((d) => this.toEntity(d));
   }
 
@@ -41,7 +41,18 @@ export class FollowUpMongoRepository implements FollowUpRepository {
   }
 
   async countByStatus(clinicaId: string, status: StatusElegibilidade): Promise<number> {
-    return this.model.countDocuments({ clinicaId, statusElegibilidade: status });
+    return this.model.countDocuments({ clinicaId, statusElegibilidade: status, excluidoEm: { $exists: false } });
+  }
+
+  async softDelete(clinicaId: string, id: string, excluidoPor: string): Promise<FollowUp | null> {
+    const doc = await this.model
+      .findOneAndUpdate(
+        { _id: id, clinicaId, excluidoEm: { $exists: false } },
+        { $set: { excluidoEm: new Date(), excluidoPor } },
+        { new: true, lean: true },
+      )
+      .lean();
+    return doc ? this.toEntity(doc) : null;
   }
 
   private toEntity(doc: Record<string, unknown>): FollowUp {

@@ -96,6 +96,8 @@ export interface LaudoMedico {
   cidadeEmissao?: string;
 
   assinado?: AssinaturaLaudo;
+  excluidoEm?: Date;
+  excluidoPor?: string;
   criadoEm: Date;
   atualizadoEm: Date;
 }

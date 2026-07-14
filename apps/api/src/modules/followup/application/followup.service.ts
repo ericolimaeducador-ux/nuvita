@@ -75,6 +75,13 @@ export class FollowUpService {
     return f;
   }
 
+  async excluir(id: string, clinicaId: string | undefined, user: AuthTokenPayload): Promise<FollowUp> {
+    const resolved = this.resolveClinicaId(user, clinicaId);
+    const excluido = await this.repo.softDelete(resolved, id, user.sub);
+    if (!excluido) throw new NotFoundException('Follow-up não encontrado.');
+    return excluido;
+  }
+
   private resolveClinicaId(user: AuthTokenPayload, requested?: string): string {
     if (user.clinicaId) return user.clinicaId;
     if (requested) return requested;

@@ -20,17 +20,17 @@ export class LaudoMedicoMongoRepository implements LaudoMedicoRepository {
   }
 
   async findByAvaliacaoIU(clinicaId: string, avaliacaoIuId: string): Promise<LaudoMedico | null> {
-    const doc = await this.model.findOne({ clinicaId, avaliacaoIuId }).lean();
+    const doc = await this.model.findOne({ clinicaId, avaliacaoIuId, excluidoEm: { $exists: false } }).lean();
     return doc ? this.toEntity(doc) : null;
   }
 
   async listByPaciente(clinicaId: string, pacienteId: string): Promise<LaudoMedico[]> {
-    const docs = await this.model.find({ clinicaId, pacienteId }).sort({ dataLaudo: -1 }).lean();
+    const docs = await this.model.find({ clinicaId, pacienteId, excluidoEm: { $exists: false } }).sort({ dataLaudo: -1 }).lean();
     return docs.map((d) => this.toEntity(d));
   }
 
   async listByStatus(clinicaId: string, status: StatusLaudoMedico): Promise<LaudoMedico[]> {
-    const docs = await this.model.find({ clinicaId, status }).sort({ atualizadoEm: -1 }).lean();
+    const docs = await this.model.find({ clinicaId, status, excluidoEm: { $exists: false } }).sort({ atualizadoEm: -1 }).lean();
     return docs.map((d) => this.toEntity(d));
   }
 
@@ -53,6 +53,17 @@ export class LaudoMedicoMongoRepository implements LaudoMedicoRepository {
             atualizadoEm: new Date(),
           },
         },
+        { new: true, lean: true },
+      )
+      .lean();
+    return doc ? this.toEntity(doc) : null;
+  }
+
+  async softDelete(clinicaId: string, id: string, excluidoPor: string): Promise<LaudoMedico | null> {
+    const doc = await this.model
+      .findOneAndUpdate(
+        { _id: id, clinicaId, excluidoEm: { $exists: false } },
+        { $set: { excluidoEm: new Date(), excluidoPor } },
         { new: true, lean: true },
       )
       .lean();

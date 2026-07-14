@@ -36,6 +36,16 @@ export class AvaliacaoIUController {
     return this.service.update(id, dto, clinicaId, user);
   }
 
+  @Patch(':id/excluir')
+  @Roles(...PAPEIS_PROFISSIONAIS)
+  excluir(
+    @Param('id') id: string,
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+  ) {
+    return this.service.excluir(id, clinicaId, user);
+  }
+
   @Get('minhas')
   @Roles(...PAPEIS_PROFISSIONAIS)
   listMinha(@CurrentUser() user: AuthTokenPayload) {

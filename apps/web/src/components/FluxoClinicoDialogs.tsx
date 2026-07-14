@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,6 +27,27 @@ import {
  * corrige a própria ficha, ex.: completar o COREN esquecido. `onCreated` deixa
  * o chamador revalidar suas próprias queries (as chaves diferem entre telas).
  */
+
+/** Confirmação de exclusão (soft-delete) reutilizada por avaliação IU, laudo e follow-up. */
+export function ConfirmExcluirDialog({ open, titulo, descricao, pending, onCancel, onConfirm }: {
+  open: boolean; titulo: string; descricao: React.ReactNode; pending: boolean;
+  onCancel: () => void; onConfirm: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>{titulo}</DialogTitle></DialogHeader>
+        <p className="text-sm text-muted-foreground">{descricao}</p>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onCancel} disabled={pending}>Cancelar</Button>
+          <Button variant="destructive" onClick={onConfirm} disabled={pending}>
+            <Trash2 className="mr-2 h-4 w-4" /> {pending ? 'Excluindo…' : 'Excluir'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function NovaAvaliacaoIUDialog({
   open, onOpenChange, pacienteId, clinicaId, produtos, onCreated,

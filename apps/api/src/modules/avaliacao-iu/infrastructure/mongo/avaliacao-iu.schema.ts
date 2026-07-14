@@ -122,6 +122,12 @@ export class AvaliacaoIUMongo {
   @Prop()
   respCuidador?: string;
 
+  @Prop({ index: true })
+  excluidoEm?: Date;
+
+  @Prop()
+  excluidoPor?: string;
+
   @Prop({ default: Date.now, immutable: true, index: true })
   criadoEm!: Date;
 

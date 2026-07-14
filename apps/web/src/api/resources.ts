@@ -325,6 +325,8 @@ export const avaliacaoIUApi = {
     api.get<AvaliacaoIU[]>('/avaliacao-iu/minhas').then((r) => r.data),
   count: () =>
     api.get<{ total: number }>('/avaliacao-iu/count').then((r) => r.data),
+  excluir: (id: string) =>
+    api.patch(`/avaliacao-iu/${id}/excluir`).then((r) => r.data),
 };
 
 // ---------- Follow-up ----------
@@ -337,6 +339,8 @@ export const followUpApi = {
     api.get<FollowUp[]>(`/followup/avaliacao/${avaliacaoIuId}`).then((r) => r.data),
   resumo: () =>
     api.get<{ emAvaliacao: number; elegivel: number; naoElegivel: number }>('/followup/resumo').then((r) => r.data),
+  excluir: (id: string) =>
+    api.patch(`/followup/${id}/excluir`).then((r) => r.data),
 };
 
 // ---------- Laudo Médico ----------
@@ -353,6 +357,8 @@ export const laudoMedicoApi = {
     api.get<LaudoMedico>(`/laudo-medico/${id}`).then((r) => r.data),
   encaminhar: (id: string) =>
     api.post<LaudoMedico>(`/laudo-medico/${id}/encaminhar`, {}).then((r) => r.data),
+  excluir: (id: string) =>
+    api.patch(`/laudo-medico/${id}/excluir`).then((r) => r.data),
   assinar: (id: string, crm?: string) =>
     api.post(`/laudo-medico/${id}/assinar`, {}, { params: crm ? { crm } : {} }).then((r) => r.data),
   preencherComIA: (pacienteId: string, avaliacaoIuId: string) =>

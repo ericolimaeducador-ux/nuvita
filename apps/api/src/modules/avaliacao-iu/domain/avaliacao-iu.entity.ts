@@ -79,6 +79,8 @@ export interface AvaliacaoIU {
   encaminhamento?: EncaminhamentoIU;
   localEncaminhamento?: string;
   respCuidador?: string;
+  excluidoEm?: Date;
+  excluidoPor?: string;
   criadoEm: Date;
   atualizadoEm: Date;
 }

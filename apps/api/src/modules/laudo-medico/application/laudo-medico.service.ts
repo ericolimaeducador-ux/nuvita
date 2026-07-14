@@ -195,6 +195,25 @@ export class LaudoMedicoService {
     return signed;
   }
 
+  /**
+   * Exclusão (soft-delete) segue a mesma regra de quem pode editar. Laudos já
+   * ASSINADOS têm retenção obrigatória (documento médico-jurídico, pode já ter
+   * sido usado em processo) e nunca podem ser excluídos, nem por ADMIN.
+   */
+  async excluir(id: string, clinicaId: string | undefined, user: AuthTokenPayload): Promise<LaudoMedico> {
+    const resolved = this.resolveClinicaId(user, clinicaId);
+    const laudo = await this.repo.findById(resolved, id);
+    if (!laudo) throw new NotFoundException('Relatório médico não encontrado.');
+    if (laudo.status === StatusLaudoMedico.ASSINADO) {
+      throw new ConflictException('Relatório já assinado tem retenção obrigatória e não pode ser excluído.');
+    }
+    this.assertPodeEditar(laudo, user);
+
+    const excluido = await this.repo.softDelete(resolved, id, user.sub);
+    if (!excluido) throw new ConflictException('Não foi possível excluir o relatório médico.');
+    return excluido;
+  }
+
   /** Só quem criou o rascunho (enquanto ainda é rascunho) ou um revisor (médico/admin) pode editar/encaminhar. */
   private assertPodeEditar(laudo: LaudoMedico, user: AuthTokenPayload): void {
     const ehRevisor = (PODE_REVISAR as Papel[]).includes(user.papel);

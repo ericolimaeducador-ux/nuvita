@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthTokenPayload, PAPEIS_PROFISSIONAIS, Papel } from '../../../../../../packages/shared/src/auth';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
@@ -22,6 +22,16 @@ export class FollowUpController {
   @Roles(...PAPEIS_PROFISSIONAIS)
   create(@Body() dto: CreateFollowUpDto, @CurrentUser() user: AuthTokenPayload) {
     return this.service.create(dto, user);
+  }
+
+  @Patch(':id/excluir')
+  @Roles(...PAPEIS_PROFISSIONAIS)
+  excluir(
+    @Param('id') id: string,
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+  ) {
+    return this.service.excluir(id, clinicaId, user);
   }
 
   @Get('resumo')

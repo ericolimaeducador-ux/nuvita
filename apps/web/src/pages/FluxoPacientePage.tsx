@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import dayjs from 'dayjs';
 import {
   ArrowLeft, ClipboardList, UserCheck, Stethoscope, Scale, Package,
-  Plus, CheckCircle2, Clock, ChevronDown, ChevronUp, Printer, CalendarClock, FileText,
+  Plus, CheckCircle2, Clock, ChevronDown, ChevronUp, Printer, CalendarClock, FileText, Trash2,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +26,7 @@ import { apiErrorMessage } from '@/api/client';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/auth/AuthContext';
 import { cn } from '@/lib/utils';
-import { NovaAvaliacaoIUDialog, NovoLaudoDialog } from '@/components/FluxoClinicoDialogs';
+import { NovaAvaliacaoIUDialog, NovoLaudoDialog, ConfirmExcluirDialog } from '@/components/FluxoClinicoDialogs';
 import { formatData, toItems } from '@/utils';
 import {
   Papel, LocalAtendimento, PerfilCliente, Destreza, TipoIU, EncaminhamentoIU,
@@ -280,6 +280,7 @@ function AvaliacaoIUStep({ pacienteId, avaliacoes, produtos, user }: {
 }) {
   const [open, setOpen] = useState(false);
   const [editAv, setEditAv] = useState<AvaliacaoIU | null>(null);
+  const [avParaExcluir, setAvParaExcluir] = useState<AvaliacaoIU | null>(null);
   const qc = useQueryClient();
   const { register, handleSubmit, setValue, watch, reset } = useForm<Record<string, unknown>>();
 
@@ -291,6 +292,16 @@ function AvaliacaoIUStep({ pacienteId, avaliacoes, produtos, user }: {
       void qc.invalidateQueries({ queryKey: ['avaliacao-iu', pacienteId] });
     },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  const excluirMut = useMutation({
+    mutationFn: (avId: string) => avaliacaoIUApi.excluir(avId),
+    onSuccess: () => {
+      toast.success('Avaliação excluída.');
+      setAvParaExcluir(null);
+      void qc.invalidateQueries({ queryKey: ['avaliacao-iu', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro ao excluir', apiErrorMessage(e)),
   });
 
   const tiposIU = (watch('tiposIU') as TipoIU[] | undefined) ?? [];
@@ -337,6 +348,11 @@ function AvaliacaoIUStep({ pacienteId, avaliacoes, produtos, user }: {
               <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => window.open(`/fluxo-clinico/${pacienteId}/avaliacao/${av.id}/imprimir`, '_blank')}>
                 <Printer className="h-3 w-3 mr-1" /> Imprimir ficha
               </Button>
+              {podeNovo && (
+                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-destructive hover:text-destructive" onClick={() => setAvParaExcluir(av)}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              )}
             </div>
           </div>
           <p className="text-xs text-muted-foreground">Motivo: {av.motivoIU}</p>
@@ -551,6 +567,14 @@ function AvaliacaoIUStep({ pacienteId, avaliacoes, produtos, user }: {
         enfermeiroRegistro={user?.registroProfissional}
         onCreated={() => void qc.invalidateQueries({ queryKey: ['avaliacao-iu', pacienteId] })}
       />
+      <ConfirmExcluirDialog
+        open={!!avParaExcluir}
+        titulo="Excluir avaliação de incontinência urinária"
+        descricao={<>Tem certeza que deseja excluir a avaliação de <span className="font-medium text-foreground">{formatData(avParaExcluir?.dataAtendimento)}</span>? Esta ação não pode ser desfeita pela tela.</>}
+        pending={excluirMut.isPending}
+        onCancel={() => setAvParaExcluir(null)}
+        onConfirm={() => avParaExcluir && excluirMut.mutate(avParaExcluir.id)}
+      />
     </div>
   );
 }
@@ -560,6 +584,7 @@ function FollowUpStep({ pacienteId, avaliacaoId, followups, user }: {
   pacienteId: string; avaliacaoId?: string; followups: FollowUp[]; user: ReturnType<typeof useAuth>['user'];
 }) {
   const [open, setOpen] = useState(false);
+  const [fuParaExcluir, setFuParaExcluir] = useState<FollowUp | null>(null);
   const qc = useQueryClient();
   const { register, handleSubmit, setValue, reset } = useForm<Record<string, unknown>>();
 
@@ -573,6 +598,16 @@ function FollowUpStep({ pacienteId, avaliacaoId, followups, user }: {
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
+  const excluirMut = useMutation({
+    mutationFn: (followupId: string) => followUpApi.excluir(followupId),
+    onSuccess: () => {
+      toast.success('Follow-up excluído.');
+      setFuParaExcluir(null);
+      void qc.invalidateQueries({ queryKey: ['followup', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro ao excluir', apiErrorMessage(e)),
+  });
+
   const podeNovo = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN;
 
   return (
@@ -583,6 +618,11 @@ function FollowUpStep({ pacienteId, avaliacaoId, followups, user }: {
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">{formatData(f.dataFollowup)}</span>
             <StatusBadge value={f.statusElegibilidade} labels={STATUS_ELEGIBILIDADE_LABEL} />
+            {podeNovo && (
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-destructive hover:text-destructive ml-auto" onClick={() => setFuParaExcluir(f)}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">{f.observacoes}</p>
           {f.proximoFollowup && (
@@ -631,6 +671,14 @@ function FollowUpStep({ pacienteId, avaliacaoId, followups, user }: {
           </form>
         </DialogContent>
       </Dialog>
+      <ConfirmExcluirDialog
+        open={!!fuParaExcluir}
+        titulo="Excluir follow-up"
+        descricao={<>Tem certeza que deseja excluir o follow-up de <span className="font-medium text-foreground">{formatData(fuParaExcluir?.dataFollowup)}</span>? Esta ação não pode ser desfeita pela tela.</>}
+        pending={excluirMut.isPending}
+        onCancel={() => setFuParaExcluir(null)}
+        onConfirm={() => fuParaExcluir && excluirMut.mutate(fuParaExcluir.id)}
+      />
     </div>
   );
 }
@@ -642,9 +690,20 @@ function LaudoMedicoStep({ pacienteId, avaliacaoId, produtoIndicado, laudos, pro
 }) {
   const [open, setOpen] = useState(false);
   const [laudoEmEdicao, setLaudoEmEdicao] = useState<LaudoMedico | null>(null);
+  const [laudoParaExcluir, setLaudoParaExcluir] = useState<LaudoMedico | null>(null);
   const qc = useQueryClient();
 
   const podeCriar = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
+
+  const excluirMut = useMutation({
+    mutationFn: (laudoId: string) => laudoMedicoApi.excluir(laudoId),
+    onSuccess: () => {
+      toast.success('Relatório excluído.');
+      setLaudoParaExcluir(null);
+      void qc.invalidateQueries({ queryKey: ['laudo-medico', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro ao excluir', apiErrorMessage(e)),
+  });
 
   return (
     <div className="space-y-3">
@@ -665,6 +724,11 @@ function LaudoMedicoStep({ pacienteId, avaliacaoId, produtoIndicado, laudos, pro
               <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => window.open(`/fluxo-clinico/${pacienteId}/laudo/${l.id}/imprimir`, '_blank')}>
                 <Printer className="h-3 w-3 mr-1" /> Imprimir
               </Button>
+              {podeCriar && l.status !== StatusLaudoMedico.ASSINADO && (
+                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-destructive hover:text-destructive" onClick={() => setLaudoParaExcluir(l)}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              )}
             </div>
           </div>
           <p className="text-xs text-muted-foreground line-clamp-2">{l.diagnosticoFuncional}</p>
@@ -690,6 +754,14 @@ function LaudoMedicoStep({ pacienteId, avaliacaoId, produtoIndicado, laudos, pro
         produtoIndicado={produtoIndicado}
         laudo={laudoEmEdicao ?? undefined}
         onCreated={() => void qc.invalidateQueries({ queryKey: ['laudo-medico', pacienteId] })}
+      />
+      <ConfirmExcluirDialog
+        open={!!laudoParaExcluir}
+        titulo="Excluir Relatório Médico Judiciário"
+        descricao={<>Tem certeza que deseja excluir o relatório de <span className="font-medium text-foreground">{formatData(laudoParaExcluir?.dataLaudo)}</span>? Esta ação não pode ser desfeita pela tela.</>}
+        pending={excluirMut.isPending}
+        onCancel={() => setLaudoParaExcluir(null)}
+        onConfirm={() => laudoParaExcluir && excluirMut.mutate(laudoParaExcluir.id)}
       />
     </div>
   );

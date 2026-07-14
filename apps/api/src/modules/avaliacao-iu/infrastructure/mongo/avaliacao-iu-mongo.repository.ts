@@ -20,12 +20,12 @@ export class AvaliacaoIUMongoRepository implements AvaliacaoIURepository {
   }
 
   async listByPaciente(clinicaId: string, pacienteId: string): Promise<AvaliacaoIU[]> {
-    const docs = await this.model.find({ clinicaId, pacienteId }).sort({ dataAtendimento: -1 }).lean();
+    const docs = await this.model.find({ clinicaId, pacienteId, excluidoEm: { $exists: false } }).sort({ dataAtendimento: -1 }).lean();
     return docs.map((d) => this.toEntity(d));
   }
 
   async listByEnfermeiro(clinicaId: string, enfermeiroId: string): Promise<AvaliacaoIU[]> {
-    const docs = await this.model.find({ clinicaId, enfermeiroId }).sort({ dataAtendimento: -1 }).lean();
+    const docs = await this.model.find({ clinicaId, enfermeiroId, excluidoEm: { $exists: false } }).sort({ dataAtendimento: -1 }).lean();
     return docs.map((d) => this.toEntity(d));
   }
 
@@ -37,7 +37,18 @@ export class AvaliacaoIUMongoRepository implements AvaliacaoIURepository {
   }
 
   async countByClinica(clinicaId: string): Promise<number> {
-    return this.model.countDocuments({ clinicaId });
+    return this.model.countDocuments({ clinicaId, excluidoEm: { $exists: false } });
+  }
+
+  async softDelete(clinicaId: string, id: string, excluidoPor: string): Promise<AvaliacaoIU | null> {
+    const doc = await this.model
+      .findOneAndUpdate(
+        { _id: id, clinicaId, excluidoEm: { $exists: false } },
+        { $set: { excluidoEm: new Date(), excluidoPor } },
+        { new: true, lean: true },
+      )
+      .lean();
+    return doc ? this.toEntity(doc) : null;
   }
 
   private toEntity(doc: Record<string, unknown>): AvaliacaoIU {

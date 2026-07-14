@@ -30,6 +30,12 @@ export class FollowUpMongo {
   @Prop()
   proximoFollowup?: Date;
 
+  @Prop({ index: true })
+  excluidoEm?: Date;
+
+  @Prop()
+  excluidoPor?: string;
+
   @Prop({ default: Date.now, immutable: true })
   criadoEm!: Date;
 

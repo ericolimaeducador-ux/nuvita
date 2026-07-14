@@ -8,4 +8,5 @@ export interface LaudoMedicoRepository {
   listByStatus(clinicaId: string, status: StatusLaudoMedico): Promise<LaudoMedico[]>;
   update(clinicaId: string, id: string, data: Partial<LaudoMedico>): Promise<LaudoMedico | null>;
   assinar(clinicaId: string, id: string, assinatura: AssinaturaLaudo): Promise<LaudoMedico | null>;
+  softDelete(clinicaId: string, id: string, excluidoPor: string): Promise<LaudoMedico | null>;
 }

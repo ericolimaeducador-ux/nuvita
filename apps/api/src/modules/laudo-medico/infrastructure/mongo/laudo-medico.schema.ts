@@ -165,6 +165,12 @@ export class LaudoMedicoMongo {
   @Prop({ type: SchemaFactory.createForClass(AssinaturaLaudoMongo) })
   assinado?: AssinaturaLaudoMongo;
 
+  @Prop({ index: true })
+  excluidoEm?: Date;
+
+  @Prop()
+  excluidoPor?: string;
+
   @Prop({ default: Date.now, immutable: true })
   criadoEm!: Date;
 

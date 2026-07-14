@@ -14,6 +14,8 @@ export interface FollowUp {
   statusElegibilidade: StatusElegibilidade;
   observacoes: string;
   proximoFollowup?: Date;
+  excluidoEm?: Date;
+  excluidoPor?: string;
   criadoEm: Date;
   atualizadoEm: Date;
 }

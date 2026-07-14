@@ -7,4 +7,5 @@ export interface AvaliacaoIURepository {
   listByEnfermeiro(clinicaId: string, enfermeiroId: string): Promise<AvaliacaoIU[]>;
   update(clinicaId: string, id: string, data: Partial<AvaliacaoIU>): Promise<AvaliacaoIU | null>;
   countByClinica(clinicaId: string): Promise<number>;
+  softDelete(clinicaId: string, id: string, excluidoPor: string): Promise<AvaliacaoIU | null>;
 }

@@ -69,7 +69,20 @@ export class PacientesService {
 
   async list(query: ListPacientesQueryDto, context: RequestAuditContext) {
     const clinicaId = this.resolveClinicaId(context.user, query.clinicaId);
-    const { projeto, projetoExcluir } = this.resolveVisibilidadeProjeto(context.user.papel, query.projeto);
+    const { projeto, projetoExcluir, semResultados } = this.resolveVisibilidadeProjeto(
+      context.user.papel,
+      query.projeto,
+    );
+
+    // Papel restrito pediu um projeto que não pode ver (PSI): lista vazia sem consultar o banco.
+    if (semResultados) {
+      await this.audit(query.nome ? AuditEvent.PATIENT_SEARCHED : AuditEvent.PATIENT_LISTED, context, {
+        clinicaId,
+        criterio: query.nome ? 'nome' : 'lista',
+        quantidade: 0,
+      });
+      return { items: [], hasMore: false };
+    }
 
     if (query.cpf) {
       const paciente = await this.pacientes.findByCpf(clinicaId, query.cpf, query.incluirInativos);
@@ -349,9 +362,20 @@ export class PacientesService {
   private resolveVisibilidadeProjeto(
     papel: Papel,
     projetoSolicitado?: ProjetoPaciente,
-  ): { projeto?: ProjetoPaciente; projetoExcluir?: ProjetoPaciente } {
+  ): { projeto?: ProjetoPaciente; projetoExcluir?: ProjetoPaciente; semResultados?: boolean } {
+    // Psicólogo: enxerga somente PSI (o filtro de projeto solicitado é irrelevante).
     if (papel === Papel.PSICOLOGO) return { projeto: ProjetoPaciente.PSI };
-    if (PAPEIS_SEM_ACESSO_PSI.includes(papel)) return { projetoExcluir: ProjetoPaciente.PSI };
+
+    // Médico/enfermeiro/advogado nunca veem PSI, mas AINDA devem respeitar um
+    // filtro explícito por Alpha/Beta — antes o projetoSolicitado era descartado
+    // e a lista voltava com todos os projetos não-PSI (Alpha + Beta juntos).
+    if (PAPEIS_SEM_ACESSO_PSI.includes(papel)) {
+      if (projetoSolicitado === ProjetoPaciente.PSI) return { semResultados: true };
+      if (projetoSolicitado) return { projeto: projetoSolicitado };
+      return { projetoExcluir: ProjetoPaciente.PSI };
+    }
+
+    // Admin/secretaria: filtro livre por qualquer projeto.
     return { projeto: projetoSolicitado };
   }
 

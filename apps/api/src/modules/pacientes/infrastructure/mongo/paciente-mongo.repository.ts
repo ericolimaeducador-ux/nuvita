@@ -89,34 +89,43 @@ export class PacienteMongoRepository implements PacienteRepository {
     this.applyCursor(query, input.cursor, sort);
 
     const limit = this.normalizeLimit(input.limit);
-    const pipeline: PipelineStage[] = [
-      {
-        $search: {
-          index: 'pacientes_nome_fonetico',
-          text: {
-            query: input.nome,
-            path: 'nome',
-            fuzzy: { maxEdits: 1, prefixLength: 2 },
+    let documents: PacienteDocument[] = [];
+
+    try {
+      const pipeline: PipelineStage[] = [
+        {
+          $search: {
+            index: 'pacientes_nome_fonetico',
+            text: {
+              query: input.nome,
+              path: 'nome',
+              fuzzy: { maxEdits: 1, prefixLength: 2 },
+            },
           },
         },
-      },
-      { $match: query },
-      // Sem collation aqui ($search não aceita) — ordenação de nome fica
-      // binária dentro do resultado da busca, o que é aceitável.
-      { $sort: this.sortSpec(sort) },
-      { $limit: limit + 1 },
-    ];
-
-    let documents: PacienteDocument[];
-    try {
+        { $match: query },
+        // Sem collation aqui ($search não aceita) — ordenação de nome fica
+        // binária dentro do resultado da busca, o que é aceitável.
+        { $sort: this.sortSpec(sort) },
+        { $limit: limit + 1 },
+      ];
       const results = await this.pacienteModel.aggregate(pipeline).exec();
       documents = results.map((result) => this.pacienteModel.hydrate(result));
     } catch (err) {
-      // Atlas Search indisponível (Mongo local/CE, ou índice pacientes_nome_fonetico
-      // não criado no cluster) — cai para busca por substring case-insensitive.
+      // Atlas Search indisponível (Mongo local/CE) lança erro no aggregate.
       this.logger.warn(
         `Busca $search indisponível, usando regex como fallback: ${(err as Error).message}`,
       );
+    }
+
+    // No Atlas real, um `index` inexistente ou ainda não pronto NÃO lança
+    // erro em `$search` — apenas retorna vazio (comportamento confirmado em
+    // produção: índice pacientes_nome_fonetico nunca foi criado no cluster).
+    // Sem forma de distinguir isso de "sem paciente correspondente" a partir
+    // de um resultado vazio, tratamos os dois casos igual e caímos para
+    // substring case-insensitive — custo desprezível no volume de pacientes
+    // por clínica.
+    if (documents.length === 0) {
       const escaped = input.nome.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const find = this.pacienteModel
         .find({ ...query, nome: { $regex: escaped, $options: 'i' } })

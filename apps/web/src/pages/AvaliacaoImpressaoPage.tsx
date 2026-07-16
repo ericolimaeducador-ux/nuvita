@@ -73,6 +73,7 @@ export function AvaliacaoImpressaoPage() {
             <div><span className="font-semibold">Data de Nascimento:</span> {formatData(paciente?.dataNascimento)}</div>
             <div><span className="font-semibold">Sexo:</span> {paciente?.sexo ?? '—'}</div>
             {paciente?.telefone && <div><span className="font-semibold">Telefone:</span> {paciente.telefone}</div>}
+            {paciente?.email && <div><span className="font-semibold">E-mail:</span> {paciente.email}</div>}
             {av?.planoSaude && <div><span className="font-semibold">Plano de Saúde:</span> {av.planoSaude}</div>}
             {av?.hospitalReferencia && <div><span className="font-semibold">Hospital Ref.:</span> {av.hospitalReferencia}</div>}
             <div className="col-span-2"><span className="font-semibold">Endereço:</span> {formatEndereco(paciente?.endereco)}</div>

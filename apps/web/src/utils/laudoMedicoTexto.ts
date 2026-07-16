@@ -130,6 +130,7 @@ export function montarLaudoNarrativa(laudo: LaudoMedico, paciente: Paciente, pro
     if (paciente.cpf) idRuns.push(t(' — '), b('CPF: '), t(paciente.cpf));
     if (idade !== undefined) idRuns.push(t(' — '), b('Idade: '), t(`${idade} anos`));
     if (sexoLabel) idRuns.push(t(' — '), b('Sexo: '), t(sexoLabel));
+    if (paciente.email) idRuns.push(t(' — '), b('E-mail: '), t(paciente.email));
     nodes.push({ type: 'paragraph', runs: idRuns, noIndent: true });
 
     // ---- §1 — Diagnóstico e cadeia causal ----

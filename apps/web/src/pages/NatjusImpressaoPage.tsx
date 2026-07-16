@@ -114,6 +114,7 @@ export function NatjusImpressaoPage() {
             <Linha rotulo="Data de nascimento">{paciente?.dataNascimento ? `${formatData(paciente.dataNascimento)} (${idade(paciente.dataNascimento)})` : ''}</Linha>
             <Linha rotulo="CPF">{paciente?.cpf ? formatCpf(paciente.cpf) : ''}</Linha>
             <Linha rotulo="Sexo">{paciente?.sexo}</Linha>
+            {paciente?.email && <Linha rotulo="E-mail">{paciente.email}</Linha>}
             {pr.objetivo?.sinaisVitais?.peso && <Linha rotulo="Peso">{pr.objetivo.sinaisVitais.peso} kg</Linha>}
           </div>
         </Secao>

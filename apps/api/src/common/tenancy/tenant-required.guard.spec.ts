@@ -36,6 +36,42 @@ describe('TenantRequiredGuard', () => {
     expect(() => guard.canActivate(contextWithRequest(request))).toThrow(ForbiddenException);
   });
 
+  it('rejects SUPER_ADMIN without a selected clinic', () => {
+    const request = { user: { sub: 'sa', papel: Papel.SUPER_ADMIN }, headers: {} };
+
+    expect(() => guard.canActivate(contextWithRequest(request))).toThrow(ForbiddenException);
+  });
+
+  it('lets SUPER_ADMIN assume a clinic via x-clinica-id header', () => {
+    const clinicaId = '6a4d54c060fe4d45ab23b331';
+    const request = {
+      user: { sub: 'sa', papel: Papel.SUPER_ADMIN } as { sub: string; papel: Papel; clinicaId?: string },
+      headers: { 'x-clinica-id': clinicaId },
+    };
+
+    expect(guard.canActivate(contextWithRequest(request))).toBe(true);
+    expect(request.user.clinicaId).toBe(clinicaId);
+    expect(tenantContext.getClinicaId()).toBe(clinicaId);
+  });
+
+  it('rejects a malformed x-clinica-id header', () => {
+    const request = {
+      user: { sub: 'sa', papel: Papel.SUPER_ADMIN },
+      headers: { 'x-clinica-id': 'nao-e-objectid; drop tudo' },
+    };
+
+    expect(() => guard.canActivate(contextWithRequest(request))).toThrow(ForbiddenException);
+  });
+
+  it('does not let other roles assume a clinic via header', () => {
+    const request = {
+      user: { sub: 'u1', papel: Papel.MEDICO },
+      headers: { 'x-clinica-id': '6a4d54c060fe4d45ab23b331' },
+    };
+
+    expect(() => guard.canActivate(contextWithRequest(request))).toThrow(ForbiddenException);
+  });
+
   it('rejects route clinicaId mismatches', () => {
     const request = {
       user: { sub: 'u1', papel: Papel.ADMIN, clinicaId: 'clinica-a' },

@@ -20,6 +20,12 @@ export class RolesGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<{ user?: AuthTokenPayload }>();
     const user = request.user;
 
+    // SUPER_ADMIN é o dono da plataforma: acesso total (resolvePermissoes já
+    // lhe dá TODOS_MODULOS), sem depender de constar em cada lista @Roles.
+    if (user?.papel === Papel.SUPER_ADMIN) {
+      return true;
+    }
+
     if (!user || !requiredRoles.includes(user.papel)) {
       throw new ForbiddenException('Acesso negado para este papel.');
     }

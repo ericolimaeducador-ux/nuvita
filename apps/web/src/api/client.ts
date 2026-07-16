@@ -3,6 +3,7 @@ import axios, {
   type AxiosRequestConfig,
   type InternalAxiosRequestConfig,
 } from 'axios';
+import { toast } from '@/components/ui/use-toast';
 
 // A API NestJS sobe sem prefixo global e define o cookie de refresh no path
 // /auth. Por isso servimos a API nos mesmos paths da origem (sem prefixo /api):
@@ -12,6 +13,7 @@ import axios, {
 const baseURL = import.meta.env.VITE_API_URL ?? '';
 
 const TOKEN_KEY = 'nuvita.accessToken';
+const CLINICA_ATIVA_KEY = 'nuvita.clinicaAtiva';
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -19,6 +21,20 @@ export function getToken(): string | null {
 export function setToken(token: string | null): void {
   if (token) localStorage.setItem(TOKEN_KEY, token);
   else localStorage.removeItem(TOKEN_KEY);
+}
+
+/**
+ * Clínica que o SUPER_ADMIN está operando (papel de plataforma, sem clínica
+ * própria no token). Vai em toda requisição como x-clinica-id; o backend só
+ * a aceita para SUPER_ADMIN (TenantRequiredGuard) — para os demais papéis o
+ * header é inofensivo, o tenant do token continua mandando.
+ */
+export function getClinicaAtiva(): string | null {
+  return localStorage.getItem(CLINICA_ATIVA_KEY);
+}
+export function setClinicaAtiva(clinicaId: string | null): void {
+  if (clinicaId) localStorage.setItem(CLINICA_ATIVA_KEY, clinicaId);
+  else localStorage.removeItem(CLINICA_ATIVA_KEY);
 }
 
 export const api = axios.create({
@@ -31,8 +47,24 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (token) {
     config.headers.set('Authorization', `Bearer ${token}`);
   }
+  const clinicaAtiva = getClinicaAtiva();
+  if (clinicaAtiva) {
+    config.headers.set('x-clinica-id', clinicaAtiva);
+  }
   return config;
 });
+
+// 403 nunca pode virar tela vazia silenciosa: avisa o usuário que o acesso
+// foi negado. Throttle de alguns segundos porque um dashboard dispara várias
+// chamadas em paralelo e todas falham juntas — um toast basta.
+let ultimoToast403 = 0;
+function avisar403(error: AxiosError) {
+  const agora = Date.now();
+  if (agora - ultimoToast403 < 5000) return;
+  ultimoToast403 = agora;
+  const msg = apiErrorMessage(error, 'Você não tem permissão para acessar este recurso.');
+  toast.error('Acesso negado', msg);
+}
 
 // Refresh transparente em 401 (uma tentativa, com fila para chamadas paralelas).
 let refreshing: Promise<string | null> | null = null;
@@ -65,6 +97,10 @@ api.interceptors.response.use(
     const url = original?.url ?? '';
 
     const isAuthRoute = url.includes('/auth/login') || url.includes('/auth/refresh');
+
+    if (status === 403) {
+      avisar403(error);
+    }
 
     if (status === 401 && original && !original._retry && !isAuthRoute) {
       original._retry = true;

@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { getToken, setToken } from '@/api/client';
+import { getClinicaAtiva, getToken, setClinicaAtiva, setToken } from '@/api/client';
 import { authApi } from '@/api/resources';
 import { resolvePermissoes, type AuthUser, type Modulo } from '@/types';
 
@@ -17,6 +17,9 @@ interface AuthState {
   loading: boolean;
   /** Permissões efetivas de módulos (fallback: padrão do papel p/ sessões antigas). */
   permissoes: Modulo[];
+  /** Clínica que o SUPER_ADMIN está operando (null = nenhuma selecionada). */
+  clinicaAtiva: string | null;
+  trocarClinica: (clinicaId: string | null) => void;
   login: (email: string, password: string, totpCode?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -37,6 +40,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(loadStoredUser);
   const [token, setTok] = useState<string | null>(getToken());
   const [loading] = useState(false);
+  const [clinicaAtiva, setClinicaAtivaState] = useState<string | null>(getClinicaAtiva());
+
+  const trocarClinica = useCallback((clinicaId: string | null) => {
+    setClinicaAtiva(clinicaId); // persiste no localStorage (lido pelo interceptor do axios)
+    setClinicaAtivaState(clinicaId);
+  }, []);
 
   const login = useCallback(
     async (email: string, password: string, totpCode?: string) => {
@@ -56,9 +65,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // ignora erro de logout — limpamos a sessão localmente de qualquer forma
     }
     setToken(null);
+    setClinicaAtiva(null);
     localStorage.removeItem(USER_KEY);
     setTok(null);
     setUser(null);
+    setClinicaAtivaState(null);
   }, []);
 
   // sincroniza logout entre abas
@@ -79,8 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<AuthState>(
-    () => ({ user, token, loading, permissoes, login, logout }),
-    [user, token, loading, permissoes, login, logout],
+    () => ({ user, token, loading, permissoes, clinicaAtiva, trocarClinica, login, logout }),
+    [user, token, loading, permissoes, clinicaAtiva, trocarClinica, login, logout],
   );
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;

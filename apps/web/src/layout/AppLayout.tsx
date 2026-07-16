@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   LayoutDashboard, Users, Calendar, Bell, DollarSign,
   Video, Building2, LogOut, ChevronLeft, ChevronRight, Activity, Scale, Shield, Brain, Wallet,
@@ -8,7 +9,9 @@ import {
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/auth/AuthContext';
+import { superAdminApi } from '@/api/resources';
 import { Modulo, Papel } from '@/types';
 import { Logo, LogoIcon } from '@/components/Logo';
 
@@ -33,7 +36,33 @@ export function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, permissoes, logout } = useAuth();
+  const qc = useQueryClient();
+  const { user, permissoes, clinicaAtiva, trocarClinica, logout } = useAuth();
+
+  // SUPER_ADMIN é papel de plataforma (sem clínica no token): opera os dados
+  // clínicos "assumindo" uma clínica, enviada em toda chamada via x-clinica-id.
+  const ehSuperAdmin = user?.papel === Papel.SUPER_ADMIN;
+  const clinicasQ = useQuery({
+    queryKey: ['super-admin', 'clinicas'],
+    queryFn: superAdminApi.listClinicas,
+    enabled: ehSuperAdmin,
+    staleTime: 5 * 60 * 1000,
+  });
+  const clinicas = clinicasQ.data?.items ?? [];
+
+  // Com uma única clínica cadastrada, assume automaticamente — o seletor só
+  // exige escolha manual quando há mais de uma.
+  useEffect(() => {
+    if (ehSuperAdmin && !clinicaAtiva && clinicas.length === 1) {
+      trocarClinica(clinicas[0].id);
+    }
+  }, [ehSuperAdmin, clinicaAtiva, clinicas, trocarClinica]);
+
+  function selecionarClinica(id: string) {
+    trocarClinica(id);
+    // Todos os dados em cache pertencem à clínica anterior (ou a nenhuma).
+    void qc.invalidateQueries();
+  }
 
   const initials = user?.nome
     ? user.nome.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
@@ -144,6 +173,21 @@ export function AppLayout() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header superior — sino + perfil do usuário logado */}
         <header className="flex items-center justify-end gap-4 px-6 py-3 bg-card border-b border-border shrink-0">
+          {ehSuperAdmin && (
+            <div className="flex items-center gap-2 mr-auto">
+              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Select value={clinicaAtiva ?? undefined} onValueChange={selecionarClinica}>
+                <SelectTrigger className="w-[220px] h-9">
+                  <SelectValue placeholder="Selecione a clínica…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clinicas.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <button
             onClick={() => navigate('/notificacoes')}
             className="relative p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"

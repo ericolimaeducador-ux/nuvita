@@ -19,7 +19,7 @@ import { Paciente, ProjetoPaciente } from '../domain/paciente.entity';
 import { PacienteRepository } from './ports/paciente.repository';
 
 /** Papéis profissionais que NUNCA veem pacientes do Projeto PSI (exclusivo do psicólogo). */
-const PAPEIS_SEM_ACESSO_PSI: Papel[] = [Papel.MEDICO, Papel.ENFERMEIRO, Papel.ADVOGADO];
+const PAPEIS_SEM_ACESSO_PSI: Papel[] = [Papel.MEDICO, Papel.ENFERMEIRO];
 
 export interface RequestAuditContext {
   ip: string;
@@ -262,8 +262,8 @@ export class PacientesService {
 
   /**
    * Único ponto de mutação de etapaFluxo no sistema. Chamado pelos services de
-   * avaliacao-iu, followup, agendamentos, checklist-documentos, laudo-medico,
-   * processo-juridico e entregas quando um evento de negócio faz o paciente
+   * avaliacao-iu, followup, agendamentos, checklist-documentos, laudo-medico
+   * e entregas quando um evento de negócio faz o paciente
    * avançar no pipeline clínico. Nunca lança exceção: uma falha nessa
    * transição secundária não pode derrubar a operação clínica primária que a
    * disparou (criar avaliação, follow-up, laudo, etc.).
@@ -355,7 +355,7 @@ export class PacientesService {
   /**
    * Pacientes do Projeto PSI (atendimento psicológico) ficam isolados dos
    * demais: só o PSICOLOGO os enxerga, e os outros profissionais de
-   * atendimento (médico/enfermeiro/advogado) nunca os veem — mesmo pedindo
+   * atendimento (médico/enfermeiro) nunca os veem — mesmo pedindo
    * `projeto` explicitamente na query. ADMIN/SECRETARIA continuam sem
    * restrição (visão administrativa da clínica inteira).
    */
@@ -366,7 +366,7 @@ export class PacientesService {
     // Psicólogo: enxerga somente PSI (o filtro de projeto solicitado é irrelevante).
     if (papel === Papel.PSICOLOGO) return { projeto: ProjetoPaciente.PSI };
 
-    // Médico/enfermeiro/advogado nunca veem PSI, mas AINDA devem respeitar um
+    // Médico/enfermeiro nunca veem PSI, mas AINDA devem respeitar um
     // filtro explícito por Alpha/Beta — antes o projetoSolicitado era descartado
     // e a lista voltava com todos os projetos não-PSI (Alpha + Beta juntos).
     if (PAPEIS_SEM_ACESSO_PSI.includes(papel)) {

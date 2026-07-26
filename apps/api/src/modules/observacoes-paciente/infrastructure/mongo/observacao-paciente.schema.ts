@@ -6,8 +6,8 @@ export type ObservacaoPacienteDocument = HydratedDocument<ObservacaoPacienteMong
 // Timeline de observações livres sobre um paciente, escrita por qualquer
 // profissional de atendimento. Cada observação é um registro isolado que
 // guarda quem escreveu (autorEmail) e quando (criadoEm) — assim o histórico
-// nunca se perde. Append-only: sem update/delete (mesmo padrão de
-// anotacoes_juridicas e do addendum de prontuário).
+// nunca se perde. Append-only: sem update/delete (mesmo padrão do addendum
+// de prontuário).
 @Schema({ collection: 'observacoes_paciente', versionKey: false })
 export class ObservacaoPacienteMongo {
   @Prop({ required: true, index: true })

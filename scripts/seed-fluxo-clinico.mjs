@@ -1,7 +1,7 @@
 /**
  * Seed completo do fluxo clínico da Nuvita
  * Cria: clínica (bootstrap) → usuários → pacientes → agendamentos
- *       → avaliações IU → follow-ups → laudos → processos → entregas
+ *       → avaliações IU → follow-ups → laudos → entregas
  *
  * Uso:
  *   1) Tenha o servidor rodando: npm run dev (na raiz do monorepo)
@@ -20,7 +20,7 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@nuvita.demo';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'SenhaForte123';
 const DEV_TOTP_SECRET = process.env.TOTP_SECRET || 'JBSWY3DPEHPK3PXP';
 // Papeis que exigem 2FA (deve refletir PAPEIS_COM_2FA_OBRIGATORIO no shared)
-const PAPEIS_2FA = ['SUPER_ADMIN', 'ADMIN', 'MEDICO', 'ENFERMEIRO', 'ADVOGADO'];
+const PAPEIS_2FA = ['SUPER_ADMIN', 'ADMIN', 'MEDICO', 'ENFERMEIRO'];
 const BOOTSTRAP_SECRET = process.env.BOOTSTRAP_SECRET;
 if (!BOOTSTRAP_SECRET) {
   console.error('✗ Defina BOOTSTRAP_SECRET no ambiente (veja .env) antes de rodar este seed.');
@@ -155,7 +155,6 @@ async function main() {
   const usuarios = [
     { nome: 'Dr. Renato Cavalcanti', email: 'dr.renato@nuvita.demo', papel: 'MEDICO' },
     { nome: 'Enf. Patricia Moura', email: 'enf.patricia@nuvita.demo', papel: 'ENFERMEIRO' },
-    { nome: 'Adv. Lucas Ferreira', email: 'adv.lucas@nuvita.demo', papel: 'ADVOGADO' },
     { nome: 'Sec. Camila Souza', email: 'sec.camila@nuvita.demo', papel: 'SECRETARIA' },
   ];
   const equipe = {};
@@ -371,69 +370,21 @@ async function main() {
   }
   console.log(`✓ ${laudoIds.length} laudos médicos criados e assinados`);
 
-  // 8) Processos jurídicos (como advogado)
-  token = equipe['ADVOGADO']?.token;
-  const processoIds = [];
-  const statusProcesso = ['em_preparacao', 'protocolado', 'em_andamento', 'ganho'];
-
-  for (let i = 0; i < laudoIds.length; i++) {
-    const l = laudoIds[i];
-    const { data: proc } = await req('POST', '/processo-juridico', {
+  // 8) Entregas — direto para pacientes com laudo médico assinado
+  token = adminAuth.accessToken;
+  let entregasConfirmadas = 0;
+  for (const l of laudoIds) {
+    const { data: entrega } = await req('POST', '/entregas', {
       clinicaId,
       pacienteId: l.pacienteId,
       avaliacaoIuId: l.avaliacaoId,
-      laudoMedicoId: l.id,
-      observacoes: 'Ação judicial para fornecimento de cateter intermitente pelo SUS. Direito à saúde — art. 196 CF/88.',
-    });
-
-    const status = statusProcesso[i % statusProcesso.length];
-    // Avançar status se necessário
-    if (status !== 'em_preparacao') {
-      const statusProgresso = ['em_preparacao', 'protocolado', 'em_andamento', 'ganho'];
-      const idx = statusProgresso.indexOf(status);
-      for (let s = 1; s <= idx; s++) {
-        await req('PATCH', `/processo-juridico/${proc.id}/status`, {
-          status: statusProgresso[s],
-          numeroProcesso: s >= 1 ? `${2024 + i}.001.${String(i + 1).padStart(6, '0')}` : undefined,
-          tribunal: s >= 1 ? 'TJSP — 3ª Vara da Fazenda Pública' : undefined,
-        }, { silent: true });
-      }
-    }
-
-    // Adicionar documento ao processo
-    await req('POST', `/processo-juridico/${proc.id}/documento`, {
-      nome: 'Petição Inicial',
-      url: `https://drive.google.com/file/d/demo-peticao-${proc.id}`,
-      tipo: 'petição',
-    }, { silent: true });
-
-    if (i < 2) {
-      await req('POST', `/processo-juridico/${proc.id}/documento`, {
-        nome: 'Laudo Médico Anexo',
-        url: `https://drive.google.com/file/d/demo-laudo-${l.id}`,
-        tipo: 'laudo',
-      }, { silent: true });
-    }
-
-    processoIds.push({ id: proc.id, pacienteId: l.pacienteId, status });
-    console.log(`  ✓ Processo jurídico [${status}]: ${proc.id.slice(-6)}`);
-  }
-  console.log(`✓ ${processoIds.length} processos jurídicos criados`);
-
-  // 9) Entregas — para processos "ganho"
-  token = adminAuth.accessToken;
-  const processoGanho = processoIds.filter(p => p.status === 'ganho');
-  for (const proc of processoGanho) {
-    const { data: entrega } = await req('POST', '/entregas', {
-      clinicaId,
-      pacienteId: proc.pacienteId,
-      processoJuridicoId: proc.id,
       quantidadeEntregue: 120,
       observacoes: 'Primeira entrega via farmácia de alto custo — UBS Central',
     }, { silent: true });
     if (entrega?.id) {
       await req('POST', `/entregas/${entrega.id}/confirmar`, {}, { silent: true });
-      console.log(`  ✓ Entrega confirmada para processo ${proc.id.slice(-6)}`);
+      entregasConfirmadas += 1;
+      console.log(`  ✓ Entrega confirmada para paciente ${l.pacienteId.slice(-6)}`);
     }
   }
 
@@ -446,13 +397,11 @@ async function main() {
   console.log(`  Avaliações  : ${avaliacaoIds.length}`);
   console.log(`  Follow-ups  : ${followupIds.length} (${elegiveis.length} elegíveis)`);
   console.log(`  Laudos      : ${laudoIds.length} (todos assinados)`);
-  console.log(`  Processos   : ${processoIds.length}`);
-  console.log(`  Entregas    : ${processoGanho.length}`);
+  console.log(`  Entregas    : ${entregasConfirmadas}`);
   console.log('\n  Credenciais de acesso:');
   console.log(`  Admin      → ${ADMIN_EMAIL} / SenhaForte123!`);
   console.log(`  Médico     → dr.renato@nuvita.demo / SenhaForte123!`);
   console.log(`  Enfermeiro → enf.patricia@nuvita.demo / SenhaForte123!`);
-  console.log(`  Advogado   → adv.lucas@nuvita.demo / SenhaForte123!`);
   console.log(`  Secretaria → sec.camila@nuvita.demo / SenhaForte123!\n`);
 }
 

@@ -24,11 +24,6 @@ export class EntregaMongoRepository implements EntregaRepository {
     return docs.map((d) => this.toEntity(d));
   }
 
-  async listByProcesso(clinicaId: string, processoJuridicoId: string): Promise<Entrega[]> {
-    const docs = await this.model.find({ clinicaId, processoJuridicoId }).sort({ dataEntrega: -1 }).lean();
-    return docs.map((d) => this.toEntity(d));
-  }
-
   async updateStatus(clinicaId: string, id: string, status: StatusEntrega): Promise<Entrega | null> {
     const doc = await this.model
       .findOneAndUpdate({ _id: id, clinicaId }, { $set: { status, atualizadoEm: new Date() } }, { new: true, lean: true })

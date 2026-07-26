@@ -24,7 +24,6 @@ export interface Entrega {
   id: string;
   clinicaId: string;
   pacienteId: string;
-  processoJuridicoId?: string;
   avaliacaoIuId?: string;
   responsavelId: string;
   dataEntrega: Date;

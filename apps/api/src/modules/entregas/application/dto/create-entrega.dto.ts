@@ -12,7 +12,6 @@ export class ItemEntregaDto {
 export class CreateEntregaDto {
   @IsOptional() @IsString() clinicaId?: string;
   @IsString() pacienteId!: string;
-  @IsOptional() @IsString() processoJuridicoId?: string;
   @IsOptional() @IsString() avaliacaoIuId?: string;
   @IsDateString() dataEntrega!: string;
   @IsEnum(OrigemEntrega) origem!: OrigemEntrega;

@@ -1,7 +1,6 @@
 import { api } from './client';
 import type {
   Agendamento,
-  AnotacaoJuridica,
   AvaliacaoIU,
   ChecklistDocumentoItem,
   DashboardFinanceiro,
@@ -22,7 +21,6 @@ import type {
   PageResult,
   Papel,
   PresignUploadResponse,
-  ProcessoJuridico,
   Produto,
   Prontuario,
   RascunhoLaudoIA,
@@ -34,7 +32,6 @@ import type {
   TipoEventoSala,
   TipoSinal,
   StatusAgendamento,
-  StatusProcesso,
   TipoAgendamento,
   TipoAtendimento,
   TipoDocumento,
@@ -365,32 +362,6 @@ export const laudoMedicoApi = {
     api.post<RascunhoLaudoIA>('/laudo-medico/pre-preenchimento', { pacienteId, avaliacaoIuId }).then((r) => r.data),
 };
 
-// ---------- Processo Jurídico ----------
-export const processoJuridicoApi = {
-  create: (payload: Record<string, unknown>) =>
-    api.post<ProcessoJuridico>('/processo-juridico', payload).then((r) => r.data),
-  listByPaciente: (pacienteId: string) =>
-    api.get<ProcessoJuridico[]>('/processo-juridico', { params: { pacienteId } }).then((r) => r.data),
-  get: (id: string) =>
-    api.get<ProcessoJuridico>(`/processo-juridico/${id}`).then((r) => r.data),
-  meus: () =>
-    api.get<ProcessoJuridico[]>('/processo-juridico/meus').then((r) => r.data),
-  listByStatus: (status: StatusProcesso) =>
-    api.get<ProcessoJuridico[]>('/processo-juridico/por-status', { params: { status } }).then((r) => r.data),
-  updateStatus: (id: string, payload: Record<string, unknown>) =>
-    api.patch<ProcessoJuridico>(`/processo-juridico/${id}/status`, payload).then((r) => r.data),
-  addDocumento: (id: string, payload: { nome: string; url: string; tipo: string }) =>
-    api.post<ProcessoJuridico>(`/processo-juridico/${id}/documento`, payload).then((r) => r.data),
-};
-
-// ---------- Anotações Jurídicas ----------
-export const anotacaoJuridicaApi = {
-  create: (payload: { pacienteId: string; texto: string }) =>
-    api.post<AnotacaoJuridica>('/anotacoes-juridicas', payload).then((r) => r.data),
-  listByPaciente: (pacienteId: string) =>
-    api.get<AnotacaoJuridica[]>('/anotacoes-juridicas', { params: { pacienteId } }).then((r) => r.data),
-};
-
 // ---------- Observações do paciente (timeline append-only) ----------
 export const observacoesPacienteApi = {
   create: (payload: { pacienteId: string; texto: string }) =>
@@ -421,8 +392,6 @@ export const entregasApi = {
     api.post<Entrega>('/entregas', payload).then((r) => r.data),
   listByPaciente: (pacienteId: string) =>
     api.get<Entrega[]>('/entregas', { params: { pacienteId } }).then((r) => r.data),
-  listByProcesso: (processoId: string) =>
-    api.get<Entrega[]>(`/entregas/processo/${processoId}`).then((r) => r.data),
   get: (id: string) =>
     api.get<Entrega>(`/entregas/${id}`).then((r) => r.data),
   confirmar: (id: string) =>

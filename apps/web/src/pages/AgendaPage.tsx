@@ -309,7 +309,7 @@ export function AgendaPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="medicoId">ID do profissional responsável</Label>
-              <Input id="medicoId" placeholder="ID do médico, enfermeiro ou advogado" value={fMedicoId} onChange={(e) => setFMedicoId(e.target.value)} />
+              <Input id="medicoId" placeholder="ID do médico ou enfermeiro" value={fMedicoId} onChange={(e) => setFMedicoId(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">

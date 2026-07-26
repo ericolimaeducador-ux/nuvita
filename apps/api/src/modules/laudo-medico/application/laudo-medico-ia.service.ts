@@ -6,8 +6,6 @@ import { AvaliacaoIUService } from '../../avaliacao-iu/application/avaliacao-iu.
 import { ProntuariosService } from '../../prontuarios/application/prontuarios.service';
 import { FollowUpService } from '../../followup/application/followup.service';
 import { ObservacoesPacienteService } from '../../observacoes-paciente/application/observacoes-paciente.service';
-import { ProcessoJuridicoService } from '../../processo-juridico/application/processo-juridico.service';
-import { AnotacoesJuridicasService } from '../../anotacoes-juridicas/application/anotacoes-juridicas.service';
 import { AI_TEXT_GENERATOR } from '../laudo-medico.constants';
 import { AiTextGenerator } from './ports/ai-text-generator';
 
@@ -47,8 +45,6 @@ export class LaudoMedicoIaService {
     private readonly prontuariosService: ProntuariosService,
     private readonly followUpService: FollowUpService,
     private readonly observacoesPacienteService: ObservacoesPacienteService,
-    private readonly processoJuridicoService: ProcessoJuridicoService,
-    private readonly anotacoesJuridicasService: AnotacoesJuridicasService,
     @Inject(AI_TEXT_GENERATOR) private readonly ia: AiTextGenerator,
   ) {}
 
@@ -60,19 +56,17 @@ export class LaudoMedicoIaService {
   ): Promise<RascunhoLaudoIA> {
     const contexto = { ip: 'internal', userAgent: 'laudo-medico-ia', user };
 
-    const [paciente, avaliacoes, prontuarios, followups, observacoes, processos, anotacoes] = await Promise.all([
+    const [paciente, avaliacoes, prontuarios, followups, observacoes] = await Promise.all([
       this.pacientesService.findOne(pacienteId, clinicaId, contexto),
       this.avaliacaoIuService.listByPaciente(pacienteId, clinicaId, user),
       this.prontuariosService.listByPaciente({ pacienteId, clinicaId }, contexto),
       this.followUpService.listByPaciente(pacienteId, clinicaId, user),
       this.observacoesPacienteService.listByPaciente(pacienteId, clinicaId, user),
-      this.processoJuridicoService.listByPaciente(pacienteId, clinicaId, user),
-      this.anotacoesJuridicasService.listByPaciente(pacienteId, clinicaId, user),
     ]);
 
     const avaliacao = avaliacoes.find((a) => a.id === avaliacaoIuId) ?? avaliacoes[0];
 
-    const prompt = this.montarPrompt({ paciente, avaliacao, prontuarios, followups, observacoes, processos, anotacoes });
+    const prompt = this.montarPrompt({ paciente, avaliacao, prontuarios, followups, observacoes });
     return this.ia.gerarJson<RascunhoLaudoIA>(prompt, RESPONSE_SCHEMA);
   }
 
@@ -82,10 +76,8 @@ export class LaudoMedicoIaService {
     prontuarios: unknown[];
     followups: unknown[];
     observacoes: unknown[];
-    processos: unknown[];
-    anotacoes: unknown[];
   }): string {
-    const { paciente, avaliacao, prontuarios, followups, observacoes, processos, anotacoes } = dados;
+    const { paciente, avaliacao, prontuarios, followups, observacoes } = dados;
 
     const blocos = [
       `Paciente: ${JSON.stringify(paciente)}`,
@@ -93,8 +85,6 @@ export class LaudoMedicoIaService {
       prontuarios.length ? `Prontuários (SOAP, do mais recente): ${JSON.stringify(prontuarios)}` : 'Sem prontuários registrados.',
       followups.length ? `Follow-ups: ${JSON.stringify(followups)}` : 'Sem follow-ups registrados.',
       observacoes.length ? `Observações livres da equipe: ${JSON.stringify(observacoes)}` : 'Sem observações livres.',
-      processos.length ? `Processo(s) jurídico(s) já em andamento: ${JSON.stringify(processos)}` : 'Sem processo jurídico em andamento.',
-      anotacoes.length ? `Anotações jurídicas: ${JSON.stringify(anotacoes)}` : 'Sem anotações jurídicas.',
     ].join('\n\n');
 
     return `Você ajuda um enfermeiro a redigir o RASCUNHO de um Relatório Médico Circunstanciado (CIL — Cateterismo Intermitente Limpo), que depois será revisado e assinado por um médico. O texto final é um documento narrativo fixo em que cada campo abaixo é encaixado dentro de frases prontas — por isso cada campo deve ser um FRAGMENTO GRAMATICAL (não uma frase completa com sujeito próprio), sem ponto final, sem maiúscula inicial (exceto siglas/nomes próprios), no mesmo registro técnico-jurídico dos exemplos abaixo. NUNCA invente dado clínico — use somente os dados fornecidos sobre o paciente.

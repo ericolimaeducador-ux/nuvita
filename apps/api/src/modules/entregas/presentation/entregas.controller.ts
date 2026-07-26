@@ -33,15 +33,6 @@ export class EntregasController {
     return this.service.listByPaciente(pacienteId, clinicaId, user);
   }
 
-  @Get('processo/:processoId')
-  listByProcesso(
-    @Param('processoId') processoId: string,
-    @Query('clinicaId') clinicaId: string | undefined,
-    @CurrentUser() user: AuthTokenPayload,
-  ) {
-    return this.service.listByProcesso(processoId, clinicaId, user);
-  }
-
   @Get(':id')
   findOne(
     @Param('id') id: string,

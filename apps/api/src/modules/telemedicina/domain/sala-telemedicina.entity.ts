@@ -15,7 +15,7 @@ export interface SalaTelemedicina {
   id: string;
   clinicaId: string;
   agendamentoId: string;
-  /** Profissional responsavel (medico, enfermeiro ou advogado conforme a modalidade). */
+  /** Profissional responsavel (medico ou enfermeiro conforme a modalidade). */
   medicoId: string;
   modalidade: ModalidadeAtendimento;
   pacienteId: string;

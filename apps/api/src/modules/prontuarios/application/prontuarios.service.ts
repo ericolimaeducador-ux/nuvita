@@ -270,7 +270,7 @@ export class ProntuariosService {
   }
 
   private assertMedico(user: AuthTokenPayload): void {
-    // Paridade profissional: médico, enfermeiro e advogado acessam o prontuário.
+    // Paridade profissional: médico e enfermeiro acessam o prontuário.
     if (!ehProfissional(user.papel)) {
       throw new ForbiddenException('Somente profissionais de atendimento acessam o prontuario.');
     }

@@ -16,7 +16,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { Papel, PAPEL_LABEL } from '@/types';
 
-const PAPEIS_CRIAVEIS = [Papel.MEDICO, Papel.ENFERMEIRO, Papel.ADVOGADO, Papel.SECRETARIA];
+const PAPEIS_CRIAVEIS = [Papel.MEDICO, Papel.ENFERMEIRO, Papel.SECRETARIA];
 
 const usuarioSchema = z.object({
   nome: z.string().min(1, 'Informe o nome.'),
@@ -57,7 +57,7 @@ export function ClinicaPage() {
         <div>
           <p className="text-sm font-medium text-foreground">Novo usuário da clínica</p>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Crie médicos, enfermeiros, advogados ou secretaria. Profissionais (médico, enfermeiro e advogado)
+            Crie médicos, enfermeiros ou secretaria. Profissionais (médico e enfermeiro)
             recebem 2FA obrigatório no primeiro acesso. Disponível apenas para ADMIN.
           </p>
         </div>

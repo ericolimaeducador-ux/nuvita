@@ -7,8 +7,6 @@ import { AvaliacaoIUModule } from '../avaliacao-iu/avaliacao-iu.module';
 import { ProntuariosModule } from '../prontuarios/prontuarios.module';
 import { FollowUpModule } from '../followup/followup.module';
 import { ObservacoesPacienteModule } from '../observacoes-paciente/observacoes-paciente.module';
-import { ProcessoJuridicoModule } from '../processo-juridico/processo-juridico.module';
-import { AnotacoesJuridicasModule } from '../anotacoes-juridicas/anotacoes-juridicas.module';
 import { LaudoMedicoService } from './application/laudo-medico.service';
 import { LaudoMedicoIaService } from './application/laudo-medico-ia.service';
 import { LaudoMedicoMongoRepository } from './infrastructure/mongo/laudo-medico-mongo.repository';
@@ -25,8 +23,6 @@ import { LaudoMedicoController } from './presentation/laudo-medico.controller';
     ProntuariosModule,
     FollowUpModule,
     ObservacoesPacienteModule,
-    ProcessoJuridicoModule,
-    AnotacoesJuridicasModule,
   ],
   controllers: [LaudoMedicoController],
   providers: [

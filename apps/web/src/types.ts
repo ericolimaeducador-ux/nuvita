@@ -5,7 +5,6 @@ export enum Papel {
   ADMIN = 'ADMIN',
   MEDICO = 'MEDICO',
   ENFERMEIRO = 'ENFERMEIRO',
-  ADVOGADO = 'ADVOGADO',
   PSICOLOGO = 'PSICOLOGO',
   SECRETARIA = 'SECRETARIA',
   PACIENTE = 'PACIENTE',
@@ -16,7 +15,6 @@ export const PAPEL_LABEL: Record<Papel, string> = {
   [Papel.ADMIN]: 'Administrador',
   [Papel.MEDICO]: 'Médico(a)',
   [Papel.ENFERMEIRO]: 'Enfermeiro(a)',
-  [Papel.ADVOGADO]: 'Advogado(a)',
   [Papel.PSICOLOGO]: 'Psicólogo(a)',
   [Papel.SECRETARIA]: 'Secretaria',
   [Papel.PACIENTE]: 'Paciente',
@@ -26,21 +24,18 @@ export const PAPEL_LABEL: Record<Papel, string> = {
 export const PAPEIS_PROFISSIONAIS: Papel[] = [
   Papel.MEDICO,
   Papel.ENFERMEIRO,
-  Papel.ADVOGADO,
   Papel.PSICOLOGO,
 ];
 
 export enum ModalidadeAtendimento {
   MEDICO = 'medico',
   ENFERMAGEM = 'enfermagem',
-  JURIDICO = 'juridico',
   PSICOLOGIA = 'psicologia',
 }
 
 export const MODALIDADE_LABEL: Record<ModalidadeAtendimento, string> = {
   [ModalidadeAtendimento.MEDICO]: 'Médico',
   [ModalidadeAtendimento.ENFERMAGEM]: 'Enfermagem',
-  [ModalidadeAtendimento.JURIDICO]: 'Jurídico',
   [ModalidadeAtendimento.PSICOLOGIA]: 'Psicologia',
 };
 
@@ -107,8 +102,6 @@ export enum TipoAgendamento {
   TELECONSULTA = 'teleconsulta',
   ATENDIMENTO_ENFERMAGEM = 'atendimento_enfermagem',
   PROCEDIMENTO_ENFERMAGEM = 'procedimento_enfermagem',
-  ATENDIMENTO_JURIDICO = 'atendimento_juridico',
-  AUDIENCIA = 'audiencia',
   ENTREVISTA = 'entrevista',
   AVALIACAO_PSICOLOGICA = 'avaliacao_psicologica',
   SESSAO_PSICOTERAPIA = 'sessao_psicoterapia',
@@ -122,8 +115,6 @@ export const TIPO_AGENDAMENTO_LABEL: Record<TipoAgendamento, string> = {
   [TipoAgendamento.TELECONSULTA]: 'Teleconsulta',
   [TipoAgendamento.ATENDIMENTO_ENFERMAGEM]: 'Atend. Enfermagem',
   [TipoAgendamento.PROCEDIMENTO_ENFERMAGEM]: 'Proc. Enfermagem',
-  [TipoAgendamento.ATENDIMENTO_JURIDICO]: 'Atend. Jurídico',
-  [TipoAgendamento.AUDIENCIA]: 'Audiência',
   [TipoAgendamento.ENTREVISTA]: 'Entrevista (Fluxo Clínico)',
   [TipoAgendamento.AVALIACAO_PSICOLOGICA]: 'Avaliação Psicológica',
   [TipoAgendamento.SESSAO_PSICOTERAPIA]: 'Sessão de Psicoterapia',
@@ -142,10 +133,6 @@ export const TIPOS_POR_MODALIDADE: Record<ModalidadeAtendimento, TipoAgendamento
     TipoAgendamento.ATENDIMENTO_ENFERMAGEM,
     TipoAgendamento.PROCEDIMENTO_ENFERMAGEM,
     TipoAgendamento.ENTREVISTA,
-  ],
-  [ModalidadeAtendimento.JURIDICO]: [
-    TipoAgendamento.ATENDIMENTO_JURIDICO,
-    TipoAgendamento.AUDIENCIA,
   ],
   [ModalidadeAtendimento.PSICOLOGIA]: [
     TipoAgendamento.AVALIACAO_PSICOLOGICA,
@@ -172,9 +159,7 @@ export const TIPO_ATENDIMENTO_LABEL: Record<TipoAtendimento, string> = {
 };
 
 /** Mapeia o tipo de agendamento para o tipo de atendimento (prontuário) mais
- * próximo, usado para pré-preencher "Iniciar atendimento" a partir da agenda.
- * Tipos jurídicos (atendimento_juridico, audiencia) não têm prontuário clínico
- * equivalente — ficam de fora do mapa. */
+ * próximo, usado para pré-preencher "Iniciar atendimento" a partir da agenda. */
 export const TIPO_ATENDIMENTO_POR_AGENDAMENTO: Partial<Record<TipoAgendamento, TipoAtendimento>> = {
   [TipoAgendamento.CONSULTA]: TipoAtendimento.CONSULTA,
   [TipoAgendamento.RETORNO]: TipoAtendimento.RETORNO,
@@ -200,7 +185,6 @@ export enum Modulo {
   NOTIFICACOES = 'NOTIFICACOES',
   TELEMEDICINA = 'TELEMEDICINA',
   LAUDOS = 'LAUDOS',
-  PROCESSOS = 'PROCESSOS',
   ENTREGAS = 'ENTREGAS',
   AVALIACOES = 'AVALIACOES',
   ANALYTICS = 'ANALYTICS',
@@ -223,7 +207,6 @@ export const MODULO_LABEL: Record<Modulo, string> = {
   [Modulo.NOTIFICACOES]: 'Notificações',
   [Modulo.TELEMEDICINA]: 'Telemedicina',
   [Modulo.LAUDOS]: 'Laudos e relatórios',
-  [Modulo.PROCESSOS]: 'Processos jurídicos',
   [Modulo.ENTREGAS]: 'Insumos / entregas',
   [Modulo.AVALIACOES]: 'Avaliações de IU',
   [Modulo.ANALYTICS]: 'Relatórios / analytics',
@@ -241,7 +224,7 @@ export const PERMISSOES_PADRAO_POR_PAPEL: Record<Papel, Modulo[]> = {
   [Papel.SUPER_ADMIN]: TODOS_MODULOS,
   [Papel.ADMIN]: [
     M.DASHBOARD, M.PACIENTES, M.AGENDA, M.PRONTUARIOS, M.DOCUMENTOS, M.FINANCEIRO,
-    M.NOTIFICACOES, M.TELEMEDICINA, M.LAUDOS, M.PROCESSOS, M.ENTREGAS, M.AVALIACOES,
+    M.NOTIFICACOES, M.TELEMEDICINA, M.LAUDOS, M.ENTREGAS, M.AVALIACOES,
     M.ANALYTICS, M.FLUXO_CLINICO, M.CLINICA,
   ],
   [Papel.MEDICO]: [
@@ -251,10 +234,6 @@ export const PERMISSOES_PADRAO_POR_PAPEL: Record<Papel, Modulo[]> = {
   [Papel.ENFERMEIRO]: [
     M.DASHBOARD, M.PACIENTES, M.AGENDA, M.PRONTUARIOS, M.DOCUMENTOS, M.AVALIACOES,
     M.LAUDOS, M.ENTREGAS, M.FLUXO_CLINICO,
-  ],
-  [Papel.ADVOGADO]: [
-    M.DASHBOARD, M.PACIENTES, M.PRONTUARIOS, M.PROCESSOS, M.ENTREGAS, M.DOCUMENTOS,
-    M.FLUXO_CLINICO,
   ],
   // Atendimento psicológico é um extra: só o psicólogo enxerga por padrão;
   // outros usuários ganham por concessão individual no painel super-admin.
@@ -306,7 +285,6 @@ export interface AuthUser {
 export const REGISTRO_LABEL: Partial<Record<Papel, string>> = {
   [Papel.MEDICO]: 'CRM',
   [Papel.ENFERMEIRO]: 'COREN',
-  [Papel.ADVOGADO]: 'OAB',
   [Papel.PSICOLOGO]: 'CRP',
 };
 export function registroLabel(papel?: Papel): string {
@@ -1124,49 +1102,6 @@ export interface RascunhoLaudoIA {
   fornecedorAtual: string;
 }
 
-export enum StatusProcesso {
-  EM_PREPARACAO = 'em_preparacao',
-  PROTOCOLADO = 'protocolado',
-  EM_ANDAMENTO = 'em_andamento',
-  GANHO = 'ganho',
-  PERDIDO = 'perdido',
-  ARQUIVADO = 'arquivado',
-}
-export const STATUS_PROCESSO_LABEL: Record<StatusProcesso, string> = {
-  [StatusProcesso.EM_PREPARACAO]: 'Em preparação',
-  [StatusProcesso.PROTOCOLADO]: 'Protocolado',
-  [StatusProcesso.EM_ANDAMENTO]: 'Em andamento',
-  [StatusProcesso.GANHO]: 'Ganho',
-  [StatusProcesso.PERDIDO]: 'Perdido',
-  [StatusProcesso.ARQUIVADO]: 'Arquivado',
-};
-
-export interface ProcessoJuridico {
-  id: string;
-  clinicaId: string;
-  pacienteId: string;
-  avaliacaoIuId: string;
-  laudoMedicoId: string;
-  advogadoId: string;
-  status: StatusProcesso;
-  numeroProcesso?: string;
-  tribunal?: string;
-  dataProtocolo?: string;
-  dataDecisao?: string;
-  observacoes?: string;
-  documentos: Array<{ nome: string; url: string; tipo: string; adicionadoEm: string }>;
-  criadoEm: string;
-}
-
-export interface AnotacaoJuridica {
-  id: string;
-  clinicaId: string;
-  pacienteId: string;
-  autorId: string;
-  texto: string;
-  criadoEm: string;
-}
-
 export interface ObservacaoPaciente {
   id: string;
   clinicaId: string;
@@ -1228,7 +1163,6 @@ export interface Entrega {
   id: string;
   clinicaId: string;
   pacienteId: string;
-  processoJuridicoId?: string;
   avaliacaoIuId?: string;
   responsavelId: string;
   dataEntrega: string;
@@ -1250,8 +1184,7 @@ export enum EtapaFluxoClinico {
   ENTREVISTA_AGENDADA = 'entrevista_agendada',
   AGUARDANDO_DOCUMENTOS = 'aguardando_documentos',
   AGUARDANDO_CONSULTA_MEDICA = 'aguardando_consulta_medica',
-  AGUARDANDO_ENVIO_JURIDICO = 'aguardando_envio_juridico',
-  PROCESSO_JURIDICO = 'processo_juridico',
+  AGUARDANDO_ENTREGA = 'aguardando_entrega',
   NAO_ELEGIVEL = 'nao_elegivel',
   CONCLUIDO = 'concluido',
 }
@@ -1263,8 +1196,7 @@ export const ETAPA_FLUXO_LABEL: Record<EtapaFluxoClinico, string> = {
   [EtapaFluxoClinico.ENTREVISTA_AGENDADA]: 'Entrevista Agendada',
   [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: 'Aguardando Documentos',
   [EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA]: 'Aguardando Consulta Médica',
-  [EtapaFluxoClinico.AGUARDANDO_ENVIO_JURIDICO]: 'Aguardando Envio ao Jurídico',
-  [EtapaFluxoClinico.PROCESSO_JURIDICO]: 'Processo Jurídico',
+  [EtapaFluxoClinico.AGUARDANDO_ENTREGA]: 'Aguardando Entrega',
   [EtapaFluxoClinico.NAO_ELEGIVEL]: 'Não Elegível',
   [EtapaFluxoClinico.CONCLUIDO]: 'Concluído',
 };
@@ -1315,14 +1247,12 @@ export const PROXIMA_ETAPA_MANUAL: Partial<Record<EtapaFluxoClinico, EtapaFluxoC
   [EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO]: EtapaFluxoClinico.ENTREVISTA_AGENDADA,
   [EtapaFluxoClinico.ENTREVISTA_AGENDADA]: EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS,
   [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA,
-  [EtapaFluxoClinico.AGUARDANDO_ENVIO_JURIDICO]: EtapaFluxoClinico.PROCESSO_JURIDICO,
 };
 
 export const PAPEIS_AVANCO_MANUAL: Partial<Record<EtapaFluxoClinico, Papel[]>> = {
   [EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO]: [Papel.SECRETARIA],
   [EtapaFluxoClinico.ENTREVISTA_AGENDADA]: [Papel.SECRETARIA],
   [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: [Papel.SECRETARIA],
-  [EtapaFluxoClinico.AGUARDANDO_ENVIO_JURIDICO]: [Papel.ADVOGADO],
 };
 
 export interface Produto {

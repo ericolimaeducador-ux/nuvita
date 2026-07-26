@@ -20,10 +20,8 @@ import { ProdutosModule } from './modules/produtos/produtos.module';
 import { AvaliacaoIUModule } from './modules/avaliacao-iu/avaliacao-iu.module';
 import { FollowUpModule } from './modules/followup/followup.module';
 import { LaudoMedicoModule } from './modules/laudo-medico/laudo-medico.module';
-import { ProcessoJuridicoModule } from './modules/processo-juridico/processo-juridico.module';
 import { EntregasModule } from './modules/entregas/entregas.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
-import { AnotacoesJuridicasModule } from './modules/anotacoes-juridicas/anotacoes-juridicas.module';
 import { ChecklistDocumentosModule } from './modules/checklist-documentos/checklist-documentos.module';
 import { ObservacoesPacienteModule } from './modules/observacoes-paciente/observacoes-paciente.module';
 
@@ -60,10 +58,8 @@ import { ObservacoesPacienteModule } from './modules/observacoes-paciente/observ
     AvaliacaoIUModule,
     FollowUpModule,
     LaudoMedicoModule,
-    ProcessoJuridicoModule,
     EntregasModule,
     SuperAdminModule,
-    AnotacoesJuridicasModule,
     ChecklistDocumentosModule,
     ObservacoesPacienteModule,
   ],

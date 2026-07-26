@@ -106,8 +106,8 @@ export class ClinicasService {
       throw new ForbiddenException('Admin so pode criar usuarios da propria clinica.');
     }
 
-    if (![Papel.MEDICO, Papel.ENFERMEIRO, Papel.ADVOGADO, Papel.SECRETARIA].includes(dto.papel)) {
-      throw new ForbiddenException('Admin da clinica so pode criar MEDICO, ENFERMEIRO, ADVOGADO ou SECRETARIA.');
+    if (![Papel.MEDICO, Papel.ENFERMEIRO, Papel.SECRETARIA].includes(dto.papel)) {
+      throw new ForbiddenException('Admin da clinica so pode criar MEDICO, ENFERMEIRO ou SECRETARIA.');
     }
 
     const clinica = await this.clinicas.findById(adminClinicaId);

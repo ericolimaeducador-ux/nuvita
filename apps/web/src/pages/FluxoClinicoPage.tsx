@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Search, Activity, Clock, ClipboardList, UserCheck, CalendarClock,
-  FileText, Stethoscope, Send, Scale, XCircle, CheckCircle2,
+  FileText, Stethoscope, Package, XCircle, CheckCircle2,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,8 +24,7 @@ const ETAPAS: Array<{ key: 'todos' | EtapaFluxoClinico; label: string; icon: Rea
   { key: EtapaFluxoClinico.ENTREVISTA_AGENDADA, label: ETAPA_FLUXO_LABEL[EtapaFluxoClinico.ENTREVISTA_AGENDADA], icon: CalendarClock },
   { key: EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS, label: ETAPA_FLUXO_LABEL[EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS], icon: FileText },
   { key: EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA, label: ETAPA_FLUXO_LABEL[EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA], icon: Stethoscope },
-  { key: EtapaFluxoClinico.AGUARDANDO_ENVIO_JURIDICO, label: ETAPA_FLUXO_LABEL[EtapaFluxoClinico.AGUARDANDO_ENVIO_JURIDICO], icon: Send },
-  { key: EtapaFluxoClinico.PROCESSO_JURIDICO, label: ETAPA_FLUXO_LABEL[EtapaFluxoClinico.PROCESSO_JURIDICO], icon: Scale },
+  { key: EtapaFluxoClinico.AGUARDANDO_ENTREGA, label: ETAPA_FLUXO_LABEL[EtapaFluxoClinico.AGUARDANDO_ENTREGA], icon: Package },
   { key: EtapaFluxoClinico.NAO_ELEGIVEL, label: ETAPA_FLUXO_LABEL[EtapaFluxoClinico.NAO_ELEGIVEL], icon: XCircle },
   { key: EtapaFluxoClinico.CONCLUIDO, label: ETAPA_FLUXO_LABEL[EtapaFluxoClinico.CONCLUIDO], icon: CheckCircle2 },
 ];
@@ -37,8 +36,7 @@ const ETAPA_COLOR: Record<EtapaFluxoClinico, string> = {
   [EtapaFluxoClinico.ENTREVISTA_AGENDADA]: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
   [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
   [EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA]: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
-  [EtapaFluxoClinico.AGUARDANDO_ENVIO_JURIDICO]: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
-  [EtapaFluxoClinico.PROCESSO_JURIDICO]: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
+  [EtapaFluxoClinico.AGUARDANDO_ENTREGA]: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
   [EtapaFluxoClinico.NAO_ELEGIVEL]: 'bg-red-500/10 text-red-600 border-red-500/20',
   [EtapaFluxoClinico.CONCLUIDO]: 'bg-accent-gold/15 text-amber-700 border-accent-gold/30',
 };

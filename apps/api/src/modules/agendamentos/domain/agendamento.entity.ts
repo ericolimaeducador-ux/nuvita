@@ -19,9 +19,6 @@ export enum TipoAgendamento {
   // Enfermagem
   ATENDIMENTO_ENFERMAGEM = 'atendimento_enfermagem',
   PROCEDIMENTO_ENFERMAGEM = 'procedimento_enfermagem',
-  // Juridico
-  ATENDIMENTO_JURIDICO = 'atendimento_juridico',
-  AUDIENCIA = 'audiencia',
   // Fluxo clínico
   ENTREVISTA = 'entrevista',
   // Psicologia
@@ -33,7 +30,7 @@ export interface Agendamento {
   id: string;
   clinicaId: string;
   pacienteId: string;
-  /** Profissional responsavel (medico, enfermeiro ou advogado conforme a modalidade). */
+  /** Profissional responsavel (medico ou enfermeiro conforme a modalidade). */
   medicoId: string;
   modalidade: ModalidadeAtendimento;
   dataHoraInicio: Date;

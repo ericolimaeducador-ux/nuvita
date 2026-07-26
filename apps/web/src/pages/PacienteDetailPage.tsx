@@ -28,21 +28,21 @@ import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/auth/AuthContext';
 import {
   pacientesApi, prontuariosApi, agendaApi, documentosApi,
-  laudoMedicoApi, avaliacaoIUApi, entregasApi, processoJuridicoApi,
-  anotacaoJuridicaApi, checklistDocumentosApi, followUpApi,
+  laudoMedicoApi, avaliacaoIUApi, entregasApi,
+  checklistDocumentosApi, followUpApi,
   produtosApi, observacoesPacienteApi,
 } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { formatCpf, formatData, idade, toItems, formatBRL, formatEndereco } from '@/utils';
 import {
   Sexo, SEXO_LABEL, ProjetoPaciente, PROJETO_LABEL, STATUS_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_LABEL,
-  STATUS_PROCESSO_LABEL, StatusEntrega, Modulo, Papel,
+  StatusEntrega, Modulo, Papel,
   StatusChecklistDocumento, STATUS_CHECKLIST_DOCUMENTO_LABEL, TIPO_DOCUMENTO_LABEL,
   StatusElegibilidade, STATUS_ELEGIBILIDADE_LABEL,
   StatusLaudoMedico, STATUS_LAUDO_MEDICO_LABEL,
   StatusAgendamento, TipoAtendimento, TIPO_ATENDIMENTO_POR_AGENDAMENTO,
   type Agendamento, type Prontuario, type Documento, type Paciente,
-  type LaudoMedico, type AvaliacaoIU, type Entrega, type ProcessoJuridico, type FollowUp,
+  type LaudoMedico, type AvaliacaoIU, type Entrega, type FollowUp,
 } from '@/types';
 
 function DescItem({ label, value }: { label: string; value: string }) {
@@ -168,7 +168,6 @@ export function PacienteDetailPage() {
     onError: (e) => toast.error('Erro ao excluir', apiErrorMessage(e)),
   });
   const entregasQ = useQuery({ queryKey: ['entregas', 'paciente', id], queryFn: () => entregasApi.listByPaciente(id), enabled: !!id });
-  const processosQ = useQuery({ queryKey: ['processos', 'paciente', id], queryFn: () => processoJuridicoApi.listByPaciente(id), enabled: !!id });
   const produtosQ = useQuery({ queryKey: ['produtos'], queryFn: () => produtosApi.list() });
 
   const produtos = (produtosQ.data ?? []).filter((p) => p.projeto === pacQ.data?.projeto);
@@ -497,34 +496,6 @@ export function PacienteDetailPage() {
         </Secao>
       )}
 
-      {/* Processos jurídicos — fora do escopo do psicólogo */}
-      {!ehPsicologo && (
-        <Secao icon={<Scale className="h-4 w-4" />} titulo="Processos jurídicos" contagem={processosQ.data?.length} defaultOpen={false}>
-          {processosQ.isLoading ? (
-            <Skeleton className="h-20 w-full" />
-          ) : (processosQ.data ?? []).length === 0 ? (
-            <Vazio>Nenhum processo jurídico.</Vazio>
-          ) : (
-            <Table>
-              <TableHeader><TableRow><TableHead>Nº do processo</TableHead><TableHead>Tribunal</TableHead><TableHead>Status</TableHead><TableHead>Protocolo</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {(processosQ.data as ProcessoJuridico[]).map((pr) => (
-                  <TableRow key={pr.id}>
-                    <TableCell className="font-medium">{pr.numeroProcesso || '—'}</TableCell>
-                    <TableCell className="text-muted-foreground">{pr.tribunal || '—'}</TableCell>
-                    <TableCell><Badge>{STATUS_PROCESSO_LABEL[pr.status] ?? pr.status}</Badge></TableCell>
-                    <TableCell className="text-muted-foreground">{pr.dataProtocolo ? dayjs(pr.dataProtocolo).format('DD/MM/YYYY') : '—'}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </Secao>
-      )}
-
-      {/* Anotações jurídicas (campo livre do advogado, fora do prontuário clínico) */}
-      {!ehPsicologo && permissoes.includes(Modulo.PROCESSOS) && <AnotacoesJuridicasSecao pacienteId={id} />}
-
       {/* Histórico de agenda — fora do escopo do psicólogo (agenda dele fica em Atendimento Psicológico) */}
       {!ehPsicologo && (
         <Secao icon={<CalendarClock className="h-4 w-4" />} titulo="Histórico de agenda" contagem={toItems<Agendamento>(agendaQ.data as never).length} defaultOpen={false}>
@@ -679,68 +650,6 @@ function TabelaEntregas({ entregas }: { entregas: Entrega[] }) {
         ))}
       </TableBody>
     </Table>
-  );
-}
-
-/** Timeline de texto livre do jurídico sobre o paciente — separada do prontuário
- * clínico (assinado/imutável), para não misturar anotação jurídica com SOAP. */
-function AnotacoesJuridicasSecao({ pacienteId }: { pacienteId: string }) {
-  const qc = useQueryClient();
-  const [texto, setTexto] = useState('');
-
-  const listQ = useQuery({
-    queryKey: ['anotacoes-juridicas', pacienteId],
-    queryFn: () => anotacaoJuridicaApi.listByPaciente(pacienteId),
-  });
-
-  const createMut = useMutation({
-    mutationFn: () => anotacaoJuridicaApi.create({ pacienteId, texto: texto.trim() }),
-    onSuccess: () => {
-      setTexto('');
-      void qc.invalidateQueries({ queryKey: ['anotacoes-juridicas', pacienteId] });
-    },
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
-  });
-
-  return (
-    <Secao icon={<Scale className="h-4 w-4" />} titulo="Anotações jurídicas" contagem={listQ.data?.length} defaultOpen={false}>
-      <div className="space-y-3">
-        <div className="space-y-2">
-          <Textarea
-            rows={3}
-            placeholder="Registre aqui observações jurídicas sobre o caso do paciente…"
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-          />
-          <div className="flex justify-end">
-            <Button
-              size="sm"
-              disabled={texto.trim().length < 3 || createMut.isPending}
-              onClick={() => createMut.mutate()}
-            >
-              {createMut.isPending ? 'Salvando…' : 'Adicionar anotação'}
-            </Button>
-          </div>
-        </div>
-
-        {listQ.isLoading ? (
-          <Skeleton className="h-16 w-full" />
-        ) : (listQ.data ?? []).length === 0 ? (
-          <Vazio>Nenhuma anotação jurídica registrada.</Vazio>
-        ) : (
-          <div className="space-y-2">
-            {(listQ.data ?? []).map((a) => (
-              <div key={a.id} className="glass rounded-lg p-3">
-                <p className="text-xs text-muted-foreground mb-1">
-                  {dayjs(a.criadoEm).format('DD/MM/YYYY HH:mm')}
-                </p>
-                <p className="text-sm text-foreground whitespace-pre-wrap">{a.texto}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </Secao>
   );
 }
 

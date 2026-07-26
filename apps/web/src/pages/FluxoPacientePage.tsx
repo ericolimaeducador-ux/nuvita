@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import dayjs from 'dayjs';
 import {
-  ArrowLeft, ClipboardList, UserCheck, Stethoscope, Scale, Package,
+  ArrowLeft, ClipboardList, UserCheck, Stethoscope, Package,
   Plus, CheckCircle2, Clock, ChevronDown, ChevronUp, Printer, CalendarClock, FileText, Trash2,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   pacientesApi, avaliacaoIUApi, followUpApi, laudoMedicoApi,
-  processoJuridicoApi, entregasApi, produtosApi, agendaApi, checklistDocumentosApi,
+  entregasApi, produtosApi, agendaApi, checklistDocumentosApi,
 } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toast } from '@/components/ui/use-toast';
@@ -30,14 +30,14 @@ import { NovaAvaliacaoIUDialog, NovoLaudoDialog, ConfirmExcluirDialog } from '@/
 import { formatData, toItems } from '@/utils';
 import {
   Papel, LocalAtendimento, PerfilCliente, Destreza, TipoIU, EncaminhamentoIU,
-  StatusElegibilidade, StatusProcesso, OrigemEntrega,
+  StatusElegibilidade, OrigemEntrega,
   LOCAL_LABEL, PERFIL_LABEL, DESTREZA_LABEL, TIPO_IU_LABEL, ENCAMINHAMENTO_LABEL,
-  STATUS_ELEGIBILIDADE_LABEL, STATUS_PROCESSO_LABEL, ORIGEM_ENTREGA_LABEL,
+  STATUS_ELEGIBILIDADE_LABEL, ORIGEM_ENTREGA_LABEL,
   EtapaFluxoClinico, ETAPA_FLUXO_LABEL, calcularPrazoEtapa, PROXIMA_ETAPA_MANUAL, PAPEIS_AVANCO_MANUAL,
   ModalidadeAtendimento, TipoAgendamento, StatusAgendamento, STATUS_AGENDAMENTO_LABEL,
   StatusChecklistDocumento, STATUS_CHECKLIST_DOCUMENTO_LABEL,
   StatusLaudoMedico, STATUS_LAUDO_MEDICO_LABEL,
-  type AvaliacaoIU, type FollowUp, type LaudoMedico, type ProcessoJuridico, type Entrega, type Produto,
+  type AvaliacaoIU, type FollowUp, type LaudoMedico, type Entrega, type Produto,
   type Agendamento, type ChecklistDocumentoItem,
 } from '@/types';
 
@@ -66,11 +66,6 @@ export function FluxoPacientePage() {
     queryFn: () => laudoMedicoApi.listByPaciente(pacienteId!),
     enabled: !!pacienteId,
   });
-  const processosQ = useQuery({
-    queryKey: ['processo-juridico', pacienteId],
-    queryFn: () => processoJuridicoApi.listByPaciente(pacienteId!),
-    enabled: !!pacienteId,
-  });
   const entregasQ = useQuery({
     queryKey: ['entregas', pacienteId],
     queryFn: () => entregasApi.listByPaciente(pacienteId!),
@@ -85,7 +80,6 @@ export function FluxoPacientePage() {
   const avaliacoes = avaliacoesQ.data ?? [];
   const followups = followupsQ.data ?? [];
   const laudos = laudosQ.data ?? [];
-  const processos = processosQ.data ?? [];
   const entregas = entregasQ.data ?? [];
   const produtos = (produtosQ.data ?? []).filter((p) => p.projeto === paciente?.projeto);
 
@@ -194,36 +188,17 @@ export function FluxoPacientePage() {
           />
         </Passo>
 
-        {/* Passo 6: Processo Jurídico */}
+        {/* Passo 6: Entregas */}
         <Passo
           numero={6}
-          titulo="Processo Jurídico"
-          subtitulo="Advogado monta e acompanha o processo judicial"
-          icon={Scale}
-          concluido={processos.some((p) => p.status === StatusProcesso.GANHO)}
-          visivel={laudos.some((l) => !!l.assinado)}
-        >
-          <ProcessoJuridicoStep
-            pacienteId={pacienteId!}
-            avaliacaoId={avaliacoes[0]?.id}
-            laudoId={laudos[0]?.id}
-            processos={processos}
-            user={user}
-          />
-        </Passo>
-
-        {/* Passo 7: Entregas */}
-        <Passo
-          numero={7}
           titulo="Entregas"
           subtitulo="Registro de produtos enviados ao paciente"
           icon={Package}
           concluido={entregas.some((e) => e.status === 'entregue')}
-          visivel={processos.length > 0 || laudos.length > 0}
+          visivel={laudos.length > 0}
         >
           <EntregasStep
             pacienteId={pacienteId!}
-            processoId={processos[0]?.id}
             avaliacaoId={avaliacoes[0]?.id}
             entregas={entregas}
             produtos={produtos}
@@ -767,179 +742,9 @@ function LaudoMedicoStep({ pacienteId, avaliacaoId, produtoIndicado, laudos, pro
   );
 }
 
-// ---- Passo 4: Processo Jurídico ----
-function ProcessoJuridicoStep({ pacienteId, avaliacaoId, laudoId, processos, user }: {
-  pacienteId: string; avaliacaoId?: string; laudoId?: string;
-  processos: ProcessoJuridico[]; user: ReturnType<typeof useAuth>['user'];
-}) {
-  const [open, setOpen] = useState(false);
-  const [statusOpen, setStatusOpen] = useState(false);
-  const [docOpen, setDocOpen] = useState(false);
-  const [processoSelecionado, setProcessoSelecionado] = useState<string>('');
-  const qc = useQueryClient();
-  const { register, handleSubmit, reset } = useForm<Record<string, unknown>>();
-  const statusForm = useForm<Record<string, unknown>>();
-  const docForm = useForm<{ nome: string; url: string; tipo: string }>();
-
-  const addDocMut = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: { nome: string; url: string; tipo: string } }) =>
-      processoJuridicoApi.addDocumento(id, payload),
-    onSuccess: () => {
-      toast.success('Documento adicionado.');
-      setDocOpen(false); docForm.reset();
-      void qc.invalidateQueries({ queryKey: ['processo-juridico', pacienteId] });
-    },
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
-  });
-
-  const mut = useMutation({
-    mutationFn: (payload: Record<string, unknown>) => processoJuridicoApi.create(payload),
-    onSuccess: () => {
-      toast.success('Processo criado.');
-      setOpen(false); reset();
-      void qc.invalidateQueries({ queryKey: ['processo-juridico', pacienteId] });
-    },
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
-  });
-
-  const statusMut = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: Record<string, unknown> }) =>
-      processoJuridicoApi.updateStatus(id, payload),
-    onSuccess: () => {
-      toast.success('Status atualizado.');
-      setStatusOpen(false);
-      void qc.invalidateQueries({ queryKey: ['processo-juridico', pacienteId] });
-    },
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
-  });
-
-  const podeCriar = user?.papel === Papel.ADVOGADO || user?.papel === Papel.ADMIN;
-
-  return (
-    <div className="space-y-3">
-      {processos.length === 0 && <p className="text-sm text-muted-foreground">Nenhum processo registrado.</p>}
-      {processos.map((p) => (
-        <div key={p.id} className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {p.numeroProcesso && <span className="text-sm font-medium">{p.numeroProcesso}</span>}
-              <StatusBadge value={p.status} labels={STATUS_PROCESSO_LABEL} />
-            </div>
-            {podeCriar && (
-              <Button size="sm" variant="outline" onClick={() => { setProcessoSelecionado(p.id); setStatusOpen(true); }}>
-                Atualizar status
-              </Button>
-            )}
-          </div>
-          {p.tribunal && <p className="text-xs text-muted-foreground">Tribunal: {p.tribunal}</p>}
-          {p.dataProtocolo && <p className="text-xs text-muted-foreground">Protocolado: {dayjs(p.dataProtocolo).format('DD/MM/YYYY')}</p>}
-          {p.observacoes && <p className="text-xs text-muted-foreground">{p.observacoes}</p>}
-          {/* Documentos */}
-          {(p.documentos ?? []).length > 0 && (
-            <div className="mt-2 space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">Documentos:</p>
-              {p.documentos.map((d, i) => (
-                <a key={i} href={d.url} target="_blank" rel="noreferrer"
-                  className="flex items-center gap-1.5 text-xs text-primary hover:underline">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                  {d.nome} <span className="text-muted-foreground">({d.tipo})</span>
-                </a>
-              ))}
-            </div>
-          )}
-          {podeCriar && (
-            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-muted-foreground mt-1"
-              onClick={() => { setProcessoSelecionado(p.id); setDocOpen(true); }}>
-              <Plus className="h-3 w-3 mr-1" /> Adicionar documento
-            </Button>
-          )}
-        </div>
-      ))}
-      {podeCriar && (
-        <Button size="sm" onClick={() => setOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Abrir processo
-        </Button>
-      )}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Abrir Processo Jurídico</DialogTitle></DialogHeader>
-          <form onSubmit={handleSubmit((v) => mut.mutate({ ...v, pacienteId, avaliacaoIuId: avaliacaoId, laudoMedicoId: laudoId, clinicaId: user?.clinicaId }))} className="space-y-4">
-            <div className="space-y-1">
-              <Label>Observações iniciais</Label>
-              <Textarea rows={3} placeholder="Resumo do caso para abertura do processo..." {...register('observacoes')} />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={mut.isPending}>{mut.isPending ? 'Criando...' : 'Abrir processo'}</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={docOpen} onOpenChange={setDocOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Adicionar Documento ao Processo</DialogTitle></DialogHeader>
-          <form onSubmit={docForm.handleSubmit((v) => addDocMut.mutate({ id: processoSelecionado, payload: v }))} className="space-y-4">
-            <div className="space-y-1">
-              <Label>Nome do documento</Label>
-              <Input placeholder="Ex: Petição inicial" {...docForm.register('nome', { required: true })} />
-            </div>
-            <div className="space-y-1">
-              <Label>URL (Google Drive, Dropbox, etc.)</Label>
-              <Input placeholder="https://..." {...docForm.register('url', { required: true })} />
-            </div>
-            <div className="space-y-1">
-              <Label>Tipo</Label>
-              <Input placeholder="Ex: petição, procuração, laudo, RG..." {...docForm.register('tipo', { required: true })} />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDocOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={addDocMut.isPending}>{addDocMut.isPending ? 'Salvando...' : 'Adicionar'}</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={statusOpen} onOpenChange={setStatusOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Atualizar Status do Processo</DialogTitle></DialogHeader>
-          <form onSubmit={statusForm.handleSubmit((v) => statusMut.mutate({ id: processoSelecionado, payload: v }))} className="space-y-4">
-            <div className="space-y-1">
-              <Label>Novo status</Label>
-              <Select onValueChange={(v) => statusForm.setValue('status', v)}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {Object.values(StatusProcesso).map((s) => (
-                    <SelectItem key={s} value={s}>{STATUS_PROCESSO_LABEL[s]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>Número do processo</Label>
-              <Input placeholder="0000000-00.0000.0.00.0000" {...statusForm.register('numeroProcesso')} />
-            </div>
-            <div className="space-y-1">
-              <Label>Tribunal / Vara</Label>
-              <Input {...statusForm.register('tribunal')} />
-            </div>
-            <div className="space-y-1">
-              <Label>Observações</Label>
-              <Textarea rows={2} {...statusForm.register('observacoes')} />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setStatusOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={statusMut.isPending}>{statusMut.isPending ? 'Salvando...' : 'Salvar'}</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-// ---- Passo 5: Entregas ----
-function EntregasStep({ pacienteId, processoId, avaliacaoId, entregas, produtos, user }: {
-  pacienteId: string; processoId?: string; avaliacaoId?: string;
+// ---- Passo 4: Entregas ----
+function EntregasStep({ pacienteId, avaliacaoId, entregas, produtos, user }: {
+  pacienteId: string; avaliacaoId?: string;
   entregas: Entrega[]; produtos: Produto[]; user: ReturnType<typeof useAuth>['user'];
 }) {
   const [open, setOpen] = useState(false);
@@ -1008,7 +813,7 @@ function EntregasStep({ pacienteId, processoId, avaliacaoId, entregas, produtos,
             }));
             const total = itens.reduce((s, i) => s + i.valorTotalCentavos, 0);
             mut.mutate({
-              pacienteId, processoJuridicoId: processoId, avaliacaoIuId: avaliacaoId, clinicaId: user?.clinicaId,
+              pacienteId, avaliacaoIuId: avaliacaoId, clinicaId: user?.clinicaId,
               dataEntrega: v.dataEntrega, origem: v.origem,
               notaFiscal: v.notaFiscal, observacoes: v.observacoes,
               itens, valorTotalCentavos: total,
@@ -1304,12 +1109,6 @@ function StatusBadge({ value, labels }: { value: string; labels: Record<string, 
     em_avaliacao: 'outline',
     elegivel: 'success',
     nao_elegivel: 'destructive',
-    em_preparacao: 'outline',
-    protocolado: 'outline',
-    em_andamento: 'outline',
-    ganho: 'success',
-    perdido: 'destructive',
-    arquivado: 'secondary',
   };
   return (
     <Badge variant={(colorMap[value] as 'outline' | 'success' | 'destructive' | 'secondary') ?? 'outline'} className="text-xs">

@@ -188,7 +188,7 @@ export class LaudoMedicoService {
     if (!signed) throw new ConflictException('Não foi possível assinar o laudo.');
 
     await this.pacientesService.avancarEtapaFluxo(
-      resolved, signed.pacienteId, EtapaFluxoClinico.AGUARDANDO_ENVIO_JURIDICO,
+      resolved, signed.pacienteId, EtapaFluxoClinico.AGUARDANDO_ENTREGA,
       { ip: 'internal', userAgent: 'pipeline-clinico', user },
     );
 

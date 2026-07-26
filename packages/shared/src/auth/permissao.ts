@@ -16,7 +16,6 @@ export enum Modulo {
   NOTIFICACOES = 'NOTIFICACOES',
   TELEMEDICINA = 'TELEMEDICINA',
   LAUDOS = 'LAUDOS',
-  PROCESSOS = 'PROCESSOS',
   ENTREGAS = 'ENTREGAS',
   AVALIACOES = 'AVALIACOES',
   ANALYTICS = 'ANALYTICS',
@@ -39,7 +38,6 @@ export const MODULO_LABEL: Record<Modulo, string> = {
   [Modulo.NOTIFICACOES]: 'Notificações',
   [Modulo.TELEMEDICINA]: 'Telemedicina',
   [Modulo.LAUDOS]: 'Laudos e relatórios',
-  [Modulo.PROCESSOS]: 'Processos jurídicos',
   [Modulo.ENTREGAS]: 'Insumos / entregas',
   [Modulo.AVALIACOES]: 'Avaliações de IU',
   [Modulo.ANALYTICS]: 'Relatórios / analytics',
@@ -57,7 +55,7 @@ export const PERMISSOES_PADRAO_POR_PAPEL: Record<Papel, Modulo[]> = {
   [Papel.SUPER_ADMIN]: TODOS_MODULOS,
   [Papel.ADMIN]: [
     M.DASHBOARD, M.PACIENTES, M.AGENDA, M.PRONTUARIOS, M.DOCUMENTOS, M.FINANCEIRO,
-    M.NOTIFICACOES, M.TELEMEDICINA, M.LAUDOS, M.PROCESSOS, M.ENTREGAS, M.AVALIACOES,
+    M.NOTIFICACOES, M.TELEMEDICINA, M.LAUDOS, M.ENTREGAS, M.AVALIACOES,
     M.ANALYTICS, M.FLUXO_CLINICO, M.CLINICA,
   ],
   [Papel.MEDICO]: [
@@ -67,10 +65,6 @@ export const PERMISSOES_PADRAO_POR_PAPEL: Record<Papel, Modulo[]> = {
   [Papel.ENFERMEIRO]: [
     M.DASHBOARD, M.PACIENTES, M.AGENDA, M.PRONTUARIOS, M.DOCUMENTOS, M.AVALIACOES,
     M.LAUDOS, M.ENTREGAS, M.FLUXO_CLINICO,
-  ],
-  [Papel.ADVOGADO]: [
-    M.DASHBOARD, M.PACIENTES, M.PRONTUARIOS, M.PROCESSOS, M.ENTREGAS, M.DOCUMENTOS,
-    M.FLUXO_CLINICO,
   ],
   // Atendimento psicológico é um extra do sistema: só o psicólogo enxerga o
   // módulo por padrão; para outros usuários (ex.: admin da clínica demo) a

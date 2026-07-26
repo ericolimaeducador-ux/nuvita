@@ -13,9 +13,6 @@ export class EntregaMongo {
   pacienteId!: string;
 
   @Prop({ index: true })
-  processoJuridicoId?: string;
-
-  @Prop({ index: true })
   avaliacaoIuId?: string;
 
   @Prop({ required: true, index: true })

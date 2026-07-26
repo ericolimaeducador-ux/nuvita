@@ -1,8 +1,8 @@
 import { Papel } from '../auth/papel.enum';
 
 /**
- * Etapas do pipeline clínico de incontinência urinária (cadastro -> alta
- * judicializada). Fonte única usada pelo backend para decidir transições; o
+ * Etapas do pipeline clínico de incontinência urinária (cadastro -> entrega
+ * de insumos). Fonte única usada pelo backend para decidir transições; o
  * frontend mantém uma cópia manual em apps/web/src/types.ts (mesmo padrão já
  * usado para todo enum de domínio no projeto).
  */
@@ -13,8 +13,7 @@ export enum EtapaFluxoClinico {
   ENTREVISTA_AGENDADA = 'entrevista_agendada',
   AGUARDANDO_DOCUMENTOS = 'aguardando_documentos',
   AGUARDANDO_CONSULTA_MEDICA = 'aguardando_consulta_medica',
-  AGUARDANDO_ENVIO_JURIDICO = 'aguardando_envio_juridico',
-  PROCESSO_JURIDICO = 'processo_juridico',
+  AGUARDANDO_ENTREGA = 'aguardando_entrega',
   // Rank alto de propósito (perto do fim, não logo após AVALIACAO_IU): assim
   // a comparação de rank em podeAvancarPara() já trata esta etapa como
   // terminal, sem precisar de um caso especial na função de comparação.
@@ -30,8 +29,7 @@ export const ORDEM_ETAPAS_FLUXO: EtapaFluxoClinico[] = [
   EtapaFluxoClinico.ENTREVISTA_AGENDADA,
   EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS,
   EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA,
-  EtapaFluxoClinico.AGUARDANDO_ENVIO_JURIDICO,
-  EtapaFluxoClinico.PROCESSO_JURIDICO,
+  EtapaFluxoClinico.AGUARDANDO_ENTREGA,
   EtapaFluxoClinico.NAO_ELEGIVEL,
   EtapaFluxoClinico.CONCLUIDO,
 ];
@@ -60,18 +58,17 @@ export const PRAZO_DIAS_POR_ETAPA: Partial<Record<EtapaFluxoClinico, number>> = 
  *   Follow-up, que já é uma ação manual explícita — um botão genérico
  *   "avançar" seria ambíguo aqui.
  * - AGUARDANDO_CONSULTA_MEDICA: o gatilho real é criar o Laudo Médico
- *   (CID-10 + justificativa médica) — documento que sustenta a ação
- *   judicial; pular sem ele inviabiliza o processo mais adiante.
- * - PROCESSO_JURIDICO -> CONCLUIDO: exige confirmar a entrega definitiva E o
- *   processo estar GANHO (consequência financeira/jurídica formal demais
- *   para um botão genérico) — só a rota automática faz essa transição.
+ *   (CID-10 + justificativa médica) — documento que sustenta a entrega dos
+ *   insumos; pular sem ele inviabiliza a etapa seguinte.
+ * - AGUARDANDO_ENTREGA -> CONCLUIDO: exige confirmar a entrega definitiva dos
+ *   insumos (nota fiscal/registro formal demais para um botão genérico) — só
+ *   a rota automática (EntregasService.confirmarEntrega) faz essa transição.
  * - NAO_ELEGIVEL e CONCLUIDO: terminais, não têm próxima etapa.
  */
 export const PROXIMA_ETAPA_MANUAL: Partial<Record<EtapaFluxoClinico, EtapaFluxoClinico>> = {
   [EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO]: EtapaFluxoClinico.ENTREVISTA_AGENDADA,
   [EtapaFluxoClinico.ENTREVISTA_AGENDADA]: EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS,
   [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA,
-  [EtapaFluxoClinico.AGUARDANDO_ENVIO_JURIDICO]: EtapaFluxoClinico.PROCESSO_JURIDICO,
 };
 
 /** Quem pode acionar o avanço manual a partir de cada etapa (ADMIN sempre pode, adicionado no backend). */
@@ -79,7 +76,6 @@ export const PAPEIS_AVANCO_MANUAL: Partial<Record<EtapaFluxoClinico, Papel[]>> =
   [EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO]: [Papel.SECRETARIA],
   [EtapaFluxoClinico.ENTREVISTA_AGENDADA]: [Papel.SECRETARIA],
   [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: [Papel.SECRETARIA],
-  [EtapaFluxoClinico.AGUARDANDO_ENVIO_JURIDICO]: [Papel.ADVOGADO],
 };
 
 function rank(etapa: EtapaFluxoClinico): number {

@@ -21,8 +21,7 @@ const ETAPA = {
   AGUARDANDO_ATENDIMENTO: 'aguardando_atendimento',
   AVALIACAO_IU: 'avaliacao_iu',
   APTO_AGUARDANDO_CONTATO: 'apto_aguardando_contato',
-  AGUARDANDO_ENVIO_JURIDICO: 'aguardando_envio_juridico',
-  PROCESSO_JURIDICO: 'processo_juridico',
+  AGUARDANDO_ENTREGA: 'aguardando_entrega',
   NAO_ELEGIVEL: 'nao_elegivel',
   CONCLUIDO: 'concluido',
 };
@@ -35,7 +34,6 @@ async function main() {
   const avaliacoes = db.collection('avaliacoes_iu');
   const followups = db.collection('followups');
   const laudos = db.collection('laudos_medicos');
-  const processos = db.collection('processos_juridicos');
   const entregas = db.collection('entregas');
 
   const semEtapa = await pacientes.find({ etapaFluxo: { $exists: false } }).toArray();
@@ -45,9 +43,8 @@ async function main() {
   for (const p of semEtapa) {
     const pacienteId = p._id.toString();
 
-    const [entregaEntregue, processo, laudo, followupRecente, avaliacao] = await Promise.all([
+    const [entregaEntregue, laudo, followupRecente, avaliacao] = await Promise.all([
       entregas.findOne({ pacienteId, status: 'entregue' }),
-      processos.findOne({ pacienteId }, { sort: { criadoEm: -1 } }),
       laudos.findOne({ pacienteId }, { sort: { dataLaudo: -1 } }),
       followups.findOne({ pacienteId }, { sort: { dataFollowup: -1 } }),
       avaliacoes.findOne({ pacienteId }, { sort: { dataAtendimento: -1 } }),
@@ -56,14 +53,11 @@ async function main() {
     let etapa = ETAPA.AGUARDANDO_ATENDIMENTO;
     let desde = p.criadoEm;
 
-    if (entregaEntregue && processo) {
+    if (entregaEntregue) {
       etapa = ETAPA.CONCLUIDO;
       desde = entregaEntregue.atualizadoEm ?? entregaEntregue.dataEntrega;
-    } else if (processo) {
-      etapa = ETAPA.PROCESSO_JURIDICO;
-      desde = processo.criadoEm;
     } else if (laudo) {
-      etapa = ETAPA.AGUARDANDO_ENVIO_JURIDICO;
+      etapa = ETAPA.AGUARDANDO_ENTREGA;
       desde = laudo.dataLaudo ?? laudo.criadoEm;
     } else if (followupRecente?.statusElegibilidade === 'nao_elegivel') {
       etapa = ETAPA.NAO_ELEGIVEL;

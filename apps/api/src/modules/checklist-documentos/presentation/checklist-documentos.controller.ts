@@ -10,7 +10,7 @@ import { CreateChecklistDocumentoDto } from '../application/dto/create-checklist
 import { UpdateChecklistDocumentoDto } from '../application/dto/update-checklist-documento.dto';
 import { CriarChecklistPadraoDto } from '../application/dto/criar-checklist-padrao.dto';
 
-// Leitura (GET) fica aberta também aos profissionais (médico/enfermeiro/advogado)
+// Leitura (GET) fica aberta também aos profissionais (médico/enfermeiro)
 // — a tela de Pacientes e o Fluxo Clínico mostram este checklist pra eles.
 // Mutações continuam restritas a quem de fato conduz a documentação (secretaria/admin).
 const LEITURA_CHECKLIST = [...PAPEIS_PROFISSIONAIS, Papel.ADMIN, Papel.SECRETARIA];

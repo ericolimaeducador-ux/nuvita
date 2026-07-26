@@ -30,13 +30,13 @@ da telemedicina ao fornecimento de produtos pelo SUS.
 ## 💡 O que é o Nuvita
 
 O **Nuvita** é uma plataforma completa de gestão clínica na nuvem, projetada para
-clínicas e equipes multidisciplinares (médicos, enfermeiros, psicólogos, advogados
+clínicas e equipes multidisciplinares (médicos, enfermeiros, psicólogos
 e secretariado). Além dos módulos clássicos de gestão — pacientes, agenda,
 prontuário eletrônico, financeiro e telemedicina — o Nuvita implementa um fluxo
 especializado e único: o **pipeline de atendimento de incontinência urinária**,
 que acompanha o paciente da avaliação de enfermagem até o fornecimento do produto
 pelo SUS, passando por follow-up de elegibilidade, laudo médico assinado
-digitalmente, processo jurídico e entrega.
+digitalmente e entrega.
 
 Cada clínica é um **tenant isolado**: dados, usuários, agenda e financeiro são
 segregados por clínica, com um painel **super-admin** global para provisionamento
@@ -66,8 +66,7 @@ e gestão fina de permissões.
 | 1. Avaliação IU | `avaliacao-iu` | Enfermeiro preenche a ficha e indica o produto |
 | 2. Follow-up | `followup` | Enfermeiro acompanha e define **elegibilidade** |
 | 3. Laudo médico | `laudo-medico` | Médico emite e **assina** o laudo para solicitação ao SUS |
-| 4. Processo jurídico | `processo-juridico` + `anotacoes-juridicas` | Advogado protocola e acompanha a ação de fornecimento |
-| 5. Entrega | `entregas` | Registro dos produtos enviados ao paciente |
+| 4. Entrega | `entregas` | Registro dos produtos enviados ao paciente |
 
 Secretária e admin enxergam o pipeline (leitura); as **mutações são restritas ao
 papel responsável** por cada etapa. Laudo, ficha de avaliação e relatório NAT-JUS
@@ -76,7 +75,7 @@ com **timbre oficial** e prontas para PDF pelo navegador).
 
 ### Administração e acesso
 
-- **Papéis**: `SUPER_ADMIN`, `ADMIN`, `MEDICO`, `ENFERMEIRO`, `ADVOGADO`,
+- **Papéis**: `SUPER_ADMIN`, `ADMIN`, `MEDICO`, `ENFERMEIRO`, `PSICOLOGO`,
   `SECRETARIA`, `PACIENTE`.
 - **2FA TOTP obrigatório** para super-admin, admin e profissionais.
 - **Permissões por módulo** (`packages/shared/src/auth/permissao.ts`): cada papel
@@ -93,8 +92,7 @@ com **timbre oficial** e prontas para PDF pelo navegador).
 flowchart LR
     A["🩺 Avaliação IU<br/><i>enfermeiro</i>"] --> B["🔄 Follow-up<br/><i>enfermeiro</i>"]
     B -->|elegível| C["📝 Laudo médico<br/><i>médico assina</i>"]
-    C --> D["⚖️ Processo jurídico<br/><i>advogado</i>"]
-    D --> E["📦 Entrega<br/><i>produtos ao paciente</i>"]
+    C --> E["📦 Entrega<br/><i>produtos ao paciente</i>"]
     B -.->|não elegível| F["Encerramento"]
 ```
 
@@ -132,8 +130,8 @@ presentation/     Controllers, guards e decorators HTTP
 
 Módulos: `auth`, `clinicas`, `pacientes`, `agendamentos`, `prontuarios`,
 `documentos`, `notificacoes`, `financeiro`, `telemedicina`, `analytics`,
-`produtos`, `avaliacao-iu`, `followup`, `laudo-medico`, `processo-juridico`,
-`entregas`, `anotacoes-juridicas`, `checklist-documentos`,
+`produtos`, `avaliacao-iu`, `followup`, `laudo-medico`,
+`entregas`, `checklist-documentos`,
 `observacoes-paciente`, `super-admin`, `health` — mais `common/tenancy`
 (resolução de tenant por request) e `common/security`.
 
@@ -214,8 +212,8 @@ npm run dev -w @nuvita/web
 node scripts/bootstrap-direto.mjs
 
 # Popula o pipeline completo: 10 pacientes, avaliações, follow-ups,
-# laudos assinados, processos e entregas + equipe (médico, enfermeiro,
-# advogado, secretária). Requer BOOTSTRAP_SECRET no ambiente.
+# laudos assinados e entregas + equipe (médico, enfermeiro,
+# secretária). Requer BOOTSTRAP_SECRET no ambiente.
 BOOTSTRAP_SECRET="<o mesmo do .env>" node scripts/seed-fluxo-clinico.mjs
 ```
 

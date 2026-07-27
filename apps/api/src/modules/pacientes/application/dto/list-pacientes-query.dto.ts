@@ -53,4 +53,8 @@ export class ListPacientesQueryDto {
   @IsOptional()
   @IsEnum(ProjetoPaciente)
   projeto?: ProjetoPaciente;
+
+  @IsOptional()
+  @IsString()
+  representante?: string;
 }

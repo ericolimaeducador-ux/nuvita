@@ -57,6 +57,7 @@ export class PacientesService {
         : undefined,
       programaIU: dto.programaIU ?? false,
       projeto: dto.projeto,
+      representante: dto.representante,
     });
 
     await this.audit(AuditEvent.PATIENT_CREATED, context, {
@@ -109,6 +110,7 @@ export class PacientesService {
           programaIU: query.programaIU,
           projeto,
           projetoExcluir,
+          representante: query.representante,
           etapaFluxo: query.etapaFluxo,
           dataNascimento: query.dataNascimento,
           sort: query.sort,
@@ -121,6 +123,7 @@ export class PacientesService {
           programaIU: query.programaIU,
           projeto,
           projetoExcluir,
+          representante: query.representante,
           etapaFluxo: query.etapaFluxo,
           dataNascimento: query.dataNascimento,
           sort: query.sort,
@@ -133,6 +136,12 @@ export class PacientesService {
     });
 
     return result;
+  }
+
+  /** Valores de `representante` já usados na clínica, para autocomplete no cadastro/filtro. */
+  async listarRepresentantes(clinicaId: string | undefined, user: AuthTokenPayload): Promise<string[]> {
+    const resolvedClinicaId = this.resolveClinicaId(user, clinicaId);
+    return this.pacientes.listarRepresentantesDistintos(resolvedClinicaId);
   }
 
   async findOne(pacienteId: string, clinicaId: string | undefined, context: RequestAuditContext): Promise<Paciente> {

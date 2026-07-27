@@ -55,6 +55,8 @@ export interface Paciente {
   consentimentoLGPD?: ConsentimentoLGPD;
   programaIU?: boolean;
   projeto?: ProjetoPaciente;
+  /** Quem indicou/encaminhou o paciente. Texto livre, não criptografado — precisa ser filtrável/agregável. */
+  representante?: string;
   observacoes?: string;
   etapaFluxo: EtapaFluxoClinico;
   etapaFluxoDesde: Date;

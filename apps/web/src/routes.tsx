@@ -22,6 +22,7 @@ import { NatjusImpressaoPage } from '@/pages/NatjusImpressaoPage';
 import { ProntuarioImpressaoPage } from '@/pages/ProntuarioImpressaoPage';
 import { AtendimentoPsicologicoPage } from '@/pages/AtendimentoPsicologicoPage';
 import { SuperAdminPage } from '@/pages/SuperAdminPage';
+import { RelatoriosGerenciaisPage } from '@/pages/RelatoriosGerenciaisPage';
 import { Modulo, Papel } from '@/types';
 
 // O acesso é controlado por MÓDULO (permissões efetivas do usuário, ajustáveis
@@ -83,6 +84,9 @@ export function AppRoutes() {
           </Route>
           <Route element={<ProtectedRoute modulo={Modulo.CLINICA} />}>
             <Route path="/clinica" element={<ClinicaPage />} />
+          </Route>
+          <Route element={<ProtectedRoute modulo={Modulo.ANALYTICS} />}>
+            <Route path="/relatorios" element={<RelatoriosGerenciaisPage />} />
           </Route>
           <Route element={<ProtectedRoute roles={[Papel.SUPER_ADMIN]} modulo={Modulo.SUPER_ADMIN} />}>
             <Route path="/super-admin" element={<SuperAdminPage />} />

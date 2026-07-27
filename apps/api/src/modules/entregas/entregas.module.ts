@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { JwtAuthGuard } from '../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/presentation/guards/roles.guard';
 import { PacientesModule } from '../pacientes/pacientes.module';
+import { ProdutosModule } from '../produtos/produtos.module';
 import { EntregasService } from './application/entregas.service';
 import { EntregaMongoRepository } from './infrastructure/mongo/entrega-mongo.repository';
 import { EntregaMongo, EntregaSchema } from './infrastructure/mongo/entrega.schema';
@@ -13,6 +14,7 @@ import { EntregasController } from './presentation/entregas.controller';
   imports: [
     MongooseModule.forFeature([{ name: EntregaMongo.name, schema: EntregaSchema }]),
     PacientesModule,
+    ProdutosModule,
   ],
   controllers: [EntregasController],
   providers: [

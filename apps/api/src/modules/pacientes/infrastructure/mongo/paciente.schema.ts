@@ -61,6 +61,11 @@ export class PacienteMongo {
   @Prop({ enum: Object.values(ProjetoPaciente), index: true })
   projeto?: ProjetoPaciente;
 
+  // Quem indicou o paciente — não criptografado (mesmo racional de `projeto`)
+  // para permitir filtro/agregação e autocomplete por valores já usados.
+  @Prop({ trim: true, index: true })
+  representante?: string;
+
   // Texto livre, criptografado (mesmo padrão de telefone/email/endereco) —
   // qualquer profissional de atendimento pode escrever, ver PATCH /observacoes.
   @Prop()
@@ -100,3 +105,4 @@ PacienteSchema.index(
 );
 PacienteSchema.index({ clinicaId: 1, ativo: 1, criadoEm: -1, _id: -1 });
 PacienteSchema.index({ clinicaId: 1, etapaFluxo: 1, criadoEm: -1 });
+PacienteSchema.index({ clinicaId: 1, representante: 1 });

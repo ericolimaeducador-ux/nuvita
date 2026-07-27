@@ -60,11 +60,11 @@ export const PERMISSOES_PADRAO_POR_PAPEL: Record<Papel, Modulo[]> = {
   ],
   [Papel.MEDICO]: [
     M.DASHBOARD, M.PACIENTES, M.AGENDA, M.PRONTUARIOS, M.DOCUMENTOS, M.TELEMEDICINA,
-    M.LAUDOS, M.AVALIACOES, M.ENTREGAS, M.FLUXO_CLINICO,
+    M.LAUDOS, M.AVALIACOES, M.ENTREGAS, M.FLUXO_CLINICO, M.ANALYTICS,
   ],
   [Papel.ENFERMEIRO]: [
     M.DASHBOARD, M.PACIENTES, M.AGENDA, M.PRONTUARIOS, M.DOCUMENTOS, M.AVALIACOES,
-    M.LAUDOS, M.ENTREGAS, M.FLUXO_CLINICO,
+    M.LAUDOS, M.ENTREGAS, M.FLUXO_CLINICO, M.ANALYTICS,
   ],
   // Atendimento psicológico é um extra do sistema: só o psicólogo enxerga o
   // módulo por padrão; para outros usuários (ex.: admin da clínica demo) a
@@ -73,12 +73,14 @@ export const PERMISSOES_PADRAO_POR_PAPEL: Record<Papel, Modulo[]> = {
   // se confunde com o M.FINANCEIRO da clínica, que ele não enxerga.
   [Papel.PSICOLOGO]: [
     M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS, M.TELEMEDICINA,
-    M.ATENDIMENTO_PSICOLOGICO, M.FINANCEIRO_PSICOLOGIA,
+    M.ATENDIMENTO_PSICOLOGICO, M.FINANCEIRO_PSICOLOGIA, M.ANALYTICS,
   ],
   [Papel.SECRETARIA]: [
-    M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS, M.FINANCEIRO, M.NOTIFICACOES, M.FLUXO_CLINICO,
+    M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS, M.FINANCEIRO, M.NOTIFICACOES, M.FLUXO_CLINICO, M.ANALYTICS,
   ],
-  [Papel.PACIENTE]: [M.DASHBOARD],
+  // Este sistema não restringe visibilidade por papel: todo usuário vê tudo
+  // por padrão (super-admin ainda pode revogar módulo individualmente).
+  [Papel.PACIENTE]: [M.DASHBOARD, M.ANALYTICS],
 };
 
 /**

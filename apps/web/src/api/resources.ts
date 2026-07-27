@@ -75,11 +75,14 @@ export interface ListPacientesParams {
   clinicaId?: string;
   programaIU?: boolean;
   projeto?: ProjetoPaciente;
+  representante?: string;
   etapaFluxo?: EtapaFluxoClinico;
 }
 export const pacientesApi = {
   list: (params: ListPacientesParams = {}) =>
     api.get<PageResult<Paciente>>('/pacientes', { params }).then((r) => r.data),
+  listarRepresentantes: () =>
+    api.get<string[]>('/pacientes/representantes').then((r) => r.data),
   get: (id: string) => api.get<Paciente>(`/pacientes/${id}`).then((r) => r.data),
   create: (payload: Record<string, unknown>) =>
     api.post<Paciente>('/pacientes', payload).then((r) => r.data),
@@ -466,4 +469,48 @@ export const superAdminApi = {
     api.get<{ items: ClinicaAdmin[]; total: number }>('/super-admin/clinicas').then((r) => r.data),
   updateClinica: (id: string, payload: UpdateClinicaPayload) =>
     api.patch<ClinicaAdmin>(`/super-admin/clinicas/${id}`, payload).then((r) => r.data),
+};
+
+// ---------- Analytics / Relatórios Gerenciais ----------
+export interface AnalyticsPeriodParams {
+  clinicaId?: string;
+  dataInicio?: string;
+  dataFim?: string;
+}
+
+export interface DashboardPacientes {
+  totalAtivos: number;
+  novosPorMes: Array<{ _id: { ano: number; mes: number }; total: number }>;
+  porSexo: Array<{ _id: string | null; total: number }>;
+}
+
+export interface EntregaNoPeriodo {
+  pacienteId: string;
+  pacienteNome: string;
+  dataEntrega: string;
+  status: string;
+  itens: Array<{ codigo: number; descricao: string; quantidade: number; categoria?: string }>;
+}
+
+export interface PacienteAguardandoRelatorio {
+  pacienteId: string;
+  pacienteNome: string;
+  criadoEm: string;
+}
+
+export const analyticsApi = {
+  pacientes: (params: AnalyticsPeriodParams = {}) =>
+    api.get<DashboardPacientes>('/analytics/pacientes', { params }).then((r) => r.data),
+  pacientesPorCateter: (params: AnalyticsPeriodParams = {}) =>
+    api.get<Array<{ _id: number; total: number }>>('/analytics/pacientes-por-cateter', { params }).then((r) => r.data),
+  pacientesPorRepresentante: (params: AnalyticsPeriodParams = {}) =>
+    api.get<Array<{ _id: string; total: number }>>('/analytics/pacientes-por-representante', { params }).then((r) => r.data),
+  entregasNoMes: (params: AnalyticsPeriodParams = {}) =>
+    api.get<EntregaNoPeriodo[]>('/analytics/entregas-no-mes', { params }).then((r) => r.data),
+  sondasNoMes: (params: AnalyticsPeriodParams = {}) =>
+    api.get<{ totalQuantidade: number }>('/analytics/sondas-no-mes', { params }).then((r) => r.data),
+  aguardandoRelatorio: (params: AnalyticsPeriodParams = {}) =>
+    api.get<PacienteAguardandoRelatorio[]>('/analytics/aguardando-relatorio', { params }).then((r) => r.data),
+  pacientesPorEtapa: (params: AnalyticsPeriodParams = {}) =>
+    api.get<Array<{ etapa: EtapaFluxoClinico; total: number }>>('/analytics/pacientes-por-etapa', { params }).then((r) => r.data),
 };

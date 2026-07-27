@@ -66,4 +66,8 @@ export class CreatePacienteDto {
   @IsOptional()
   @IsEnum(ProjetoPaciente)
   projeto?: ProjetoPaciente;
+
+  @IsOptional()
+  @IsString()
+  representante?: string;
 }

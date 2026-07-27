@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { Plus, Search, Download, X } from 'lucide-react';
@@ -30,6 +30,7 @@ const pacienteSchema = z.object({
   dataNascimento: z.string().optional(),
   sexo: z.nativeEnum(Sexo, { error: 'Selecione.' }).optional(),
   projeto: z.nativeEnum(ProjetoPaciente, { error: 'Selecione.' }).optional(),
+  representante: z.string().optional(),
   telefone: z.string().optional(),
   email: z.string().email('E-mail inválido.').optional().or(z.literal('')),
   consentimento: z.boolean().optional(),
@@ -62,6 +63,7 @@ export function PacientesPage() {
   const [busca, setBusca] = useState('');
   const [nascFiltro, setNascFiltro] = useState('');
   const [projetoFiltro, setProjetoFiltro] = useState<ProjetoPaciente | 'all'>('all');
+  const [representanteFiltro, setRepresentanteFiltro] = useState('');
   const [sort, setSort] = useState<PacienteSort>('recentes');
   const [incluirInativos, setIncluirInativos] = useState(false);
   const [open, setOpen] = useState(false);
@@ -77,6 +79,12 @@ export function PacientesPage() {
     defaultValues: { consentimento: false },
   });
 
+  // Sugestões de "quem indicou" já usadas na clínica (autocomplete via datalist).
+  const representantesQ = useQuery({
+    queryKey: ['pacientes', 'representantes'],
+    queryFn: pacientesApi.listarRepresentantes,
+  });
+
   // 11 dígitos sem letras = CPF (busca exata); qualquer outra coisa = nome.
   const buscaDigitos = busca.replace(/\D/g, '');
   const buscaEhCpf = buscaDigitos.length === 11 && !/[a-zA-Z]/.test(busca);
@@ -86,6 +94,7 @@ export function PacientesPage() {
     cpf: buscaEhCpf ? buscaDigitos : undefined,
     dataNascimento: nascFiltro || undefined,
     projeto: projetoFiltro !== 'all' ? projetoFiltro : undefined,
+    representante: representanteFiltro || undefined,
     sort,
     incluirInativos: incluirInativos || undefined,
   };
@@ -98,7 +107,7 @@ export function PacientesPage() {
   });
 
   const temFiltros = Boolean(
-    buscaInput || nascFiltro || projetoFiltro !== 'all' || sort !== 'recentes' || incluirInativos,
+    buscaInput || nascFiltro || projetoFiltro !== 'all' || representanteFiltro || sort !== 'recentes' || incluirInativos,
   );
 
   function limparFiltros() {
@@ -106,6 +115,7 @@ export function PacientesPage() {
     setBusca('');
     setNascFiltro('');
     setProjetoFiltro('all');
+    setRepresentanteFiltro('');
     setSort('recentes');
     setIncluirInativos(false);
   }
@@ -142,6 +152,7 @@ export function PacientesPage() {
       dataNascimento: v.dataNascimento ? dayjs(v.dataNascimento).format('YYYY-MM-DD') : undefined,
       sexo: v.sexo || undefined,
       projeto: ehPsicologo ? ProjetoPaciente.PSI : (v.projeto || undefined),
+      representante: v.representante?.trim() || undefined,
       telefone: v.telefone || undefined,
       email: v.email || undefined,
       endereco: temEndereco ? enderecoCampos : undefined,
@@ -219,6 +230,18 @@ export function PacientesPage() {
               </div>
             )}
 
+            <div className="space-y-1">
+              <Label htmlFor="representanteFiltro">Representante</Label>
+              <Input
+                id="representanteFiltro"
+                className="w-44"
+                list="representantes-list"
+                placeholder="Todos"
+                value={representanteFiltro}
+                onChange={(e) => setRepresentanteFiltro(e.target.value)}
+              />
+            </div>
+
             <div className="flex items-center gap-2 pb-2.5">
               <Checkbox
                 id="incluirInativos"
@@ -235,6 +258,11 @@ export function PacientesPage() {
             )}
           </div>
 
+          {/* Compartilhado pelo filtro acima e pelo campo do formulário de cadastro. */}
+          <datalist id="representantes-list">
+            {representantesQ.data?.map((r) => <option key={r} value={r} />)}
+          </datalist>
+
           {listQ.isLoading ? (
             <div className="space-y-3">{[1,2,3,4,5].map((i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
           ) : (
@@ -247,6 +275,7 @@ export function PacientesPage() {
                   <TableHead>Idade</TableHead>
                   <TableHead>Sexo</TableHead>
                   <TableHead>Projeto</TableHead>
+                  <TableHead>Representante</TableHead>
                   <TableHead>Telefone</TableHead>
                   <TableHead>Situação</TableHead>
                   <TableHead className="w-14" />
@@ -263,6 +292,7 @@ export function PacientesPage() {
                     <TableCell>
                       {p.projeto ? <Badge variant="secondary">{PROJETO_LABEL[p.projeto]}</Badge> : '—'}
                     </TableCell>
+                    <TableCell>{p.representante || '—'}</TableCell>
                     <TableCell>{p.telefone || '—'}</TableCell>
                     <TableCell>
                       <Badge variant={p.ativo === false ? 'secondary' : 'success'}>
@@ -285,7 +315,7 @@ export function PacientesPage() {
                 ))}
                 {pacientes.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">Nenhum paciente encontrado</TableCell>
+                    <TableCell colSpan={10} className="text-center text-muted-foreground py-8">Nenhum paciente encontrado</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -352,6 +382,15 @@ export function PacientesPage() {
                   </Select>
                 </div>
               )}
+              <div className="space-y-2">
+                <Label htmlFor="representante">Representante (quem indicou)</Label>
+                <Input
+                  id="representante"
+                  list="representantes-list"
+                  placeholder="Nome de quem indicou"
+                  {...register('representante')}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="telefone">Telefone</Label>
                 <Input id="telefone" placeholder="(00) 00000-0000" {...register('telefone')} />

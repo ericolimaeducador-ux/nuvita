@@ -50,6 +50,17 @@ export class PacientesController {
     return this.pacientesService.list(query, this.contextFromRequest(request, user));
   }
 
+  // Precisa vir ANTES de `@Get(':id')` — senão `GET /pacientes/representantes`
+  // cairia em `:id = 'representantes'` (rotas casam na ordem de declaração).
+  @Get('representantes')
+  @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
+  listarRepresentantes(
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+  ) {
+    return this.pacientesService.listarRepresentantes(clinicaId, user);
+  }
+
   @Get(':id')
   @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   findOne(

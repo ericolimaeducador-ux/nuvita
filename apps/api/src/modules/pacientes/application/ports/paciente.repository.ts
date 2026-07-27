@@ -28,6 +28,7 @@ export interface ListPacientesInput extends CursorPaginationInput {
   projeto?: ProjetoPaciente;
   /** Exclui um projeto do resultado (usado p/ esconder pacientes do Projeto PSI de quem não é psicólogo). Ignorado se `projeto` também for informado. */
   projetoExcluir?: ProjetoPaciente;
+  representante?: string;
   etapaFluxo?: EtapaFluxoClinico;
   /** Dia exato de nascimento no formato YYYY-MM-DD. */
   dataNascimento?: string;
@@ -48,4 +49,6 @@ export interface PacienteRepository {
   findManyByIds(clinicaId: string, pacienteIds: string[]): Promise<Paciente[]>;
   update(clinicaId: string, pacienteId: string, input: UpdatePacienteInput): Promise<Paciente | null>;
   deactivate(clinicaId: string, pacienteId: string): Promise<Paciente | null>;
+  /** Valores distintos de `representante` já usados na clínica, para autocomplete. */
+  listarRepresentantesDistintos(clinicaId: string): Promise<string[]>;
 }

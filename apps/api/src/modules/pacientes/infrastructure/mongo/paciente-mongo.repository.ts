@@ -52,6 +52,7 @@ export class PacienteMongoRepository implements PacienteRepository {
       convenio: this.encryptJsonOptional(input.convenio),
       consentimentoLGPD: input.consentimentoLGPD,
       projeto: input.projeto,
+      representante: input.representante,
       etapaFluxo: EtapaFluxoClinico.AGUARDANDO_ATENDIMENTO,
       etapaFluxoDesde: new Date(),
       ativo: true,
@@ -203,6 +204,17 @@ export class PacienteMongoRepository implements PacienteRepository {
     return document ? this.toEntity(document) : null;
   }
 
+  async listarRepresentantesDistintos(clinicaId: string): Promise<string[]> {
+    const valores = await this.pacienteModel.distinct('representante', {
+      clinicaId,
+      representante: { $ne: null },
+    });
+
+    return (valores as unknown[])
+      .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
+
   private toUpdate(input: UpdatePacienteInput): Record<string, unknown> {
     const update: Record<string, unknown> = {};
 
@@ -220,6 +232,7 @@ export class PacienteMongoRepository implements PacienteRepository {
     if (input.consentimentoLGPD !== undefined) update.consentimentoLGPD = input.consentimentoLGPD;
     if (input.programaIU !== undefined) update.programaIU = input.programaIU;
     if (input.projeto !== undefined) update.projeto = input.projeto;
+    if (input.representante !== undefined) update.representante = input.representante;
     if (input.observacoes !== undefined) update.observacoes = this.encryptOptional(input.observacoes);
     if (input.etapaFluxo !== undefined) update.etapaFluxo = input.etapaFluxo;
     if (input.etapaFluxoDesde !== undefined) update.etapaFluxoDesde = input.etapaFluxoDesde;
@@ -261,6 +274,7 @@ export class PacienteMongoRepository implements PacienteRepository {
       observacoes: this.decryptOptional(object.observacoes),
       programaIU: object.programaIU ?? false,
       projeto: object.projeto,
+      representante: object.representante,
       etapaFluxo: object.etapaFluxo,
       etapaFluxoDesde: object.etapaFluxoDesde,
       ativo: object.ativo,
@@ -285,6 +299,7 @@ export class PacienteMongoRepository implements PacienteRepository {
     } else if (input.projetoExcluir !== undefined) {
       query.projeto = { $ne: input.projetoExcluir };
     }
+    if (input.representante !== undefined) query.representante = input.representante;
     if (input.etapaFluxo !== undefined) query.etapaFluxo = input.etapaFluxo;
     if (input.dataNascimento) {
       // Campo gravado como meia-noite UTC; intervalo de 24h cobre o dia inteiro.

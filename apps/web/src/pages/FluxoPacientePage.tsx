@@ -30,7 +30,7 @@ import { NovaAvaliacaoIUDialog, NovoLaudoDialog, ConfirmExcluirDialog } from '@/
 import { formatData, toItems } from '@/utils';
 import {
   Papel, LocalAtendimento, PerfilCliente, Destreza, TipoIU, EncaminhamentoIU,
-  StatusElegibilidade, OrigemEntrega,
+  StatusElegibilidade, OrigemEntrega, CATEGORIA_INSUMO_LABEL,
   LOCAL_LABEL, PERFIL_LABEL, DESTREZA_LABEL, TIPO_IU_LABEL, ENCAMINHAMENTO_LABEL,
   STATUS_ELEGIBILIDADE_LABEL, ORIGEM_ENTREGA_LABEL,
   EtapaFluxoClinico, ETAPA_FLUXO_LABEL, calcularPrazoEtapa, PROXIMA_ETAPA_MANUAL, PAPEIS_AVANCO_MANUAL,
@@ -794,6 +794,11 @@ function EntregasStep({ pacienteId, avaliacaoId, entregas, produtos, user }: {
           {e.itens.map((item, i) => (
             <p key={i} className="text-xs text-muted-foreground">
               {item.descricao} — {item.quantidade}x — R$ {(item.valorTotalCentavos / 100).toFixed(2)}
+              {item.categoria && (
+                <Badge variant="outline" className="ml-2 text-[10px]">
+                  {CATEGORIA_INSUMO_LABEL[item.categoria]}
+                </Badge>
+              )}
             </p>
           ))}
           <p className="text-xs font-medium text-primary">Total: R$ {(e.valorTotalCentavos / 100).toFixed(2)}</p>

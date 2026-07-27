@@ -2,20 +2,32 @@ import { BadRequestException, Inject, Injectable, NotFoundException } from '@nes
 import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
 import { EtapaFluxoClinico } from '../../../../../../packages/shared/src/fluxo-clinico';
 import { PacientesService } from '../../pacientes/application/pacientes.service';
+import { ProdutosService } from '../../produtos/application/produtos.service';
+import { TipoProduto } from '../../produtos/domain/produto.entity';
 import { ENTREGA_REPOSITORY } from '../entregas.constants';
-import { Entrega, StatusEntrega } from '../domain/entrega.entity';
+import { CategoriaInsumo, Entrega, ItemEntrega, StatusEntrega } from '../domain/entrega.entity';
 import { EntregaRepository } from './ports/entrega.repository';
 import { CreateEntregaDto } from './dto/create-entrega.dto';
+
+// Mapeamento vive aqui (não em `produtos`) para não acoplar o domínio do
+// catálogo a um conceito de relatório que ele não precisa conhecer.
+const CATEGORIA_POR_TIPO_PRODUTO: Record<TipoProduto, CategoriaInsumo> = {
+  [TipoProduto.CATETER_VAPRO]: CategoriaInsumo.SONDA,
+  [TipoProduto.CATETER_SAMTRONIC]: CategoriaInsumo.SONDA,
+  [TipoProduto.COLETOR_ACTICOAT]: CategoriaInsumo.COLETOR,
+};
 
 @Injectable()
 export class EntregasService {
   constructor(
     @Inject(ENTREGA_REPOSITORY) private readonly repo: EntregaRepository,
     private readonly pacientesService: PacientesService,
+    private readonly produtosService: ProdutosService,
   ) {}
 
   async create(dto: CreateEntregaDto, user: AuthTokenPayload): Promise<Entrega> {
     const clinicaId = this.resolveClinicaId(user, dto.clinicaId);
+    const itens = await this.categorizarItens(dto.itens);
     return this.repo.create({
       clinicaId,
       pacienteId: dto.pacienteId,
@@ -24,11 +36,27 @@ export class EntregasService {
       dataEntrega: new Date(dto.dataEntrega),
       origem: dto.origem,
       status: StatusEntrega.PENDENTE,
-      itens: dto.itens,
+      itens,
       valorTotalCentavos: dto.valorTotalCentavos,
       notaFiscal: dto.notaFiscal,
       observacoes: dto.observacoes,
     });
+  }
+
+  /**
+   * Deriva `categoria` de cada item a partir do `tipo` do produto do
+   * catálogo — nunca aceita do cliente (ver ItemEntregaDto). Item cujo
+   * código não corresponde a nenhum produto cadastrado fica sem categoria
+   * (excluído dos relatórios por categoria, não bloqueia a entrega).
+   */
+  private async categorizarItens(itens: CreateEntregaDto['itens']): Promise<ItemEntrega[]> {
+    return Promise.all(
+      itens.map(async (item) => {
+        const produto = await this.produtosService.buscarPorCodigo(item.codigo);
+        const categoria = produto ? CATEGORIA_POR_TIPO_PRODUTO[produto.tipo] : undefined;
+        return { ...item, categoria };
+      }),
+    );
   }
 
   async findOne(id: string, clinicaId: string | undefined, user: AuthTokenPayload): Promise<Entrega> {

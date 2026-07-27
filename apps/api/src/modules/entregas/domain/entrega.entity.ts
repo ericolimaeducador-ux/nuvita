@@ -12,12 +12,24 @@ export enum StatusEntrega {
   DEVOLVIDA = 'devolvida',
 }
 
+// Derivada automaticamente do `tipo` do produto do catálogo no momento da
+// entrega (ver EntregasService.create) — nunca aceita diretamente do cliente,
+// para não deixar o cliente "mentir" a categoria usada nos relatórios.
+export enum CategoriaInsumo {
+  SONDA = 'sonda',
+  COLETOR = 'coletor',
+  // Item sem correspondência no catálogo de produtos (ou catálogo futuro
+  // com categorias ainda não mapeadas).
+  OUTRO = 'outro',
+}
+
 export interface ItemEntrega {
   codigo: number;
   descricao: string;
   quantidade: number;
   valorUnitarioCentavos: number;
   valorTotalCentavos: number;
+  categoria?: CategoriaInsumo;
 }
 
 export interface Entrega {

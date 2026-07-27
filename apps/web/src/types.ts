@@ -329,6 +329,7 @@ export interface Paciente {
   consentimentoLGPD?: ConsentimentoLGPD;
   programaIU?: boolean;
   projeto?: ProjetoPaciente;
+  representante?: string;
   observacoes?: string;
   etapaFluxo?: EtapaFluxoClinico;
   etapaFluxoDesde?: string;
@@ -1146,6 +1147,18 @@ export const ORIGEM_ENTREGA_LABEL: Record<OrigemEntrega, string> = {
   [OrigemEntrega.DOACAO]: 'Doação',
 };
 
+// Derivada automaticamente no servidor a partir do produto entregue — só leitura.
+export enum CategoriaInsumo {
+  SONDA = 'sonda',
+  COLETOR = 'coletor',
+  OUTRO = 'outro',
+}
+export const CATEGORIA_INSUMO_LABEL: Record<CategoriaInsumo, string> = {
+  [CategoriaInsumo.SONDA]: 'Sonda',
+  [CategoriaInsumo.COLETOR]: 'Coletor',
+  [CategoriaInsumo.OUTRO]: 'Outro',
+};
+
 export enum StatusEntrega {
   PENDENTE = 'pendente',
   ENVIADA = 'enviada',
@@ -1168,7 +1181,7 @@ export interface Entrega {
   dataEntrega: string;
   origem: OrigemEntrega;
   status: StatusEntrega;
-  itens: Array<{ codigo: number; descricao: string; quantidade: number; valorUnitarioCentavos: number; valorTotalCentavos: number }>;
+  itens: Array<{ codigo: number; descricao: string; quantidade: number; valorUnitarioCentavos: number; valorTotalCentavos: number; categoria?: CategoriaInsumo }>;
   valorTotalCentavos: number;
   notaFiscal?: string;
   observacoes?: string;

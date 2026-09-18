@@ -8,6 +8,7 @@ import { SecurityModule } from './common/security/security.module';
 import { TenancyModule } from './common/tenancy/tenancy.module';
 import { AppConfigService } from './common/security/config.service';
 import { AgendamentosModule } from './modules/agendamentos/agendamentos.module';
+import { LembretesAgendamentoModule } from './modules/lembretes-agendamento/lembretes-agendamento.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
@@ -62,6 +63,7 @@ import { IaClinicaModule } from './modules/ia-clinica/ia-clinica.module';
     DocumentosModule,
     NotificacoesModule,
     AgendamentosModule,
+    LembretesAgendamentoModule,
     FinanceiroModule,
     TelemedicinaModule,
     AnalyticsModule,

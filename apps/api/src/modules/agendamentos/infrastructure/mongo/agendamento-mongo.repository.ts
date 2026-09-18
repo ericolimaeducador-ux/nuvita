@@ -9,6 +9,7 @@ import {
   UpdateAgendamentoInput,
 } from '../../application/ports/agendamento.repository';
 import { Agendamento, BloqueioAgenda, StatusAgendamento } from '../../domain/agendamento.entity';
+import { JanelaLembrete } from '../../domain/lembrete-window';
 import {
   AgendamentoDocument,
   AgendamentoMongo,
@@ -131,6 +132,43 @@ export class AgendamentoMongoRepository implements AgendamentoRepository {
       .exec();
 
     return result.deletedCount > 0;
+  }
+
+  async listarParaLembrete(campo: 'lembrete24hEnviadoEm' | 'lembrete1hEnviadoEm', janela: JanelaLembrete): Promise<Agendamento[]> {
+    // Sem clinicaId de propósito: job de sistema (Cloud Scheduler) roda uma
+    // única vez varrendo todas as clínicas, não por tenant — mesmo espírito
+    // do acesso cross-tenant do SUPER_ADMIN. Todo outro método deste
+    // repositório é escopado por clinicaId; esta é a única exceção deliberada.
+    const docs = await this.model
+      .find({
+        dataHoraInicio: { $gte: janela.inicio, $lt: janela.fim },
+        [campo]: { $exists: false },
+      })
+      .sort({ dataHoraInicio: 1 })
+      .exec();
+
+    return docs.map((d) => this.toEntity(d));
+  }
+
+  async marcarLembreteEnviado(
+    clinicaId: string,
+    id: string,
+    campo: 'lembrete24hEnviadoEm' | 'lembrete1hEnviadoEm',
+    quando: Date,
+  ): Promise<boolean> {
+    // Filtro condicional no PRÓPRIO update (não um find + depois um set):
+    // se outra execução já marcou este campo entre a query e esta chamada,
+    // o findOneAndUpdate não acha o documento (o filtro exige {$exists:false})
+    // e retorna null — é assim que uma colisão de idempotência é detectada,
+    // não por uma leitura prévia separada (que teria uma janela de corrida).
+    const doc = await this.model
+      .findOneAndUpdate(
+        { clinicaId, _id: new Types.ObjectId(id), [campo]: { $exists: false } },
+        { $set: { [campo]: quando } },
+      )
+      .exec();
+
+    return doc !== null;
   }
 
   private toEntity(doc: AgendamentoDocument): Agendamento {

@@ -34,6 +34,8 @@ const PLACEHOLDERS = new Set([
   'your-secret-access-key',
   'sk-ant-your-api-key-here',
   'your-ia-uso-base64-encoded-32-bytes-here',
+  'https://your-cloud-run-service-url/internal/processar-lembretes',
+  'your-reminder-scheduler-sa@your-gcp-project.iam.gserviceaccount.com',
 ]);
 
 /** Segredos que precisam de comprimento mínimo além de não ser placeholder. */
@@ -56,6 +58,8 @@ const SEGREDOS_SEM_PLACEHOLDER: ReadonlyArray<[keyof AppConfig, string]> = [
   ['documentStorageAccessKeyId', 'DOCUMENT_STORAGE_ACCESS_KEY_ID'],
   ['documentStorageSecretAccessKey', 'DOCUMENT_STORAGE_SECRET_ACCESS_KEY'],
   ['anthropicApiKey', 'ANTHROPIC_API_KEY'],
+  ['reminderSchedulerExpectedAudience', 'REMINDER_SCHEDULER_EXPECTED_AUDIENCE'],
+  ['reminderSchedulerExpectedServiceAccount', 'REMINDER_SCHEDULER_EXPECTED_SERVICE_ACCOUNT'],
 ];
 
 export interface ResultadoValidacao {

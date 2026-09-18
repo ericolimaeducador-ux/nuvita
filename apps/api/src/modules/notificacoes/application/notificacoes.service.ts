@@ -24,6 +24,17 @@ export interface NotificacaoRequestContext {
   ip: string;
   userAgent: string;
   user: AuthTokenPayload;
+  /**
+   * feature-consultation-reminder-scheduler: true quando quem chamou não é
+   * uma pessoa logada, e sim um job automático (Cloud Scheduler). Papel
+   * enum não tem valor de "sistema" (ver infra/PENDENCIAS.md #15), então
+   * o job usa um `user` sintético (sub/email não-humanos) — esta flag é o
+   * jeito estrutural de uma consulta futura em audit_logs (SQL/Mongo
+   * direto, ou uma eventual tela de auditoria) saber que a linha não veio
+   * de uma pessoa, sem precisar inferir isso só pelo padrão da string do
+   * sub/email.
+   */
+  automatedActor?: boolean;
 }
 
 @Injectable()
@@ -171,7 +182,7 @@ export class NotificacoesService {
       email: context.user.email,
       ip: context.ip,
       userAgent: context.userAgent,
-      metadata,
+      metadata: context.automatedActor ? { ...metadata, automatedActor: true } : metadata,
     });
   }
 }

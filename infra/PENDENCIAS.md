@@ -283,3 +283,63 @@ Validado com `actionlint` (exit 0, sem findings) e parse YAML dos dois
 arquivos antes do commit. A partir do próximo push que tocar `apps/web/**`
 ou `packages/shared/**`, o deploy automático vai pro lugar certo sem
 disparo manual.
+
+---
+
+## 14. `global-throttler.guard.spec.ts` — flakiness sob carga (timeout)
+
+**Achado:** durante a Fase 3 de `feature-consultation-reminder-scheduler`
+(2026-09-18), ao rodar a suíte completa da API duas vezes seguidas.
+
+1ª rodada (`npx jest`, suíte inteira, 37 suites): 5 falhas, todas em
+`common/http/global-throttler.guard.spec.ts` — "Exceeded timeout of 5000 ms"
+em 3 testes que dependem de contagem de requisições HTTP reais contra um
+servidor Nest efêmero (`app.listen(0)` + `fetch()`). 2ª rodada, minutos
+depois, com um arquivo de teste a mais incluído (38 suites): as mesmas 216+
+testes passaram 100%, incluindo esse arquivo.
+
+**Não reproduzido isoladamente** (`npx jest global-throttler.guard.spec.ts`
+sozinho não foi tentado nesta sessão). Não relacionado a
+`feature-consultation-reminder-scheduler` — nenhum arquivo tocado pela
+feature aparece nas duas rodadas com falha.
+
+**Leve, não bloqueante.** Hipótese mais provável: contenção de CPU ao rodar
+a suíte inteira em paralelo derruba testes sensíveis a timing baseados em
+timeout de 5000ms e requisições HTTP reais. Considerar, quando conveniente:
+aumentar o timeout desses testes específicos, ou rodá-los com
+`--runInBand`/isolados do resto da suíte.
+
+---
+
+## 15. `Papel` (enum) não tem valor para atores automatizados (jobs/schedulers)
+
+**Achado:** durante a Fase 4 de `feature-consultation-reminder-scheduler`
+(2026-09-18), decidindo qual `context.user` passar pra
+`NotificacoesService.create()` a partir de um job periódico (sem usuário
+logado).
+
+Papel enum não tem valor para atores automatizados (jobs/schedulers) — o
+consultation-reminder-scheduler usa SUPER_ADMIN com sub/email sintéticos
+e metadata.automatedActor=true como contorno. Se mais jobs automáticos
+forem adicionados no futuro, vale considerar adicionar um papel/conceito
+formal de "sistema" ao invés de repetir este contorno.
+
+---
+
+## 16. `consultation-reminder-scheduler` — risco residual aceito: corrida entre execuções simultâneas do job
+
+**Achado:** durante o portão de revisão final de `feature-consultation-reminder-scheduler`
+(2026-09-18). **Risco aceito conscientemente pelo usuário**, sem lock
+distribuído nesta versão.
+
+consultation-reminder-scheduler: risco residual aceito — se duas
+execuções do job se sobrepuserem no tempo (job a cada 15min, mas
+processamento de uma execução ainda rodando quando a próxima começa),
+ambas podem ler o mesmo agendamento antes de qualquer uma marcar
+lembrete[X]EnviadoEm, resultando em possível envio duplicado antes da
+colisão ser detectada e logada. Mitigação atual: detecção via
+findOneAndUpdate condicional (conta como 'deduped' no log), sem lock
+distribuído. Risco aceito dado o volume atual (poucas clínicas, poucos
+agendamentos por janela de 15min tornam sobreposição real improvável).
+Revisitar com lock distribuído (ex.: Redis) se o volume crescer ou se
+duplicação for observada na prática.

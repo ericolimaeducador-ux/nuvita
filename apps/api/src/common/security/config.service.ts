@@ -110,6 +110,14 @@ export interface AppConfig {
   kmsKeyRing: string;
   kmsKey: string;
 
+  // Consultation Reminder Scheduler (feature-consultation-reminder-scheduler)
+  // — guard OIDC de POST /internal/processar-lembretes. Presença é obrigatória
+  // em todo ambiente (enforced pelo loader, ver requiredVars/getSecretOrThrow);
+  // opcional aqui só para os fixtures tipados de config-validation.spec.ts
+  // continuarem compilando (mesmo padrão de iaUsoEncryptionKey acima).
+  reminderSchedulerExpectedAudience?: string;
+  reminderSchedulerExpectedServiceAccount?: string;
+
   // IA clínica (sugestão de abordagem + prescrição de exercícios)
   anthropicApiKey?: string;
   anthropicModel: string;
@@ -203,6 +211,8 @@ export class AppConfigService {
         prontuarioSignatureSecret,
         anthropicApiKey,
         anthropicModel,
+        reminderSchedulerExpectedAudience,
+        reminderSchedulerExpectedServiceAccount,
       ] = await Promise.all([
         this.getSecretOrThrow('mongodb-uri'),
         this.getSecretOrThrow('redis-url'),
@@ -233,6 +243,8 @@ export class AppConfigService {
         this.getSecretOrThrow('prontuario-signature-secret'),
         this.getSecretOrDefault('anthropic-api-key', undefined),
         this.getSecretOrDefault('anthropic-model', 'claude-sonnet-5'),
+        this.getSecretOrThrow('reminder-scheduler-expected-audience'),
+        this.getSecretOrThrow('reminder-scheduler-expected-service-account'),
       ]);
 
       const config: AppConfig = {
@@ -276,6 +288,8 @@ export class AppConfigService {
         kmsKey: process.env.KMS_KEY || 'nuvita-psi-master-key',
         anthropicApiKey,
         anthropicModel: anthropicModel ?? 'claude-sonnet-5',
+        reminderSchedulerExpectedAudience,
+        reminderSchedulerExpectedServiceAccount,
         logLevel: (process.env.LOG_LEVEL as AppConfig['logLevel']) || 'info',
       };
 
@@ -311,6 +325,8 @@ export class AppConfigService {
       'APP_ROOT_DOMAIN',
       'BOOTSTRAP_SECRET',
       'PRONTUARIO_SIGNATURE_SECRET',
+      'REMINDER_SCHEDULER_EXPECTED_AUDIENCE',
+      'REMINDER_SCHEDULER_EXPECTED_SERVICE_ACCOUNT',
     ];
 
     const missing = requiredVars.filter((key) => !process.env[key]);
@@ -365,6 +381,8 @@ export class AppConfigService {
       kmsKey: process.env.KMS_KEY || 'nuvita-psi-master-key',
       anthropicApiKey: process.env.ANTHROPIC_API_KEY,
       anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5',
+      reminderSchedulerExpectedAudience: process.env.REMINDER_SCHEDULER_EXPECTED_AUDIENCE!,
+      reminderSchedulerExpectedServiceAccount: process.env.REMINDER_SCHEDULER_EXPECTED_SERVICE_ACCOUNT!,
       logLevel: (process.env.LOG_LEVEL as AppConfig['logLevel']) || 'debug',
     };
 

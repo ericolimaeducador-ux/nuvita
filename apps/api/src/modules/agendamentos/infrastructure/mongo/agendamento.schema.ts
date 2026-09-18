@@ -19,6 +19,15 @@ export class AgendamentoMongo {
   @Prop({ required: true }) criadoPor!: string;
   criadoEm!: Date;
   atualizadoEm?: Date;
+
+  // Idempotência dos lembretes automáticos (feature-consultation-reminder-scheduler).
+  // Estampado quando o respectivo lembrete é enviado. Ausente = nunca enviado —
+  // NUNCA tratar ausência como "já enviado" nem travar nada nesse caso.
+  @Prop({ type: Date })
+  lembrete24hEnviadoEm?: Date;
+
+  @Prop({ type: Date })
+  lembrete1hEnviadoEm?: Date;
 }
 
 export const AgendamentoSchema = SchemaFactory.createForClass(AgendamentoMongo);

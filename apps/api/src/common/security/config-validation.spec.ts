@@ -125,4 +125,16 @@ describe('validarForcaDosSegredos', () => {
 
     expect(erros).toContainEqual(expect.stringContaining('ANTHROPIC_API_KEY'));
   });
+
+  it('rejeita REMINDER_SCHEDULER_EXPECTED_AUDIENCE/SERVICE_ACCOUNT com o valor de exemplo (feature-consultation-reminder-scheduler)', () => {
+    const { erros } = validarForcaDosSegredos(
+      configValida({
+        reminderSchedulerExpectedAudience: 'https://your-cloud-run-service-url/internal/processar-lembretes',
+        reminderSchedulerExpectedServiceAccount: 'your-reminder-scheduler-sa@your-gcp-project.iam.gserviceaccount.com',
+      }),
+    );
+
+    expect(erros).toContainEqual(expect.stringContaining('REMINDER_SCHEDULER_EXPECTED_AUDIENCE'));
+    expect(erros).toContainEqual(expect.stringContaining('REMINDER_SCHEDULER_EXPECTED_SERVICE_ACCOUNT'));
+  });
 });

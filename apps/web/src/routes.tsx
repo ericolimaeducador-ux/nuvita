@@ -6,6 +6,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { AppLayout } from '@/layout/AppLayout';
 import { LoginPage } from '@/pages/LoginPage';
 import { LandingPage } from '@/pages/LandingPage';
+import { PrivacidadePage } from '@/pages/PrivacidadePage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { PacientesPage } from '@/pages/PacientesPage';
 import { PacienteDetailPage } from '@/pages/PacienteDetailPage';
@@ -50,6 +51,7 @@ export function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       {/* "/" é pública: autenticado vai ao dashboard, visitante vê a landing. */}
       <Route path="/" element={<HomeOuLanding />} />
+      <Route path="/privacidade" element={<PrivacidadePage />} />
       {/* Sala de teleatendimento é PÚBLICA: o paciente entra pelo link com o
           token da sala, sem conta no sistema. O token UUID é a credencial. */}
       <Route path="/tele/:token" element={<AtendimentoTelemedicinaPage />} />

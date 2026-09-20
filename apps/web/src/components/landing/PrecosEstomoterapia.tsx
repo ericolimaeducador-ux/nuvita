@@ -81,7 +81,7 @@ function CartaoPlano({ plano }: { plano: Plano }) {
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-5">
         <div className="flex justify-center">
-          <SeloGarantia>14 dias de garantia incondicional</SeloGarantia>
+          <SeloGarantia>14 dias de garantia incondicional — devolvemos 100% do valor</SeloGarantia>
         </div>
         <ListaBeneficios itens={plano.beneficios} />
         <div className="mt-auto pt-2">

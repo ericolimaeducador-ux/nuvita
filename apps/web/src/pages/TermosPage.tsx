@@ -26,7 +26,8 @@ const secoes: SecaoLegal[] = [
   {
     titulo: '3. Vigência e fidelidade',
     blocos: [
-      'Assinatura anual, renovada automaticamente salvo cancelamento prévio. Pagamento parcelado (12x sem juros): fidelidade de 12 meses — cancelamento antecipado [A CONFIRMAR COM ADVOGADO: consequência exata]. Pagamento à vista: sem fidelidade.',
+      '3.1. A assinatura tem vigência anual. Ao final de cada ciclo anual, a assinatura é renovada automaticamente por igual período, salvo cancelamento prévio pelo contratante. Para o pagamento parcelado (12x sem juros), cada ciclo anual renovado inicia um novo período de fidelidade de 12 (doze) meses, nos termos da cláusula 3.2.',
+      '3.2. Pagamento parcelado (12x sem juros): fidelidade de 12 meses — cancelamento antecipado [A CONFIRMAR COM ADVOGADO: consequência exata]. Pagamento à vista: sem fidelidade.',
     ],
   },
   {

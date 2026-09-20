@@ -17,7 +17,7 @@ const secoes: SecaoLegal[] = [
   {
     titulo: '2. Quais dados coletamos',
     blocos: [
-      '2.1. Dados fornecidos diretamente por você (profissional de saúde, cliente da assinatura): nome, e-mail, telefone, dados de pagamento (processados por terceiro — ver seção 6), dados profissionais (registro em conselho de classe, quando aplicável), credenciais de acesso (login e senha, armazenada de forma criptografada).',
+      '2.1. Dados fornecidos diretamente por você (profissional de saúde, cliente da assinatura): nome, e-mail, telefone, dados de pagamento (processados por terceiro — ver seção 4), dados profissionais (registro em conselho de classe, quando aplicável), credenciais de acesso (login e senha, armazenada de forma criptografada).',
       '2.2. Dados de pacientes/clientes inseridos por você no sistema: ao utilizar a plataforma, você (profissional de saúde) pode inserir dados de seus próprios pacientes/clientes (nome, histórico clínico, evolução, fotos de lesão, quando aplicável). Nesses casos, você atua como Controlador desses dados de terceiros, e a Nuvita atua como Operadora, processando esses dados exclusivamente conforme suas instruções e para viabilizar o funcionamento do sistema que você contratou.',
       '2.3. Dados de navegação (cookies e analytics): coletamos dados de navegação na página institucional (nuvita.app.br) por meio do Google Analytics, somente mediante seu consentimento explícito dado através do banner de cookies. Você pode recusar esse consentimento a qualquer momento, e a navegação básica do site não é prejudicada por essa recusa. Não utilizamos cookies de analytics dentro da área logada do sistema (dashboard, prontuários e demais telas autenticadas).',
     ],

@@ -31,9 +31,18 @@ export function PrecosPsicologia() {
                   'Dados protegidos com criptografia, conforme LGPD',
                 ]}
               />
-              <BotaoCheckout href={PRICING_LINKS.psicologia} className="h-11 w-full text-base">
-                Assinar agora
-              </BotaoCheckout>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <BotaoCheckout href={PRICING_LINKS.psicologia.vista} className="h-auto min-h-11 w-full whitespace-normal px-3 py-2 text-center text-sm sm:flex-1">
+                  Pagar à vista no Pix
+                </BotaoCheckout>
+                <BotaoCheckout
+                  href={PRICING_LINKS.psicologia.parcelado}
+                  variant="outline"
+                  className="h-auto min-h-11 w-full whitespace-normal border-petroleo bg-transparent px-3 py-2 text-center text-sm text-petroleo hover:bg-petroleo/5 sm:flex-1"
+                >
+                  Parcelar em 12x sem juros
+                </BotaoCheckout>
+              </div>
             </CardContent>
           </Card>
           <p className="mt-4 text-xs text-muted-foreground">

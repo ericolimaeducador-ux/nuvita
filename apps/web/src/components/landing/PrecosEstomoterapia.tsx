@@ -13,7 +13,7 @@ interface Plano {
   preco: string;
   parcelado: string;
   beneficios: string[];
-  href: string;
+  links: { readonly vista: string; readonly parcelado: string };
   destaque?: boolean;
 }
 
@@ -26,7 +26,7 @@ const planos: Plano[] = [
     preco: 'R$ 1.590,00',
     parcelado: 'ou 12x de R$ 149,90 sem juros',
     beneficios: ['Prontuário eletrônico completo', 'Suporte padrão'],
-    href: PRICING_LINKS.estomoBasico,
+    links: PRICING_LINKS.estomoBasico,
   },
   {
     titulo: 'Premium',
@@ -40,7 +40,7 @@ const planos: Plano[] = [
       '5x mais espaço para fotos de evolução',
       'Ideal para acompanhamento de lesões complexas',
     ],
-    href: PRICING_LINKS.estomoPremium,
+    links: PRICING_LINKS.estomoPremium,
     destaque: true,
   },
 ];
@@ -54,6 +54,8 @@ const beneficiosEnterprise = [
   'Contrato com faturamento (boleto/NF)',
 ];
 
+// Estomoterapia ainda não foi lançada: o botão único só habilita quando os DOIS links existirem
+// ("Em breve" desabilitado caso contrário). No lançamento, ganha os dois botões (vista/parcelado) como a Psicologia.
 function CartaoPlano({ plano }: { plano: Plano }) {
   return (
     <Card
@@ -85,7 +87,7 @@ function CartaoPlano({ plano }: { plano: Plano }) {
         <ListaBeneficios itens={plano.beneficios} />
         <div className="mt-auto pt-2">
           <BotaoCheckout
-            href={plano.href}
+            href={plano.links.vista && plano.links.parcelado ? plano.links.vista : ''}
             variant={plano.destaque ? 'default' : 'outline'}
             className="h-11 w-full text-base"
           >

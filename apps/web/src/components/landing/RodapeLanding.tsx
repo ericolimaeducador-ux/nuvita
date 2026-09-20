@@ -8,9 +8,14 @@ export function RodapeLanding({ comBanner = false }: { comBanner?: boolean }) {
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
         <Logo width={120} iconColor="#FFB800" textColor="#FFFFFF" />
         <p className="text-sm">© {new Date().getFullYear()} Nuvita · Portal de saúde na nuvem</p>
-        <Link to="/privacidade" className="text-sm underline underline-offset-2 hover:text-white">
-          Política de Privacidade
-        </Link>
+        <nav className="flex gap-x-6 text-sm">
+          <Link to="/privacidade" className="underline underline-offset-2 hover:text-white">
+            Política de Privacidade
+          </Link>
+          <Link to="/termos" className="underline underline-offset-2 hover:text-white">
+            Termos de Uso
+          </Link>
+        </nav>
       </div>
     </footer>
   );

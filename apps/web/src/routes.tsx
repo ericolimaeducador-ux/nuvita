@@ -1,7 +1,11 @@
+import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { marcarEntradaPorRotaPublica } from '@/api/client';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
+import { useAuth } from '@/auth/AuthContext';
 import { AppLayout } from '@/layout/AppLayout';
 import { LoginPage } from '@/pages/LoginPage';
+import { LandingPage } from '@/pages/LandingPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { PacientesPage } from '@/pages/PacientesPage';
 import { PacienteDetailPage } from '@/pages/PacienteDetailPage';
@@ -25,6 +29,18 @@ import { SuperAdminPage } from '@/pages/SuperAdminPage';
 import { RelatoriosGerenciaisPage } from '@/pages/RelatoriosGerenciaisPage';
 import { Modulo, Papel } from '@/types';
 
+// Usado em "/" e no catch-all: sessão válida → dashboard; senão → landing.
+function HomeOuLanding() {
+  const { user, token } = useAuth();
+  const logado = Boolean(token && user);
+  // Sessão vinda do localStorage ainda não validada: se a API responder 401,
+  // o interceptor limpa tudo e volta à landing (não ao /login).
+  useEffect(() => {
+    if (logado) marcarEntradaPorRotaPublica();
+  }, [logado]);
+  return logado ? <Navigate to="/dashboard" replace /> : <LandingPage />;
+}
+
 // O acesso é controlado por MÓDULO (permissões efetivas do usuário, ajustáveis
 // pelo super-admin). O papel só permanece como trava dura no /super-admin;
 // nos demais, o padrão por papel já vem embutido em resolvePermissoes.
@@ -32,6 +48,8 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      {/* "/" é pública: autenticado vai ao dashboard, visitante vê a landing. */}
+      <Route path="/" element={<HomeOuLanding />} />
       {/* Sala de teleatendimento é PÚBLICA: o paciente entra pelo link com o
           token da sala, sem conta no sistema. O token UUID é a credencial. */}
       <Route path="/tele/:token" element={<AtendimentoTelemedicinaPage />} />
@@ -48,7 +66,6 @@ export function AppRoutes() {
         </Route>
         <Route element={<AppLayout />}>
           {/* /dashboard fica sem gate: é o destino dos redirects e todo papel o tem por padrão. */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route element={<ProtectedRoute modulo={Modulo.PACIENTES} />}>
             <Route path="/pacientes" element={<PacientesPage />} />
@@ -93,7 +110,7 @@ export function AppRoutes() {
           </Route>
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<HomeOuLanding />} />
     </Routes>
   );
 }

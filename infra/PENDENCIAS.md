@@ -343,3 +343,14 @@ distribuído. Risco aceito dado o volume atual (poucas clínicas, poucos
 agendamentos por janela de 15min tornam sobreposição real improvável).
 Revisitar com lock distribuído (ex.: Redis) se o volume crescer ou se
 duplicação for observada na prática.
+
+---
+
+## 17. `@IsDateString()` sem offset explícito pode causar desvio de horário em `dataHoraInicio`
+
+**Achado:** durante a verificação de fuso pré-criação do job de lembretes de
+`feature-consultation-reminder-scheduler` (2026-09-19). **Não bloqueante.**
+
+@IsDateString() sem offset explícito pode causar desvio de horário —
+identificado durante verificação pré-criação do job de lembretes, não
+bloqueante, revisar se lembretes chegarem na hora errada.

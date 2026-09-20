@@ -62,6 +62,8 @@ export class LembretesAgendamentoProcessorService {
       }
     }
 
+    this.logger.log(JSON.stringify({ event: 'reminder_run_summary', ...resultado }));
+
     return resultado;
   }
 

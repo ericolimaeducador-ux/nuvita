@@ -35,6 +35,16 @@
   --color-accent-gold-hover: #E6A600;
   --color-bg-dark: #0B1120;
   --color-surface-dark: #1E293B;
+
+  /* Landing: petróleo + dourado da marca */
+  --color-petroleo: #0F3D3E;
+  --color-petroleo-medio: #1B5E5A;
+  --color-quente: #F7F5F0;
+  --color-ouro: #C9A15A;
+  --color-ink: #2B2B28;
+  --color-sage: #8FA69E;
+  --font-display: "Fraunces Variable", Georgia, serif;
+  --font-body: Inter, system-ui, sans-serif;
 }
 
 @keyframes fadeIn {

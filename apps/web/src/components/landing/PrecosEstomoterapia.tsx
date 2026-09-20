@@ -3,7 +3,6 @@ import { cn } from '@/lib/utils';
 import { PRICING_LINKS } from '@/config/pricing-links';
 import { BotaoCheckout } from './BotaoCheckout';
 import { ListaBeneficios } from './ListaBeneficios';
-import { Reveal } from './Reveal';
 import { SeloGarantia } from './SeloGarantia';
 
 interface Plano {
@@ -61,18 +60,18 @@ function CartaoPlano({ plano }: { plano: Plano }) {
       className={cn(
         'relative flex h-full flex-col',
         plano.destaque
-          ? 'border-2 border-brand-cobalt shadow-2xl lg:-translate-y-3'
-          : 'border border-border',
+          ? 'border-2 border-petroleo shadow-none lg:-translate-y-3'
+          : 'border border-sage/60 shadow-none',
       )}
     >
       {plano.destaque && (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent-gold px-3 py-1 text-xs font-bold text-gray-900 shadow">
+        <span className="absolute -top-3 left-6 rounded-md bg-ouro px-3 py-1 text-xs font-bold text-ink">
           Mais popular
         </span>
       )}
-      <CardHeader className="items-center text-center">
+      <CardHeader>
         <CardTitle className="text-xl">{plano.titulo}</CardTitle>
-        <p className="pt-2 text-4xl font-bold tracking-tight text-brand-cobalt">{plano.armazenamento}</p>
+        <p className="pt-2 text-4xl font-bold tracking-tight text-petroleo-medio">{plano.armazenamento}</p>
         <p className="text-xs text-muted-foreground">{plano.apoio}</p>
         <p className="pt-1 text-xs font-medium text-foreground">{plano.limites}</p>
         <p className="pt-4 whitespace-nowrap text-3xl font-bold tracking-tight text-foreground">{plano.preco}</p>
@@ -80,7 +79,7 @@ function CartaoPlano({ plano }: { plano: Plano }) {
         <p className="text-sm text-muted-foreground">{plano.parcelado}</p>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-5">
-        <div className="flex justify-center">
+        <div className="flex">
           <SeloGarantia>14 dias de garantia incondicional — devolvemos 100% do valor</SeloGarantia>
         </div>
         <ListaBeneficios itens={plano.beneficios} />
@@ -100,8 +99,8 @@ function CartaoPlano({ plano }: { plano: Plano }) {
 
 function CartaoEnterprise() {
   return (
-    <Card className="flex h-full flex-col border border-border">
-      <CardHeader className="items-center text-center">
+    <Card className="flex h-full flex-col border border-sage/60 shadow-none">
+      <CardHeader>
         <CardTitle className="text-xl">Enterprise</CardTitle>
         <p className="pt-6 text-3xl font-bold tracking-tight text-foreground">Sob consulta</p>
       </CardHeader>
@@ -119,20 +118,20 @@ function CartaoEnterprise() {
 
 export function PrecosEstomoterapia() {
   return (
-    <section id="precos-estomoterapia" className="scroll-mt-16 px-6 py-20">
+    <section id="precos-estomoterapia" className="scroll-mt-16 px-6 py-24">
       <div className="mx-auto max-w-6xl">
-        <Reveal className="mb-12 text-center">
-          <h2 className="text-3xl font-semibold">Estomoterapia</h2>
-          <p className="mt-2 text-muted-foreground">Escolha o armazenamento ideal para o seu acompanhamento.</p>
-        </Reveal>
-
-        <div className="grid items-stretch gap-10 lg:grid-cols-3 lg:gap-8">
-          <Reveal delay={0.05} className="mx-auto w-full max-w-md lg:max-w-none lg:pt-3"><CartaoPlano plano={planos[0]} /></Reveal>
-          <Reveal delay={0.15} className="mx-auto w-full max-w-md lg:max-w-none"><CartaoPlano plano={planos[1]} /></Reveal>
-          <Reveal delay={0.25} className="mx-auto w-full max-w-md lg:max-w-none lg:pt-3"><CartaoEnterprise /></Reveal>
+        <div className="mb-14">
+          <h2 className="font-display text-4xl font-medium leading-tight text-petroleo sm:text-5xl">Estomoterapia</h2>
+          <p className="mt-3 max-w-md text-muted-foreground">Escolha o armazenamento ideal para o seu acompanhamento.</p>
         </div>
 
-        <p className="mt-8 text-center text-xs text-muted-foreground">
+        <div className="grid items-stretch gap-10 lg:grid-cols-3 lg:gap-8">
+          <div className="mx-auto w-full max-w-md lg:max-w-none lg:pt-3"><CartaoPlano plano={planos[0]} /></div>
+          <div className="mx-auto w-full max-w-md lg:max-w-none"><CartaoPlano plano={planos[1]} /></div>
+          <div className="mx-auto w-full max-w-md lg:max-w-none lg:pt-3"><CartaoEnterprise /></div>
+        </div>
+
+        <p className="mt-8 text-xs text-muted-foreground">
           Assinatura anual. Fidelidade de 12 meses para pagamento parcelado. Pagamento à vista sem fidelidade.
         </p>
       </div>

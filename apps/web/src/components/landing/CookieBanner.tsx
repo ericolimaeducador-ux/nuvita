@@ -15,7 +15,7 @@ export function CookieBanner({ onAceitar, onRecusar }: { onAceitar: () => void; 
         <p className="text-sm text-foreground">
           Usamos cookies para entender como você usa nosso site e melhorar sua experiência. Ao continuar, você
           concorda com nossa{' '}
-          <Link to="/privacidade" className="font-medium text-brand-cobalt underline underline-offset-2">
+          <Link to="/privacidade" className="font-medium text-petroleo underline underline-offset-2">
             Política de Privacidade
           </Link>
           .

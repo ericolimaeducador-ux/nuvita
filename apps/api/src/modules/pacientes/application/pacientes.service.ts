@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
 import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
 import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
@@ -11,6 +11,21 @@ import { UpdateObservacoesPacienteDto } from './dto/update-observacoes-paciente.
 import { PACIENTE_REPOSITORY } from '../pacientes.constants';
 import { Paciente, ProjetoPaciente } from '../domain/paciente.entity';
 import { PacienteRepository } from './ports/paciente.repository';
+
+const MSG_CPF_DUPLICADO_CADASTRO = 'Já existe um paciente com este CPF nesta clínica.';
+const MSG_CPF_DUPLICADO_ATUALIZACAO =
+  'Não é possível atualizar: já existe outro paciente com este CPF nesta clínica.';
+
+/**
+ * Violação do índice único {clinicaId, cpfHash} (E11000). O índice também vale para
+ * pacientes inativos: um paciente desativado com o mesmo CPF continua bloqueando o cadastro.
+ */
+function ehCpfDuplicado(erro: unknown): boolean {
+  if (typeof erro !== 'object' || erro === null) return false;
+  const e = erro as { code?: number; keyPattern?: Record<string, unknown>; message?: string };
+  if (e.code !== 11000) return false;
+  return e.keyPattern ? 'cpfHash' in e.keyPattern : /cpfHash/.test(e.message ?? '');
+}
 
 export interface RequestAuditContext {
   ip: string;
@@ -29,7 +44,7 @@ export class PacientesService {
 
   async create(dto: CreatePacienteDto, context: RequestAuditContext): Promise<Paciente> {
     const clinicaId = this.resolveClinicaId(context.user, dto.clinicaId);
-    const paciente = await this.pacientes.create({
+    const paciente = await this.traduzirCpfDuplicado(MSG_CPF_DUPLICADO_CADASTRO, () => this.pacientes.create({
       clinicaId,
       nome: dto.nome,
       cpf: dto.cpf,
@@ -49,7 +64,7 @@ export class PacientesService {
       projeto: dto.projeto,
       linhaTerapeutica: dto.linhaTerapeutica,
       representante: dto.representante,
-    });
+    }));
 
     await this.audit(AuditEvent.PATIENT_CREATED, context, {
       clinicaId,
@@ -157,7 +172,7 @@ export class PacientesService {
   ): Promise<Paciente> {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
     await this.assertPacienteVisivel(resolvedClinicaId, pacienteId, context.user.papel);
-    const paciente = await this.pacientes.update(resolvedClinicaId, pacienteId, {
+    const paciente = await this.traduzirCpfDuplicado(MSG_CPF_DUPLICADO_ATUALIZACAO, () => this.pacientes.update(resolvedClinicaId, pacienteId, {
       ...dto,
       dataNascimento: dto.dataNascimento ? new Date(dto.dataNascimento) : undefined,
       consentimentoLGPD: dto.consentimentoLGPD
@@ -167,7 +182,7 @@ export class PacientesService {
             versao: dto.consentimentoLGPD.versao,
           }
         : undefined,
-    });
+    }));
 
     if (!paciente) {
       throw new NotFoundException('Paciente nao encontrado.');
@@ -241,6 +256,16 @@ export class PacientesService {
       formato: 'application/json',
       dados: paciente,
     };
+  }
+
+  /** Executa a gravação e converte a violação do índice único de CPF em 409 com mensagem clara. */
+  private async traduzirCpfDuplicado<T>(mensagem: string, operacao: () => Promise<T>): Promise<T> {
+    try {
+      return await operacao();
+    } catch (erro) {
+      if (ehCpfDuplicado(erro)) throw new ConflictException(mensagem);
+      throw erro;
+    }
   }
 
   private resolveClinicaId(user: AuthTokenPayload, requestedClinicaId?: string): string {

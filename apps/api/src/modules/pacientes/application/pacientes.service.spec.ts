@@ -1,3 +1,4 @@
+import { ConflictException } from '@nestjs/common';
 import { Papel } from '../../../../../../packages/shared/src/auth';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { PacienteRepository } from './ports/paciente.repository';
@@ -66,5 +67,41 @@ describe('PacientesService', () => {
 
     expect(listarRepresentantesDistintos).toHaveBeenCalledWith('clinica-1');
     expect(resultado).toEqual(['Ana', 'João']);
+  });
+  describe('CPF duplicado (índice único {clinicaId, cpfHash})', () => {
+    const erroCpf = Object.assign(new Error('E11000 duplicate key ... clinicaId_1_cpfHash_1'), {
+      code: 11000,
+      keyPattern: { clinicaId: 1, cpfHash: 1 },
+    });
+
+    it('create() converte E11000 do CPF em 409 com mensagem clara', async () => {
+      const create = jest.fn().mockRejectedValue(erroCpf);
+      const service = serviceWith({ create });
+
+      const chamada = service.create({ clinicaId: 'clinica-1', nome: 'Maria', cpf: '52998224725' } as never, context);
+
+      await expect(chamada).rejects.toBeInstanceOf(ConflictException);
+      await expect(chamada).rejects.toThrow('Já existe um paciente com este CPF nesta clínica.');
+    });
+
+    it('update() converte E11000 do CPF em 409 com mensagem de atualização', async () => {
+      const service = serviceWith({
+        findById: jest.fn().mockResolvedValue(basePaciente),
+        update: jest.fn().mockRejectedValue(erroCpf),
+      });
+
+      const chamada = service.update('paciente-1', { cpf: '52998224725' } as never, undefined, context);
+
+      await expect(chamada).rejects.toBeInstanceOf(ConflictException);
+      await expect(chamada).rejects.toThrow('Não é possível atualizar: já existe outro paciente com este CPF nesta clínica.');
+    });
+
+    it('não engole erros diferentes: E11000 de outro índice e falhas genéricas seguem como estão', async () => {
+      const outroIndice = Object.assign(new Error('dup'), { code: 11000, keyPattern: { clinicaId: 1, outro: 1 } });
+      const generico = new Error('conexão perdida');
+
+      await expect(serviceWith({ create: jest.fn().mockRejectedValue(outroIndice) }).create({ clinicaId: 'clinica-1', nome: 'M' } as never, context)).rejects.toBe(outroIndice);
+      await expect(serviceWith({ create: jest.fn().mockRejectedValue(generico) }).create({ clinicaId: 'clinica-1', nome: 'M' } as never, context)).rejects.toBe(generico);
+    });
   });
 });

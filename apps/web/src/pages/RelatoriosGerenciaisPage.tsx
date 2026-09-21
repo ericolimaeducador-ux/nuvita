@@ -28,7 +28,6 @@ const BAR_COLOR = 'hsl(var(--primary))';
 const GRID_COLOR = 'hsl(var(--border))';
 const TICK_STYLE = { fill: 'hsl(var(--muted-foreground))', fontSize: 12 };
 
-const MAX_REPRESENTANTES_EXIBIDOS = 8;
 
 function StatTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
   return (
@@ -49,14 +48,16 @@ function ChartCard({
   loading,
   empty,
   children,
+  className,
 }: {
   title: string;
   loading: boolean;
   empty: boolean;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
@@ -98,10 +99,6 @@ export function RelatoriosGerenciaisPage() {
     queryKey: ['analytics', 'pacientes', periodo],
     queryFn: () => analyticsApi.pacientes(periodo),
   });
-  const porRepresentanteQ = useQuery({
-    queryKey: ['analytics', 'pacientes-por-representante'],
-    queryFn: () => analyticsApi.pacientesPorRepresentante(),
-  });
   const agendamentosQ = useQuery({
     queryKey: ['analytics', 'agendamentos', periodo],
     queryFn: () => analyticsApi.agendamentos(periodo),
@@ -129,17 +126,6 @@ export function RelatoriosGerenciaisPage() {
     queryFn: () => analyticsApi.horariosVagos({ data: diaVagos, horaInicio: horaInicioVagos, horaFim: horaFimVagos }),
   });
 
-  // Mais de ~8 categorias num gráfico de barras vira ilegível — dobra a
-  // cauda em "Outros" em vez de listar todo mundo (ver skill `dataviz`,
-  // anti-padrão "cycling hues past 8" aplicado aqui a contagem de barras).
-  const dadosRepresentante = useMemo(() => {
-    const bruto = (porRepresentanteQ.data ?? []).map((d) => ({ nome: d._id, total: d.total }));
-    if (bruto.length <= MAX_REPRESENTANTES_EXIBIDOS) return bruto;
-    const principais = bruto.slice(0, MAX_REPRESENTANTES_EXIBIDOS);
-    const outros = bruto.slice(MAX_REPRESENTANTES_EXIBIDOS).reduce((soma, d) => soma + d.total, 0);
-    return [...principais, { nome: 'Outros', total: outros }];
-  }, [porRepresentanteQ.data]);
-
   const novosNoPeriodo = (pacientesQ.data?.novosPorMes ?? []).reduce((soma, m) => soma + m.total, 0);
 
   const dadosPorDia = useMemo(
@@ -164,7 +150,7 @@ export function RelatoriosGerenciaisPage() {
     <div className="p-6 space-y-6">
       <PageHeader
         title="Relatórios Gerenciais"
-        subtitle="Visão consolidada de pacientes e representantes para a gestão da clínica"
+        subtitle="Visão consolidada de pacientes e atendimentos para a gestão da clínica"
       />
 
       <Card>
@@ -189,18 +175,6 @@ export function RelatoriosGerenciaisPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartCard title="Pacientes por representante" loading={porRepresentanteQ.isLoading} empty={dadosRepresentante.length === 0}>
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={dadosRepresentante} layout="vertical" margin={{ left: 24 }}>
-              <CartesianGrid horizontal={false} stroke={GRID_COLOR} />
-              <XAxis type="number" allowDecimals={false} tick={TICK_STYLE} axisLine={{ stroke: GRID_COLOR }} tickLine={false} />
-              <YAxis type="category" dataKey="nome" width={140} tick={TICK_STYLE} axisLine={{ stroke: GRID_COLOR }} tickLine={false} />
-              <Tooltip {...tooltipStyle()} />
-              <Bar dataKey="total" name="Pacientes" fill={BAR_COLOR} radius={[0, 4, 4, 0]} maxBarSize={24} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
         <ChartCard title="Atendimentos por mês" loading={agendamentosQ.isLoading} empty={dadosPorMesAtendimentos.length === 0}>
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={dadosPorMesAtendimentos} margin={{ left: 8 }}>
@@ -225,7 +199,7 @@ export function RelatoriosGerenciaisPage() {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Atendimentos por dia" loading={agendamentosQ.isLoading} empty={dadosPorDia.length === 0}>
+        <ChartCard title="Atendimentos por dia" loading={agendamentosQ.isLoading} empty={dadosPorDia.length === 0} className="lg:col-span-2">
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={dadosPorDia} margin={{ left: 8 }}>
               <CartesianGrid vertical={false} stroke={GRID_COLOR} />

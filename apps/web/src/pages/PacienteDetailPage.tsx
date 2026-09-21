@@ -386,7 +386,6 @@ const editPacienteSchema = z.object({
   sexo: z.nativeEnum(Sexo).optional().or(z.literal('')),
   projeto: z.nativeEnum(ProjetoPaciente).optional().or(z.literal('')),
   linhaTerapeutica: z.nativeEnum(LinhaTerapeutica).optional().or(z.literal('')),
-  representante: z.string().optional(),
   telefone: z.string().optional(),
   email: z.string().email('E-mail inválido.').optional().or(z.literal('')),
   consentimento: z.boolean().optional(),
@@ -415,11 +414,6 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
     resolver: zodResolver(editPacienteSchema),
   });
 
-  const representantesQ = useQuery({
-    queryKey: ['pacientes', 'representantes'],
-    queryFn: pacientesApi.listarRepresentantes,
-  });
-
   function abrir() {
     reset({
       cpf: p.cpf ?? '',
@@ -427,7 +421,6 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
       sexo: p.sexo ?? '',
       projeto: ehPsicologo ? ProjetoPaciente.PSI : (p.projeto ?? ''),
       linhaTerapeutica: p.linhaTerapeutica ?? '',
-      representante: p.representante ?? '',
       telefone: p.telefone ?? '',
       email: p.email ?? '',
       consentimento: !!p.consentimentoLGPD?.aceito,
@@ -472,7 +465,6 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
       sexo: v.sexo || undefined,
       projeto: v.projeto || undefined,
       linhaTerapeutica: v.linhaTerapeutica || undefined,
-      representante: v.representante?.trim() || undefined,
       telefone: v.telefone || undefined,
       email: v.email || undefined,
       endereco: temEndereco ? enderecoCampos : undefined,
@@ -501,7 +493,6 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
         <DescItem label="Sexo" value={p.sexo ? SEXO_LABEL[p.sexo] : '—'} />
         <DescItem label="Projeto" value={p.projeto ? PROJETO_LABEL[p.projeto] : '—'} />
         <DescItem label="Linha terapêutica" value={p.linhaTerapeutica ? LINHA_TERAPEUTICA_LABEL[p.linhaTerapeutica] : '—'} />
-        <DescItem label="Representante" value={p.representante || '—'} />
         <DescItem label="Telefone" value={p.telefone || '—'} />
         <DescItem label="E-mail" value={p.email || '—'} />
         <DescItem label="Consentimento LGPD" value={p.consentimentoLGPD?.aceito ? 'Aceito' : 'Pendente'} />
@@ -559,19 +550,6 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="editRepresentante">Representante (quem indicou)</Label>
-              <Input
-                id="editRepresentante"
-                list="representantes-list-edit"
-                placeholder="Nome de quem indicou"
-                {...register('representante')}
-              />
-              <datalist id="representantes-list-edit">
-                {representantesQ.data?.map((r) => <option key={r} value={r} />)}
-              </datalist>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

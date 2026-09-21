@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PRICING_LINKS } from '@/config/pricing-links';
 import { BotaoCheckout } from './BotaoCheckout';
+import { CheckoutWallet } from './CheckoutWallet';
 import { ListaBeneficios } from './ListaBeneficios';
 import { SeloGarantia } from './SeloGarantia';
 
@@ -43,6 +44,7 @@ export function PrecosPsicologia() {
                   Parcelar em 12x sem juros
                 </BotaoCheckout>
               </div>
+              <CheckoutWallet />
             </CardContent>
           </Card>
           <p className="mt-4 text-xs text-muted-foreground">

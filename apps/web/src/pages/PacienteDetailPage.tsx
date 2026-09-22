@@ -127,6 +127,7 @@ export function PacienteDetailPage() {
 
   const [novoDocOpen, setNovoDocOpen] = useState(false);
   const [docParaExcluir, setDocParaExcluir] = useState<Documento | null>(null);
+  const [confirmDesativarOpen, setConfirmDesativarOpen] = useState(false);
   const [novaAvaliacaoOpen, setNovaAvaliacaoOpen] = useState(false);
   const [avaliacaoEdit, setAvaliacaoEdit] = useState<AvaliacaoIU | null>(null);
   const [avaliacaoParaExcluir, setAvaliacaoParaExcluir] = useState<AvaliacaoIU | null>(null);
@@ -181,6 +182,8 @@ export function PacienteDetailPage() {
   // Export LGPD: mesmos papéis autorizados no backend (GET /pacientes/:id/export).
   const podeExportar =
     user?.papel === Papel.SECRETARIA || user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
+  // Excluir (desativar) paciente: mesmos papéis autorizados no backend (PATCH /pacientes/:id/desativar).
+  const podeDesativar = user?.papel === Papel.SECRETARIA || user?.papel === Papel.ADMIN;
 
   // Direito de acesso/portabilidade (LGPD): baixa um JSON com todos os dados do
   // paciente. Antes o botão só disparava o GET e descartava a resposta (nada
@@ -201,6 +204,19 @@ export function PacienteDetailPage() {
       toast.success('Exportação concluída', 'O arquivo com os dados do paciente foi baixado.');
     },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+  });
+
+  // Exclusão é soft-delete: marca o paciente como inativo (ativo: false), preservando
+  // histórico clínico. Não some da base — some das listas e buscas por padrão.
+  const desativarMut = useMutation({
+    mutationFn: () => pacientesApi.deactivate(id),
+    onSuccess: () => {
+      toast.success('Paciente excluído', 'O cadastro foi desativado.');
+      setConfirmDesativarOpen(false);
+      void qc.invalidateQueries({ queryKey: ['pacientes'] });
+      navigate('/pacientes');
+    },
+    onError: (e) => toast.error('Erro ao excluir paciente', apiErrorMessage(e)),
   });
 
   const prontuarios = useMemo(() => toItems<Prontuario>(prontQ.data as never), [prontQ.data]);
@@ -262,6 +278,17 @@ export function PacienteDetailPage() {
                 onClick={() => exportMut.mutate()}
               >
                 <Download className="mr-2 h-4 w-4" /> {exportMut.isPending ? 'Exportando…' : 'Exportar (LGPD)'}
+              </Button>
+            )}
+            {podeDesativar && p.ativo !== false && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                title="Desativa o cadastro do paciente (não apaga o histórico clínico)"
+                onClick={() => setConfirmDesativarOpen(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Excluir paciente
               </Button>
             )}
           </div>
@@ -592,6 +619,14 @@ export function PacienteDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmExcluirDialog
+        open={confirmDesativarOpen}
+        titulo="Excluir paciente"
+        descricao={<>Tem certeza que deseja excluir <span className="font-medium text-foreground">{p.nome}</span>? O cadastro fica inativo e some das listas e buscas, mas o histórico clínico é preservado. Esta ação não pode ser desfeita pela tela.</>}
+        pending={desativarMut.isPending}
+        onCancel={() => setConfirmDesativarOpen(false)}
+        onConfirm={() => desativarMut.mutate()}
+      />
       <ConfirmExcluirDialog
         open={!!avaliacaoParaExcluir}
         titulo="Excluir avaliação de incontinência urinária"

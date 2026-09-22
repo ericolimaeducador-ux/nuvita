@@ -10,7 +10,7 @@ import {
   UpdatePacienteInput,
 } from '../../application/ports/paciente.repository';
 import { CursorPaginationResult } from '../../domain/pagination';
-import { Convenio, Endereco, Paciente } from '../../domain/paciente.entity';
+import { Convenio, Endereco, Paciente, ResponsavelLegal } from '../../domain/paciente.entity';
 import { PacienteCryptoService } from '../crypto/paciente-crypto.service';
 import { PacienteDocument, PacienteMongo } from './paciente.schema';
 
@@ -53,6 +53,8 @@ export class PacienteMongoRepository implements PacienteRepository {
       projeto: input.projeto,
       linhaTerapeutica: input.linhaTerapeutica,
       representante: input.representante,
+      responsavelLegal: this.encryptJsonOptional(input.responsavelLegal),
+      autorizacaoResponsavel: input.autorizacaoResponsavel,
       ativo: true,
     };
     if (input.cpf) {
@@ -231,6 +233,8 @@ export class PacienteMongoRepository implements PacienteRepository {
     if (input.projeto !== undefined) update.projeto = input.projeto;
     if (input.linhaTerapeutica !== undefined) update.linhaTerapeutica = input.linhaTerapeutica;
     if (input.representante !== undefined) update.representante = input.representante;
+    if (input.responsavelLegal !== undefined) update.responsavelLegal = this.encryptJsonOptional(input.responsavelLegal);
+    if (input.autorizacaoResponsavel !== undefined) update.autorizacaoResponsavel = input.autorizacaoResponsavel;
     if (input.observacoes !== undefined) update.observacoes = this.encryptOptional(input.observacoes);
 
     return update;
@@ -271,6 +275,8 @@ export class PacienteMongoRepository implements PacienteRepository {
       projeto: object.projeto,
       linhaTerapeutica: object.linhaTerapeutica,
       representante: object.representante,
+      responsavelLegal: this.decryptJsonOptional<ResponsavelLegal>(object.responsavelLegal),
+      autorizacaoResponsavel: object.autorizacaoResponsavel,
       ativo: object.ativo,
       criadoEm: object.criadoEm,
       atualizadoEm: object.atualizadoEm,

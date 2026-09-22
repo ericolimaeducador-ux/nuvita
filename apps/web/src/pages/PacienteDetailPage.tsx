@@ -8,7 +8,7 @@ import dayjs from 'dayjs';
 import {
   ArrowLeft, User, Download, Plus, FileText,
   CalendarClock, ChevronDown, Stethoscope,
-  Trash2, Pencil, FileSignature, ClipboardCheck,
+  Trash2, Pencil, FileSignature, ClipboardCheck, ShieldAlert,
 } from 'lucide-react';
 import { ProntuarioDetailDialog } from '@/components/ProntuarioDialogs';
 import { NovoDocumentoDialog } from '@/components/NovoDocumentoDialog';
@@ -32,6 +32,7 @@ import {
 } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { formatCpf, formatData, idade, toItems, formatEndereco } from '@/utils';
+import { classificarIdadePorString } from '@/paciente-idade';
 import {
   Sexo, SEXO_LABEL, ProjetoPaciente, PROJETO_LABEL, STATUS_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_LABEL,
   Papel, TIPO_DOCUMENTO_LABEL, LinhaTerapeutica, LINHA_TERAPEUTICA_LABEL,
@@ -145,6 +146,7 @@ export function PacienteDetailPage() {
   );
 
   const p = pacQ.data;
+  const classificacaoIdade = classificarIdadePorString(p.dataNascimento);
 
   return (
     <div className="p-6 space-y-4">
@@ -164,6 +166,7 @@ export function PacienteDetailPage() {
               <div className="flex items-center gap-4 mt-1 flex-wrap">
                 <span className="text-sm text-muted-foreground">{formatCpf(p.cpf)}</span>
                 <span className="text-sm text-muted-foreground">{idade(p.dataNascimento)}</span>
+                {classificacaoIdade === 'menor' && <Badge variant="warning">Menor de idade</Badge>}
                 <Badge variant={p.ativo === false ? 'secondary' : 'success'}>
                   {p.ativo === false ? 'Inativo' : 'Ativo'}
                 </Badge>
@@ -183,6 +186,15 @@ export function PacienteDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Aviso não bloqueante — sem data de nascimento não dá para saber se o
+          paciente é menor de idade (regra de responsável legal, Fase 2). */}
+      {classificacaoIdade === 'indeterminado' && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-700">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>Data de nascimento não informada — complete o cadastro no próximo atendimento para verificar se o paciente é menor de idade.</p>
+        </div>
+      )}
 
       {/* Dados cadastrais */}
       <DadosCadastraisSecao paciente={p} pacienteId={id} />
@@ -499,6 +511,26 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
         <div className="col-span-2 sm:col-span-3">
           <DescItem label="Endereço" value={formatEndereco(p.endereco)} />
         </div>
+        {/* Só aparece quando há responsável legal cadastrado (paciente menor —
+            ver cadastro em PacientesPage.tsx). Sem edição aqui ainda nesta rodada;
+            a API já aceita PATCH com os mesmos campos, se precisar no futuro. */}
+        {p.responsavelLegal && (
+          <>
+            <DescItem label="Responsável legal" value={p.responsavelLegal.nome || '—'} />
+            <DescItem label="CPF do responsável" value={formatCpf(p.responsavelLegal.cpf)} />
+            <DescItem label="Telefone do responsável" value={p.responsavelLegal.telefone || '—'} />
+            <DescItem label="E-mail do responsável" value={p.responsavelLegal.email || '—'} />
+            <DescItem label="Vínculo" value={p.responsavelLegal.vinculo || '—'} />
+            <DescItem
+              label="Autorização do responsável"
+              value={
+                p.autorizacaoResponsavel?.confirmado
+                  ? `Confirmada${p.autorizacaoResponsavel.registradaEm ? ' em ' + dayjs(p.autorizacaoResponsavel.registradaEm).format('DD/MM/YYYY HH:mm') : ''}`
+                  : 'Pendente'
+              }
+            />
+          </>
+        )}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>

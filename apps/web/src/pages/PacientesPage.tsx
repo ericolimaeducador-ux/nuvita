@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { Plus, Search, Download, X } from 'lucide-react';
+import { Plus, Search, Download, X, ShieldAlert } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { pacientesApi, type PacienteSort } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toItems, formatCpf, formatData, idade } from '@/utils';
+import { classificarIdadePorString } from '@/paciente-idade';
 import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import {
@@ -27,24 +28,54 @@ import {
   LinhaTerapeutica, LINHA_TERAPEUTICA_LABEL, type Paciente,
 } from '@/types';
 
-const pacienteSchema = z.object({
-  nome: z.string().min(1, 'Informe o nome.'),
-  cpf: z.string().regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, 'CPF inválido.').optional().or(z.literal('')),
-  dataNascimento: z.string().optional(),
-  sexo: z.nativeEnum(Sexo, { error: 'Selecione.' }).optional(),
-  projeto: z.nativeEnum(ProjetoPaciente, { error: 'Selecione.' }).optional(),
-  linhaTerapeutica: z.nativeEnum(LinhaTerapeutica, { error: 'Selecione.' }).optional(),
-  telefone: z.string().optional(),
-  email: z.string().email('E-mail inválido.').optional().or(z.literal('')),
-  consentimento: z.boolean().optional(),
-  logradouro: z.string().optional(),
-  numero: z.string().optional(),
-  complemento: z.string().optional(),
-  bairro: z.string().optional(),
-  cidade: z.string().optional(),
-  estado: z.string().optional(),
-  cep: z.string().optional(),
-});
+const CPF_REGEX = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/;
+
+const pacienteSchema = z
+  .object({
+    nome: z.string().min(1, 'Informe o nome.'),
+    cpf: z.string().regex(CPF_REGEX, 'CPF inválido.').optional().or(z.literal('')),
+    // Obrigatória no cadastro (Fase 2: sem ela não dá para saber se o paciente é
+    // menor de idade e exigir responsável legal). Na edição continua opcional —
+    // ver editPacienteSchema, em PacienteDetailPage.tsx.
+    dataNascimento: z.string().min(1, 'Informe a data de nascimento.'),
+    sexo: z.nativeEnum(Sexo, { error: 'Selecione.' }).optional(),
+    projeto: z.nativeEnum(ProjetoPaciente, { error: 'Selecione.' }).optional(),
+    linhaTerapeutica: z.nativeEnum(LinhaTerapeutica, { error: 'Selecione.' }).optional(),
+    telefone: z.string().optional(),
+    email: z.string().email('E-mail inválido.').optional().or(z.literal('')),
+    consentimento: z.boolean().optional(),
+    // Responsável legal — só obrigatório quando dataNascimento indica menor de
+    // idade (checagem condicional abaixo, no superRefine; mesmo padrão do backend
+    // em PacientesService.validarResponsavelLegalObrigatorio()).
+    responsavelNome: z.string().optional(),
+    responsavelCpf: z.string().regex(CPF_REGEX, 'CPF inválido.').optional().or(z.literal('')),
+    responsavelTelefone: z.string().optional(),
+    responsavelEmail: z.string().email('E-mail inválido.').optional().or(z.literal('')),
+    responsavelVinculo: z.string().optional(),
+    autorizacaoResponsavel: z.boolean().optional(),
+    logradouro: z.string().optional(),
+    numero: z.string().optional(),
+    complemento: z.string().optional(),
+    bairro: z.string().optional(),
+    cidade: z.string().optional(),
+    estado: z.string().optional(),
+    cep: z.string().optional(),
+  })
+  .superRefine((v, ctx) => {
+    if (classificarIdadePorString(v.dataNascimento) !== 'menor') return;
+    if (!v.responsavelNome?.trim()) {
+      ctx.addIssue({ code: 'custom', path: ['responsavelNome'], message: 'Informe o nome do responsável legal.' });
+    }
+    if (!v.responsavelCpf?.trim()) {
+      ctx.addIssue({ code: 'custom', path: ['responsavelCpf'], message: 'Informe o CPF do responsável legal.' });
+    }
+    if (!v.responsavelTelefone?.trim()) {
+      ctx.addIssue({ code: 'custom', path: ['responsavelTelefone'], message: 'Informe o telefone do responsável legal.' });
+    }
+    if (!v.autorizacaoResponsavel) {
+      ctx.addIssue({ code: 'custom', path: ['autorizacaoResponsavel'], message: 'Confirme a autorização do responsável legal.' });
+    }
+  });
 type PacienteForm = z.infer<typeof pacienteSchema>;
 
 const SORT_OPTIONS: { value: PacienteSort; label: string }[] = [
@@ -81,6 +112,9 @@ export function PacientesPage() {
     resolver: zodResolver(pacienteSchema),
     defaultValues: { consentimento: false },
   });
+  // Recalcula a cada tecla no campo de nascimento — mostra/esconde a seção de
+  // responsável legal em tempo real, sem esperar o submit.
+  const ehMenorNoFormulario = classificarIdadePorString(watch('dataNascimento')) === 'menor';
 
   // 11 dígitos sem letras = CPF (busca exata); qualquer outra coisa = nome.
   const buscaDigitos = busca.replace(/\D/g, '');
@@ -141,12 +175,13 @@ export function PacientesPage() {
       cep: v.cep?.trim() || undefined,
     };
     const temEndereco = Object.values(enderecoCampos).some(Boolean);
+    const menor = classificarIdadePorString(v.dataNascimento) === 'menor';
 
     createMut.mutate({
       clinicaId: user?.clinicaId,
       nome: v.nome,
       cpf: v.cpf || undefined,
-      dataNascimento: v.dataNascimento ? dayjs(v.dataNascimento).format('YYYY-MM-DD') : undefined,
+      dataNascimento: dayjs(v.dataNascimento).format('YYYY-MM-DD'),
       sexo: v.sexo || undefined,
       projeto: ehPsicologo ? ProjetoPaciente.PSI : (v.projeto || undefined),
       linhaTerapeutica: v.linhaTerapeutica || undefined,
@@ -156,6 +191,18 @@ export function PacientesPage() {
       consentimentoLGPD: v.consentimento
         ? { aceito: true, dataAceite: new Date().toISOString(), versao: '1.0' }
         : undefined,
+      // Só envia responsável/autorização quando o cálculo indicou menor de idade —
+      // o superRefine acima já bloqueou o submit se algum campo obrigatório faltar.
+      responsavelLegal: menor
+        ? {
+            nome: v.responsavelNome?.trim() || undefined,
+            cpf: v.responsavelCpf || undefined,
+            telefone: v.responsavelTelefone?.trim() || undefined,
+            email: v.responsavelEmail || undefined,
+            vinculo: v.responsavelVinculo?.trim() || undefined,
+          }
+        : undefined,
+      autorizacaoResponsavel: menor ? { confirmado: !!v.autorizacaoResponsavel } : undefined,
     });
   }
 
@@ -280,7 +327,12 @@ export function PacientesPage() {
                     <TableCell className="font-medium">{p.nome}</TableCell>
                     <TableCell>{formatCpf(p.cpf)}</TableCell>
                     <TableCell>{formatData(p.dataNascimento)}</TableCell>
-                    <TableCell>{idade(p.dataNascimento)}</TableCell>
+                    <TableCell>
+                      {idade(p.dataNascimento)}
+                      {classificarIdadePorString(p.dataNascimento) === 'menor' && (
+                        <Badge variant="warning" className="ml-2">Menor de idade</Badge>
+                      )}
+                    </TableCell>
                     <TableCell>{p.sexo ? SEXO_LABEL[p.sexo] : '—'}</TableCell>
                     <TableCell>
                       {p.projeto ? <Badge variant="secondary">{PROJETO_LABEL[p.projeto]}</Badge> : '—'}
@@ -333,7 +385,7 @@ export function PacientesPage() {
             <DialogTitle>Novo paciente</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground -mt-2">
-            Apenas o nome é obrigatório. Os demais dados podem ser completados depois, na tela do paciente.
+            Nome e data de nascimento são obrigatórios. Os demais dados podem ser completados depois, na tela do paciente.
           </p>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
@@ -349,7 +401,7 @@ export function PacientesPage() {
                 {errors.cpf && <p className="text-sm text-destructive">{errors.cpf.message}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dataNascimento">Nascimento (opcional)</Label>
+                <Label htmlFor="dataNascimento">Nascimento</Label>
                 <Input id="dataNascimento" type="date" {...register('dataNascimento')} />
                 {errors.dataNascimento && <p className="text-sm text-destructive">{errors.dataNascimento.message}</p>}
               </div>
@@ -364,6 +416,58 @@ export function PacientesPage() {
                 {errors.sexo && <p className="text-sm text-destructive">{errors.sexo.message}</p>}
               </div>
             </div>
+
+            {/* Só aparece quando a data de nascimento indica menor de idade (Art. 8º
+                do Código de Ética Profissional do CFP + Resolução CFP nº 13/2022 —
+                citados pelo usuário; fonte ainda não verificada em texto normativo
+                primário). Todos os campos aqui são obrigatórios (ver superRefine
+                do pacienteSchema, acima). */}
+            {ehMenorNoFormulario && (
+              <div className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
+                <p className="flex items-center gap-1.5 text-sm font-medium text-amber-700">
+                  <ShieldAlert className="h-4 w-4" /> Responsável legal (paciente menor de idade)
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="responsavelNome">Nome do responsável</Label>
+                    <Input id="responsavelNome" placeholder="Nome completo" {...register('responsavelNome')} />
+                    {errors.responsavelNome && <p className="text-sm text-destructive">{errors.responsavelNome.message}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="responsavelCpf">CPF do responsável</Label>
+                    <Input id="responsavelCpf" placeholder="000.000.000-00" {...register('responsavelCpf')} />
+                    {errors.responsavelCpf && <p className="text-sm text-destructive">{errors.responsavelCpf.message}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="responsavelTelefone">Telefone do responsável</Label>
+                    <Input id="responsavelTelefone" placeholder="(00) 00000-0000" {...register('responsavelTelefone')} />
+                    {errors.responsavelTelefone && <p className="text-sm text-destructive">{errors.responsavelTelefone.message}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="responsavelEmail">E-mail do responsável (opcional)</Label>
+                    <Input id="responsavelEmail" type="email" placeholder="responsavel@email.com" {...register('responsavelEmail')} />
+                    {errors.responsavelEmail && <p className="text-sm text-destructive">{errors.responsavelEmail.message}</p>}
+                  </div>
+                  <div className="col-span-2 space-y-2">
+                    <Label htmlFor="responsavelVinculo">Vínculo (opcional)</Label>
+                    <Input id="responsavelVinculo" placeholder="Ex.: mãe, pai, tutor legal" {...register('responsavelVinculo')} />
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="autorizacaoResponsavel"
+                    checked={watch('autorizacaoResponsavel')}
+                    onCheckedChange={(c) => setValue('autorizacaoResponsavel', !!c)}
+                  />
+                  <Label htmlFor="autorizacaoResponsavel" className="text-sm leading-tight cursor-pointer">
+                    Responsável legal autorizou o acompanhamento psicoterapêutico.
+                  </Label>
+                </div>
+                {errors.autorizacaoResponsavel && (
+                  <p className="text-sm text-destructive">{errors.autorizacaoResponsavel.message}</p>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               {!ehPsicologo && (

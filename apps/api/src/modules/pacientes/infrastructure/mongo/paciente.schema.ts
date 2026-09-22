@@ -18,6 +18,23 @@ export class ConsentimentoLGPDMongo {
 
 const ConsentimentoLGPDSchema = SchemaFactory.createForClass(ConsentimentoLGPDMongo);
 
+@Schema({ _id: false, versionKey: false })
+export class AutorizacaoResponsavelMongo {
+  @Prop({ required: true, default: false })
+  confirmado!: boolean;
+
+  // Quem confirmou (context.user.sub) e quando — não reescrito num PATCH que
+  // não toca em autorizacaoResponsavel (ver PacientesService.update()): fica
+  // como o registro histórico de QUANDO a autorização foi de fato confirmada.
+  @Prop()
+  registradaPor?: string;
+
+  @Prop()
+  registradaEm?: Date;
+}
+
+const AutorizacaoResponsavelSchema = SchemaFactory.createForClass(AutorizacaoResponsavelMongo);
+
 @Schema({ collection: 'pacientes', versionKey: false })
 export class PacienteMongo {
   @Prop({ required: true, index: true })
@@ -63,6 +80,20 @@ export class PacienteMongo {
   // para permitir filtro/agregação e autocomplete por valores já usados.
   @Prop({ trim: true, index: true })
   representante?: string;
+
+  // JSON criptografado (mesmo padrão de endereco/convenio, um único blob para o
+  // subdocumento inteiro) — inclui nome/cpf/telefone/email do responsável, todos
+  // dados pessoais sensíveis. Sem índice para o CPF do responsável (diferente do
+  // cpfHash do paciente): um mesmo responsável pode ter vários pacientes
+  // vinculados, e não há hoje um caso de uso de busca por CPF do responsável
+  // que justifique manter um índice (nem único, nem não-único) sobre esse dado.
+  @Prop()
+  responsavelLegal?: string;
+
+  // Não criptografado (mesmo padrão de consentimentoLGPD) — não é dado pessoal do
+  // responsável, é o registro operacional de QUEM/QUANDO autorizou.
+  @Prop({ type: AutorizacaoResponsavelSchema })
+  autorizacaoResponsavel?: AutorizacaoResponsavelMongo;
 
   // Texto livre, criptografado (mesmo padrão de telefone/email/endereco) —
   // qualquer profissional de atendimento pode escrever, ver PATCH /observacoes.

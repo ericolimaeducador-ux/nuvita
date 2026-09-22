@@ -41,7 +41,7 @@ function makeService(overrides: {
     ...overrides.agendamentos,
   };
   const pacientesService = {
-    resumoPorIds: jest.fn().mockResolvedValue(new Map([['pac-1', { nome: 'Fulana', email: 'fulana@nuvita.test' }]])),
+    resumoPorIds: jest.fn().mockResolvedValue(new Map([['pac-1', { nome: 'Fulana', email: 'fulana@nuvita.test', nomeDestinatario: 'Fulana', ehResponsavel: false }]])),
   };
   const notificacoesService = {
     create: jest.fn().mockResolvedValue(undefined),

@@ -28,10 +28,41 @@ const TEMPLATES: Record<TipoNotificacao, { assunto: string; mensagem: string }> 
   },
 };
 
+/**
+ * Variante do texto para quando o destinatário é o responsável legal de um
+ * paciente menor, não o paciente (ver PacientesService.contatoEfetivo() +
+ * CreateNotificacaoDto.paraResponsavel) — {nome} continua sendo quem recebe a
+ * mensagem, e {nomePaciente} identifica de quem se trata. Só os 4 tipos
+ * operacionais (agenda/teleconsulta/documento) têm variante; ELEGIBILIDADE_CONFIRMADA
+ * é notificação interna (sem destinatário humano), sem variante.
+ */
+const TEMPLATES_RESPONSAVEL: Partial<Record<TipoNotificacao, { assunto: string; mensagem: string }>> = {
+  [TipoNotificacao.LEMBRETE_CONSULTA_24H]: {
+    assunto: 'Lembrete de consulta',
+    mensagem: 'Ola {nome}, a consulta de {nomePaciente} e amanha as {hora} com Dr(a). {medico}',
+  },
+  [TipoNotificacao.LEMBRETE_CONSULTA_1H]: {
+    assunto: 'Consulta em 1 hora',
+    mensagem: 'Ola {nome}, a consulta de {nomePaciente} com Dr(a). {medico} sera as {hora}.',
+  },
+  [TipoNotificacao.CONFIRMACAO_AGENDAMENTO]: {
+    assunto: 'Agendamento confirmado',
+    mensagem: 'Ola {nome}, o agendamento de {nomePaciente} foi confirmado para {hora} com Dr(a). {medico}.',
+  },
+  [TipoNotificacao.LINK_TELECONSULTA]: {
+    assunto: 'Link da teleconsulta',
+    mensagem: 'Ola {nome}, acesse a teleconsulta de {nomePaciente} pelo link: {link}',
+  },
+  [TipoNotificacao.RESULTADO_DISPONIVEL]: {
+    assunto: 'Resultado disponivel',
+    mensagem: 'Ola {nome}, o documento {documento} de {nomePaciente} ja esta disponivel no prontuario.',
+  },
+};
+
 @Injectable()
 export class NotificacaoTemplateService {
-  render(tipo: TipoNotificacao, variaveis: Record<string, string>) {
-    const template = TEMPLATES[tipo];
+  render(tipo: TipoNotificacao, variaveis: Record<string, string>, paraResponsavel = false) {
+    const template = (paraResponsavel ? TEMPLATES_RESPONSAVEL[tipo] : undefined) ?? TEMPLATES[tipo];
     if (!template) {
       throw new BadRequestException('Tipo de notificacao sem template configurado.');
     }

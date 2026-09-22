@@ -60,7 +60,7 @@ function makeService(overrides: {
   const auditLogs = { create: jest.fn().mockResolvedValue(undefined), ...overrides.auditLogs };
   const pacientesService = {
     resumoPorIds: jest.fn().mockResolvedValue(
-      new Map([['pac-1', { nome: 'Paciente Teste', cpf: '11122233344', email: 'paciente@teste.com' }]]),
+      new Map([['pac-1', { nome: 'Paciente Teste', cpf: '11122233344', email: 'paciente@teste.com', nomeDestinatario: 'Paciente Teste', ehResponsavel: false }]]),
     ),
     ...overrides.pacientesService,
   };
@@ -123,6 +123,38 @@ describe('AgendamentosService.create — wiring de confirmacao_agendamento (Cate
         canal: CanalNotificacao.EMAIL,
         email: 'paciente@teste.com',
         nome: 'Paciente Teste',
+      }),
+      ctx,
+    );
+  });
+
+  it('paciente menor com responsável legal cadastrado → notifica o responsável, não o paciente (Fase 2: responsável legal)', async () => {
+    const { service, notificacoesService } = makeService({
+      pacientesService: {
+        resumoPorIds: jest.fn().mockResolvedValue(
+          new Map([['pac-1', {
+            nome: 'Joaquinzinho',
+            cpf: '11122233344',
+            email: 'mae@teste.com',
+            nomeDestinatario: 'Maria (mãe)',
+            ehResponsavel: true,
+          }]]),
+        ),
+      },
+    });
+
+    await service.create(dto, ctx);
+
+    // Payload da notificação de confirmação de agendamento aponta pro contato do
+    // responsável, não do paciente — sem gastar cota de e-mail real (NotificacoesService é mock).
+    expect(notificacoesService.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tipo: TipoNotificacao.CONFIRMACAO_AGENDAMENTO,
+        canal: CanalNotificacao.EMAIL,
+        email: 'mae@teste.com',
+        nome: 'Maria (mãe)',
+        nomePaciente: 'Joaquinzinho',
+        paraResponsavel: true,
       }),
       ctx,
     );

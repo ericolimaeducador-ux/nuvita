@@ -44,6 +44,30 @@ export interface ConsentimentoLGPD {
   versao: string;
 }
 
+/**
+ * Responsável legal de paciente menor de idade (Art. 8º do Código de Ética
+ * Profissional do CFP + Resolução CFP nº 13/2022 — citados pelo usuário;
+ * fonte ainda não verificada em texto normativo primário nesta sessão).
+ * Todos os campos ficam opcionais no TIPO — a obrigatoriedade condicional
+ * (quando o paciente é menor) é regra de negócio, validada em
+ * PacientesService, não uma restrição estrutural do dado.
+ */
+export interface ResponsavelLegal {
+  nome?: string;
+  cpf?: string;
+  telefone?: string;
+  email?: string;
+  /** Ex.: "mãe", "pai", "tutor legal". Texto livre — sem catálogo fechado no MVP. */
+  vinculo?: string;
+}
+
+export interface AutorizacaoResponsavel {
+  confirmado: boolean;
+  /** context.user.sub de quem confirmou — mesmo padrão de `criadoPor` em agendamento/lançamento financeiro. */
+  registradaPor?: string;
+  registradaEm?: Date;
+}
+
 export interface Paciente {
   id: string;
   clinicaId: string;
@@ -60,6 +84,8 @@ export interface Paciente {
   linhaTerapeutica?: LinhaTerapeutica;
   /** Quem indicou/encaminhou o paciente. Texto livre, não criptografado — precisa ser filtrável/agregável. */
   representante?: string;
+  responsavelLegal?: ResponsavelLegal;
+  autorizacaoResponsavel?: AutorizacaoResponsavel;
   observacoes?: string;
   ativo: boolean;
   criadoEm: Date;

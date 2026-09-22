@@ -42,7 +42,7 @@ function agendamento(overrides: Record<string, unknown> = {}) {
 }
 
 function makePacientesMap(id: string, nome = 'Fulana', email = 'fulana@nuvita.test') {
-  return new Map([[id, { nome, email }]]);
+  return new Map([[id, { nome, email, nomeDestinatario: nome, ehResponsavel: false }]]);
 }
 
 function makeService(overrides: {
@@ -169,8 +169,8 @@ describe('LembretesAgendamentoProcessorService.processar()', () => {
       },
     });
     pacientesService.resumoPorIds.mockImplementation((_clinicaId: string, ids: string[]) => {
-      const map = new Map<string, { nome: string; email: string }>();
-      for (const id of ids) map.set(id, { nome: 'Paciente', email: `${id}@nuvita.test` });
+      const map = new Map<string, { nome: string; email: string; nomeDestinatario: string; ehResponsavel: boolean }>();
+      for (const id of ids) map.set(id, { nome: 'Paciente', email: `${id}@nuvita.test`, nomeDestinatario: 'Paciente', ehResponsavel: false });
       return Promise.resolve(map);
     });
 
@@ -195,8 +195,8 @@ describe('LembretesAgendamentoProcessorService.processar()', () => {
       },
       pacientesService: {
         resumoPorIds: jest.fn((_clinicaId: string, ids: string[]) => {
-          const map = new Map<string, { nome: string; email: string }>();
-          for (const id of ids) map.set(id, { nome: 'Paciente', email: `${id}@nuvita.test` });
+          const map = new Map<string, { nome: string; email: string; nomeDestinatario: string; ehResponsavel: boolean }>();
+          for (const id of ids) map.set(id, { nome: 'Paciente', email: `${id}@nuvita.test`, nomeDestinatario: 'Paciente', ehResponsavel: false });
           return Promise.resolve(map);
         }),
       },

@@ -14,6 +14,7 @@ import { LinhaTerapeutica, ProjetoPaciente, Sexo } from '../../domain/paciente.e
 import { ConsentimentoLGpdDto } from './consentimento-lgpd.dto';
 import { ConvenioDto } from './convenio.dto';
 import { EnderecoDto } from './endereco.dto';
+import { AutorizacaoResponsavelDto, ResponsavelLegalDto } from './responsavel-legal.dto';
 
 export class CreatePacienteDto {
   @IsMongoId()
@@ -27,9 +28,12 @@ export class CreatePacienteDto {
   @Matches(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/)
   cpf?: string;
 
-  @IsOptional()
+  // Obrigatória SÓ no cadastro (aqui): sem ela não dá para saber se o paciente é
+  // menor de idade, e a regra de responsável legal depende dessa classificação.
+  // Em UpdatePacienteDto (PartialType deste DTO) ela volta a ser opcional, para
+  // não travar a edição de pacientes já cadastrados sem essa data.
   @IsISO8601()
-  dataNascimento?: string;
+  dataNascimento!: string;
 
   @IsOptional()
   @IsEnum(Sexo)
@@ -69,4 +73,16 @@ export class CreatePacienteDto {
   @IsOptional()
   @IsString()
   representante?: string;
+
+  // Objeto inteiro opcional aqui — obrigatoriedade condicional (paciente menor)
+  // é validada em PacientesService.create()/update(), não neste DTO.
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ResponsavelLegalDto)
+  responsavelLegal?: ResponsavelLegalDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AutorizacaoResponsavelDto)
+  autorizacaoResponsavel?: AutorizacaoResponsavelDto;
 }

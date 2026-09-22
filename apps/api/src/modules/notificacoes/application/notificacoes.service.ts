@@ -59,12 +59,13 @@ export class NotificacoesService {
     const destino = this.resolveDestino(dto);
     const variaveis = {
       nome: dto.nome,
+      nomePaciente: dto.nomePaciente ?? dto.nome,
       hora: dto.hora ?? '',
       medico: dto.medico ?? '',
       link: dto.link ?? '',
       documento: dto.documento ?? '',
     };
-    const rendered = this.templates.render(dto.tipo, variaveis);
+    const rendered = this.templates.render(dto.tipo, variaveis, dto.paraResponsavel);
     const notificacao = await this.notificacoes.create({
       clinicaId,
       destinatarioId: dto.destinatarioId,

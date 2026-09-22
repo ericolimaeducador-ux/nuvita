@@ -260,6 +260,21 @@ export interface ConsentimentoLGPD {
   versao: string;
 }
 
+/** Responsável legal de paciente menor de idade — ver paciente-idade.ts. */
+export interface ResponsavelLegal {
+  nome?: string;
+  cpf?: string;
+  telefone?: string;
+  email?: string;
+  vinculo?: string;
+}
+
+export interface AutorizacaoResponsavel {
+  confirmado: boolean;
+  registradaPor?: string;
+  registradaEm?: string;
+}
+
 export interface Paciente {
   id: string;
   clinicaId: string;
@@ -274,6 +289,8 @@ export interface Paciente {
   projeto?: ProjetoPaciente;
   linhaTerapeutica?: LinhaTerapeutica;
   representante?: string;
+  responsavelLegal?: ResponsavelLegal;
+  autorizacaoResponsavel?: AutorizacaoResponsavel;
   observacoes?: string;
   ativo?: boolean;
   criadoEm?: string;

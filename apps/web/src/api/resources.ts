@@ -45,6 +45,16 @@ export const authApi = {
       .post<LoginResponse>('/auth/login', { email, password, totpCode })
       .then((r) => r.data),
   logout: () => api.post('/auth/logout').then((r) => r.data),
+  forgotPassword: (email: string) =>
+    api.post<{ ok: true }>('/auth/forgot-password', { email }).then((r) => r.data),
+  resetPassword: (token: string, novaSenha: string) =>
+    api.post<{ ok: true }>('/auth/reset-password', { token, novaSenha }).then((r) => r.data),
+  forgotLogin: (telefone: string) =>
+    api.post<{ ok: true }>('/auth/forgot-login', { telefone }).then((r) => r.data),
+  verifyForgotLogin: (telefone: string, codigo: string) =>
+    api
+      .post<{ emailMascarado: string; resetToken: string }>('/auth/forgot-login/verify', { telefone, codigo })
+      .then((r) => r.data),
 };
 
 // ---------- Clínicas ----------
@@ -53,6 +63,7 @@ export interface CriarUsuarioPayload {
   email: string;
   password: string;
   papel: Papel;
+  telefone?: string;
 }
 export const clinicasApi = {
   // Cria um usuário (profissional ou secretaria) dentro da clínica do ADMIN.
@@ -418,6 +429,7 @@ export interface UpdateUsuarioPayload {
   clinicaId?: string | null;
   ativo?: boolean;
   registroProfissional?: string;
+  telefone?: string;
   modulosConcedidos?: Modulo[];
   modulosRevogados?: Modulo[];
 }
@@ -429,6 +441,7 @@ export interface CreateAdminUserPayload {
   papel: Papel;
   clinicaId?: string;
   registroProfissional?: string;
+  telefone?: string;
 }
 
 export interface TwoFactorSetup {

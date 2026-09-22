@@ -22,4 +22,9 @@ export class CreateAdminUserDto {
   @IsOptional()
   @IsString()
   registroProfissional?: string;
+
+  /** Opcional — usado só pra recuperação de login via WhatsApp. */
+  @IsOptional()
+  @IsString()
+  telefone?: string;
 }

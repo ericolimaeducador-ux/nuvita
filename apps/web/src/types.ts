@@ -1295,6 +1295,7 @@ export interface UsuarioAdmin {
   ativo: boolean;
   criadoEm: string;
   registroProfissional?: string;
+  telefone?: string;
   permissoes?: Modulo[];
   modulosConcedidos?: Modulo[];
   modulosRevogados?: Modulo[];

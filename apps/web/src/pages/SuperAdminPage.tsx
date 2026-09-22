@@ -50,6 +50,7 @@ const createSchema = z.object({
   papel: z.nativeEnum(Papel, { message: 'Selecione um perfil.' }),
   clinicaId: z.string().optional(),
   registroProfissional: z.string().optional(),
+  telefone: z.string().optional(),
 });
 type CreateForm = z.infer<typeof createSchema>;
 
@@ -60,6 +61,7 @@ const editSchema = z.object({
   clinicaId: z.string().optional(),
   ativo: z.boolean(),
   registroProfissional: z.string().optional(),
+  telefone: z.string().optional(),
 });
 type EditForm = z.infer<typeof editSchema>;
 
@@ -212,7 +214,7 @@ export function SuperAdminPage() {
 
   function openEdit(u: UsuarioAdmin) {
     setEditTarget(u);
-    editForm.reset({ nome: u.nome, email: u.email, papel: u.papel, clinicaId: u.clinicaId ?? '', ativo: u.ativo, registroProfissional: u.registroProfissional ?? '' });
+    editForm.reset({ nome: u.nome, email: u.email, papel: u.papel, clinicaId: u.clinicaId ?? '', ativo: u.ativo, registroProfissional: u.registroProfissional ?? '', telefone: u.telefone ?? '' });
     // permissoes vem da API; fallback recalcula para respostas antigas em cache
     setModulosSel(u.permissoes ?? resolvePermissoes(u.papel, u.modulosConcedidos, u.modulosRevogados));
   }
@@ -448,7 +450,15 @@ export function SuperAdminPage() {
           </DialogHeader>
           <form
             onSubmit={createForm.handleSubmit((v) =>
-              createMut.mutate({ nome: v.nome, email: v.email, password: v.password, papel: v.papel, clinicaId: v.clinicaId || undefined, registroProfissional: papelTemRegistro(v.papel) ? (v.registroProfissional || undefined) : undefined })
+              createMut.mutate({
+                nome: v.nome,
+                email: v.email,
+                password: v.password,
+                papel: v.papel,
+                clinicaId: v.clinicaId || undefined,
+                registroProfissional: papelTemRegistro(v.papel) ? (v.registroProfissional || undefined) : undefined,
+                telefone: v.telefone || undefined,
+              })
             )}
             className="space-y-4 py-2"
           >
@@ -505,6 +515,10 @@ export function SuperAdminPage() {
                   <Input placeholder={`Nº do ${registroLabel(createForm.watch('papel'))}`} {...createForm.register('registroProfissional')} />
                 </div>
               )}
+              <div className="col-span-2 space-y-1.5">
+                <Label>Telefone <span className="text-muted-foreground">(opcional — recuperação de login via WhatsApp)</span></Label>
+                <Input placeholder="(11) 91234-5678" {...createForm.register('telefone')} />
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancelar</Button>
@@ -536,6 +550,7 @@ export function SuperAdminPage() {
                 ativo: v.ativo,
                 // Só faz sentido para papéis com conselho; limpa se o papel não tiver.
                 registroProfissional: papelTemRegistro(v.papel) ? (v.registroProfissional || '') : '',
+                telefone: v.telefone || undefined,
                 modulosConcedidos: modulosSel.filter((m) => !padrao.includes(m)),
                 modulosRevogados: padrao.filter((m) => !modulosSel.includes(m)),
               };
@@ -604,6 +619,11 @@ export function SuperAdminPage() {
                   <Input placeholder={`Nº do ${registroLabel(editForm.watch('papel'))}`} {...editForm.register('registroProfissional')} />
                 </div>
               )}
+
+              <div className="col-span-2 space-y-1.5">
+                <Label>Telefone <span className="text-muted-foreground">(opcional — recuperação de login via WhatsApp)</span></Label>
+                <Input placeholder="(11) 91234-5678" {...editForm.register('telefone')} />
+              </div>
 
               {/* Permissões de módulos */}
               <div className="col-span-2 space-y-2 pt-2 border-t border-border">

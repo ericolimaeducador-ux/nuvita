@@ -2,6 +2,7 @@ import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundExce
 import * as bcrypt from 'bcrypt';
 import * as speakeasy from 'speakeasy';
 import { AppConfigService } from '../../../common/security/config.service';
+import { phoneHash } from '../../../common/security/phone-crypto.util';
 import { AuthTokenPayload, exigeTwoFactor, Papel } from '../../../../../../packages/shared/src/auth';
 import { AUDIT_LOG_REPOSITORY, USER_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
@@ -129,6 +130,8 @@ export class ClinicasService {
       papel: dto.papel,
       clinicaId: adminClinicaId,
       twoFactorSecret: twoFactorSetup?.base32,
+      telefone: dto.telefone,
+      telefoneHash: dto.telefone ? phoneHash(dto.telefone, this.configService) : undefined,
     });
 
     await this.auditLogs.create({

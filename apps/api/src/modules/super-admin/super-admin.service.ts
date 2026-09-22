@@ -6,6 +6,7 @@ import { USER_REPOSITORY } from '../auth/auth.constants';
 import { UserRepository } from '../auth/application/ports/user.repository';
 import { toPublicUser } from '../auth/domain/user.entity';
 import { AppConfigService } from '../../common/security/config.service';
+import { phoneHash } from '../../common/security/phone-crypto.util';
 import { CLINICA_REPOSITORY } from '../clinicas/clinicas.constants';
 import { ClinicaRepository } from '../clinicas/application/ports/clinica.repository';
 import { ListUsersQueryDto } from './application/dto/list-users-query.dto';
@@ -75,6 +76,8 @@ export class SuperAdminService {
       clinicaId: dto.clinicaId ?? null,
       twoFactorSecret: twoFactorSetup?.base32,
       registroProfissional: dto.registroProfissional,
+      telefone: dto.telefone,
+      telefoneHash: dto.telefone ? phoneHash(dto.telefone, this.configService) : undefined,
     });
 
     return { ...toPublicUser(user), twoFactorSetup };
@@ -120,6 +123,7 @@ export class SuperAdminService {
       email: novoEmail,
       ...(modulosConcedidos !== undefined ? { modulosConcedidos } : {}),
       ...(twoFactorSetup ? { twoFactorSecret: twoFactorSetup.base32 } : {}),
+      ...(dto.telefone ? { telefoneHash: phoneHash(dto.telefone, this.configService) } : {}),
     });
     if (!updated) throw new NotFoundException('Usuário não encontrado.');
     return { ...toPublicUser(updated), twoFactorSetup };

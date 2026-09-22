@@ -23,6 +23,7 @@ const usuarioSchema = z.object({
   papel: z.nativeEnum(Papel, { error: 'Selecione o perfil.' }),
   email: z.string().min(1, 'Informe o e-mail.').email('E-mail inválido.'),
   password: z.string().min(10, 'Mínimo de 10 caracteres.'),
+  telefone: z.string().optional(),
 });
 type UsuarioForm = z.infer<typeof usuarioSchema>;
 
@@ -35,14 +36,20 @@ export function ClinicaPage() {
   });
 
   const mut = useMutation({
-    mutationFn: (payload: { nome: string; email: string; password: string; papel: Papel }) =>
+    mutationFn: (payload: { nome: string; email: string; password: string; papel: Papel; telefone?: string }) =>
       clinicasApi.criarUsuario(user?.clinicaId ?? '', payload),
     onSuccess: () => { toast.success('Usuário criado com sucesso.'); reset(); },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
   function onSubmit(v: UsuarioForm) {
-    mut.mutate({ nome: v.nome, email: v.email, password: v.password, papel: v.papel });
+    mut.mutate({
+      nome: v.nome,
+      email: v.email,
+      password: v.password,
+      papel: v.papel,
+      telefone: v.telefone || undefined,
+    });
   }
 
   return (
@@ -91,6 +98,11 @@ export function ClinicaPage() {
                 <Label htmlFor="password">Senha provisória</Label>
                 <PasswordInput id="password" placeholder="mínimo 10 caracteres" {...register('password')} />
                 {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="telefone">Telefone (opcional)</Label>
+                <Input id="telefone" placeholder="(11) 91234-5678" {...register('telefone')} />
+                <p className="text-xs text-muted-foreground">Usado só para recuperação de login via WhatsApp.</p>
               </div>
             </div>
 

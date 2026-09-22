@@ -10,6 +10,8 @@ export interface User {
   twoFactorSecret?: string;
   /** Registro do conselho profissional: CRM (médico), COREN (enfermeiro). */
   registroProfissional?: string;
+  /** Usado só pra recuperação de login via WhatsApp — nunca exigido no cadastro. */
+  telefone?: string;
   ativo: boolean;
   criadoEm: Date;
   /** Exceções por usuário sobre o padrão do papel (ver resolvePermissoes). */

@@ -1,4 +1,4 @@
-import { IsEmail, IsIn, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 import { Papel } from '../../../../../../../packages/shared/src/auth';
 
 export class CreateClinicaUsuarioDto {
@@ -14,4 +14,9 @@ export class CreateClinicaUsuarioDto {
 
   @IsIn([Papel.MEDICO, Papel.ENFERMEIRO, Papel.SECRETARIA])
   papel!: Papel.MEDICO | Papel.ENFERMEIRO | Papel.SECRETARIA;
+
+  /** Opcional — usado só pra recuperação de login via WhatsApp. */
+  @IsOptional()
+  @IsString()
+  telefone?: string;
 }

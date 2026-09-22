@@ -18,6 +18,8 @@ export class UserMongoRepository implements UserRepository {
       clinicaId: input.clinicaId,
       '2faSecret': input.twoFactorSecret,
       registroProfissional: input.registroProfissional,
+      telefone: input.telefone,
+      telefoneHash: input.telefoneHash,
       ativo: true,
     });
 
@@ -40,6 +42,11 @@ export class UserMongoRepository implements UserRepository {
 
   async findById(id: string): Promise<User | null> {
     const user = await this.userModel.findById(id).exec();
+    return user ? this.toEntity(user) : null;
+  }
+
+  async findByTelefoneHash(telefoneHash: string): Promise<User | null> {
+    const user = await this.userModel.findOne({ telefoneHash }).exec();
     return user ? this.toEntity(user) : null;
   }
 
@@ -69,6 +76,8 @@ export class UserMongoRepository implements UserRepository {
     if (input.registroProfissional !== undefined) set['registroProfissional'] = input.registroProfissional;
     if (input.modulosConcedidos !== undefined) set['modulosConcedidos'] = input.modulosConcedidos;
     if (input.modulosRevogados !== undefined) set['modulosRevogados'] = input.modulosRevogados;
+    if (input.telefone !== undefined) set['telefone'] = input.telefone;
+    if (input.telefoneHash !== undefined) set['telefoneHash'] = input.telefoneHash;
 
     const doc = await this.userModel
       .findByIdAndUpdate(id, { $set: set }, { new: true })
@@ -100,6 +109,7 @@ export class UserMongoRepository implements UserRepository {
       clinicaId: object.clinicaId,
       twoFactorSecret: object['2faSecret'],
       registroProfissional: object.registroProfissional,
+      telefone: object.telefone,
       ativo: object.ativo,
       criadoEm: object.criadoEm,
       modulosConcedidos: object.modulosConcedidos,

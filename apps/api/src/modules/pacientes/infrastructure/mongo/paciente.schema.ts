@@ -99,9 +99,13 @@ PacienteSchema.index({ clinicaId: 1, _id: 1 });
 // TODOS os campos estão ausentes, e clinicaId sempre existe — então todo
 // paciente sem CPF entrava no índice com cpfHash:null e o 2º colidia.
 // Índice parcial exige cpfHash realmente presente (string), como pretendido.
+// `ativo: true` também entra no filtro: "excluir paciente" é soft-delete
+// (ativo=false, dado continua no banco) — sem essa condição, o CPF de um
+// paciente excluído ficava preso para sempre, bloqueando um recadastro
+// corrigido ou até um paciente novo com o mesmo CPF na mesma clínica.
 PacienteSchema.index(
   { clinicaId: 1, cpfHash: 1 },
-  { unique: true, partialFilterExpression: { cpfHash: { $type: 'string' } } },
+  { unique: true, partialFilterExpression: { cpfHash: { $type: 'string' }, ativo: true } },
 );
 PacienteSchema.index({ clinicaId: 1, ativo: 1, criadoEm: -1, _id: -1 });
 PacienteSchema.index({ clinicaId: 1, etapaFluxo: 1, criadoEm: -1 });

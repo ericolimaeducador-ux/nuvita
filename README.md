@@ -302,6 +302,8 @@ A lista completa e comentada está em [`.env.example`](.env.example).
 - [`apps/web/README.md`](apps/web/README.md) — detalhes do frontend
 - [`infra/`](infra/) — notas de integração por módulo (auth, documentos,
   notificações, pacientes, prontuários) e checklist de produção
+- [`docs/SMOKE_PROD_v1.md`](docs/SMOKE_PROD_v1.md) — smoke não destrutivo de
+  produção (`npm run smoke:prod`)
 
 ## 📄 Propriedade intelectual
 

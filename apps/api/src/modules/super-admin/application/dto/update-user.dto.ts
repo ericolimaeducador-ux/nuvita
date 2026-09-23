@@ -26,6 +26,11 @@ export class UpdateUserDto {
   @IsString()
   registroProfissional?: string;
 
+  /** Opcional — usado só pra recuperação de login via WhatsApp. */
+  @IsOptional()
+  @IsString()
+  telefone?: string;
+
   // Exceções de permissão por usuário sobre o padrão do papel.
   @IsOptional()
   @IsArray()

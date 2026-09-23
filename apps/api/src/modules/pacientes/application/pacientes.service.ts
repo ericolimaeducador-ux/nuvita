@@ -1,4 +1,12 @@
-import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
 import {
   EtapaFluxoClinico,
@@ -38,27 +46,32 @@ export class PacientesService {
 
   async create(dto: CreatePacienteDto, context: RequestAuditContext): Promise<Paciente> {
     const clinicaId = this.resolveClinicaId(context.user, dto.clinicaId);
-    const paciente = await this.pacientes.create({
-      clinicaId,
-      nome: dto.nome,
-      cpf: dto.cpf,
-      dataNascimento: dto.dataNascimento ? new Date(dto.dataNascimento) : undefined,
-      sexo: dto.sexo,
-      telefone: dto.telefone,
-      email: dto.email,
-      endereco: dto.endereco,
-      convenio: dto.convenio,
-      consentimentoLGPD: dto.consentimentoLGPD
-        ? {
-            aceito: dto.consentimentoLGPD.aceito,
-            dataAceite: new Date(dto.consentimentoLGPD.dataAceite),
-            versao: dto.consentimentoLGPD.versao,
-          }
-        : undefined,
-      programaIU: dto.programaIU ?? false,
-      projeto: dto.projeto,
-      representante: dto.representante,
-    });
+    let paciente: Paciente;
+    try {
+      paciente = await this.pacientes.create({
+        clinicaId,
+        nome: dto.nome,
+        cpf: dto.cpf,
+        dataNascimento: dto.dataNascimento ? new Date(dto.dataNascimento) : undefined,
+        sexo: dto.sexo,
+        telefone: dto.telefone,
+        email: dto.email,
+        endereco: dto.endereco,
+        convenio: dto.convenio,
+        consentimentoLGPD: dto.consentimentoLGPD
+          ? {
+              aceito: dto.consentimentoLGPD.aceito,
+              dataAceite: new Date(dto.consentimentoLGPD.dataAceite),
+              versao: dto.consentimentoLGPD.versao,
+            }
+          : undefined,
+        programaIU: dto.programaIU ?? false,
+        projeto: dto.projeto,
+        representante: dto.representante,
+      });
+    } catch (error) {
+      throw this.translatePersistenceError(error);
+    }
 
     await this.audit(AuditEvent.PATIENT_CREATED, context, {
       clinicaId,
@@ -183,17 +196,22 @@ export class PacientesService {
   ): Promise<Paciente> {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
     await this.assertPacienteVisivel(resolvedClinicaId, pacienteId, context.user.papel);
-    const paciente = await this.pacientes.update(resolvedClinicaId, pacienteId, {
-      ...dto,
-      dataNascimento: dto.dataNascimento ? new Date(dto.dataNascimento) : undefined,
-      consentimentoLGPD: dto.consentimentoLGPD
-        ? {
-            aceito: dto.consentimentoLGPD.aceito,
-            dataAceite: new Date(dto.consentimentoLGPD.dataAceite),
-            versao: dto.consentimentoLGPD.versao,
-          }
-        : undefined,
-    });
+    let paciente: Paciente | null;
+    try {
+      paciente = await this.pacientes.update(resolvedClinicaId, pacienteId, {
+        ...dto,
+        dataNascimento: dto.dataNascimento ? new Date(dto.dataNascimento) : undefined,
+        consentimentoLGPD: dto.consentimentoLGPD
+          ? {
+              aceito: dto.consentimentoLGPD.aceito,
+              dataAceite: new Date(dto.consentimentoLGPD.dataAceite),
+              versao: dto.consentimentoLGPD.versao,
+            }
+          : undefined,
+      });
+    } catch (error) {
+      throw this.translatePersistenceError(error);
+    }
 
     if (!paciente) {
       throw new NotFoundException('Paciente nao encontrado.');
@@ -359,6 +377,19 @@ export class PacientesService {
 
   private resolveClinicaId(user: AuthTokenPayload, requestedClinicaId?: string): string {
     return resolveTenantClinicaId(user, requestedClinicaId);
+  }
+
+  /**
+   * Traduz erro de chave duplicada do Mongo (índice único clinicaId+cpfHash)
+   * em 409 com mensagem clara, em vez de deixar o MongoServerError virar
+   * 500 genérico. Qualquer outro erro passa direto.
+   */
+  private translatePersistenceError(error: unknown): Error {
+    const mongoError = error as { code?: number; keyPattern?: Record<string, unknown> };
+    if (mongoError?.code === 11000 && mongoError.keyPattern && 'cpfHash' in mongoError.keyPattern) {
+      return new ConflictException('CPF já cadastrado para outro paciente desta clínica.');
+    }
+    return error as Error;
   }
 
   /**

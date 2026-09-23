@@ -29,6 +29,14 @@ export class UserMongo {
   @Prop({ trim: true })
   registroProfissional?: string;
 
+  // Usado só pra recuperação de login via WhatsApp (opcional, cadastrado por
+  // um ADMIN/SUPER_ADMIN — não há edição de perfil pelo próprio usuário hoje).
+  @Prop({ trim: true })
+  telefone?: string;
+
+  @Prop({ index: true, sparse: true })
+  telefoneHash?: string;
+
   @Prop({ default: true, index: true })
   ativo!: boolean;
 

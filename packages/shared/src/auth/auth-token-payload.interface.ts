@@ -11,4 +11,6 @@ export interface AuthTokenPayload {
   registroProfissional?: string;
   jti: string;
   typ: 'access' | 'refresh';
+  /** Adicionado automaticamente pelo JwtService ao assinar — usado pra checar revogação em massa por usuário. */
+  iat?: number;
 }

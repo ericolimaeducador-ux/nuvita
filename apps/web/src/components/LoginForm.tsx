@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Mail, Lock, ShieldCheck, Loader2 } from 'lucide-react';
 import { useAuth, BOAS_VINDAS_KEY } from '@/auth/AuthContext';
 import { apiErrorMessage } from '@/api/client';
@@ -119,6 +119,14 @@ export function LoginForm() {
             'Entrar'
           )}
         </Button>
+        <div className="flex items-center justify-between text-sm pt-1">
+          <Link to="/esqueci-senha" className="text-muted-foreground hover:text-foreground underline underline-offset-2">
+            Esqueci minha senha
+          </Link>
+          <Link to="/esqueci-login" className="text-muted-foreground hover:text-foreground underline underline-offset-2">
+            Esqueci meu login
+          </Link>
+        </div>
       </form>
     </div>
   );

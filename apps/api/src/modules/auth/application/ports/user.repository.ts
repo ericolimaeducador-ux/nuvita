@@ -9,6 +9,8 @@ export interface CreateUserInput {
   clinicaId?: string | null;
   twoFactorSecret?: string;
   registroProfissional?: string;
+  telefone?: string;
+  telefoneHash?: string;
 }
 
 export interface UpdateUserInput {
@@ -22,6 +24,8 @@ export interface UpdateUserInput {
   registroProfissional?: string;
   modulosConcedidos?: Modulo[];
   modulosRevogados?: Modulo[];
+  telefone?: string;
+  telefoneHash?: string;
 }
 
 export interface UserFilters {
@@ -36,6 +40,7 @@ export interface UserRepository {
   findByEmail(email: string): Promise<User | null>;
   findByEmailWithSecrets(email: string): Promise<User | null>;
   findById(id: string): Promise<User | null>;
+  findByTelefoneHash(telefoneHash: string): Promise<User | null>;
   findAll(filters: UserFilters, skip: number, limit: number): Promise<User[]>;
   count(filters: UserFilters): Promise<number>;
   update(id: string, input: UpdateUserInput): Promise<User | null>;

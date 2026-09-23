@@ -195,7 +195,11 @@ export class AuthService {
   }
 
   async validateAccessPayload(payload: AuthTokenPayload): Promise<AuthTokenPayload> {
-    if (payload.typ !== 'access' || (await this.tokenRevocation.isRevoked(payload.jti))) {
+    if (
+      payload.typ !== 'access' ||
+      (await this.tokenRevocation.isRevoked(payload.jti)) ||
+      (payload.iat !== undefined && (await this.tokenRevocation.isAllRevokedSince(payload.sub, payload.iat * 1000)))
+    ) {
       throw new UnauthorizedException('Token invalido.');
     }
 
@@ -290,8 +294,13 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token invalido.');
     }
 
-    if (failIfRevoked && (await this.tokenRevocation.isRevoked(payload.jti))) {
-      throw new UnauthorizedException('Refresh token revogado.');
+    if (failIfRevoked) {
+      const revoked =
+        (await this.tokenRevocation.isRevoked(payload.jti)) ||
+        (payload.iat !== undefined && (await this.tokenRevocation.isAllRevokedSince(payload.sub, payload.iat * 1000)));
+      if (revoked) {
+        throw new UnauthorizedException('Refresh token revogado.');
+      }
     }
 
     return payload;

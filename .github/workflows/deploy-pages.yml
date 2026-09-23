@@ -44,6 +44,8 @@ jobs:
           VITE_BASE: /
           # URL pública da API (HTTPS). Secret VITE_API_URL = https://api.nuvita.app.br.
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          # Public Key de PRODUCAO do Mercado Pago (publica por natureza). Sem ela o Wallet Brick nao aparece.
+          VITE_MERCADO_PAGO_PUBLIC_KEY: ${{ secrets.VITE_MERCADO_PAGO_PUBLIC_KEY }}
         run: npm run build
 
       - name: Upload Pages artifact

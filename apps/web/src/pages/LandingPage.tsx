@@ -84,13 +84,13 @@ export function LandingPage() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="border-white/10 bg-petroleo text-quente">
-              <DropdownMenuItem className="focus:bg-white/10 focus:text-quente" onSelect={() => rolarPara('entrar-urologia')}>
+              <DropdownMenuItem className="text-quente focus:bg-white/10 focus:text-quente data-[highlighted]:bg-white/10 data-[highlighted]:text-quente data-[highlighted]:underline data-[highlighted]:decoration-ouro data-[highlighted]:underline-offset-4" onSelect={() => rolarPara('entrar-urologia')}>
                 Urologia
               </DropdownMenuItem>
-              <DropdownMenuItem asChild className="focus:bg-white/10 focus:text-quente">
+              <DropdownMenuItem asChild className="text-quente focus:bg-white/10 focus:text-quente data-[highlighted]:bg-white/10 data-[highlighted]:text-quente data-[highlighted]:underline data-[highlighted]:decoration-ouro data-[highlighted]:underline-offset-4">
                 <a href={ESTOMOTERAPIA_URL} target="_blank" rel="noopener noreferrer">Estomoterapia</a>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild className="focus:bg-white/10 focus:text-quente">
+              <DropdownMenuItem asChild className="text-quente focus:bg-white/10 focus:text-quente data-[highlighted]:bg-white/10 data-[highlighted]:text-quente data-[highlighted]:underline data-[highlighted]:decoration-ouro data-[highlighted]:underline-offset-4">
                 <a href={PSICOLOGIA_URL} target="_blank" rel="noopener noreferrer">Psicologia</a>
               </DropdownMenuItem>
             </DropdownMenuContent>

@@ -23,6 +23,7 @@ import { EncaminhamentoPage } from '@/pages/EncaminhamentoPage';
 import { PrescricaoCuidadosPage } from '@/pages/PrescricaoCuidadosPage';
 import { AtendimentoPsicologicoPage } from '@/pages/AtendimentoPsicologicoPage';
 import { SuperAdminPage } from '@/pages/SuperAdminPage';
+import { TicketsPage } from '@/pages/TicketsPage';
 import { RelatoriosGerenciaisPage } from '@/pages/RelatoriosGerenciaisPage';
 import { Modulo, Papel } from '@/types';
 
@@ -88,6 +89,7 @@ export function AppRoutes() {
             </Route>
             <Route element={<ProtectedRoute roles={[Papel.SUPER_ADMIN]} modulo={Modulo.SUPER_ADMIN} />}>
               <Route path="/super-admin" element={<SuperAdminPage />} />
+              <Route path="/tickets" element={<TicketsPage />} />
             </Route>
           </Route>
         </Route>

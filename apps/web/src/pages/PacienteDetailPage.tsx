@@ -12,6 +12,11 @@ import {
 } from 'lucide-react';
 import { ProntuarioDetailDialog } from '@/components/ProntuarioDialogs';
 import { NovoDocumentoDialog } from '@/components/NovoDocumentoDialog';
+import {
+  CorrigirIdentidadeDialog,
+  SolicitarCorrecaoDialog,
+  TicketsDoPaciente,
+} from '@/components/CorrecaoIdentidadeDialogs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -420,7 +425,12 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
   // Psicólogo só cuida de pacientes do Projeto PSI — trava o campo em vez de
   // expor o seletor (evita que o paciente suma da lista dele por engano).
   const ehPsicologo = user?.papel === Papel.PSICOLOGO;
+  // Nome, CPF e nascimento não se editam aqui (feature-correcao-identidade-paciente): só o
+  // SUPER_ADMIN corrige, com justificativa; os demais papéis abrem um ticket.
+  const ehSuperAdmin = user?.papel === Papel.SUPER_ADMIN;
   const [open, setOpen] = useState(false);
+  const [solicitarOpen, setSolicitarOpen] = useState(false);
+  const [corrigirOpen, setCorrigirOpen] = useState(false);
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<EditPacienteForm>({
     resolver: zodResolver(editPacienteSchema),
@@ -472,8 +482,6 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
     const temEndereco = Object.values(enderecoCampos).some(Boolean);
 
     updateMut.mutate({
-      cpf: v.cpf || undefined,
-      dataNascimento: v.dataNascimento ? dayjs(v.dataNascimento).format('YYYY-MM-DD') : undefined,
       sexo: v.sexo || undefined,
       projeto: v.projeto || undefined,
       linhaTerapeutica: v.linhaTerapeutica || undefined,
@@ -492,9 +500,15 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
       titulo="Dados cadastrais"
       defaultOpen={false}
       acao={
-        <Button variant="ghost" size="icon" title="Editar cadastro" onClick={abrir}>
-          <Pencil className="h-4 w-4" />
-        </Button>
+        ehSuperAdmin ? (
+          <Button variant="outline" size="sm" onClick={() => setCorrigirOpen(true)}>
+            Corrigir identidade
+          </Button>
+        ) : (
+          <Button variant="ghost" size="icon" title="Editar cadastro" onClick={abrir}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+        )
       }
     >
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 glass rounded-xl p-4">
@@ -533,21 +547,29 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
         )}
       </div>
 
+      <TicketsDoPaciente pacienteId={pacienteId} />
+      <SolicitarCorrecaoDialog open={solicitarOpen} onOpenChange={setSolicitarOpen} pacienteId={pacienteId} />
+      <CorrigirIdentidadeDialog open={corrigirOpen} onOpenChange={setCorrigirOpen} pacienteId={pacienteId} />
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar cadastro</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted p-3 text-sm">
+              <span className="text-muted-foreground">Nome, CPF e nascimento só podem ser corrigidos pelo administrador da plataforma.</span>
+              <Button type="button" variant="outline" size="sm" onClick={() => { setOpen(false); setSolicitarOpen(true); }}>
+                Solicitar correção
+              </Button>
+            </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="editCpf">CPF</Label>
-                <Input id="editCpf" placeholder="000.000.000-00" {...register('cpf')} />
-                {errors.cpf && <p className="text-sm text-destructive">{errors.cpf.message}</p>}
+                <Input id="editCpf" placeholder="000.000.000-00" disabled {...register('cpf')} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="editDataNascimento">Nascimento</Label>
-                <Input id="editDataNascimento" type="date" {...register('dataNascimento')} />
+                <Input id="editDataNascimento" type="date" disabled {...register('dataNascimento')} />
               </div>
               <div className="space-y-2">
                 <Label>Sexo</Label>

@@ -84,18 +84,6 @@ describe('PacientesService', () => {
       await expect(chamada).rejects.toThrow('Já existe um paciente com este CPF nesta clínica.');
     });
 
-    it('update() converte E11000 do CPF em 409 com mensagem de atualização', async () => {
-      const service = serviceWith({
-        findById: jest.fn().mockResolvedValue(basePaciente),
-        update: jest.fn().mockRejectedValue(erroCpf),
-      });
-
-      const chamada = service.update('paciente-1', { cpf: '52998224725' } as never, undefined, context);
-
-      await expect(chamada).rejects.toBeInstanceOf(ConflictException);
-      await expect(chamada).rejects.toThrow('Não é possível atualizar: já existe outro paciente com este CPF nesta clínica.');
-    });
-
     it('não engole erros diferentes: E11000 de outro índice e falhas genéricas seguem como estão', async () => {
       const outroIndice = Object.assign(new Error('dup'), { code: 11000, keyPattern: { clinicaId: 1, outro: 1 } });
       const generico = new Error('conexão perdida');
@@ -176,17 +164,6 @@ describe('PacientesService', () => {
         service.create({ clinicaId: 'clinica-1', nome: 'Sem data de nascimento' } as never, context),
       ).resolves.toBeDefined();
       expect(create).toHaveBeenCalledTimes(2);
-    });
-
-    it('update() promovendo paciente já cadastrado (sem data) para menor, sem responsável → bloqueia', async () => {
-      const service = serviceWith({
-        findById: jest.fn().mockResolvedValue(basePaciente), // sem dataNascimento nem responsavelLegal
-        update: jest.fn(),
-      });
-
-      const chamada = service.update('paciente-1', { dataNascimento: dataNascimentoMenor } as never, undefined, context);
-
-      await expect(chamada).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('update() de paciente menor já com responsável cadastrado, editando só o telefone → não reexige os campos já preenchidos e preserva a autorização histórica', async () => {

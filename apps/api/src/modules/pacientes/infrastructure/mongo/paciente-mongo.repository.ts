@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, PipelineStage, Types } from 'mongoose';
 import {
+  CorrigirIdentidadeInput,
   CreatePacienteInput,
   ListPacientesInput,
   PacienteRepository,
@@ -185,6 +186,72 @@ export class PacienteMongoRepository implements PacienteRepository {
       .findOneAndUpdate(
         { clinicaId, _id: new Types.ObjectId(pacienteId), ativo: true },
         { $set: { ...update, atualizadoEm: new Date() } },
+        { new: true },
+      )
+      .exec();
+
+    return document ? this.toEntity(document) : null;
+  }
+
+  async corrigirIdentidade(
+    clinicaId: string,
+    pacienteId: string,
+    input: CorrigirIdentidadeInput,
+  ): Promise<Paciente | null> {
+    // Estado anterior lido com cpf/nome/data já decifrados só em memória; a versão
+    // vai criptografada. Ler e gravar não são atômicos entre si, então o filtro do
+    // update exige que o cpfHash ainda seja o lido — se outra escrita mexeu no
+    // meio, a correção não é aplicada (retorna null → 404/409 no serviço).
+    const atual = await this.pacienteModel
+      .findOne({ clinicaId, _id: new Types.ObjectId(pacienteId), ativo: true })
+      .exec();
+    if (!atual) return null;
+    const anterior = this.toEntity(atual);
+
+    const set: Record<string, unknown> = { atualizadoEm: new Date() };
+    const campos: string[] = [];
+    const novo: Record<string, unknown> = {};
+    if (input.nome !== undefined) {
+      set.nome = input.nome;
+      novo.nome = input.nome;
+      campos.push('nome');
+    }
+    if (input.cpf !== undefined) {
+      set.cpf = this.crypto.encryptString(this.crypto.normalizeCpf(input.cpf));
+      set.cpfHash = this.crypto.cpfHash(input.cpf);
+      novo.cpf = this.crypto.normalizeCpf(input.cpf);
+      campos.push('cpf');
+    }
+    if (input.dataNascimento !== undefined) {
+      set.dataNascimento = input.dataNascimento;
+      novo.dataNascimento = input.dataNascimento;
+      campos.push('dataNascimento');
+    }
+
+    const versao = {
+      campos,
+      dados: this.crypto.encryptJson({
+        anterior: { nome: anterior.nome, cpf: anterior.cpf, dataNascimento: anterior.dataNascimento },
+        novo,
+        justificativa: input.justificativa,
+      }),
+      solicitadoPor: input.solicitadoPor,
+      ...(input.ticketId ? { ticketId: input.ticketId } : {}),
+      executadoPor: input.executadoPor,
+      executadoEm: input.executadoEm,
+    };
+
+    // Uma única operação em um único documento: novos valores + versão anterior
+    // entram juntos ou nenhum dos dois entra (sem transação, sem estado parcial).
+    const document = await this.pacienteModel
+      .findOneAndUpdate(
+        {
+          clinicaId,
+          _id: new Types.ObjectId(pacienteId),
+          ativo: true,
+          ...(atual.get('cpfHash') ? { cpfHash: atual.get('cpfHash') } : { cpfHash: { $exists: false } }),
+        },
+        { $set: set, $push: { versoesIdentidade: versao } },
         { new: true },
       )
       .exec();

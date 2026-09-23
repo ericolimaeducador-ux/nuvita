@@ -35,6 +35,33 @@ export class AutorizacaoResponsavelMongo {
 
 const AutorizacaoResponsavelSchema = SchemaFactory.createForClass(AutorizacaoResponsavelMongo);
 
+// Versão anterior de uma correção de identidade (feature-correcao-identidade-paciente).
+// `dados` é um blob criptografado (AES-256-GCM, mesma chave/serviço dos demais
+// campos sensíveis) com { anterior, novo, justificativa } — valores antigos/novos
+// e a justificativa livre NUNCA aparecem em claro nem na trilha de auditoria.
+@Schema({ _id: false, versionKey: false })
+export class VersaoIdentidadeMongo {
+  @Prop({ type: [String], required: true })
+  campos!: string[];
+
+  @Prop({ required: true })
+  dados!: string;
+
+  @Prop({ required: true })
+  solicitadoPor!: string;
+
+  @Prop()
+  ticketId?: string;
+
+  @Prop({ required: true })
+  executadoPor!: string;
+
+  @Prop({ required: true })
+  executadoEm!: Date;
+}
+
+const VersaoIdentidadeSchema = SchemaFactory.createForClass(VersaoIdentidadeMongo);
+
 @Schema({ collection: 'pacientes', versionKey: false })
 export class PacienteMongo {
   @Prop({ required: true, index: true })
@@ -99,6 +126,12 @@ export class PacienteMongo {
   // qualquer profissional de atendimento pode escrever, ver PATCH /observacoes.
   @Prop()
   observacoes?: string;
+
+  // Histórico append-only das correções de identidade. select:false — fica fora de
+  // qualquer leitura normal (lista, detalhe, export LGPD) e só sai por consulta
+  // explícita; gravado exclusivamente por PacienteMongoRepository.corrigirIdentidade().
+  @Prop({ type: [VersaoIdentidadeSchema], default: undefined, select: false })
+  versoesIdentidade?: VersaoIdentidadeMongo[];
 
   @Prop({ default: true, index: true })
   ativo!: boolean;

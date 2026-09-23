@@ -1,10 +1,19 @@
-import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
 import { isMenorDeIdade } from '../../../../../../packages/shared/src/paciente';
 import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
 import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
+import { CorrigirIdentidadePacienteDto } from './dto/corrigir-identidade-paciente.dto';
 import { CreatePacienteDto } from './dto/create-paciente.dto';
 import { ListPacientesQueryDto } from './dto/list-pacientes-query.dto';
 import { AutorizacaoResponsavelDto } from './dto/responsavel-legal.dto';
@@ -37,6 +46,18 @@ const MSG_CPF_DUPLICADO_ATUALIZACAO =
  * Violação do índice único {clinicaId, cpfHash} (E11000). O índice também vale para
  * pacientes inativos: um paciente desativado com o mesmo CPF continua bloqueando o cadastro.
  */
+const MSG_IDENTIDADE_SO_SUPER_ADMIN =
+  'Nome, CPF e data de nascimento só podem ser corrigidos pelo SUPER_ADMIN, com justificativa.';
+
+function soDigitos(valor: string | undefined): string {
+  return (valor ?? '').replace(/D/g, '');
+}
+
+function diaISO(valor: Date | string | undefined): string {
+  if (!valor) return '';
+  return (valor instanceof Date ? valor.toISOString() : new Date(valor).toISOString()).slice(0, 10);
+}
+
 function ehCpfDuplicado(erro: unknown): boolean {
   if (typeof erro !== 'object' || erro === null) return false;
   const e = erro as { code?: number; keyPattern?: Record<string, unknown>; message?: string };
@@ -236,6 +257,14 @@ export class PacientesService {
     // o telefone de um paciente maior não pode, por exemplo, ser barrado por falta
     // de responsável, e editar o CPF de um menor já cadastrado com responsável não
     // pode reexigir os campos que já foram preenchidos antes.
+    // Identidade (nome/CPF/data de nascimento) não muda por aqui, para ninguém: só via
+    // corrigirIdentidade() (SUPER_ADMIN + justificativa + versão anterior preservada).
+    // Reenviar o valor já salvo (ex.: formulário de edição que manda todos os campos)
+    // não conta como alteração.
+    if (this.alteraIdentidade(dto, atual)) {
+      throw new ForbiddenException(MSG_IDENTIDADE_SO_SUPER_ADMIN);
+    }
+
     const dataNascimentoResultante = dto.dataNascimento ? new Date(dto.dataNascimento) : atual.dataNascimento;
     const responsavelResultante = dto.responsavelLegal ?? atual.responsavelLegal;
     const autorizacaoConfirmadaResultante =
@@ -283,6 +312,77 @@ export class PacientesService {
     }
 
     return paciente;
+  }
+
+  /**
+   * Correção de nome/CPF/data de nascimento (feature-correcao-identidade-paciente).
+   * Só SUPER_ADMIN; exige justificativa; o repositório preserva o estado anterior
+   * na mesma operação atômica. A auditoria leva só ids e NOMES de campos — valores
+   * antigos/novos e a justificativa (que pode citar dado do paciente) ficam no
+   * registro de versão criptografado, nunca no audit_logs.
+   */
+  async corrigirIdentidade(
+    pacienteId: string,
+    dto: CorrigirIdentidadePacienteDto,
+    clinicaId: string | undefined,
+    context: RequestAuditContext,
+  ): Promise<Paciente> {
+    if (context.user.papel !== Papel.SUPER_ADMIN) {
+      throw new ForbiddenException(MSG_IDENTIDADE_SO_SUPER_ADMIN);
+    }
+
+    const justificativa = dto.justificativa?.trim();
+    if (!justificativa) {
+      throw new BadRequestException('A justificativa da correção é obrigatória.');
+    }
+
+    const campos = (['nome', 'cpf', 'dataNascimento'] as const).filter((campo) => dto[campo] !== undefined);
+    if (campos.length === 0) {
+      throw new BadRequestException('Informe ao menos um campo de identidade (nome, CPF ou data de nascimento) para corrigir.');
+    }
+
+    const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+    const atual = await this.assertPacienteVisivel(resolvedClinicaId, pacienteId, context.user.papel);
+
+    const dataNascimento = dto.dataNascimento ? new Date(dto.dataNascimento) : undefined;
+    // A nova data pode transformar o paciente em menor: a regra de responsável legal vale igual.
+    if (isMenorDeIdade(dataNascimento ?? atual.dataNascimento) === 'menor') {
+      this.validarResponsavelLegalObrigatorio(atual.responsavelLegal, atual.autorizacaoResponsavel?.confirmado);
+    }
+
+    const paciente = await this.traduzirCpfDuplicado(MSG_CPF_DUPLICADO_ATUALIZACAO, () =>
+      this.pacientes.corrigirIdentidade(resolvedClinicaId, pacienteId, {
+        nome: dto.nome,
+        cpf: dto.cpf,
+        dataNascimento,
+        justificativa,
+        solicitadoPor: dto.solicitanteUserId ?? context.user.sub,
+        ticketId: dto.ticketId,
+        executadoPor: context.user.sub,
+        executadoEm: new Date(),
+      }),
+    );
+
+    if (!paciente) {
+      throw new NotFoundException('Paciente nao encontrado.');
+    }
+
+    await this.audit(AuditEvent.PATIENT_IDENTITY_CORRECTED, context, {
+      clinicaId: resolvedClinicaId,
+      pacienteId,
+      campos,
+      ...(dto.ticketId ? { ticketId: dto.ticketId } : {}),
+      solicitadoPor: dto.solicitanteUserId ?? context.user.sub,
+    });
+
+    return paciente;
+  }
+
+  private alteraIdentidade(dto: UpdatePacienteDto, atual: Paciente): boolean {
+    if (dto.nome !== undefined && dto.nome.trim() !== atual.nome.trim()) return true;
+    if (dto.cpf !== undefined && soDigitos(dto.cpf) !== soDigitos(atual.cpf)) return true;
+    if (dto.dataNascimento !== undefined && diaISO(dto.dataNascimento) !== diaISO(atual.dataNascimento)) return true;
+    return false;
   }
 
   async updateObservacoes(

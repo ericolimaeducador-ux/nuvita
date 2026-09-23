@@ -7,6 +7,25 @@ export type UpdatePacienteInput = Partial<
   Omit<Paciente, 'id' | 'clinicaId' | 'ativo' | 'criadoEm' | 'atualizadoEm'>
 >;
 
+/**
+ * Correção de identidade (feature-correcao-identidade-paciente). O repositório
+ * grava os novos valores E preserva o estado anterior na MESMA operação atômica —
+ * nunca há correção aplicada sem a versão anterior guardada.
+ */
+export interface CorrigirIdentidadeInput {
+  nome?: string;
+  cpf?: string;
+  dataNascimento?: Date;
+  justificativa: string;
+  /** Quem pediu a correção (id de usuário); o próprio executor quando não há outro solicitante. */
+  solicitadoPor: string;
+  ticketId?: string;
+  /** Sempre o SUPER_ADMIN autenticado. */
+  executadoPor: string;
+  /** Gerado no servidor. */
+  executadoEm: Date;
+}
+
 export const PACIENTE_SORTS = [
   'recentes',
   'nome_asc',
@@ -41,6 +60,8 @@ export interface PacienteRepository {
   /** Busca vários pacientes por id (inclui inativos) — usado p/ resolver nome/CPF em lote. */
   findManyByIds(clinicaId: string, pacienteIds: string[]): Promise<Paciente[]>;
   update(clinicaId: string, pacienteId: string, input: UpdatePacienteInput): Promise<Paciente | null>;
+  /** Aplica a correção e preserva a versão anterior atomicamente; null se o paciente ativo não existe no tenant. */
+  corrigirIdentidade(clinicaId: string, pacienteId: string, input: CorrigirIdentidadeInput): Promise<Paciente | null>;
   deactivate(clinicaId: string, pacienteId: string): Promise<Paciente | null>;
   /** Valores distintos de `representante` já usados na clínica, para autocomplete. */
   listarRepresentantesDistintos(clinicaId: string): Promise<string[]>;

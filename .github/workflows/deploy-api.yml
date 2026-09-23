@@ -73,6 +73,25 @@ jobs:
             --env-vars-file cloudrun.env.yaml \
             --quiet
 
+      # O deploy acima substitui TODAS as variaveis pelo CLOUDRUN_ENV_YAML. As do
+      # Mercado Pago vivem em secrets proprios e sao reaplicadas aqui, sem tocar
+      # nas demais. Se o token nao estiver configurado, o passo e ignorado.
+      - name: Apply Mercado Pago env vars
+        env:
+          MP_TOKEN: ${{ secrets.MERCADO_PAGO_ACCESS_TOKEN }}
+          MP_WEBHOOK_SECRET: ${{ secrets.MERCADO_PAGO_WEBHOOK_SECRET }}
+          MP_NOTIFICATION_URL: ${{ secrets.MERCADO_PAGO_NOTIFICATION_URL }}
+        run: |
+          if [ -z "$MP_TOKEN" ]; then
+            echo "MERCADO_PAGO_ACCESS_TOKEN ausente: pulando."
+            exit 0
+          fi
+          gcloud run services update "$SERVICE" \
+            --project "${{ secrets.GCP_PROJECT_ID }}" \
+            --region "$REGION" \
+            --update-env-vars "^@^MERCADO_PAGO_ACCESS_TOKEN=${MP_TOKEN}@MERCADO_PAGO_WEBHOOK_SECRET=${MP_WEBHOOK_SECRET}@MERCADO_PAGO_NOTIFICATION_URL=${MP_NOTIFICATION_URL}" \
+            --quiet
+
       - name: Show service URL
         run: |
           gcloud run services describe "$SERVICE" \

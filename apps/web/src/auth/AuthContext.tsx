@@ -7,8 +7,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { getClinicaAtiva, getToken, setClinicaAtiva, setToken } from '@/api/client';
+import { USER_KEY, getClinicaAtiva, getToken, setClinicaAtiva, setToken } from '@/api/client';
 import { authApi } from '@/api/resources';
+import { toast } from '@/components/ui/use-toast';
 import { resolvePermissoes, type AuthUser, type Modulo } from '@/types';
 
 interface AuthState {
@@ -24,7 +25,8 @@ interface AuthState {
   logout: () => Promise<void>;
 }
 
-const USER_KEY = 'nuvita.user';
+/** Sinaliza que o login acabou de ocorrer (o reload pós-login apaga o estado React). */
+export const BOAS_VINDAS_KEY = 'nuvita.boasVindas';
 const AuthCtx = createContext<AuthState | undefined>(undefined);
 
 function loadStoredUser(): AuthUser | null {
@@ -70,6 +72,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTok(null);
     setUser(null);
     setClinicaAtivaState(null);
+  }, []);
+
+  // toast de boas-vindas adiado pelo login (que recarrega a página inteira)
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(BOAS_VINDAS_KEY)) {
+        sessionStorage.removeItem(BOAS_VINDAS_KEY);
+        toast.success('Bem-vindo ao Nuvita.');
+      }
+    } catch { /* sem storage */ }
   }, []);
 
   // sincroniza logout entre abas

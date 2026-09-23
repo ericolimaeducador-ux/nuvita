@@ -24,6 +24,7 @@ import { EntregasModule } from './modules/entregas/entregas.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { ChecklistDocumentosModule } from './modules/checklist-documentos/checklist-documentos.module';
 import { ObservacoesPacienteModule } from './modules/observacoes-paciente/observacoes-paciente.module';
+import { MercadoPagoModule } from './modules/mercado-pago/mercado-pago.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { ObservacoesPacienteModule } from './modules/observacoes-paciente/observ
     SuperAdminModule,
     ChecklistDocumentosModule,
     ObservacoesPacienteModule,
+    MercadoPagoModule,
   ],
 })
 export class AppModule {}

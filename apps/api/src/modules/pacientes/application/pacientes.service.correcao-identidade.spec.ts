@@ -121,6 +121,30 @@ describe('Correção de identidade do paciente', () => {
 
       expect(repo.update).toHaveBeenCalled();
     });
+
+    it('reenviar o CPF igual ao salvo, só que formatado (000.000.000-00), não conta como alteração', async () => {
+      const repo = repoPadrao();
+      const { service } = montar(repo);
+
+      await service.update(
+        'paciente-1',
+        { cpf: '529.982.247-25', telefone: '11888887777' } as never,
+        undefined,
+        contextDe(Papel.SECRETARIA),
+      );
+
+      expect(repo.update).toHaveBeenCalled();
+    });
+
+    it('CPF formatado DIFERENTE do salvo continua sendo alteração → 403', async () => {
+      const repo = repoPadrao();
+      const { service } = montar(repo);
+
+      await expect(
+        service.update('paciente-1', { cpf: '111.444.777-35' } as never, undefined, contextDe(Papel.SECRETARIA)),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(repo.update).not.toHaveBeenCalled();
+    });
   });
 
   describe('corrigirIdentidade() — autorização e validação', () => {

@@ -50,7 +50,7 @@ const MSG_IDENTIDADE_SO_SUPER_ADMIN =
   'Nome, CPF e data de nascimento só podem ser corrigidos pelo SUPER_ADMIN, com justificativa.';
 
 function soDigitos(valor: string | undefined): string {
-  return (valor ?? '').replace(/D/g, '');
+  return (valor ?? '').replace(/\D/g, '');
 }
 
 function diaISO(valor: Date | string | undefined): string {

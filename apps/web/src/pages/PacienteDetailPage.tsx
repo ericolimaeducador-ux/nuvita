@@ -17,6 +17,7 @@ import {
   SolicitarCorrecaoDialog,
   TicketsDoPaciente,
 } from '@/components/CorrecaoIdentidadeDialogs';
+import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -202,7 +203,9 @@ export function PacienteDetailPage() {
       )}
 
       {/* Dados cadastrais */}
-      <DadosCadastraisSecao paciente={p} pacienteId={id} />
+      <SectionErrorBoundary secao="Dados cadastrais">
+        <DadosCadastraisSecao paciente={p} pacienteId={id} />
+      </SectionErrorBoundary>
 
       {/* Prontuários / atendimentos */}
       <Secao

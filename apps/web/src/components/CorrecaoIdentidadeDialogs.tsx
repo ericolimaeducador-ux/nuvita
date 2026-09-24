@@ -247,7 +247,20 @@ export function TicketsDoPaciente({ pacienteId }: { pacienteId: string }) {
     queryFn: () => ticketsApi.listarPorPaciente(pacienteId),
     enabled: !!pacienteId,
   });
-  const tickets = q.data ?? [];
+  if (q.isLoading) return null;
+
+  // Falha explícita: erro da API ou resposta que não é lista (ex.: HTML de gateway/proxy)
+  // nunca pode aparecer como "sem tickets" — paciente com solicitações parecendo sem nenhuma.
+  if (q.isError || !Array.isArray(q.data)) {
+    return (
+      <p role="alert" data-testid="tickets-do-paciente-erro" className="mt-4 text-sm text-destructive">
+        Não foi possível carregar as solicitações de correção deste paciente. Recarregue a página; se persistir,
+        contate o suporte.
+      </p>
+    );
+  }
+
+  const tickets = q.data;
   if (tickets.length === 0) return null;
 
   return (

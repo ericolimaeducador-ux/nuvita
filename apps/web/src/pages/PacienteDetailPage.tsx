@@ -401,6 +401,7 @@ export function PacienteDetailPage() {
 }
 
 const editPacienteSchema = z.object({
+  nome: z.string().optional(),
   cpf: z.string().regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, 'CPF inválido.').optional().or(z.literal('')),
   dataNascimento: z.string().optional(),
   sexo: z.nativeEnum(Sexo).optional().or(z.literal('')),
@@ -441,6 +442,7 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
 
   function abrir() {
     reset({
+      nome: p.nome,
       cpf: p.cpf ?? '',
       dataNascimento: p.dataNascimento ? p.dataNascimento.slice(0, 10) : '',
       sexo: p.sexo ?? '',
@@ -498,59 +500,61 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
   }
 
   return (
-    <Secao
-      icon={<User className="h-4 w-4" />}
-      titulo="Dados cadastrais"
-      defaultOpen={false}
-      acao={
-        ehSuperAdmin ? (
-          <Button variant="outline" size="sm" onClick={() => setCorrigirOpen(true)}>
-            Corrigir identidade
-          </Button>
-        ) : (
-          <Button variant="ghost" size="icon" title="Editar cadastro" onClick={abrir}>
-            <Pencil className="h-4 w-4" />
-          </Button>
-        )
-      }
-    >
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 glass rounded-xl p-4">
-        <DescItem label="Nome" value={p.nome} />
-        <DescItem label="ID do paciente" value={pacienteId} />
-        <DescItem label="CPF" value={formatCpf(p.cpf)} />
-        <DescItem label="Nascimento" value={formatData(p.dataNascimento)} />
-        <DescItem label="Sexo" value={p.sexo ? SEXO_LABEL[p.sexo] : '—'} />
-        <DescItem label="Projeto" value={p.projeto ? PROJETO_LABEL[p.projeto] : '—'} />
-        <DescItem label="Linha terapêutica" value={p.linhaTerapeutica ? LINHA_TERAPEUTICA_LABEL[p.linhaTerapeutica] : '—'} />
-        <DescItem label="Telefone" value={p.telefone || '—'} />
-        <DescItem label="E-mail" value={p.email || '—'} />
-        <DescItem label="Consentimento LGPD" value={p.consentimentoLGPD?.aceito ? 'Aceito' : 'Pendente'} />
-        <div className="col-span-2 sm:col-span-3">
-          <DescItem label="Endereço" value={formatEndereco(p.endereco)} />
+    <>
+      <Secao
+        icon={<User className="h-4 w-4" />}
+        titulo="Dados cadastrais"
+        defaultOpen={false}
+        acao={
+          ehSuperAdmin ? (
+            <Button variant="outline" size="sm" onClick={() => setCorrigirOpen(true)}>
+              Corrigir identidade
+            </Button>
+          ) : (
+            <Button variant="ghost" size="icon" title="Editar cadastro" onClick={abrir}>
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )
+        }
+      >
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 glass rounded-xl p-4">
+          <DescItem label="Nome" value={p.nome} />
+          <DescItem label="ID do paciente" value={pacienteId} />
+          <DescItem label="CPF" value={formatCpf(p.cpf)} />
+          <DescItem label="Nascimento" value={formatData(p.dataNascimento)} />
+          <DescItem label="Sexo" value={p.sexo ? SEXO_LABEL[p.sexo] : '—'} />
+          <DescItem label="Projeto" value={p.projeto ? PROJETO_LABEL[p.projeto] : '—'} />
+          <DescItem label="Linha terapêutica" value={p.linhaTerapeutica ? LINHA_TERAPEUTICA_LABEL[p.linhaTerapeutica] : '—'} />
+          <DescItem label="Telefone" value={p.telefone || '—'} />
+          <DescItem label="E-mail" value={p.email || '—'} />
+          <DescItem label="Consentimento LGPD" value={p.consentimentoLGPD?.aceito ? 'Aceito' : 'Pendente'} />
+          <div className="col-span-2 sm:col-span-3">
+            <DescItem label="Endereço" value={formatEndereco(p.endereco)} />
+          </div>
+          {/* Só aparece quando há responsável legal cadastrado (paciente menor —
+              ver cadastro em PacientesPage.tsx). Sem edição aqui ainda nesta rodada;
+              a API já aceita PATCH com os mesmos campos, se precisar no futuro. */}
+          {p.responsavelLegal && (
+            <>
+              <DescItem label="Responsável legal" value={p.responsavelLegal.nome || '—'} />
+              <DescItem label="CPF do responsável" value={formatCpf(p.responsavelLegal.cpf)} />
+              <DescItem label="Telefone do responsável" value={p.responsavelLegal.telefone || '—'} />
+              <DescItem label="E-mail do responsável" value={p.responsavelLegal.email || '—'} />
+              <DescItem label="Vínculo" value={p.responsavelLegal.vinculo || '—'} />
+              <DescItem
+                label="Autorização do responsável"
+                value={
+                  p.autorizacaoResponsavel?.confirmado
+                    ? `Confirmada${p.autorizacaoResponsavel.registradaEm ? ' em ' + dayjs(p.autorizacaoResponsavel.registradaEm).format('DD/MM/YYYY HH:mm') : ''}`
+                    : 'Pendente'
+                }
+              />
+            </>
+          )}
         </div>
-        {/* Só aparece quando há responsável legal cadastrado (paciente menor —
-            ver cadastro em PacientesPage.tsx). Sem edição aqui ainda nesta rodada;
-            a API já aceita PATCH com os mesmos campos, se precisar no futuro. */}
-        {p.responsavelLegal && (
-          <>
-            <DescItem label="Responsável legal" value={p.responsavelLegal.nome || '—'} />
-            <DescItem label="CPF do responsável" value={formatCpf(p.responsavelLegal.cpf)} />
-            <DescItem label="Telefone do responsável" value={p.responsavelLegal.telefone || '—'} />
-            <DescItem label="E-mail do responsável" value={p.responsavelLegal.email || '—'} />
-            <DescItem label="Vínculo" value={p.responsavelLegal.vinculo || '—'} />
-            <DescItem
-              label="Autorização do responsável"
-              value={
-                p.autorizacaoResponsavel?.confirmado
-                  ? `Confirmada${p.autorizacaoResponsavel.registradaEm ? ' em ' + dayjs(p.autorizacaoResponsavel.registradaEm).format('DD/MM/YYYY HH:mm') : ''}`
-                  : 'Pendente'
-              }
-            />
-          </>
-        )}
-      </div>
 
-      <TicketsDoPaciente pacienteId={pacienteId} />
+        <TicketsDoPaciente pacienteId={pacienteId} />
+      </Secao>
       <SolicitarCorrecaoDialog open={solicitarOpen} onOpenChange={setSolicitarOpen} pacienteId={pacienteId} />
       <CorrigirIdentidadeDialog open={corrigirOpen} onOpenChange={setCorrigirOpen} pacienteId={pacienteId} />
       <Dialog open={open} onOpenChange={setOpen}>
@@ -564,6 +568,10 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
               <Button type="button" variant="outline" size="sm" onClick={() => { setOpen(false); setSolicitarOpen(true); }}>
                 Solicitar correção
               </Button>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editNome">Nome</Label>
+              <Input id="editNome" disabled {...register('nome')} />
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
@@ -674,7 +682,7 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
           </form>
         </DialogContent>
       </Dialog>
-    </Secao>
+    </>
   );
 }
 

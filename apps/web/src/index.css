@@ -42,6 +42,9 @@
   --color-ouro: #C9A15A;
   --color-ink: #2B2B28;
   --color-sage: #8FA69E;
+  /* Seções escuras da landing: mesmo tom de base dos fundos em public/landing/ (as bordas somem). */
+  --color-noite: #10131A;
+  --color-turquesa: #2DD4BF;
   --font-display: "Fraunces Variable", Georgia, serif;
   --font-body: Inter, system-ui, sans-serif;
 }

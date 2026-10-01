@@ -7,20 +7,15 @@ const secoes: SecaoLegal[] = [
   {
     titulo: '1. Objeto',
     blocos: [
-      'Este contrato regula a assinatura dos serviços Nuvita: Nuvita Psicologia (Plano Único), Nuvita Estomoterapia (Básico, Premium, Enterprise) e Nuvita Urologia [A CONFIRMAR: contratação própria ou tratamento separado].',
+      'Este contrato regula a assinatura dos serviços Nuvita: Nuvita Psicologia (Plano Único) e Nuvita Urologia [A CONFIRMAR: contratação própria ou tratamento separado]. Nuvita Estomoterapia ainda não foi lançada; seus planos e preços serão publicados, e passarão a ser regidos por este contrato, somente no lançamento.',
     ],
   },
   {
     titulo: '2. Planos e preços',
     blocos: [
       'Nuvita Psicologia — Plano Único: R$599,90 à vista (Pix/débito) ou 12x de R$69,90 sem juros.',
-      'Nuvita Estomoterapia:',
-      [
-        'Básico (200 MB): R$1.590,00 à vista ou 12x de R$149,90 sem juros',
-        'Premium (1 GB): R$1.990,00 à vista ou 12x de R$219,90 sem juros',
-        'Enterprise: sob consulta',
-      ],
-      'Limite de upload: 5 MB por foto, 10 MB por documento (Básico e Premium). Reajuste anual mediante aviso prévio de [A CONFIRMAR: prazo].',
+      'Nuvita Estomoterapia: ainda não lançada. Planos, preços e limites de uso serão publicados nesta cláusula no lançamento.',
+      'Reajuste anual mediante aviso prévio de [A CONFIRMAR: prazo].',
     ],
   },
   {

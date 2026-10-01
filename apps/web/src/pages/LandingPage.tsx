@@ -1,4 +1,7 @@
 import type { CSSProperties } from 'react';
+// Títulos da landing em Plus Jakarta Sans (600/700/800 já vêm do main.tsx); itálico só aqui.
+import '@fontsource/plus-jakarta-sans/latin-600-italic.css';
+// Fraunces: só o H1 do hero usa essa fonte (decisão do usuário); o resto da landing ficou em Jakarta.
 import '@fontsource-variable/fraunces';
 import { ChevronDown } from 'lucide-react';
 import { MotionConfig, motion } from 'framer-motion';
@@ -10,13 +13,11 @@ import { LoginForm } from '@/components/LoginForm';
 import { HeroVideo } from '@/components/HeroVideo';
 import logoDourado from '@/assets/logo-dourado.png';
 import { CtaFinal } from '@/components/landing/CtaFinal';
-import { DiferenciaisGrid } from '@/components/landing/DiferenciaisGrid';
 import { ComoFunciona } from '@/components/landing/ComoFunciona';
 import { CookieBanner } from '@/components/landing/CookieBanner';
+import { EspecialidadesAbas } from '@/components/landing/EspecialidadesAbas';
 import { FaqLanding } from '@/components/landing/FaqLanding';
-import { IlustracaoEstomoterapia, IlustracaoPsicologia, IlustracaoUrologia } from '@/components/landing/IlustracoesEspecialidades';
-import { SecaoEspecialidade } from '@/components/landing/SecaoEspecialidade';
-import { PrecosEstomoterapia } from '@/components/landing/PrecosEstomoterapia';
+import { GridConfianca } from '@/components/landing/GridConfianca';
 import { PrecosPsicologia } from '@/components/landing/PrecosPsicologia';
 import { RodapeLanding } from '@/components/landing/RodapeLanding';
 import { useConsentimentoCookies, useGoogleAnalytics } from '@/lib/analytics';
@@ -46,6 +47,7 @@ const tema = {
   // Componentes legados (ex.: LoginForm) usam brand-cobalt: dentro da landing, viram petróleo.
   '--color-brand-cobalt': '#0F3D3E',
   '--color-brand-cobalt-dark': '#0B2E2F',
+  '--font-display': '"Plus Jakarta Sans", Inter, system-ui, sans-serif',
 } as CSSProperties;
 
 function rolarPara(id: string) {
@@ -84,9 +86,6 @@ export function LandingPage() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="border-white/10 bg-petroleo text-quente">
-              <DropdownMenuItem className="focus:bg-white/10 focus:text-quente" onSelect={() => rolarPara('entrar-urologia')}>
-                Urologia
-              </DropdownMenuItem>
               <DropdownMenuItem asChild className="focus:bg-white/10 focus:text-quente">
                 <a href={ESTOMOTERAPIA_URL} target="_blank" rel="noopener noreferrer">Estomoterapia</a>
               </DropdownMenuItem>
@@ -114,58 +113,25 @@ export function LandingPage() {
             >
               <motion.h1
                 variants={heroItem}
-                className="mb-6 max-w-3xl font-display text-5xl font-medium leading-[1.05] sm:text-6xl lg:text-7xl"
+                style={{ fontFamily: '"Fraunces Variable", Georgia, serif' }}
+                className="mb-6 max-w-3xl text-5xl font-medium leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl"
               >
                 Seu portal de saúde <span className="italic text-ouro">na nuvem</span>
               </motion.h1>
               <motion.p variants={heroItem} className="max-w-xl text-lg leading-relaxed text-quente/85 sm:text-xl">
-                Prontuário eletrônico completo para profissionais de saúde — urologia, estomoterapia e psicologia
+                Prontuário eletrônico completo para profissionais de saúde — estomoterapia e psicologia
                 em um só lugar, com segurança e conformidade com a LGPD.
               </motion.p>
             </motion.div>
           </section>
 
-          <DiferenciaisGrid />
-
-          <SecaoEspecialidade
-            titulo="Urologia"
-            descricao="Gestão completa de consultório urológico — prontuário, agenda e histórico de acompanhamento, com acesso direto abaixo."
-            cta="Acessar"
-            onCta={() => rolarPara('entrar-urologia')}
-            fundo="bg-background"
-            painel="rounded-[2.5rem] rounded-tr-md bg-petroleo-medio"
-            ilustracao={<IlustracaoUrologia className="h-full w-full" />}
-          />
-          <SecaoEspecialidade
-            invertido
-            titulo="Estomoterapia"
-            descricao="Prontuário especializado em cuidado de feridas, com registro fotográfico de evolução de lesão e armazenamento dedicado na nuvem."
-            destaque={
-              <p className="mt-7 max-w-lg border-l-2 border-ouro pl-5 font-display text-xl leading-snug text-petroleo">
-                Armazenamento dedicado para as fotos de evolução: até 1 GB no plano Premium, o equivalente a cerca de 200 fotos de lesão.
-              </p>
-            }
-            cta="Ver planos"
-            onCta={() => rolarPara('precos-estomoterapia')}
-            fundo="bg-secondary"
-            painel="rounded-3xl rounded-bl-md bg-petroleo"
-            ilustracao={<IlustracaoEstomoterapia className="h-full w-full" />}
-          />
-          <SecaoEspecialidade
-            titulo="Psicologia"
-            descricao="Prontuário eletrônico para psicólogos — sessões, evolução clínica e agenda, com segurança e privacidade de dados."
-            cta="Ver plano"
-            onCta={() => rolarPara('precos-psicologia')}
-            fundo="bg-background"
-            painel="rounded-[2.5rem] rounded-tl-md bg-petroleo-medio"
-            ilustracao={<IlustracaoPsicologia className="h-full w-full" />}
-          />
+          <EspecialidadesAbas onVerPlano={() => rolarPara('precos-psicologia')} />
+          <GridConfianca />
 
           <ComoFunciona />
           <PrecosPsicologia />
-          <PrecosEstomoterapia />
 
-          {/* Login Urologia (âncora do dropdown "Entrar" e do card de Urologia) */}
+          {/* Login Urologia (âncora do link "Urologia" do rodapé) */}
           <section id="entrar-urologia" className="scroll-mt-16 bg-petroleo-medio px-6 py-24">
             <div className="mx-auto w-full max-w-md">
               <LoginForm />

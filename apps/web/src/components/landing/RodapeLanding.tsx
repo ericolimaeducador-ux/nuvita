@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import logoDourado from '@/assets/logo-dourado.png';
+import { EMPRESA } from '@/lib/empresa';
 
 const ESTOMOTERAPIA_URL = 'https://estomoterapia.nuvita.app.br';
 const PSICOLOGIA_URL = 'https://psi.nuvita.app.br';
@@ -13,8 +14,8 @@ export function RodapeLanding({ comBanner = false, onEntrarUrologia }: { comBann
       <div className="mx-auto grid max-w-6xl gap-10 sm:grid-cols-[1.4fr_1fr_1fr]">
         <div>
           <img src={logoDourado} alt="Nuvita — gestão de saúde na nuvem" className="h-12 w-auto" />
-          <a href="mailto:comercial@swbbrasil.com.br" className="mt-5 inline-block text-sm hover:text-ouro">
-            comercial@swbbrasil.com.br
+          <a href={`mailto:${EMPRESA.email}`} className="mt-5 inline-block text-sm hover:text-ouro">
+            {EMPRESA.email}
           </a>
         </div>
         <nav aria-label="Produtos" className="flex flex-col gap-2 text-sm">

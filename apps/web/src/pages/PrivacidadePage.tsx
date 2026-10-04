@@ -1,4 +1,6 @@
+// PENDENTE DE REVISÃO JURÍDICA (identificação da empresa, papel na LGPD e data alterados em 04/10/2026).
 import { PaginaLegal, type SecaoLegal } from '@/components/legal/PaginaLegal';
+import { EMPRESA } from '@/lib/empresa';
 
 // Texto fornecido pelo responsável. Os marcadores [A CONFIRMAR: ...] e
 // [EM CONVERSÃO: ...] são INTENCIONAIS (pendências jurídicas/contábeis): não
@@ -8,10 +10,10 @@ const secoes: SecaoLegal[] = [
     titulo: '1. Quem somos',
     blocos: [
       'Esta Política de Privacidade se aplica ao uso da plataforma Nuvita (nuvita.app.br e subdomínios), incluindo os módulos de Urologia, Estomoterapia e Psicologia, operada por:',
-      '55.747.955 ERICO HENRIQUE DE LIMA ARAUJO, CNPJ 55.747.955/0001-07 (nome fantasia "7Safe") [EM CONVERSÃO: de MEI para Microempresa (ME), Simples Nacional, com inclusão do CNAE 6203-1/00]',
-      'Endereço: Rua Levindo Lopes, 391, Sala 101, Savassi, Belo Horizonte/MG, CEP 30140-171',
-      'Para fins da Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD), a empresa acima atua como Controladora dos dados pessoais tratados na plataforma.',
-      'Encarregado de Proteção de Dados (DPO): comercial@swbbrasil.com.br',
+      `${EMPRESA.razaoSocial}, CNPJ ${EMPRESA.cnpj}`,
+      `Endereço: ${EMPRESA.endereco}`,
+      'Para fins da Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD), a empresa acima atua como Operadora dos dados de pacientes/clientes inseridos na plataforma pelos profissionais, que são os Controladores desses dados, e como Controladora apenas dos dados cadastrais dos próprios assinantes.',
+      `Encarregado de Proteção de Dados (DPO): ${EMPRESA.email}`,
     ],
   },
   {
@@ -55,7 +57,7 @@ const secoes: SecaoLegal[] = [
   {
     titulo: '6. Seus direitos como titular de dados',
     blocos: [
-      'Você pode solicitar a qualquer momento: confirmação da existência de tratamento, acesso, correção, anonimização/bloqueio/eliminação, portabilidade, eliminação de dados tratados com base no consentimento, informação sobre compartilhamento, e revogação do consentimento. Contato: comercial@swbbrasil.com.br',
+      `Você pode solicitar a qualquer momento: confirmação da existência de tratamento, acesso, correção, anonimização/bloqueio/eliminação, portabilidade, eliminação de dados tratados com base no consentimento, informação sobre compartilhamento, e revogação do consentimento. Contato: ${EMPRESA.email}`,
     ],
   },
   {
@@ -72,7 +74,7 @@ const secoes: SecaoLegal[] = [
   },
   {
     titulo: '9. Contato',
-    blocos: ['comercial@swbbrasil.com.br'],
+    blocos: [EMPRESA.email],
   },
 ];
 
@@ -80,7 +82,7 @@ export function PrivacidadePage() {
   return (
     <PaginaLegal
       titulo="Política de Privacidade"
-      atualizacao="Última atualização: [A CONFIRMAR: data de publicação]"
+      atualizacao={`Última atualização: ${EMPRESA.atualizacaoLegal}`}
       secoes={secoes}
     />
   );

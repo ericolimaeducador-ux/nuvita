@@ -1,4 +1,6 @@
+// PENDENTE DE REVISÃO JURÍDICA (identificação da empresa, foro e data alterados em 04/10/2026).
 import { PaginaLegal, type SecaoLegal } from '@/components/legal/PaginaLegal';
+import { EMPRESA } from '@/lib/empresa';
 
 // Texto fornecido pelo responsável. Os marcadores [A CONFIRMAR ...] são
 // INTENCIONAIS (pendências jurídicas): não remover nem "corrigir" sem decisão
@@ -68,7 +70,7 @@ const secoes: SecaoLegal[] = [
   {
     titulo: '11. Disposições gerais',
     blocos: [
-      'Regido pelas leis brasileiras. Foro da comarca de Belo Horizonte/MG, ressalvado o direito do consumidor de optar pelo foro de seu domicílio (CDC).',
+      `Regido pelas leis brasileiras. Foro da comarca de ${EMPRESA.foro}, ressalvado o direito do consumidor de optar pelo foro de seu domicílio (CDC).`,
     ],
   },
 ];
@@ -77,7 +79,7 @@ export function TermosPage() {
   return (
     <PaginaLegal
       titulo="Termos de Uso e Contrato de Assinatura"
-      atualizacao="Última atualização: [A CONFIRMAR: data]"
+      atualizacao={`Última atualização: ${EMPRESA.atualizacaoLegal}`}
       secoes={secoes}
     />
   );

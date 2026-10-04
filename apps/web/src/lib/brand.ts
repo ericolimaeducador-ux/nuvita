@@ -4,12 +4,13 @@ import logoColor from '@/assets/nuvita-logo.png';
 import logoLight from '@/assets/nuvita-logo-light.png';
 import markColor from '@/assets/nuvita-mark.png';
 import markLight from '@/assets/nuvita-mark-light.png';
+import { EMPRESA } from '@/lib/empresa';
 
 export const brand = {
   nome: 'Nuvita',
   slogan: 'gestão de saúde na nuvem',
-  cnpj: '55.747.955/0001-07',
-  endereco: 'Rua Levindo Lopes, 391 – Funcionários, Belo Horizonte – MG',
+  cnpj: EMPRESA.cnpj,
+  endereco: EMPRESA.endereco,
   telefone: '+55 (11) 94739-1805',
   // Logo completo (ícone + marca nominativa). `color` para superfícies claras /
   // documentos impressos; `light` para o tema escuro do app.

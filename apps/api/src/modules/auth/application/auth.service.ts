@@ -107,7 +107,7 @@ export class AuthService {
 
   async login(dto: LoginDto, context: RequestContext): Promise<AuthResponse> {
     const email = dto.email.toLowerCase();
-    await this.loginRateLimiter.assertAllowed(context.ip);
+    await this.loginRateLimiter.assertAllowed(context.ip, email);
 
     const user = await this.users.findByEmailWithSecrets(email);
     if (!user || !user.ativo) {
@@ -128,7 +128,9 @@ export class AuthService {
       throw error;
     }
 
-    await this.loginRateLimiter.clear(context.ip);
+    // Zera só o par (ip, conta) que logou: o histórico de falhas de OUTRAS contas
+    // no mesmo IP (NAT, atacante) não pode ser apagado por um acerto.
+    await this.loginRateLimiter.clear(context.ip, email);
     const tokens = await this.issueTokens(user);
 
     await this.auditLogs.create({
@@ -426,7 +428,7 @@ export class AuthService {
     reason: string,
     userId?: string,
   ): Promise<void> {
-    await this.loginRateLimiter.recordFailure(context.ip);
+    await this.loginRateLimiter.recordFailure(context.ip, email);
     await this.auditLogs.create({
       event: AuditEvent.LOGIN_FAILURE,
       userId,

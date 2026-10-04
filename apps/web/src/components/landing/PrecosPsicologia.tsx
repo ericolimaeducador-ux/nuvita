@@ -31,7 +31,7 @@ export function PrecosPsicologia() {
             </span>
             <CardHeader>
               <CardTitle className="text-xl">Plano Único</CardTitle>
-              <p className="pt-3 text-5xl font-bold tracking-tight text-foreground">R$ 599,90</p>
+              <p className="pt-3 text-5xl font-bold tracking-tight text-foreground">R$ 789,90</p>
               <p className="text-sm text-muted-foreground">à vista no Pix ou débito</p>
               <p className="text-sm text-muted-foreground">ou 12x de R$ 69,90 sem juros no cartão</p>
             </CardHeader>

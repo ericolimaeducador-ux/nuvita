@@ -15,7 +15,7 @@ const secoes: SecaoLegal[] = [
   {
     titulo: '2. Planos e preços',
     blocos: [
-      'Nuvita Psicologia — Plano Único: R$599,90 à vista (Pix/débito) ou 12x de R$69,90 sem juros.',
+      'Nuvita Psicologia — Plano Único: R$789,90 à vista (Pix/débito) ou 12x de R$69,90 sem juros.',
       'Nuvita Estomoterapia: ainda não lançada. Planos, preços e limites de uso serão publicados nesta cláusula no lançamento.',
       'Reajuste anual mediante aviso prévio de [A CONFIRMAR: prazo].',
     ],

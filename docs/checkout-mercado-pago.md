@@ -1,7 +1,7 @@
 # Checkout Mercado Pago (Wallet Brick) — ambiente de teste
 
 Validação técnica: o Wallet Brick é uma **terceira opção** no card da Psicologia, ao lado dos dois
-links diretos (Pix e 12x), que seguem funcionando. Só a modalidade à vista (R$ 599,90) por enquanto.
+links diretos (Pix e 12x), que seguem funcionando. Só a modalidade à vista (R$ 789,90) por enquanto.
 
 Fluxo: navegador (Public Key) → `POST /pagamentos/preferencia` (API usa o Access Token, que nunca sai
 do servidor) → id da preferência → Wallet Brick → pagamento → Mercado Pago chama

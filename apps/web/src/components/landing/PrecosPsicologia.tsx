@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PRICING_LINKS } from '@/config/pricing-links';
+import { CHECKOUT_ONLINE_ATIVO, EMPRESA } from '@/lib/empresa';
 import { BotaoCheckout } from './BotaoCheckout';
 import { CheckoutWallet } from './CheckoutWallet';
 import { Fundo, MASCARA_RADIAL, cascata, naViewport, subir } from './fundo';
@@ -46,19 +48,30 @@ export function PrecosPsicologia() {
                   'Dados protegidos com criptografia, conforme LGPD',
                 ]}
               />
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <BotaoCheckout href={PRICING_LINKS.psicologia.vista} className="h-auto min-h-11 w-full whitespace-normal px-3 py-2 text-center text-sm sm:flex-1">
-                  Pagar à vista no Pix
-                </BotaoCheckout>
-                <BotaoCheckout
-                  href={PRICING_LINKS.psicologia.parcelado}
-                  variant="outline"
-                  className="h-auto min-h-11 w-full whitespace-normal border-petroleo bg-transparent px-3 py-2 text-center text-sm text-petroleo hover:bg-petroleo/5 sm:flex-1"
-                >
-                  Parcelar em 12x sem juros
-                </BotaoCheckout>
-              </div>
-              <CheckoutWallet />
+              {CHECKOUT_ONLINE_ATIVO ? (
+                <>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <BotaoCheckout href={PRICING_LINKS.psicologia.vista} className="h-auto min-h-11 w-full whitespace-normal px-3 py-2 text-center text-sm sm:flex-1">
+                      Pagar à vista no Pix
+                    </BotaoCheckout>
+                    <BotaoCheckout
+                      href={PRICING_LINKS.psicologia.parcelado}
+                      variant="outline"
+                      className="h-auto min-h-11 w-full whitespace-normal border-petroleo bg-transparent px-3 py-2 text-center text-sm text-petroleo hover:bg-petroleo/5 sm:flex-1"
+                    >
+                      Parcelar em 12x sem juros
+                    </BotaoCheckout>
+                  </div>
+                  <CheckoutWallet />
+                </>
+              ) : (
+                <div className="space-y-2">
+                  <Button asChild className="h-11 w-full">
+                    <a href={`mailto:${EMPRESA.emailComercial}?subject=Contratar%20Nuvita%20Psicologia`}>Quero contratar</a>
+                  </Button>
+                  <p className="text-center text-xs text-muted-foreground">Nossa equipe responde em até 1 dia útil.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
           <p className="mt-4 text-xs text-quente/75">

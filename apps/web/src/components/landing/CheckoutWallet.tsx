@@ -47,7 +47,7 @@ export function CheckoutWallet() {
         <p className="text-sm font-semibold text-ink">Ou pague direto aqui</p>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
-        R$ 789,90 à vista no Pix ou débito, sem sair da página. Em validação: os botões acima continuam valendo.
+        R$ 789,90 à vista no Pix ou débito, sem sair da página.
       </p>
 
       {estado === 'fechado' && (

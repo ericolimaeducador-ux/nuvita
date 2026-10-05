@@ -8,19 +8,19 @@
   (controlador/operador) a definir com advogado.
 - Dados da empresa no código: fonte única em `apps/web/src/lib/empresa.ts`.
 
-## Textos legais — marcadores [A CONFIRMAR]
+## Textos legais
 
-Marcadores [A CONFIRMAR] dos textos legais removidos em 2026-10-04 por confirmação do usuário.
-Conteúdo aprovado por ele.
+Marcadores [A CONFIRMAR] dos Termos e da Privacidade resolvidos em 2026-10-05 com texto aprovado
+pelo advogado do usuário (reajuste, multa de fidelidade, canal de cancelamento/estorno, cláusula 9,
+provedores de nuvem, processador de pagamento = Mercado Pago, inadimplência e guarda de prontuários, CFP).
 
-Removido (o texto já estava completo): `TermosPage` cláusula 1, após "Nuvita Urologia".
+**Pendentes:**
 
-**Pendentes (o marcador substitui um dado que ainda não está escrito — o usuário precisa informar o valor):**
-
-- `TermosPage` cláusula 2: prazo de aviso prévio do reajuste anual.
-- `TermosPage` cláusula 3.2: consequência exata do cancelamento antecipado no parcelado (confirmar com advogado).
-- `TermosPage` cláusula 4: canal de solicitação da garantia e prazo de devolução.
-- `TermosPage` cláusula 6: processador de pagamento.
-- `TermosPage` cláusula 9: Limitação de responsabilidade — cláusula ainda não redigida (advogado).
-- `TermosPage` cláusula 10: canal de cancelamento e prazo de aviso prévio por inadimplência.
-- `PrivacidadePage`: processador de pagamento e provedores de infraestrutura em nuvem.
+- **Prazo de guarda de 5 anos:** advogado deve confirmar na norma vigente do CFP (o texto original citava o CFM).
+- **Inadimplência:** não existe rotina de cobrança, notificação ou suspensão por inadimplência
+  (verificado nos repos nuvita e nuvita-psi em 2026-10-05). Notificação por 5 dias e suspensão após
+  o 7º dia são obrigação OPERACIONAL manual do usuário até existir automação.
+- **Backup/restore:** a guarda em backup prometida nos Termos depende de evidência verificada no
+  Atlas (lacuna NGS1 nº 6, nuvita-psi).
+- **Termos usam USUÁRIO/LICENCIANTE e contratante/Nuvita:** advogado deve harmonizar (ou aprovar
+  cláusula de definições, ainda não incluída).

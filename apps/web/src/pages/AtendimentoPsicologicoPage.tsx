@@ -953,6 +953,16 @@ export function AtendimentoPsicologicoPage() {
         </Select>
       </div>
 
+      {/* A numeração (sessão/ciclo) é calculada pela API; sem o painel, nenhum número é exibido. */}
+      {painelQ.isError && (
+        <ErroConsulta
+          className="mb-3"
+          erro={painelQ.error}
+          refetch={painelQ.refetch}
+          recurso="a numeração das sessões e dos ciclos"
+        />
+      )}
+
       {agendamentosQ.isLoading ? (
         <div className="space-y-2"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>
       ) : agendamentos.length === 0 ? (
@@ -980,13 +990,21 @@ export function AtendimentoPsicologicoPage() {
                 </p>
               </div>
               <div className="text-sm">
-                <p className="font-medium">
-                  {situacao ? rotuloProximaSessao(situacao) : '1ª consulta'}
-                </p>
-                {situacao && situacao.sessoesRealizadas > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Ciclo {situacao.cicloAtual} · {situacao.sessoesNoCiclo}/{painelQ.data?.sessoesPorCiclo ?? 4} sessões
+                {painelQ.isError ? (
+                  <p data-testid="numero-sessao-indisponivel" className="text-xs text-muted-foreground">
+                    Nº da sessão indisponível
                   </p>
+                ) : (
+                  <>
+                    <p className="font-medium">
+                      {situacao ? rotuloProximaSessao(situacao) : '1ª consulta'}
+                    </p>
+                    {situacao && situacao.sessoesRealizadas > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Ciclo {situacao.cicloAtual} · {situacao.sessoesNoCiclo}/{painelQ.data?.sessoesPorCiclo ?? 4} sessões
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
               <Badge variant="outline" className={STATUS_BADGE[a.status]}>

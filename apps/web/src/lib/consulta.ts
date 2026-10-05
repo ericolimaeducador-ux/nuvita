@@ -28,6 +28,17 @@ export function comoLista<T>(dados: unknown): T[] | PageResult<T> {
   throw new RespostaInvalidaError();
 }
 
+/**
+ * Objeto que carrega uma lista em um campo (ex.: painel.pacientes). Devolve o objeto como veio;
+ * qualquer outra coisa lança — a ausência do campo não pode virar "sem itens".
+ */
+export function comoObjetoComLista<T extends object>(dados: unknown, campo: string): T {
+  if (dados !== null && typeof dados === 'object' && Array.isArray((dados as Record<string, unknown>)[campo])) {
+    return dados as T;
+  }
+  throw new RespostaInvalidaError();
+}
+
 export type TipoErroConsulta =
   | 'sem-acesso'
   | 'nao-encontrado'

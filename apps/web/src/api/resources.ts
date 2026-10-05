@@ -1,5 +1,5 @@
 import { api } from './client';
-import { comoLista } from '@/lib/consulta';
+import { comoLista, comoObjetoComLista } from '@/lib/consulta';
 import type {
   Agendamento,
   AuthUser,
@@ -232,7 +232,10 @@ export interface CobrarCicloPayload {
 }
 
 export const psicoFinanceiroApi = {
-  painel: () => api.get<PainelPsicologia>('/financeiro/psicologia/painel').then((r) => r.data),
+  painel: () =>
+    api
+      .get<PainelPsicologia>('/financeiro/psicologia/painel')
+      .then((r) => comoObjetoComLista<PainelPsicologia>(r.data, 'pacientes')),
   salvarConfig: (valorSessao: number) =>
     api.post('/financeiro/psicologia/configuracao', { valorSessao }).then((r) => r.data),
   cobrar: (payload: CobrarCicloPayload) =>

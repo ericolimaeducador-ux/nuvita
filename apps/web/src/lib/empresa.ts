@@ -1,5 +1,4 @@
 // Razão social e CNPJ conferidos em base pública em 2026-10-04 (empresa ativa).
-// Pendências de lançamento (CNAE, contrato, LGPD): docs/PENDENCIAS-LANCAMENTO.md.
 // Fonte única dos dados da empresa vendedora nos textos legais, rodapé e brand.
 // Corrigir razão social, CNPJ, endereço, foro ou e-mail = editar UMA linha aqui.
 export const EMPRESA = {

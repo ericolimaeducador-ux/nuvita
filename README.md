@@ -307,8 +307,8 @@ A lista completa e comentada está em [`.env.example`](.env.example).
 
 ## 📄 Propriedade intelectual
 
-© Nuvita — razão social, CNPJ e endereço em `apps/web/src/lib/empresa.ts`
-(pendente de revisão jurídica). Software proprietário; todos os direitos reservados.
+© Nuvita — razão social, CNPJ e endereço em `apps/web/src/lib/empresa.ts`.
+Software proprietário; todos os direitos reservados.
 Este repositório não concede licença de uso, cópia ou distribuição.
 
 ---

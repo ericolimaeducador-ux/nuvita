@@ -1,10 +1,6 @@
-// PENDENTE DE REVISÃO JURÍDICA (identificação da empresa, papel na LGPD e data alterados em 04/10/2026).
 import { PaginaLegal, type SecaoLegal } from '@/components/legal/PaginaLegal';
 import { EMPRESA } from '@/lib/empresa';
 
-// Texto fornecido pelo responsável. Os marcadores [A CONFIRMAR: ...] e
-// [EM CONVERSÃO: ...] são INTENCIONAIS (pendências jurídicas/contábeis): não
-// remover nem "corrigir" sem decisão do responsável.
 const secoes: SecaoLegal[] = [
   {
     titulo: '1. Quem somos',

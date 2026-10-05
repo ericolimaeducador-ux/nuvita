@@ -17,6 +17,7 @@ import { DocumentosModule } from './modules/documentos/documentos.module';
 import { FinanceiroModule } from './modules/financeiro/financeiro.module';
 import { NotificacoesModule } from './modules/notificacoes/notificacoes.module';
 import { PacientesModule } from './modules/pacientes/pacientes.module';
+import { TicketsModule } from './modules/tickets/tickets.module';
 import { ProntuariosModule } from './modules/prontuarios/prontuarios.module';
 import { TelemedicinaModule } from './modules/telemedicina/telemedicina.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
@@ -59,6 +60,7 @@ import { IaClinicaModule } from './modules/ia-clinica/ia-clinica.module';
     AuthModule,
     ClinicasModule,
     PacientesModule,
+    TicketsModule,
     ProntuariosModule,
     DocumentosModule,
     NotificacoesModule,

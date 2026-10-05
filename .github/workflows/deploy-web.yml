@@ -30,6 +30,7 @@ on:
     paths:
       - 'apps/web/**'
       - 'packages/shared/**'
+      - 'firebase.json'
       - '.github/workflows/deploy-web.yml'
   workflow_dispatch:
 

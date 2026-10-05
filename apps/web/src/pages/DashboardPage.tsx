@@ -11,6 +11,7 @@ import {
   agendaApi, pacientesApi, psicoFinanceiroApi,
 } from '@/api/resources';
 import { toItems } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import { useAuth } from '@/auth/AuthContext';
 import {
   StatusAgendamento,
@@ -64,10 +65,11 @@ export function DashboardPage() {
     (pacientesQ.data as { total?: number })?.total ?? toItems(pacientesQ.data as never).length;
 
   const stats = [
-    { title: 'Pacientes ativos', value: totalPacientes, icon: Users, loading: pacientesQ.isLoading },
-    { title: 'Agendamentos hoje', value: agendamentos.length, icon: Calendar, loading: agendaHojeQ.isLoading },
-    { title: 'Atendimentos realizados', value: realizados, icon: CheckCircle, loading: agendaHojeQ.isLoading },
-    { title: 'Prontuários', value: '—', icon: FileText, loading: false },
+  // Em erro o cartão mostra "—": zero seria um número inventado.
+    { title: 'Pacientes ativos', value: totalPacientes, icon: Users, loading: pacientesQ.isLoading, erro: pacientesQ.isError },
+    { title: 'Agendamentos hoje', value: agendamentos.length, icon: Calendar, loading: agendaHojeQ.isLoading, erro: agendaHojeQ.isError },
+    { title: 'Atendimentos realizados', value: realizados, icon: CheckCircle, loading: agendaHojeQ.isLoading, erro: agendaHojeQ.isError },
+    { title: 'Prontuários', value: '—', icon: FileText, loading: false, erro: false },
   ];
 
   return (
@@ -76,6 +78,18 @@ export function DashboardPage() {
         title={`Olá, ${user?.nome ?? user?.email ?? ''}`}
         subtitle={dayjs().format('dddd, DD [de] MMMM [de] YYYY')}
       />
+
+      {podeVerPsicologia && painelPsiQ.isError && (
+        <ErroConsulta
+          className="mb-6"
+          erro={painelPsiQ.error}
+          refetch={painelPsiQ.refetch}
+          recurso="a situação de sessões e ciclos da psicoterapia"
+        />
+      )}
+      {pacientesQ.isError && (
+        <ErroConsulta className="mb-6" erro={pacientesQ.error} refetch={pacientesQ.refetch} recurso="o total de pacientes" />
+      )}
 
       {/* Psicoterapia: em que sessão cada paciente está e como está o ciclo de cobrança */}
       {podeVerPsicologia && painelPsiQ.data && painelPsiQ.data.pacientes.length > 0 && (
@@ -150,7 +164,7 @@ export function DashboardPage() {
                     </div>
                     <div>
                       <p className="text-xs text-blue-100">{s.title}</p>
-                      <p className="text-2xl font-bold text-white">{s.value}</p>
+                      <p className="text-2xl font-bold text-white">{s.erro ? '—' : s.value}</p>
                     </div>
                   </div>
                 )}
@@ -172,6 +186,8 @@ export function DashboardPage() {
             <div className="space-y-3">
               {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
             </div>
+          ) : agendaHojeQ.isError ? (
+            <ErroConsulta erro={agendaHojeQ.error} refetch={agendaHojeQ.refetch} recurso="a agenda de hoje" />
           ) : agendamentos.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Calendar className="h-8 w-8 mx-auto mb-2 opacity-40" />

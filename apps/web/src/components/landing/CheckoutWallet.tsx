@@ -45,10 +45,9 @@ export function CheckoutWallet() {
     <div className="mt-6 border-t border-sage/50 pt-5">
       <div className="flex items-center gap-2">
         <p className="text-sm font-semibold text-ink">Ou pague direto aqui</p>
-        <span className="rounded bg-ouro/25 px-1.5 py-0.5 text-[11px] font-semibold text-ink">versão de teste</span>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
-        R$ 599,90 à vista no Pix ou débito, sem sair da página. Em validação: os botões acima continuam valendo.
+        R$ 789,90 à vista no Pix ou débito, sem sair da página.
       </p>
 
       {estado === 'fechado' && (

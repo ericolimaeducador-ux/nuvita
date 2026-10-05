@@ -1,17 +1,15 @@
 import { PaginaLegal, type SecaoLegal } from '@/components/legal/PaginaLegal';
+import { EMPRESA } from '@/lib/empresa';
 
-// Texto fornecido pelo responsável. Os marcadores [A CONFIRMAR: ...] e
-// [EM CONVERSÃO: ...] são INTENCIONAIS (pendências jurídicas/contábeis): não
-// remover nem "corrigir" sem decisão do responsável.
 const secoes: SecaoLegal[] = [
   {
     titulo: '1. Quem somos',
     blocos: [
       'Esta Política de Privacidade se aplica ao uso da plataforma Nuvita (nuvita.app.br e subdomínios), incluindo os módulos de Urologia, Estomoterapia e Psicologia, operada por:',
-      '55.747.955 ERICO HENRIQUE DE LIMA ARAUJO, CNPJ 55.747.955/0001-07 (nome fantasia "7Safe") [EM CONVERSÃO: de MEI para Microempresa (ME), Simples Nacional, com inclusão do CNAE 6203-1/00]',
-      'Endereço: Rua Levindo Lopes, 391, Sala 101, Savassi, Belo Horizonte/MG, CEP 30140-171',
-      'Para fins da Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD), a empresa acima atua como Controladora dos dados pessoais tratados na plataforma.',
-      'Encarregado de Proteção de Dados (DPO): comercial@swbbrasil.com.br',
+      `${EMPRESA.razaoSocial}, CNPJ ${EMPRESA.cnpj}`,
+      `Endereço: ${EMPRESA.endereco}`,
+      'Para fins da Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD), a empresa acima atua como Operadora dos dados de pacientes/clientes inseridos na plataforma pelos profissionais, que são os Controladores desses dados, e como Controladora apenas dos dados cadastrais dos próprios assinantes.',
+      `Encarregado de Proteção de Dados (DPO): ${EMPRESA.email}`,
     ],
   },
   {
@@ -39,11 +37,11 @@ const secoes: SecaoLegal[] = [
     titulo: '4. Com quem compartilhamos dados',
     blocos: [
       [
-        'Processador de pagamento: [A CONFIRMAR: Mercado Pago ou outro]',
-        'Provedores de infraestrutura em nuvem: [A CONFIRMAR: quais]',
         'Google Analytics: apenas para visitantes que consentirem',
         'Não vendemos nem compartilhamos dados com terceiros para fins de publicidade.',
       ],
+      'O processamento das transações financeiras e a gestão do faturamento são realizados por meio do gateway de pagamento Mercado Pago. O USUÁRIO reconhece que os dados financeiros são compartilhados com o Mercado Pago estritamente para a finalidade de cobrança, manutenção de assinaturas e prevenção à fraude, atuando o Mercado Pago como Operador de Dados nos termos da LGPD.',
+      'Para garantir a disponibilidade e segurança da aplicação e dos dados de saúde dos pacientes, a plataforma utiliza infraestrutura de nuvem de terceiros. Os dados são armazenados e processados utilizando os serviços do Google Cloud (incluindo Cloud Run e Firebase), MongoDB Atlas e Cloudflare R2. Ao utilizar nossos serviços, o Usuário concorda com o compartilhamento e a potencial transferência internacional destes dados para servidores localizados nos Estados Unidos ou em outras regiões globais operadas por estes provedores, os quais adotam os mais altos padrões de criptografia e conformidade legal compatíveis com a LGPD.',
     ],
   },
   {
@@ -55,7 +53,7 @@ const secoes: SecaoLegal[] = [
   {
     titulo: '6. Seus direitos como titular de dados',
     blocos: [
-      'Você pode solicitar a qualquer momento: confirmação da existência de tratamento, acesso, correção, anonimização/bloqueio/eliminação, portabilidade, eliminação de dados tratados com base no consentimento, informação sobre compartilhamento, e revogação do consentimento. Contato: comercial@swbbrasil.com.br',
+      `Você pode solicitar a qualquer momento: confirmação da existência de tratamento, acesso, correção, anonimização/bloqueio/eliminação, portabilidade, eliminação de dados tratados com base no consentimento, informação sobre compartilhamento, e revogação do consentimento. Contato: ${EMPRESA.email}`,
     ],
   },
   {
@@ -72,7 +70,7 @@ const secoes: SecaoLegal[] = [
   },
   {
     titulo: '9. Contato',
-    blocos: ['comercial@swbbrasil.com.br'],
+    blocos: [EMPRESA.email],
   },
 ];
 
@@ -80,7 +78,7 @@ export function PrivacidadePage() {
   return (
     <PaginaLegal
       titulo="Política de Privacidade"
-      atualizacao="Última atualização: [A CONFIRMAR: data de publicação]"
+      atualizacao={`Última atualização: ${EMPRESA.atualizacaoLegal}`}
       secoes={secoes}
     />
   );

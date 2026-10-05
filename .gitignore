@@ -23,3 +23,6 @@ Thumbs.db
 # INPI – documentos particulares de registro e pacotes gerados para depósito
 docs/inpi/
 inpi-deposito/
+
+# Documento interno de pendencias de lancamento (nunca versionar)
+docs/PENDENCIAS-LANCAMENTO.md

@@ -307,12 +307,12 @@ A lista completa e comentada está em [`.env.example`](.env.example).
 
 ## 📄 Propriedade intelectual
 
-© Nuvita — CNPJ 55.747.955/0001-07 · Rua Levindo Lopes, 391 – Funcionários,
-Belo Horizonte/MG. Software proprietário; todos os direitos reservados.
+© Nuvita — razão social, CNPJ e endereço em `apps/web/src/lib/empresa.ts`.
+Software proprietário; todos os direitos reservados.
 Este repositório não concede licença de uso, cópia ou distribuição.
 
 ---
 
 <div align="center">
-<sub>Feito com 💚 em Belo Horizonte · <b>Nuvita — gestão de saúde na nuvem</b></sub>
+<sub>Feito com 💚 · <b>Nuvita — gestão de saúde na nuvem</b></sub>
 </div>

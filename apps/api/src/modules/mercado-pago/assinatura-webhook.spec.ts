@@ -34,7 +34,7 @@ describe('planos', () => {
     for (const id of PLANO_IDS) expect(PLANOS[id].valor).toBeGreaterThan(0);
   });
   it('parcelado = 12 x 69,90', () => {
-    expect(PLANOS['psicologia-vista'].valor).toBe(599.9);
+    expect(PLANOS['psicologia-vista'].valor).toBe(789.9);
     expect(PLANOS['psicologia-parcelado'].valor).toBeCloseTo(12 * 69.9, 2);
   });
 });

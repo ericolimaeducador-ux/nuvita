@@ -20,11 +20,11 @@ export interface PlanoPagamento {
 }
 
 export const PLANOS: Record<PlanoId, PlanoPagamento> = {
-  // R$ 599,90 à vista no Pix ou débito: sem cartão de crédito nem boleto.
+  // R$ 789,90 à vista no Pix ou débito: sem cartão de crédito nem boleto.
   'psicologia-vista': {
     id: 'psicologia-vista',
     titulo: 'Nuvita Psicologia — Plano Único (à vista)',
-    valor: 599.9,
+    valor: 789.9,
     meiosDePagamento: { excluidos: [{ id: 'credit_card' }, { id: 'ticket' }] },
   },
   // 12x de R$ 69,90 = R$ 838,80. Cartão de crédito em até 12 parcelas. O "sem juros" é

@@ -9,3 +9,9 @@ afterEach(() => cleanup());
 if (!document.elementFromPoint) {
   document.elementFromPoint = () => null;
 }
+
+// Radix Select/Popover em jsdom: APIs de ponteiro e scroll que o jsdom não implementa.
+if (!Element.prototype.hasPointerCapture) Element.prototype.hasPointerCapture = () => false;
+if (!Element.prototype.setPointerCapture) Element.prototype.setPointerCapture = () => {};
+if (!Element.prototype.releasePointerCapture) Element.prototype.releasePointerCapture = () => {};
+if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};

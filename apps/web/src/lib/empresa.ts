@@ -7,8 +7,10 @@ export const EMPRESA = {
   cnpj: '10.917.735/0001-38',
   endereco: 'Rua das Flechas, 403, Vila Santa Catarina, São Paulo/SP, CEP 04364-030',
   foro: 'São Paulo/SP',
-  // Contato geral e Encarregado de Proteção de Dados (DPO).
-  email: 'dealer.empresa@gmail.com',
+  // Contato geral, Encarregado de Proteção de Dados (DPO) e canal de direitos LGPD.
+  email: 'contato@nuvita.app.br',
+  // Contato comercial (rodapé da landing).
+  emailComercial: 'comercial@nuvita.app.br',
   // Data exibida em "Última atualização" dos Termos e da Privacidade.
   // ATUALIZAR na data real de publicação.
   atualizacaoLegal: '04/10/2026',

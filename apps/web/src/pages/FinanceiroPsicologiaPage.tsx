@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
 import { psicoFinanceiroApi } from '@/api/resources';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import { apiErrorMessage } from '@/api/client';
 import { formatBRL, formatData } from '@/utils';
 import {
@@ -464,9 +465,7 @@ export function FinanceiroPsicologiaPage() {
           <Skeleton className="h-20 w-full" />
         </div>
       ) : painelQ.isError ? (
-        <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
-          {apiErrorMessage(painelQ.error)}
-        </div>
+        <ErroConsulta erro={painelQ.error} refetch={painelQ.refetch} recurso="o painel financeiro da psicologia" />
       ) : (painel?.pacientes.length ?? 0) === 0 ? (
         <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
           Nenhum paciente em acompanhamento ainda. Assim que você registrar a primeira sessão, ele aparece aqui.

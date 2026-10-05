@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { apiErrorMessage } from '@/api/client';
 import { corrigirIdentidadePaciente, ticketsApi, TICKET_STATUS_LABEL, type Ticket } from '@/api/tickets';
+import { ErroConsulta } from '@/components/ErroConsulta';
+import { RespostaInvalidaError } from '@/lib/consulta';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -256,10 +258,12 @@ export function TicketsDoPaciente({ pacienteId }: { pacienteId: string }) {
   // nunca pode aparecer como "sem tickets" — paciente com solicitações parecendo sem nenhuma.
   if (q.isError || !Array.isArray(q.data)) {
     return (
-      <p role="alert" data-testid="tickets-do-paciente-erro" className="mt-4 text-sm text-destructive">
-        Não foi possível carregar as solicitações de correção deste paciente. Recarregue a página; se persistir,
-        contate o suporte.
-      </p>
+      <ErroConsulta
+        className="mt-4"
+        erro={q.error ?? new RespostaInvalidaError()}
+        refetch={q.refetch}
+        recurso="as solicitações de correção deste paciente"
+      />
     );
   }
 

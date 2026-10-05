@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { prontuariosApi } from '@/api/resources';
+import { ErroConsulta } from '@/components/ErroConsulta';
+import { RespostaInvalidaError } from '@/lib/consulta';
 import { apiErrorMessage } from '@/api/client';
 import { toast } from '@/components/ui/use-toast';
 import { CAMPOS_POR_LINHA } from '@/lib/linhaTerapeutica';
@@ -118,8 +120,8 @@ export function ProntuarioDetailDialog({
 
         {q.isLoading ? (
           <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full" />)}</div>
-        ) : !pr ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">Não foi possível carregar o prontuário.</p>
+        ) : !pr || q.isError ? (
+          <ErroConsulta erro={q.error ?? new RespostaInvalidaError()} refetch={q.refetch} recurso="o prontuário" />
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 glass rounded-xl p-4">

@@ -663,6 +663,8 @@ function HistoricoSessoesDialog({
         </DialogHeader>
         {sessoesQ.isLoading ? (
           <div className="space-y-2"><Skeleton className="h-14 w-full" /><Skeleton className="h-14 w-full" /></div>
+        ) : sessoesQ.isError ? (
+          <ErroConsulta erro={sessoesQ.error} refetch={sessoesQ.refetch} recurso="o histórico de sessões" />
         ) : sessoes.length === 0 ? (
           <p className="text-sm text-muted-foreground py-6 text-center">Nenhuma sessão registrada ainda.</p>
         ) : (
@@ -774,6 +776,9 @@ function NovoAgendamentoDialog({ open, onClose }: { open: boolean; onClose: () =
           <div className="space-y-2">
             <Label>Paciente</Label>
             <Input placeholder="Buscar por nome…" value={busca} onChange={(e) => setBusca(e.target.value)} />
+            {pacientesQ.isError && (
+              <ErroConsulta erro={pacientesQ.error} refetch={pacientesQ.refetch} recurso="a lista de pacientes" />
+            )}
             <Select value={pacienteId} onValueChange={setPacienteId}>
               <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
               <SelectContent>
@@ -965,6 +970,8 @@ export function AtendimentoPsicologicoPage() {
 
       {agendamentosQ.isLoading ? (
         <div className="space-y-2"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>
+      ) : agendamentosQ.isError ? (
+        <ErroConsulta erro={agendamentosQ.error} refetch={agendamentosQ.refetch} recurso="os agendamentos" />
       ) : agendamentos.length === 0 ? (
         <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
           Nenhum paciente agendado para o psicólogo neste filtro.

@@ -39,6 +39,17 @@ export function comoObjetoComLista<T extends object>(dados: unknown, campo: stri
   throw new RespostaInvalidaError();
 }
 
+/** Primeira consulta (na ordem dada) em erro, ou null. Para páginas que dependem de várias consultas. */
+export interface ConsultaComFalha {
+  isError: boolean;
+  error: unknown;
+  refetch: () => unknown;
+}
+
+export function primeiraFalha(...consultas: ConsultaComFalha[]): ConsultaComFalha | null {
+  return consultas.find((q) => q.isError) ?? null;
+}
+
 export type TipoErroConsulta =
   | 'sem-acesso'
   | 'nao-encontrado'

@@ -13,6 +13,8 @@ import { DocumentoClinicoLayout } from '@/components/DocumentoClinicoLayout';
 import { DocumentoAssinatura } from '@/components/DocumentoAssinatura';
 import { pacientesApi, prontuariosApi } from '@/api/resources';
 import { toItems } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
+import { primeiraFalha } from '@/lib/consulta';
 import { TipoAtendimento, type Prontuario } from '@/types';
 
 /** Último valor não-vazio de um campo, das sessões mais recentes para as mais antigas. */
@@ -67,16 +69,19 @@ export function LaudoPsicoterapicoPage() {
     .sort((a, b) => dayjs(a.dataAtendimento).valueOf() - dayjs(b.dataAtendimento).valueOf());
 
   useEffect(() => {
-    if (rascunhoAplicado || sessoesQ.isLoading) return;
+    // Em erro o rascunho não pode ser "gasto" com histórico vazio: espera o retry dar certo.
+    if (rascunhoAplicado || sessoesQ.isLoading || sessoesQ.isError) return;
     setTexto(montarRascunho(sessoes));
     setRascunhoAplicado(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessoesQ.isLoading]);
+  }, [sessoesQ.isLoading, sessoesQ.isError]);
 
   const paciente = pacienteQ.data;
   const carregando = pacienteQ.isLoading || sessoesQ.isLoading;
+  // Sem paciente e histórico não se emite documento: nada de nome em branco nem de histórico vazio.
+  const falha = primeiraFalha(pacienteQ, sessoesQ);
 
-  if (modo === 'imprimir') {
+  if (modo === 'imprimir' && !falha) {
     return (
       <DocumentoClinicoLayout rotulo="Laudo Psicoterápico" onVoltar={() => setModo('compor')}>
         <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4 mb-6">
@@ -97,7 +102,7 @@ export function LaudoPsicoterapicoPage() {
     <div className="p-6 max-w-2xl mx-auto">
       <PageHeader
         title="Laudo Psicoterápico"
-        subtitle={paciente ? `Paciente: ${paciente.nome}` : 'Carregando…'}
+        subtitle={paciente ? `Paciente: ${paciente.nome}` : falha ? 'Dados indisponíveis' : 'Carregando…'}
         extra={
           <Button variant="ghost" onClick={() => navigate(-1)}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
@@ -107,6 +112,8 @@ export function LaudoPsicoterapicoPage() {
 
       {carregando ? (
         <Skeleton className="h-64 w-full" />
+      ) : falha ? (
+        <ErroConsulta erro={falha.error} refetch={falha.refetch} recurso="os dados do paciente e o histórico de sessões" />
       ) : (
         <Card>
           <CardContent className="p-6 space-y-4">

@@ -23,6 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
 import { superAdminApi, type UpdateClinicaPayload } from '@/api/resources';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import type { CreateAdminUserPayload, UpdateUsuarioPayload, ClinicaAdmin, TwoFactorSetup } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import {
@@ -178,14 +179,20 @@ export function SuperAdminPage() {
     limit: LIMIT,
   };
 
-  const { data, isFetching, refetch } = useQuery({
+  const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['super-admin', 'usuarios', queryParams],
     queryFn: () => superAdminApi.listUsuarios(queryParams),
     placeholderData: (prev) => prev,
   });
 
   // Lista de clínicas: alimenta a aba Clínicas e os dropdowns de vínculo dos usuários.
-  const { data: clinicasData, isFetching: clinicasFetching } = useQuery({
+  const {
+    data: clinicasData,
+    isFetching: clinicasFetching,
+    isError: clinicasError,
+    error: clinicasErro,
+    refetch: refetchClinicas,
+  } = useQuery({
     queryKey: ['super-admin', 'clinicas'],
     queryFn: () => superAdminApi.listClinicas(),
   });
@@ -395,6 +402,12 @@ export function SuperAdminPage() {
             </Button>
           </div>
 
+          {isError && <ErroConsulta erro={error} refetch={refetch} recurso="os usuários" />}
+          {/* Sem a lista de clínicas, nomes e vínculos de clínica caem no ID e os seletores ficam vazios. */}
+          {clinicasError && (
+            <ErroConsulta erro={clinicasErro} refetch={refetchClinicas} recurso="as clínicas (nomes e vínculos)" />
+          )}
+
           {/* Table */}
           <Card>
             <CardContent className="p-0">
@@ -414,7 +427,7 @@ export function SuperAdminPage() {
                   {items.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
-                        {isFetching ? 'Carregando…' : 'Nenhum usuário encontrado.'}
+                        {isError ? 'Lista indisponível.' : isFetching ? 'Carregando…' : 'Nenhum usuário encontrado.'}
                       </TableCell>
                     </TableRow>
                   )}
@@ -485,6 +498,7 @@ export function SuperAdminPage() {
               Nova clínica
             </Button>
           </div>
+          {clinicasError && <ErroConsulta erro={clinicasErro} refetch={refetchClinicas} recurso="as clínicas" />}
           <Card>
             <CardContent className="p-0">
               <Table>
@@ -503,7 +517,7 @@ export function SuperAdminPage() {
                   {clinicas.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
-                        {clinicasFetching ? 'Carregando…' : 'Nenhuma clínica cadastrada.'}
+                        {clinicasError ? 'Lista indisponível.' : clinicasFetching ? 'Carregando…' : 'Nenhuma clínica cadastrada.'}
                       </TableCell>
                     </TableRow>
                   )}

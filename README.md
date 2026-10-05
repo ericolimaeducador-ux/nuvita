@@ -197,7 +197,7 @@ desenvolvimento compartilhado (`JBSWY3DPEHPK3PXP` — **apenas dev**). Para
 gerar o código 2FA na hora do login:
 
 ```bash
-node scripts/totp.mjs   # imprime o código TOTP atual
+TOTP_SECRET=JBSWY3DPEHPK3PXP node scripts/totp.mjs   # imprime o código TOTP atual (segredo de dev do seed)
 ```
 
 ### Stack completa via Docker

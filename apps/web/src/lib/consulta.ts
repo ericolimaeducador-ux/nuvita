@@ -29,11 +29,17 @@ export function comoLista<T>(dados: unknown): T[] | PageResult<T> {
 }
 
 /**
- * Objeto que carrega uma lista em um campo (ex.: painel.pacientes). Devolve o objeto como veio;
+ * Objeto que carrega listas em um ou mais campos (ex.: painel.pacientes). Devolve o objeto como veio;
  * qualquer outra coisa lança — a ausência do campo não pode virar "sem itens".
  */
-export function comoObjetoComLista<T extends object>(dados: unknown, campo: string): T {
-  if (dados !== null && typeof dados === 'object' && Array.isArray((dados as Record<string, unknown>)[campo])) {
+export function comoObjetoComLista<T extends object>(dados: unknown, campo: string | string[]): T {
+  const campos = Array.isArray(campo) ? campo : [campo];
+  if (
+    dados !== null &&
+    typeof dados === 'object' &&
+    !Array.isArray(dados) &&
+    campos.every((c) => Array.isArray((dados as Record<string, unknown>)[c]))
+  ) {
     return dados as T;
   }
   throw new RespostaInvalidaError();

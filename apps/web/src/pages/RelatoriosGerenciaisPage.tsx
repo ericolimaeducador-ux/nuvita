@@ -20,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { analyticsApi } from '@/api/resources';
 import { formatBRL } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
 
 // Todo gráfico aqui é uma série única (contagem por categoria) — por isso uma
 // única cor (o azul primário do app), sem necessidade de paleta categórica.
@@ -47,12 +48,15 @@ function ChartCard({
   title,
   loading,
   empty,
+  falha,
   children,
   className,
 }: {
   title: string;
   loading: boolean;
   empty: boolean;
+  /** Consulta em erro: o gráfico não pode parecer "sem dados". */
+  falha?: { error: unknown; refetch: () => unknown } | null;
   children: React.ReactNode;
   className?: string;
 }) {
@@ -64,6 +68,8 @@ function ChartCard({
       <CardContent>
         {loading ? (
           <Skeleton className="h-64 w-full" />
+        ) : falha ? (
+          <ErroConsulta erro={falha.error} refetch={falha.refetch} recurso="este gráfico" />
         ) : empty ? (
           <p className="py-16 text-center text-sm text-muted-foreground">Sem dados no período.</p>
         ) : (
@@ -169,13 +175,17 @@ export function RelatoriosGerenciaisPage() {
         </CardContent>
       </Card>
 
+      {pacientesQ.isError && (
+        <ErroConsulta erro={pacientesQ.error} refetch={pacientesQ.refetch} recurso="os dados de pacientes" />
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatTile icon={<Users className="h-5 w-5" />} label="Pacientes ativos" value={pacientesQ.data?.totalAtivos ?? '—'} />
-        <StatTile icon={<UserPlus className="h-5 w-5" />} label="Novos no período" value={novosNoPeriodo} />
+        <StatTile icon={<UserPlus className="h-5 w-5" />} label="Novos no período" value={pacientesQ.isError ? '—' : novosNoPeriodo} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartCard title="Atendimentos por mês" loading={agendamentosQ.isLoading} empty={dadosPorMesAtendimentos.length === 0}>
+        <ChartCard title="Atendimentos por mês" loading={agendamentosQ.isLoading} falha={agendamentosQ.isError ? agendamentosQ : null} empty={dadosPorMesAtendimentos.length === 0}>
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={dadosPorMesAtendimentos} margin={{ left: 8 }}>
               <CartesianGrid vertical={false} stroke={GRID_COLOR} />
@@ -187,7 +197,7 @@ export function RelatoriosGerenciaisPage() {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Atendimentos por semana" loading={agendamentosQ.isLoading} empty={dadosPorSemana.length === 0}>
+        <ChartCard title="Atendimentos por semana" loading={agendamentosQ.isLoading} falha={agendamentosQ.isError ? agendamentosQ : null} empty={dadosPorSemana.length === 0}>
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={dadosPorSemana} margin={{ left: 8 }}>
               <CartesianGrid vertical={false} stroke={GRID_COLOR} />
@@ -199,7 +209,7 @@ export function RelatoriosGerenciaisPage() {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Atendimentos por dia" loading={agendamentosQ.isLoading} empty={dadosPorDia.length === 0} className="lg:col-span-2">
+        <ChartCard title="Atendimentos por dia" loading={agendamentosQ.isLoading} falha={agendamentosQ.isError ? agendamentosQ : null} empty={dadosPorDia.length === 0} className="lg:col-span-2">
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={dadosPorDia} margin={{ left: 8 }}>
               <CartesianGrid vertical={false} stroke={GRID_COLOR} />
@@ -213,15 +223,19 @@ export function RelatoriosGerenciaisPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <StatTile icon={<DollarSign className="h-5 w-5" />} label="Receita recebida no período" value={formatBRL(receitaTotalNoPeriodo)} />
+        <StatTile icon={<DollarSign className="h-5 w-5" />} label="Receita recebida no período" value={financeiroQ.isError ? '—' : formatBRL(receitaTotalNoPeriodo)} />
         <StatTile
           icon={<AlertTriangle className="h-5 w-5" />}
           label="Cobranças vencidas"
-          value={`${cobrancasQ.data?.vencidas.length ?? 0} · ${formatBRL(cobrancasQ.data?.totalVencido ?? 0)}`}
+          value={
+            cobrancasQ.isError
+              ? '—'
+              : `${cobrancasQ.data?.vencidas.length ?? 0} · ${formatBRL(cobrancasQ.data?.totalVencido ?? 0)}`
+          }
         />
       </div>
 
-      <ChartCard title="Receita recebida por mês" loading={financeiroQ.isLoading} empty={dadosReceitaPorMes.length === 0}>
+      <ChartCard title="Receita recebida por mês" loading={financeiroQ.isLoading} falha={financeiroQ.isError ? financeiroQ : null} empty={dadosReceitaPorMes.length === 0}>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={dadosReceitaPorMes} margin={{ left: 8 }}>
             <CartesianGrid vertical={false} stroke={GRID_COLOR} />
@@ -240,6 +254,8 @@ export function RelatoriosGerenciaisPage() {
         <CardContent>
           {cobrancasQ.isLoading ? (
             <Skeleton className="h-32 w-full" />
+          ) : cobrancasQ.isError ? (
+            <ErroConsulta erro={cobrancasQ.error} refetch={cobrancasQ.refetch} recurso="as cobranças" />
           ) : (cobrancasQ.data?.vencidas.length ?? 0) + (cobrancasQ.data?.aVencer.length ?? 0) === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma cobrança pendente.</p>
           ) : (
@@ -281,6 +297,8 @@ export function RelatoriosGerenciaisPage() {
           </p>
           {perdaSeguimentoQ.isLoading ? (
             <Skeleton className="h-32 w-full" />
+          ) : perdaSeguimentoQ.isError ? (
+            <ErroConsulta erro={perdaSeguimentoQ.error} refetch={perdaSeguimentoQ.refetch} recurso="os sinais de perda de seguimento" />
           ) : (perdaSeguimentoQ.data ?? []).length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">Nenhum sinal de perda de seguimento.</p>
           ) : (
@@ -339,6 +357,8 @@ export function RelatoriosGerenciaisPage() {
 
           {horariosVagosQ.isLoading ? (
             <Skeleton className="h-16 w-full" />
+          ) : horariosVagosQ.isError ? (
+            <ErroConsulta erro={horariosVagosQ.error} refetch={horariosVagosQ.refetch} recurso="os horários livres" />
           ) : (horariosVagosQ.data ?? []).length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">Sem horários livres nessa janela.</p>
           ) : (

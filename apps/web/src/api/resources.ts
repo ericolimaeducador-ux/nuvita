@@ -524,15 +524,23 @@ export interface SlotVago {
 
 export const analyticsApi = {
   pacientes: (params: AnalyticsPeriodParams = {}) =>
-    api.get<DashboardPacientes>('/analytics/pacientes', { params }).then((r) => r.data),
+    api
+      .get<DashboardPacientes>('/analytics/pacientes', { params })
+      .then((r) => comoObjetoComLista<DashboardPacientes>(r.data, 'novosPorMes')),
   pacientesPorRepresentante: (params: AnalyticsPeriodParams = {}) =>
     api.get<Array<{ _id: string; total: number }>>('/analytics/pacientes-por-representante', { params }).then((r) => comoLista<{ _id: string; total: number }>(r.data) as Array<{ _id: string; total: number }>),
   agendamentos: (params: AnalyticsPeriodParams = {}) =>
-    api.get<DashboardAgendamentos>('/analytics/agendamentos', { params }).then((r) => r.data),
+    api
+      .get<DashboardAgendamentos>('/analytics/agendamentos', { params })
+      .then((r) => comoObjetoComLista<DashboardAgendamentos>(r.data, ['porMes', 'porDia', 'porSemana'])),
   financeiro: (params: AnalyticsPeriodParams = {}) =>
-    api.get<DashboardFinanceiroAnalytics>('/analytics/financeiro', { params }).then((r) => r.data),
+    api
+      .get<DashboardFinanceiroAnalytics>('/analytics/financeiro', { params })
+      .then((r) => comoObjetoComLista<DashboardFinanceiroAnalytics>(r.data, 'receitasPorMes')),
   cobrancasPsicologia: (params: { clinicaId?: string; profissionalId?: string } = {}) =>
-    api.get<CobrancasPsicologia>('/analytics/cobrancas-psicologia', { params }).then((r) => r.data),
+    api
+      .get<CobrancasPsicologia>('/analytics/cobrancas-psicologia', { params })
+      .then((r) => comoObjetoComLista<CobrancasPsicologia>(r.data, ['vencidas', 'aVencer'])),
   perdaSeguimento: (params: { clinicaId?: string; profissionalId?: string; diasLimite?: number } = {}) =>
     api.get<PacientePerdaSeguimento[]>('/analytics/perda-seguimento', { params }).then((r) => comoLista<PacientePerdaSeguimento>(r.data) as PacientePerdaSeguimento[]),
   horariosVagos: (params: {

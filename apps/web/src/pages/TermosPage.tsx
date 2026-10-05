@@ -9,7 +9,7 @@ const secoes: SecaoLegal[] = [
   {
     titulo: '1. Objeto',
     blocos: [
-      'Este contrato regula a assinatura dos serviços Nuvita: Nuvita Psicologia (Plano Único) e Nuvita Urologia [A CONFIRMAR: contratação própria ou tratamento separado]. Nuvita Estomoterapia ainda não foi lançada; seus planos e preços serão publicados, e passarão a ser regidos por este contrato, somente no lançamento.',
+      'Este contrato regula a assinatura dos serviços Nuvita: Nuvita Psicologia (Plano Único) e Nuvita Urologia. Nuvita Estomoterapia ainda não foi lançada; seus planos e preços serão publicados, e passarão a ser regidos por este contrato, somente no lançamento.',
     ],
   },
   {

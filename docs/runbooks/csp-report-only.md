@@ -12,8 +12,9 @@ then switch from `Content-Security-Policy-Report-Only` to the blocking
 
 ## Preconditions
 
-- The branch that adds the headers is deployed (`firebase.json` is in the `deploy-web.yml`
-  `paths` filter, so a push to `main` redeploys).
+- The branch that adds the headers is deployed. `firebase.json` is in the `deploy-web.yml`
+  `paths` filter (added together with these headers), so a push to `main` that touches it
+  redeploys; `workflow_dispatch` also works.
 - Verify the header is live:
 
   ```bash
@@ -94,6 +95,16 @@ Redeploy and repeat the walk until a full pass over every screen and role produc
 3. Deploy, then repeat the **critical flows** at least once: login with 2FA, upload a
    document, open a document, a telemedicine call on both sides.
 4. Rollback plan: revert the header rename (one line in `firebase.json`) and redeploy.
+
+## Observation procedure
+
+After the deploy, walk every screen with the DevTools console open (login, dashboard, patients,
+patient record, clinical notes, agenda, financial, telemedicine with camera, documents, reports,
+super admin) and record each CSP violation in the results table below. Only switch to the
+blocking CSP after **zero violations in one complete pass**.
+
+Future evolution (out of scope for now): a `report-to` / `report-uri` collection endpoint, so
+violations from real users are gathered without a manual walk.
 
 ## Results table (fill during the walk)
 

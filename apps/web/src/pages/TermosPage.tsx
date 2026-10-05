@@ -17,20 +17,22 @@ const secoes: SecaoLegal[] = [
     blocos: [
       'Nuvita Psicologia — Plano Único: R$789,90 à vista (Pix/débito) ou 12x de R$69,90 sem juros.',
       'Nuvita Estomoterapia: ainda não lançada. Planos, preços e limites de uso serão publicados nesta cláusula no lançamento.',
-      'Reajuste anual mediante aviso prévio de [A CONFIRMAR: prazo].',
+      'Os valores dos planos contratados poderão ser reajustados anualmente, ou na menor periodicidade permitida por lei, com base na variação positiva do IPCA/IBGE acumulado no período. A licenciante notificará o USUÁRIO sobre o reajuste com antecedência mínima de 30 (trinta) dias da data efetiva da cobrança do novo valor.',
     ],
   },
   {
     titulo: '3. Vigência e fidelidade',
     blocos: [
       '3.1. A assinatura tem vigência anual. Ao final de cada ciclo anual, a assinatura é renovada automaticamente por igual período, salvo cancelamento prévio pelo contratante. Para o pagamento parcelado (12x sem juros), cada ciclo anual renovado inicia um novo período de fidelidade de 12 (doze) meses, nos termos da cláusula 3.2.',
-      '3.2. Pagamento parcelado (12x sem juros): fidelidade de 12 meses — cancelamento antecipado [A CONFIRMAR COM ADVOGADO: consequência exata]. Pagamento à vista: sem fidelidade.',
+      '3.2. Pagamento parcelado (12x sem juros): fidelidade de 12 meses. Pagamento à vista: sem fidelidade.',
+      'Caso o USUÁRIO solicite o cancelamento de um plano com compromisso de fidelidade (exemplo: plano anual com pagamento parcelado) antes do término do período contratado, será cobrada uma multa rescisória equivalente a 20% (vinte por cento) sobre o valor total das parcelas vincendas.',
     ],
   },
   {
     titulo: '4. Garantia de satisfação (14 dias)',
     blocos: [
-      '14 dias corridos, contados da confirmação do pagamento, para cancelamento com devolução integral (100%) do valor pago, sem necessidade de justificativa. Após esse prazo, aplicam-se as regras da cláusula 3. Solicitações via [A CONFIRMAR: canal], devolução em até [A CONFIRMAR: prazo].',
+      '14 dias corridos, contados da confirmação do pagamento, para cancelamento com devolução integral (100%) do valor pago, sem necessidade de justificativa. Após esse prazo, aplicam-se as regras da cláusula 3.',
+      'Qualquer solicitação de cancelamento da assinatura ou pedido de estorno e devolução deverá ser formalizada exclusivamente por e-mail, através do endereço cancelamento@nuvita.app.br. O processamento da solicitação contará a partir da data de recebimento da comunicação neste canal oficial.',
     ],
   },
   {
@@ -59,12 +61,17 @@ const secoes: SecaoLegal[] = [
   },
   {
     titulo: '9. Limitação de responsabilidade',
-    blocos: ['[A CONFIRMAR COM ADVOGADO — cláusula ainda não redigida]'],
+    blocos: [
+      '9.1. O SOFTWARE é fornecido no estado em que se encontra ("as is"), sem garantias implícitas de adequação a uma finalidade específica além daquelas expressamente declaradas nestes Termos.',
+      '9.2. A LICENCIANTE atua exclusivamente como provedora de tecnologia e ferramenta de gestão, não prestando serviços médicos ou de saúde. A responsabilidade por diagnósticos, prescrições, tratamentos e pela precisão clínica das informações inseridas no prontuário é exclusiva do USUÁRIO (Profissional de Saúde).',
+      '9.3. Em nenhuma hipótese a LICENCIANTE será responsabilizada por danos indiretos, lucros cessantes, paralisação de negócios ou perda de dados decorrentes do mau uso do sistema, falhas de conexão de internet do usuário ou eventos de força maior.',
+      '9.4. A responsabilidade civil máxima da LICENCIANTE, em caso de falha sistêmica ou danos comprovadamente causados por sua culpa exclusiva, limitar-se-á ao valor total pago pelo USUÁRIO nos 12 (doze) meses anteriores à ocorrência do evento danoso.',
+    ],
   },
   {
     titulo: '10. Rescisão',
     blocos: [
-      'Cancelamento a qualquer momento via [A CONFIRMAR: canal], observadas as regras de fidelidade e garantia. Suspensão por inadimplência mediante aviso prévio de [A CONFIRMAR: prazo].',
+      'Cancelamento a qualquer momento, observadas as regras de fidelidade e garantia. Suspensão por inadimplência mediante aviso prévio de [A CONFIRMAR: prazo].',
     ],
   },
   {

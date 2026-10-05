@@ -3,16 +3,17 @@ import { cn } from '@/lib/utils';
 
 const BASE = import.meta.env.BASE_URL;
 
-// Dimensões reais dos arquivos em public/landing/ (evita layout shift).
+// Cada fundo tem duas larguras em public/landing/ (srcset + sizes). width/height seguem a
+// proporção real dos arquivos (evita layout shift); a versão sem sufixo, de largura única, não é mais usada.
 const FUNDOS = {
-  especialidades: { arquivo: 'specialties-glow-bg.webp', largura: 2560, altura: 1086 },
-  psicologia: { arquivo: 'psicologia-accent-bg.webp', largura: 1600, altura: 873 },
-  estomoterapia: { arquivo: 'estomaterapia-soon-bg.webp', largura: 1600, altura: 873 },
-  cifragem: { arquivo: 'bento-encryption-bg.webp', largura: 900, altura: 900 },
-  doisFatores: { arquivo: 'bento-2fa-bg.webp', largura: 900, altura: 900 },
-  nuvem: { arquivo: 'bento-cloud-bg.webp', largura: 1600, altura: 873 },
-  planos: { arquivo: 'pricing-glow-bg.webp', largura: 2560, altura: 1086 },
-  cta: { arquivo: 'cta-band-bg.webp', largura: 2560, altura: 1086 },
+  especialidades: { base: 'specialties-glow-bg', pequena: 1280, grande: 2560, largura: 1280, altura: 543, sizes: '100vw' },
+  psicologia: { base: 'psicologia-accent-bg', pequena: 1280, grande: 2560, largura: 1280, altura: 698, sizes: '(min-width: 1024px) 640px, 100vw' },
+  estomoterapia: { base: 'estomaterapia-soon-bg', pequena: 1280, grande: 2560, largura: 1280, altura: 698, sizes: '(min-width: 1024px) 640px, 100vw' },
+  cifragem: { base: 'bento-encryption-bg', pequena: 600, grande: 1200, largura: 600, altura: 600, sizes: '(min-width: 640px) 576px, 100vw' },
+  doisFatores: { base: 'bento-2fa-bg', pequena: 600, grande: 1200, largura: 600, altura: 600, sizes: '(min-width: 640px) 576px, 100vw' },
+  nuvem: { base: 'bento-cloud-bg', pequena: 1280, grande: 2560, largura: 1280, altura: 698, sizes: '(min-width: 1152px) 1152px, 100vw' },
+  planos: { base: 'pricing-glow-bg', pequena: 1280, grande: 2560, largura: 1280, altura: 543, sizes: '100vw' },
+  cta: { base: 'cta-band-bg', pequena: 1280, grande: 2560, largura: 1280, altura: 543, sizes: '(min-width: 1152px) 1152px, 100vw' },
 } as const;
 
 // Máscaras: o -webkit- ainda é necessário no Safari.
@@ -26,6 +27,11 @@ function mascara(imagem: string, composicao?: 'intersect'): CSSProperties {
 
 /** Centro claro: apaga as bordas para o brilho não "recortar" na seção. */
 export const MASCARA_RADIAL = mascara('radial-gradient(ellipse at center, #000 30%, transparent 72%)');
+/** Fade nas quatro bordas: o acento da Psicologia não "recorta" no painel. */
+export const MASCARA_BORDAS = mascara(
+  'linear-gradient(to right, transparent, #000 18%, #000 82%, transparent), linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent)',
+  'intersect',
+);
 /** Some até transparente nas bordas inferior e direita. */
 export const MASCARA_INFERIOR_DIREITA = mascara(
   'linear-gradient(to bottom, #000 55%, transparent), linear-gradient(to right, #000 55%, transparent)',
@@ -82,7 +88,9 @@ export function Fundo({
   }
   return (
     <img
-      src={`${BASE}landing/${f.arquivo}`}
+      src={`${BASE}landing/${f.base}-${f.pequena}.webp`}
+      srcSet={`${BASE}landing/${f.base}-${f.pequena}.webp ${f.pequena}w, ${BASE}landing/${f.base}-${f.grande}.webp ${f.grande}w`}
+      sizes={f.sizes}
       alt=""
       aria-hidden="true"
       width={f.largura}

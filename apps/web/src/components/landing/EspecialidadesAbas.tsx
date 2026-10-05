@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Fundo, MASCARA_INFERIOR_DIREITA, MASCARA_RADIAL, cascata, naViewport, subir } from './fundo';
+import { Fundo, MASCARA_BORDAS, MASCARA_RADIAL, cascata, naViewport, subir } from './fundo';
 import { MockupDispositivos } from './MockupDispositivos';
 
 const gatilho =
@@ -26,7 +26,7 @@ export function EspecialidadesAbas({ onVerPlano }: { onVerPlano: () => void }) {
       aria-labelledby="especialidades-titulo"
       className="relative isolate scroll-mt-16 overflow-hidden bg-noite px-6 py-24 text-quente"
     >
-      <Fundo nome="especialidades" className="-z-10 opacity-40" style={MASCARA_RADIAL} />
+      <Fundo nome="especialidades" className="-z-10 opacity-50" style={MASCARA_RADIAL} />
 
       <motion.div
         className="mx-auto max-w-6xl"
@@ -78,7 +78,7 @@ export function EspecialidadesAbas({ onVerPlano }: { onVerPlano: () => void }) {
                 </button>
               </div>
               <div className="relative isolate py-6">
-                <Fundo nome="psicologia" className="-z-10 rounded-3xl opacity-80" style={MASCARA_INFERIOR_DIREITA} />
+                <Fundo nome="psicologia" className="-z-10 rounded-3xl opacity-40" style={MASCARA_BORDAS} />
                 <MockupDispositivos />
               </div>
             </TabsPrimitive.Content>

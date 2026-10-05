@@ -12,7 +12,7 @@ import { SeloGarantia } from './SeloGarantia';
 export function PrecosPsicologia() {
   return (
     <section id="precos-psicologia" className="relative isolate scroll-mt-16 overflow-hidden bg-noite px-6 py-24 text-quente">
-      <Fundo nome="planos" className="-z-10 opacity-45" style={MASCARA_RADIAL} />
+      <Fundo nome="planos" className="-z-10 opacity-30" style={MASCARA_RADIAL} />
       <motion.div
         className="mx-auto grid max-w-6xl items-start gap-10 lg:grid-cols-[1fr_26rem] lg:gap-20"
         variants={cascata}

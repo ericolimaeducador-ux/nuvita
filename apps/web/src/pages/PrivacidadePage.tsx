@@ -41,10 +41,10 @@ const secoes: SecaoLegal[] = [
     titulo: '4. Com quem compartilhamos dados',
     blocos: [
       [
-        'Processador de pagamento: [A CONFIRMAR: Mercado Pago ou outro]',
         'Google Analytics: apenas para visitantes que consentirem',
         'Não vendemos nem compartilhamos dados com terceiros para fins de publicidade.',
       ],
+      'O processamento das transações financeiras e a gestão do faturamento são realizados por meio do gateway de pagamento Mercado Pago. O USUÁRIO reconhece que os dados financeiros são compartilhados com o Mercado Pago estritamente para a finalidade de cobrança, manutenção de assinaturas e prevenção à fraude, atuando o Mercado Pago como Operador de Dados nos termos da LGPD.',
       'Para garantir a disponibilidade e segurança da aplicação e dos dados de saúde dos pacientes, a plataforma utiliza infraestrutura de nuvem de terceiros. Os dados são armazenados e processados utilizando os serviços do Google Cloud (incluindo Cloud Run e Firebase), MongoDB Atlas e Cloudflare R2. Ao utilizar nossos serviços, o Usuário concorda com o compartilhamento e a potencial transferência internacional destes dados para servidores localizados nos Estados Unidos ou em outras regiões globais operadas por estes provedores, os quais adotam os mais altos padrões de criptografia e conformidade legal compatíveis com a LGPD.',
     ],
   },

@@ -44,7 +44,7 @@ const secoes: SecaoLegal[] = [
   {
     titulo: '6. Forma de pagamento',
     blocos: [
-      'Processado por [A CONFIRMAR: Mercado Pago ou outro]. A Nuvita não armazena dados completos de cartão de crédito.',
+      'O processamento das transações financeiras e a gestão do faturamento são realizados por meio do gateway de pagamento Mercado Pago. O USUÁRIO reconhece que os dados financeiros são compartilhados com o Mercado Pago estritamente para a finalidade de cobrança, manutenção de assinaturas e prevenção à fraude, atuando o Mercado Pago como Operador de Dados nos termos da LGPD. A Nuvita não armazena dados completos de cartão de crédito.',
     ],
   },
   {
@@ -71,7 +71,8 @@ const secoes: SecaoLegal[] = [
   {
     titulo: '10. Rescisão',
     blocos: [
-      'Cancelamento a qualquer momento, observadas as regras de fidelidade e garantia. Suspensão por inadimplência mediante aviso prévio de [A CONFIRMAR: prazo].',
+      'Cancelamento a qualquer momento, observadas as regras de fidelidade e garantia.',
+      'Em caso de atraso no pagamento, o USUÁRIO receberá notificações prévias de cobrança durante 5 (cinco) dias consecutivos. Persistindo a inadimplência, a prestação do serviço será suspensa após o 7º (sétimo) dia do vencimento original. Para garantir a segurança jurídica e o cumprimento das normativas do Conselho Federal de Psicologia (CFP), todo o histórico de prontuários psicológicos gerado pelo USUÁRIO permanecerá integralmente guardado na infraestrutura de backend e em rotinas de backup da plataforma pelo prazo legal de 5 (cinco) anos, garantindo a integridade do acervo clínico.',
     ],
   },
   {

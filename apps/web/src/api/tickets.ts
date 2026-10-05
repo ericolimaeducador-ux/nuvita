@@ -1,4 +1,5 @@
 import { api } from './client';
+import { comoLista } from '@/lib/consulta';
 
 // Tickets internos usuário → SUPER_ADMIN (feature-tickets-superadmin): hoje só
 // "Correção de dados de identidade" de um paciente.
@@ -33,9 +34,9 @@ export interface CorrecaoIdentidadePayload {
 export const ticketsApi = {
   abrir: (payload: { pacienteId: string; justificativa: string }) =>
     api.post<Ticket>('/tickets', payload).then((r) => r.data),
-  listarAbertos: () => api.get<Ticket[]>('/tickets').then((r) => r.data),
+  listarAbertos: () => api.get<Ticket[]>('/tickets').then((r) => comoLista<Ticket>(r.data) as Ticket[]),
   listarPorPaciente: (pacienteId: string) =>
-    api.get<Ticket[]>(`/tickets/paciente/${pacienteId}`).then((r) => r.data),
+    api.get<Ticket[]>(`/tickets/paciente/${pacienteId}`).then((r) => comoLista<Ticket>(r.data) as Ticket[]),
   atender: (id: string, payload: CorrecaoIdentidadePayload) =>
     api.post<Ticket>(`/tickets/${id}/atender`, payload).then((r) => r.data),
   recusar: (id: string, motivo: string) =>

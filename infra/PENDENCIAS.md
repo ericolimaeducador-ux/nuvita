@@ -178,7 +178,7 @@ escopo sem pedido.
 
 ---
 
-## 9. `apps/web` não tem runner de teste
+## 9. `apps/web` não tem runner de teste — RESOLVIDO
 
 **Achado:** durante a Fase 4 de `feature/clinic-onboarding-and-auth-gates`
 (2026-09-10).
@@ -200,6 +200,15 @@ meio de uma feature de produto.
 
 **Não bloqueante.** Avaliar como item próprio (qual runner, convenção de teste,
 cobertura mínima esperada) quando o volume de UI justificar.
+
+**Resolvido em 2026-10-04** (branch `fix/erro-explicito-queries`): o volume de UI
+justificou o item próprio. `apps/web` ganhou Vitest + jsdom + Testing Library
+(`vitest`, `jsdom`, `@testing-library/react|dom|jest-dom|user-event`, só em
+`devDependencies` do web), `vitest.config.ts` e o script `npm test`
+(`vitest run`). Convenção: testes ao lado do código (`*.test.ts[x]`), setup em
+`src/test/setup.ts`. Primeiros testes: `lib/consulta.test.ts` e
+`components/ErroConsulta.test.tsx` (falha explícita de queries). Nada foi
+adicionado em `apps/api`.
 
 ---
 

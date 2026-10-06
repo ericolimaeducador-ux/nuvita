@@ -17,8 +17,9 @@ import {
 } from '../documentos.constants';
 import { ALLOWED_DOCUMENT_MIME_TYPES, Documento } from '../domain/documento.entity';
 
-// Extensão de arquivo por MIME type permitido — usada para nomear o objeto no
-// storage de forma legível ao baixar.
+// Extensão de arquivo por MIME type permitido (allowlist). É a ÚNICA fonte da
+// extensão da chave do objeto e do nome sugerido no download: nunca vem do
+// nome do arquivo ou do título informados pelo usuário.
 const EXTENSAO_POR_MIME: Record<string, string> = {
   'application/pdf': '.pdf',
   'image/jpeg': '.jpg',
@@ -57,7 +58,7 @@ export class DocumentosService {
       throw new BadRequestException('Limite de 500MB por paciente excedido.');
     }
 
-    const key = this.buildObjectKey(clinicaId, dto.pacienteId, dto.nomePaciente, dto.nome, dto.mimeType);
+    const key = this.buildObjectKey(clinicaId, dto.pacienteId, dto.mimeType);
     const presigned = await this.storage.createUploadUrl({
       key,
       mimeType: dto.mimeType,
@@ -145,7 +146,11 @@ export class DocumentosService {
   async createAccessUrl(documentoId: string, clinicaId: string | undefined, context: DocumentoRequestContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
     const documento = await this.getDocumentoOrThrow(resolvedClinicaId, documentoId);
-    const accessUrl = await this.storage.createReadUrl(documento.url, DOCUMENT_ACCESS_URL_TTL_SECONDS);
+    const accessUrl = await this.storage.createReadUrl(
+      documento.url,
+      DOCUMENT_ACCESS_URL_TTL_SECONDS,
+      this.buildDownloadFilename(documento),
+    );
 
     await this.audit(AuditEvent.DOCUMENT_VIEW_URL_CREATED, context, {
       clinicaId: resolvedClinicaId,
@@ -212,31 +217,17 @@ export class DocumentosService {
     return resolveTenantClinicaId(user, requestedClinicaId);
   }
 
-  private buildObjectKey(
-    clinicaId: string,
-    pacienteId: string,
-    nomePaciente: string | undefined,
-    nomeDocumento: string,
-    mimeType: string,
-  ): string {
-    // Nome legível do arquivo = "<nome do paciente> - <titulo do documento>",
-    // para que o download traga um nome que faz sentido. O UUID garante unicidade
-    // da chave mesmo que dois documentos tenham o mesmo nome.
-    const partes = [nomePaciente, nomeDocumento].map((p) => this.slug(p)).filter(Boolean);
-    const base = partes.join('-') || 'documento';
-    const extensao = EXTENSAO_POR_MIME[mimeType] ?? '';
-    return `${clinicaId}/pacientes/${pacienteId}/${randomUUID()}-${base}${extensao}`;
+  // A chave do objeto não carrega dado pessoal: nem nome do paciente, nem título
+  // ou nome do arquivo (a chave aparece em URLs, logs do storage e histórico).
+  private buildObjectKey(clinicaId: string, pacienteId: string, mimeType: string): string {
+    return `${clinicaId}/pacientes/${pacienteId}/${randomUUID()}${EXTENSAO_POR_MIME[mimeType] ?? ''}`;
   }
 
-  // Remove acentos e caracteres inseguros para chaves de objeto S3/R2, mantendo
-  // legibilidade (espaços viram "_").
-  private slug(value: string | undefined): string {
-    if (!value) return '';
-    return value
-      .normalize('NFD')
-      .replace(new RegExp('[\\u0300-\\u036f]', 'g'), '')
-      .replace(/[^a-zA-Z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '');
+  // Nome genérico sugerido no download (vai na query string da URL assinada).
+  // Data de criação em UTC + extensão da allowlist; nunca o título.
+  private buildDownloadFilename(documento: Documento): string {
+    const data = new Date(documento.criadoEm).toISOString().slice(0, 10);
+    return `documento-${data}${EXTENSAO_POR_MIME[documento.mimeType] ?? ''}`;
   }
 
   private async audit(

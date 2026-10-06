@@ -1,17 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { existsSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
-
-// Screenshots reais dos mockups da landing. Ausentes → a moldura mostra um placeholder
-// neutro (sem requisição 404). Avaliado ao subir o dev/build: depois de adicionar os
-// arquivos, reinicie o `vite` ou rode o build de novo.
-const existeShot = (nome: string) =>
-  existsSync(fileURLToPath(new URL(`./public/landing/shots/${nome}`, import.meta.url)));
-const SHOTS_PSICOLOGIA = {
-  desktop: existeShot('psicologia-desktop.png'),
-  mobile: existeShot('psicologia-mobile.png'),
-};
 
 // Frontend Nuvita. Encaminha as rotas da API NestJS (porta 3000) preservando
 // os mesmos paths — assim o cookie de refresh (httpOnly, path /auth) é mantido.
@@ -37,9 +26,6 @@ const apiProxy = {
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? (process.env.VITE_BASE ?? '/nuvita/') : '/',
   plugins: [react()],
-  define: {
-    __SHOTS_PSICOLOGIA__: JSON.stringify(SHOTS_PSICOLOGIA),
-  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

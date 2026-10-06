@@ -60,10 +60,13 @@ export class S3DocumentStorageService implements DocumentStorage {
     };
   }
 
-  async createReadUrl(privateUrl: string, expiresInSeconds: number): Promise<string> {
+  async createReadUrl(privateUrl: string, expiresInSeconds: number, downloadFilename?: string): Promise<string> {
     const command = new GetObjectCommand({
       Bucket: this.bucket,
       Key: this.keyFromPrivateUrl(privateUrl),
+      ResponseContentDisposition: downloadFilename
+        ? `inline; filename="${downloadFilename.replace(/[^A-Za-z0-9._-]/g, '_')}"`
+        : undefined,
     });
 
     return getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });

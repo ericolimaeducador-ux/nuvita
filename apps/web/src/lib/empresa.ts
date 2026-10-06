@@ -14,3 +14,9 @@ export const EMPRESA = {
   // ATUALIZAR na data real de publicação.
   atualizacaoLegal: '04/10/2026',
 } as const;
+
+// Checkout online da landing (links mpago.li e Wallet Brick do Mercado Pago).
+// PAUSADO (2026-10-05): links com valor divergente do site, recebedor no CNPJ antigo e
+// token de producao recusado (403) pelo Mercado Pago. Em false, o card de preco mostra
+// so o contato comercial por e-mail. Voltar a true apos corrigir links e credenciais.
+export const CHECKOUT_ONLINE_ATIVO = false;

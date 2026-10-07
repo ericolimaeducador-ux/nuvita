@@ -53,8 +53,18 @@ export class S3DocumentStorageService implements DocumentStorage {
       },
     });
 
+    // Por padrão o presigner MOVE todo header x-amz-* para a query string e só assina content-length e
+    // host. Como o navegador envia x-amz-meta-sha256 e Content-Type como headers do PUT, ambos precisam
+    // ser headers ASSINADOS (e o x-amz-meta-sha256 não pode ser hoisted): senão o R2 responde 403
+    // SignatureDoesNotMatch por header x-amz-* não assinado.
+    const uploadUrl = await getSignedUrl(this.client, command, {
+      expiresIn: DOCUMENT_ACCESS_URL_TTL_SECONDS,
+      unhoistableHeaders: new Set(['x-amz-meta-sha256']),
+      signableHeaders: new Set(['content-type', 'x-amz-meta-sha256']),
+    });
+
     return {
-      uploadUrl: await getSignedUrl(this.client, command, { expiresIn: DOCUMENT_ACCESS_URL_TTL_SECONDS }),
+      uploadUrl,
       privateUrl: this.privateUrl(input.key),
       expiresInSeconds: DOCUMENT_ACCESS_URL_TTL_SECONDS,
     };

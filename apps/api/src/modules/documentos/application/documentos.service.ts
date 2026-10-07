@@ -92,10 +92,9 @@ export class DocumentosService {
       uploadUrl: presigned.uploadUrl,
       expiresInSeconds: presigned.expiresInSeconds,
       requiredHeaders: {
+        // Headers que o navegador DEVE enviar no PUT: a URL assina ambos (ver createUploadUrl em
+        // s3-document-storage.service.ts); com valor diferente o R2 responde 403 SignatureDoesNotMatch.
         'Content-Type': dto.mimeType,
-        // A URL presignada assina o Metadata do PutObjectCommand (ver
-        // s3-document-storage.service.ts) — sem este header exato, o S3/R2
-        // rejeita o PUT com SignatureDoesNotMatch.
         'x-amz-meta-sha256': dto.hash.toLowerCase(),
       },
     };

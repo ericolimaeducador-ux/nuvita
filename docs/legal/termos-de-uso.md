@@ -61,7 +61,7 @@ Disponibilizar a plataforma conforme o plano contratado; realizar backups perió
 
 Cancelamento a qualquer momento, observadas as regras de fidelidade e garantia.
 
-Em caso de atraso no pagamento, o USUÁRIO receberá notificações prévias de cobrança durante 5 (cinco) dias consecutivos. Persistindo a inadimplência, a prestação do serviço será suspensa após o 7º (sétimo) dia do vencimento original. Para garantir a segurança jurídica e o cumprimento das normativas do Conselho Federal de Psicologia (CFP), todo o histórico de prontuários psicológicos gerado pelo USUÁRIO permanecerá integralmente guardado na infraestrutura de backend e em rotinas de backup da plataforma pelo prazo legal de 5 (cinco) anos, garantindo a integridade do acervo clínico.
+Em caso de atraso no pagamento, o USUÁRIO receberá notificações prévias de cobrança durante 5 (cinco) dias consecutivos. Persistindo a inadimplência, a prestação do serviço será suspensa após o 7º (sétimo) dia do vencimento original. Para garantir a segurança jurídica e o cumprimento das normativas do Conselho Federal de Psicologia (CFP), todo o histórico de prontuários psicológicos gerado pelo USUÁRIO permanecerá integralmente guardado na infraestrutura de backend e em rotinas de backup da plataforma pelo prazo mínimo de 5 (cinco) anos, nos termos da Resolução CFP nº 001/2009, ressalvados os prazos superiores previstos em lei ou por determinação judicial, garantindo a integridade do acervo clínico.
 
 ## 11. Disposições gerais
 

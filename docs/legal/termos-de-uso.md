@@ -7,6 +7,8 @@
 
 ## 1. Objeto
 
+A plataforma Nuvita é disponibilizada por Dealer Empresas LTDA, inscrita no CNPJ sob o nº 10.917.735/0001-38, com sede na Rua das Flechas, 403, Vila Santa Catarina, São Paulo/SP, CEP 04364-030 (doravante "LICENCIANTE" ou "Nuvita").
+
 Este contrato regula a assinatura dos serviços Nuvita: Nuvita Psicologia (Plano Único) e Nuvita Urologia. Nuvita Estomoterapia ainda não foi lançada; seus planos e preços serão publicados, e passarão a ser regidos por este contrato, somente no lançamento.
 
 ## 2. Planos e preços

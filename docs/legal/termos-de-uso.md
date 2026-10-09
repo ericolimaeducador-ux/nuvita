@@ -1,102 +1,70 @@
-# Termos de Uso — Nuvita Psi
+# Termos de Uso e Contrato de Assinatura
 
-**Versão:** 1.0
-**Data de publicação e última revisão:** 10 de setembro de 2026
+**Versão:** 2.0
+**Data de publicação e última revisão:** 9 de outubro de 2026
 
 ---
 
-## 1. Quem somos e o que este termo cobre
+## 1. Objeto
 
-Estes Termos de Uso ("Termos") regulam o acesso e uso da plataforma **Nuvita Psi**, sistema de gestão para profissionais de psicologia, disponibilizado por **7Safe Medtech**, inscrita no CNPJ sob o nº **55.747.955/0001-07**, doravante denominada "Nuvita Psi" ou "Plataforma".
+Este contrato regula a assinatura dos serviços Nuvita: Nuvita Psicologia (Plano Único) e Nuvita Urologia. Nuvita Estomoterapia ainda não foi lançada; seus planos e preços serão publicados, e passarão a ser regidos por este contrato, somente no lançamento.
 
-Ao criar uma conta ou utilizar a Plataforma, você ("Profissional", "Usuário") declara ter lido, compreendido e aceitado integralmente estes Termos.
+## 2. Planos e preços
 
-## 2. Quem pode usar a Plataforma
+Nuvita Psicologia — Plano Único: R$789,90 à vista (Pix/débito) ou 12x de R$69,90 no cartão (total R$838,80).
 
-2.1. O acesso como Profissional é destinado a psicólogos regularmente inscritos em Conselho Regional de Psicologia (CRP), em situação regular perante o conselho de classe.
+Nuvita Estomoterapia: ainda não lançada. Planos, preços e limites de uso serão publicados nesta cláusula no lançamento.
 
-2.2. É responsabilidade exclusiva do Profissional manter seu registro profissional (CRP) válido e informar a Plataforma caso essa situação se altere.
+Os valores dos planos contratados poderão ser reajustados anualmente, ou na menor periodicidade permitida por lei, com base na variação positiva do IPCA/IBGE acumulado no período. A licenciante notificará o USUÁRIO sobre o reajuste com antecedência mínima de 30 (trinta) dias da data efetiva da cobrança do novo valor.
 
-2.3. O uso da Plataforma por pessoa que não atenda a este requisito é vedado e pode resultar em suspensão ou cancelamento do acesso, sem prejuízo de outras medidas cabíveis.
+## 3. Vigência e fidelidade
 
-## 3. Natureza do serviço
+3.1. A assinatura tem vigência anual. Ao final de cada ciclo anual, a assinatura é renovada automaticamente por igual período, salvo cancelamento prévio pelo contratante. Para o pagamento parcelado (12x no cartão), cada ciclo anual renovado inicia um novo período de fidelidade de 12 (doze) meses, nos termos da cláusula 3.2.
 
-3.1. O Nuvita Psi é uma ferramenta de gestão — prontuário eletrônico, agenda, comunicação com pacientes, controle financeiro e recursos assistidos por inteligência artificial para apoio à documentação clínica.
+3.2. Pagamento parcelado (12x no cartão): fidelidade de 12 meses. Pagamento à vista: sem fidelidade.
 
-3.2. **A Plataforma não presta assistência psicológica, não substitui o julgamento clínico do Profissional e não é parte da relação terapêutica entre o Profissional e seus pacientes.** Toda decisão clínica é de responsabilidade exclusiva do Profissional.
+Caso o USUÁRIO solicite o cancelamento de um plano com compromisso de fidelidade (exemplo: plano anual com pagamento parcelado) antes do término do período contratado, será cobrada uma multa rescisória equivalente a 20% (vinte por cento) sobre o valor total das parcelas vincendas.
 
-3.3. Funcionalidades assistidas por inteligência artificial (como sugestões de abordagem terapêutica ou de conteúdo para planos de cuidado) são **sugestões**, sujeitas a revisão e decisão humana obrigatória antes de qualquer uso no atendimento real. A Plataforma mantém registro técnico de cada geração e da decisão do Profissional sobre ela, para fins de auditoria e responsabilização.
+## 4. Garantia de satisfação (14 dias)
 
-## 4. Responsabilidades do Profissional perante seus pacientes
+14 dias corridos, contados da confirmação do pagamento, para cancelamento com devolução integral (100%) do valor pago, sem necessidade de justificativa. Após esse prazo, aplicam-se as regras da cláusula 3.
 
-4.1. O Profissional é o responsável direto pelo tratamento dos dados pessoais e dados sensíveis de seus pacientes inseridos na Plataforma, na qualidade de controlador desses dados, nos termos da Lei Geral de Proteção de Dados (Lei nº 13.709/2018).
+Qualquer solicitação de cancelamento da assinatura ou pedido de estorno e devolução deverá ser formalizada exclusivamente por e-mail, através do endereço cancelamento@nuvita.app.br. O processamento da solicitação contará a partir da data de recebimento da comunicação neste canal oficial.
 
-4.2. Cabe ao Profissional obter o consentimento adequado de cada paciente para o tratamento de seus dados, inclusive quando o atendimento envolver recursos digitais, tecnologias de comunicação ou inteligência artificial, informando de forma clara os limites de confidencialidade aplicáveis.
+## 5. Ativação do acesso
 
-4.3. Quando o Profissional realizar atendimento mediado por tecnologias digitais de informação e comunicação, é sua responsabilidade observar as normas do Conselho Federal de Psicologia vigentes sobre a matéria, incluindo a formalização de contrato específico com o paciente que especifique os recursos tecnológicos utilizados e os limites de confidencialidade do atendimento.
+Acesso liberado em até 24 horas úteis após confirmação do pagamento, via credenciais enviadas por e-mail e/ou WhatsApp.
 
-4.4. A Plataforma não verifica, valida nem se responsabiliza pelo conteúdo clínico inserido pelo Profissional, nem pela adequação de seu atendimento às normas éticas e legais da profissão.
+## 6. Forma de pagamento
 
-## 5. Segurança e tratamento de dados pela Plataforma
+O processamento das transações financeiras e a gestão do faturamento são realizados por meio do gateway de pagamento Mercado Pago. O USUÁRIO reconhece que os dados financeiros são compartilhados com o Mercado Pago estritamente para a finalidade de cobrança, manutenção de assinaturas e prevenção à fraude, atuando o Mercado Pago como Operador de Dados nos termos da LGPD. A Nuvita não armazena dados completos de cartão de crédito.
 
-5.1. O Nuvita Psi adota medidas técnicas e organizacionais para proteger os dados armazenados, incluindo criptografia de dados sensíveis em repouso, controle de acesso por perfil, trilha de auditoria e backup periódico.
+## 7. Obrigações do contratante
 
-5.2. Dados de cada clínica cadastrada na Plataforma são segregados logicamente, não sendo acessíveis a usuários de outras clínicas, exceto ao perfil de administração da própria Plataforma para fins de suporte técnico e operação do serviço.
+Manter dados cadastrais atualizados; usar a plataforma conforme legislação aplicável à sua área profissional; guardar suas credenciais de acesso; atuar como Controlador (LGPD) dos dados de pacientes/clientes que inserir na plataforma.
 
-5.3. Em caso de incidente de segurança que possa acarretar risco a direitos e liberdades dos titulares de dados, a Plataforma comunicará o Profissional em prazo razoável, nos termos da LGPD.
+## 8. Obrigações da Nuvita
 
-## 6. Conta, acesso e segurança
-
-6.1. O Profissional é responsável por manter a confidencialidade de suas credenciais de acesso (senha e autenticação de dois fatores) e por todas as atividades realizadas em sua conta.
-
-6.2. A Plataforma pode exigir a troca de senhas temporárias ou provisórias no primeiro acesso, como medida de segurança.
-
-6.3. O Profissional deve comunicar imediatamente à Plataforma qualquer suspeita de uso não autorizado de sua conta.
-
-## 7. Planos, cobrança e cancelamento
-
-7.1. O acesso à Plataforma pode ser oferecido em diferentes planos, com funcionalidades e condições comerciais próprias, conforme informado ao Profissional no momento da contratação.
-
-7.2. Até que um sistema de cobrança recorrente automatizada seja disponibilizado pela Plataforma, o acesso é condicionado à confirmação de pagamento por meios acordados diretamente entre o Profissional e a Nuvita Psi.
-
-7.3. Estes Termos serão atualizados para detalhar condições específicas de cobrança, renovação automática e cancelamento assim que o sistema de assinatura recorrente entrar em operação, sendo o Profissional notificado e, se aplicável, convidado a um novo aceite.
-
-## 8. Propriedade intelectual
-
-8.1. A Plataforma, seu código, design, marca e demais elementos são de propriedade da Nuvita Psi ou de seus licenciadores, não sendo cedidos ao Profissional qualquer direito sobre eles além do direito de uso conforme estes Termos.
-
-8.2. Os dados inseridos pelo Profissional (registros de pacientes, prontuários, documentos) permanecem de titularidade do Profissional e/ou de seus pacientes, conforme aplicável, sendo a Plataforma mera depositária técnica para fins de prestação do serviço.
+Disponibilizar a plataforma conforme o plano contratado; realizar backups periódicos; atuar como Operadora dos dados de pacientes/clientes inseridos pelo contratante; comunicar indisponibilidades relevantes.
 
 ## 9. Limitação de responsabilidade
 
-9.1. A Plataforma é fornecida "como está" e "conforme disponível". A Nuvita Psi envida seus melhores esforços para manter o serviço disponível, seguro e livre de erros, sem, contudo, garantir disponibilidade ininterrupta ou ausência total de falhas.
+9.1. O SOFTWARE é fornecido no estado em que se encontra ("as is"), sem garantias implícitas de adequação a uma finalidade específica além daquelas expressamente declaradas nestes Termos.
 
-9.2. A Nuvita Psi não se responsabiliza por:
-- decisões clínicas, diagnósticos, condutas terapêuticas ou qualquer ato do exercício profissional do Profissional, os quais permanecem sob sua exclusiva responsabilidade técnica e ética;
-- conteúdo inserido pelo Profissional na Plataforma, incluindo prontuários, documentos e comunicações com pacientes;
-- decisões tomadas pelo Profissional com base em sugestões geradas por recursos de inteligência artificial da Plataforma, cuja adoção é sempre uma escolha humana e deliberada do Profissional;
-- danos decorrentes de uso indevido da Plataforma, compartilhamento de credenciais de acesso pelo Profissional, ou de caso fortuito e força maior.
+9.2. A LICENCIANTE atua exclusivamente como provedora de tecnologia e ferramenta de gestão, não prestando serviços médicos ou de saúde. A responsabilidade por diagnósticos, prescrições, tratamentos e pela precisão clínica das informações inseridas no prontuário é exclusiva do USUÁRIO (Profissional de Saúde).
 
-9.3. Nos casos em que a legislação aplicável não permitir a exclusão de responsabilidade, esta ficará limitada, na maior extensão permitida em lei, ao valor efetivamente pago pelo Profissional à Nuvita Psi nos 12 (doze) meses anteriores ao evento que originou a reclamação.
+9.3. Em nenhuma hipótese a LICENCIANTE será responsabilizada por danos indiretos, lucros cessantes, paralisação de negócios ou perda de dados decorrentes do mau uso do sistema, falhas de conexão de internet do usuário ou eventos de força maior.
 
-9.4. Nada nesta cláusula limita a responsabilidade da Nuvita Psi por incidentes de segurança da informação decorrentes de falha comprovada em suas próprias medidas de proteção de dados, nos termos da Lei Geral de Proteção de Dados.
+9.4. A responsabilidade civil máxima da LICENCIANTE, em caso de falha sistêmica ou danos comprovadamente causados por sua culpa exclusiva, limitar-se-á ao valor total pago pelo USUÁRIO nos 12 (doze) meses anteriores à ocorrência do evento danoso.
 
-## 10. Vigência, alterações e rescisão
+## 10. Rescisão
 
-10.1. Estes Termos vigoram a partir do aceite e permanecem válidos enquanto durar o uso da Plataforma.
+Cancelamento a qualquer momento, observadas as regras de fidelidade e garantia.
 
-10.2. A Nuvita Psi pode alterar estes Termos a qualquer momento, mediante aviso prévio razoável e nova exigência de aceite quando as alterações forem substanciais.
+Em caso de atraso no pagamento, o USUÁRIO receberá notificações prévias de cobrança durante 5 (cinco) dias consecutivos. Persistindo a inadimplência, a prestação do serviço será suspensa após o 7º (sétimo) dia do vencimento original. Para garantir a segurança jurídica e o cumprimento das normativas do Conselho Federal de Psicologia (CFP), todo o histórico de prontuários psicológicos gerado pelo USUÁRIO permanecerá integralmente guardado na infraestrutura de backend e em rotinas de backup da plataforma pelo prazo legal de 5 (cinco) anos, garantindo a integridade do acervo clínico.
 
-10.3. O Profissional pode encerrar sua conta a qualquer momento, mediante solicitação à Plataforma, observado o direito de exportação de seus dados nos termos da LGPD.
+## 11. Disposições gerais
 
-## 11. Foro
-
-11.1. Fica eleito o foro da comarca de **Belo Horizonte, Minas Gerais**, sede da 7Safe Medtech, para dirimir quaisquer controvérsias oriundas destes Termos, com renúncia a qualquer outro, por mais privilegiado que seja.
-
-## 12. Contato
-
-12.1. Dúvidas sobre estes Termos podem ser encaminhadas exclusivamente para **atendimento@nuvita.app.br**.
-
-12.2. Está prevista a criação de um canal adicional de dúvidas via formulário na landing page institucional do Nuvita, que será informado nesta seção quando disponível.
+Regido pelas leis brasileiras. Foro da comarca de São Paulo/SP, ressalvado o direito do consumidor de optar pelo foro de seu domicílio (CDC).
 
 ---

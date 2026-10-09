@@ -8,7 +8,7 @@
  * esta string: todo PSICOLOGO passa a ser obrigado a aceitar de novo no
  * próximo login (reaceite por versão).
  */
-export const TERMOS_DE_USO_VERSAO_ATUAL = '1.0';
+export const TERMOS_DE_USO_VERSAO_ATUAL = '2.0';
 
 /** Data de vigência da versão atual (ISO date). Informativo. */
-export const TERMOS_DE_USO_VIGENCIA = '2026-09-10';
+export const TERMOS_DE_USO_VIGENCIA = '2026-10-09';

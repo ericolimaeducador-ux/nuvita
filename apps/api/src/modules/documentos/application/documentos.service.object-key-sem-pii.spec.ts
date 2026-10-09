@@ -31,6 +31,7 @@ function makeService(criadoEm = new Date('2026-09-30T15:00:00.000Z')) {
       hash: 'a'.repeat(64),
       uploadPor: 'user-1',
       criadoEm,
+      confirmadoEm: criadoEm,
     }),
   };
   const storage = {

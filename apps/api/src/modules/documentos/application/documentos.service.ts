@@ -1,4 +1,12 @@
-import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
 import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
@@ -12,6 +20,7 @@ import { PacientesService } from '../../pacientes/application/pacientes.service'
 import {
   DOCUMENTO_REPOSITORY,
   DOCUMENT_ACCESS_URL_TTL_SECONDS,
+  DOCUMENTO_NAO_CONFIRMADO_TTL_MS,
   MAX_DOCUMENT_SIZE_BYTES,
   MAX_PATIENT_STORAGE_BYTES,
 } from '../documentos.constants';
@@ -76,6 +85,7 @@ export class DocumentosService {
       url: presigned.privateUrl,
       hash: dto.hash.toLowerCase(),
       uploadPor: context.user.sub,
+      confirmadoEm: null,
     });
 
     await this.audit(AuditEvent.DOCUMENT_UPLOAD_URL_CREATED, context, {
@@ -103,6 +113,7 @@ export class DocumentosService {
   async confirmUpload(documentoId: string, clinicaId: string | undefined, context: DocumentoRequestContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
     const documento = await this.getDocumentoOrThrow(resolvedClinicaId, documentoId);
+    const confirmadoEm = documento.confirmadoEm ?? (await this.confirmarObjetoNoStorage(documento, resolvedClinicaId));
     const thumbnailUrl = await this.storage.createThumbnailIfSupported(documento);
     if (thumbnailUrl) {
       await this.documentos.setThumbnail(resolvedClinicaId, documentoId, thumbnailUrl);
@@ -120,6 +131,7 @@ export class DocumentosService {
 
     return {
       ...documento,
+      confirmadoEm,
       thumbnailUrl: thumbnailUrl ?? documento.thumbnailUrl,
     };
   }
@@ -139,12 +151,16 @@ export class DocumentosService {
       quantidade: documentos.length,
     });
 
-    return documentos;
+    // Só documentos com upload confirmado; pendentes (null) e legados sem backfill (indefinido) ficam ocultos.
+    return documentos.filter((documento) => documento.confirmadoEm != null);
   }
 
   async createAccessUrl(documentoId: string, clinicaId: string | undefined, context: DocumentoRequestContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
     const documento = await this.getDocumentoOrThrow(resolvedClinicaId, documentoId);
+    if (documento.confirmadoEm == null) {
+      throw new NotFoundException('Documento nao encontrado.');
+    }
     const accessUrl = await this.storage.createReadUrl(
       documento.url,
       DOCUMENT_ACCESS_URL_TTL_SECONDS,
@@ -189,6 +205,50 @@ export class DocumentosService {
     });
 
     return documento;
+  }
+
+  /**
+   * Soft-delete de registros criados no presign e nunca confirmados há mais de 24h.
+   * Só age sobre confirmadoEm === null explícito: confirmados e legados (indefinido) são intocáveis.
+   */
+  async limparNaoConfirmados(agora: Date = new Date()): Promise<number> {
+    const limite = new Date(agora.getTime() - DOCUMENTO_NAO_CONFIRMADO_TTL_MS);
+    const pendentes = await this.documentos.listNaoConfirmadosAte(limite);
+    let removidos = 0;
+    for (const documento of pendentes) {
+      if (documento.confirmadoEm !== null) {
+        continue;
+      }
+      try {
+        await this.documentos.softDelete(documento.clinicaId, documento.id, 'system:limpeza-nao-confirmados');
+        removidos += 1;
+        await this.storage.deleteObject(documento.url).catch(() => undefined);
+      } catch (error) {
+        this.logger.warn(`Falha ao limpar documento nao confirmado ${documento.id}: ${(error as Error).message}`);
+      }
+    }
+    return removidos;
+  }
+
+  // HeadObject: o objeto precisa existir no bucket com o tamanho declarado no presign. Só então
+  // a flag confirmadoEm é gravada. R2 indisponível falha o confirm (reenvio é melhor que fantasma).
+  private async confirmarObjetoNoStorage(documento: Documento, clinicaId: string): Promise<Date> {
+    let head: { tamanho: number } | undefined;
+    try {
+      head = await this.storage.headObject(documento.url);
+    } catch (error) {
+      this.logger.warn(`HeadObject falhou para o documento ${documento.id}: ${(error as Error).message}`);
+      throw new ServiceUnavailableException('Nao foi possivel verificar o arquivo enviado. Tente novamente.');
+    }
+    if (!head) {
+      throw new UnprocessableEntityException('Arquivo nao encontrado no armazenamento. Envie o arquivo novamente.');
+    }
+    if (head.tamanho !== documento.tamanho) {
+      throw new UnprocessableEntityException('O tamanho do arquivo enviado difere do declarado. Envie o arquivo novamente.');
+    }
+    const confirmadoEm = new Date();
+    await this.documentos.setConfirmadoEm(clinicaId, documento.id, confirmadoEm);
+    return confirmadoEm;
   }
 
   private async getDocumentoOrThrow(clinicaId: string, documentoId: string) {

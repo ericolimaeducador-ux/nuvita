@@ -40,10 +40,12 @@ function makeService(overrides: {
   const documentos = {
     findById: jest.fn().mockResolvedValue(documentoExistente),
     setThumbnail: jest.fn().mockResolvedValue(undefined),
+    setConfirmadoEm: jest.fn().mockResolvedValue(undefined),
     ...overrides.documentos,
   };
   const storage = {
     createThumbnailIfSupported: jest.fn().mockResolvedValue(undefined),
+    headObject: jest.fn().mockResolvedValue({ tamanho: 1024 }),
     ...overrides.storage,
   };
   const auditLogs = { create: jest.fn().mockResolvedValue(undefined), ...overrides.auditLogs };

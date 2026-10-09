@@ -44,6 +44,20 @@ export class DocumentoMongoRepository implements DocumentoRepository {
     return documents.map((document) => this.toEntity(document));
   }
 
+  async setConfirmadoEm(clinicaId: string, documentoId: string, confirmadoEm: Date): Promise<void> {
+    await this.model.updateOne({ _id: documentoId, clinicaId }, { $set: { confirmadoEm } }).exec();
+  }
+
+  async listNaoConfirmadosAte(limite: Date): Promise<Documento[]> {
+    // $type 'null' casa só o null explícito; documento legado (campo ausente) fica de fora
+    // até o backfill, para a limpeza nunca apagar documento antigo por engano.
+    const documents = await this.model
+      .find({ confirmadoEm: { $type: 'null' }, criadoEm: { $lt: limite }, excluidoEm: { $exists: false } })
+      .exec();
+
+    return documents.map((document) => this.toEntity(document));
+  }
+
   async sumActivePatientBytes(clinicaId: string, pacienteId: string): Promise<number> {
     const result = await this.model
       .aggregate([
@@ -86,6 +100,7 @@ export class DocumentoMongoRepository implements DocumentoRepository {
       hash: object.hash,
       uploadPor: object.uploadPor,
       thumbnailUrl: object.thumbnailUrl,
+      confirmadoEm: object.confirmadoEm,
       criadoEm: object.criadoEm,
       excluidoEm: object.excluidoEm,
       excluidoPor: object.excluidoPor,

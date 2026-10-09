@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -103,6 +104,21 @@ export class S3DocumentStorageService implements DocumentStorage {
     );
 
     return this.privateUrl(thumbnailKey);
+  }
+
+  async headObject(privateUrl: string): Promise<{ tamanho: number } | undefined> {
+    try {
+      const head = await this.client.send(
+        new HeadObjectCommand({ Bucket: this.bucket, Key: this.keyFromPrivateUrl(privateUrl) }),
+      );
+      return { tamanho: head.ContentLength ?? 0 };
+    } catch (error) {
+      const e = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+      if (e.name === 'NotFound' || e.name === 'NoSuchKey' || e.$metadata?.httpStatusCode === 404) {
+        return undefined;
+      }
+      throw error;
+    }
   }
 
   async deleteObject(privateUrl: string): Promise<void> {

@@ -61,6 +61,7 @@ function documentoAntigo(extensao: '.pdf' | '.png', mimeType: 'application/pdf' 
     hash: 'a'.repeat(64),
     uploadPor: 'user-1',
     criadoEm: CRIADO_EM,
+    confirmadoEm: CRIADO_EM,
   };
 }
 

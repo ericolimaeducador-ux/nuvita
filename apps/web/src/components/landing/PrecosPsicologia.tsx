@@ -35,7 +35,7 @@ export function PrecosPsicologia() {
               <CardTitle className="text-xl">Plano Único</CardTitle>
               <p className="pt-3 text-5xl font-bold tracking-tight text-foreground">R$ 789,90</p>
               <p className="text-sm text-muted-foreground">à vista no Pix ou débito</p>
-              <p className="text-sm text-muted-foreground">ou 12x de R$ 69,90 sem juros no cartão</p>
+              <p className="text-sm text-muted-foreground">ou 12x de R$ 69,90 no cartão (total R$ 838,80)</p>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="flex">
@@ -59,7 +59,7 @@ export function PrecosPsicologia() {
                       variant="outline"
                       className="h-auto min-h-11 w-full whitespace-normal border-petroleo bg-transparent px-3 py-2 text-center text-sm text-petroleo hover:bg-petroleo/5 sm:flex-1"
                     >
-                      Parcelar em 12x sem juros
+                      Parcelar em 12x de R$ 69,90
                     </BotaoCheckout>
                   </div>
                   <CheckoutWallet />

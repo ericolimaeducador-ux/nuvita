@@ -11,7 +11,7 @@ const secoes: SecaoLegal[] = [
   {
     titulo: '2. Planos e preços',
     blocos: [
-      'Nuvita Psicologia — Plano Único: R$789,90 à vista (Pix/débito) ou 12x de R$69,90 sem juros.',
+      'Nuvita Psicologia — Plano Único: R$789,90 à vista (Pix/débito) ou 12x de R$69,90 no cartão (total R$838,80).',
       'Nuvita Estomoterapia: ainda não lançada. Planos, preços e limites de uso serão publicados nesta cláusula no lançamento.',
       'Os valores dos planos contratados poderão ser reajustados anualmente, ou na menor periodicidade permitida por lei, com base na variação positiva do IPCA/IBGE acumulado no período. A licenciante notificará o USUÁRIO sobre o reajuste com antecedência mínima de 30 (trinta) dias da data efetiva da cobrança do novo valor.',
     ],
@@ -19,8 +19,8 @@ const secoes: SecaoLegal[] = [
   {
     titulo: '3. Vigência e fidelidade',
     blocos: [
-      '3.1. A assinatura tem vigência anual. Ao final de cada ciclo anual, a assinatura é renovada automaticamente por igual período, salvo cancelamento prévio pelo contratante. Para o pagamento parcelado (12x sem juros), cada ciclo anual renovado inicia um novo período de fidelidade de 12 (doze) meses, nos termos da cláusula 3.2.',
-      '3.2. Pagamento parcelado (12x sem juros): fidelidade de 12 meses. Pagamento à vista: sem fidelidade.',
+      '3.1. A assinatura tem vigência anual. Ao final de cada ciclo anual, a assinatura é renovada automaticamente por igual período, salvo cancelamento prévio pelo contratante. Para o pagamento parcelado (12x no cartão), cada ciclo anual renovado inicia um novo período de fidelidade de 12 (doze) meses, nos termos da cláusula 3.2.',
+      '3.2. Pagamento parcelado (12x no cartão): fidelidade de 12 meses. Pagamento à vista: sem fidelidade.',
       'Caso o USUÁRIO solicite o cancelamento de um plano com compromisso de fidelidade (exemplo: plano anual com pagamento parcelado) antes do término do período contratado, será cobrada uma multa rescisória equivalente a 20% (vinte por cento) sobre o valor total das parcelas vincendas.',
     ],
   },

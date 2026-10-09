@@ -1,6 +1,6 @@
 const passos = [
   { titulo: 'Escolha seu plano', texto: 'Compare os planos da sua especialidade e selecione o que cabe no seu consultório.' },
-  { titulo: 'Pague com Pix, débito ou cartão parcelado', texto: 'À vista no Pix ou débito, ou em até 12x sem juros no cartão.' },
+  { titulo: 'Pague com Pix, débito ou cartão parcelado', texto: 'À vista no Pix ou débito, ou em 12x de R$ 69,90 no cartão (total R$ 838,80).' },
   { titulo: 'Receba seu acesso em até 24h úteis', texto: 'Após a confirmação do pagamento, liberamos o seu acesso.' },
   { titulo: 'Comece a usar — com 14 dias de garantia', texto: 'Se não for o que esperava, devolvemos 100% do valor dentro do prazo.' },
 ];

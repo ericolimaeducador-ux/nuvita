@@ -16,7 +16,7 @@ const categorias: Categoria[] = [
       },
       {
         p: 'Existe fidelidade?',
-        r: 'A assinatura tem vigência anual e é renovada automaticamente ao fim de cada ciclo, salvo cancelamento prévio. No pagamento parcelado (12x sem juros) há fidelidade de 12 meses; no pagamento à vista não há fidelidade. Os detalhes estão na cláusula 3 dos Termos de Uso.',
+        r: 'A assinatura tem vigência anual e é renovada automaticamente ao fim de cada ciclo, salvo cancelamento prévio. No pagamento parcelado (12x no cartão) há fidelidade de 12 meses; no pagamento à vista não há fidelidade. Os detalhes estão na cláusula 3 dos Termos de Uso.',
       },
       {
         p: 'Quanto tempo leva para meu acesso ser liberado?',
@@ -34,7 +34,7 @@ const categorias: Categoria[] = [
       },
       {
         p: 'Como funciona o parcelamento?',
-        r: 'No cartão de crédito você parcela em até 12x sem juros. No parcelamento há fidelidade de 12 meses; no pagamento à vista, não.',
+        r: 'No cartão de crédito você parcela em até 12x de R$ 69,90 (total R$ 838,80). No parcelamento há fidelidade de 12 meses; no pagamento à vista, não.',
       },
     ],
   },

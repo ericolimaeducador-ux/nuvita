@@ -24,6 +24,7 @@ import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { ObservacoesPacienteModule } from './modules/observacoes-paciente/observacoes-paciente.module';
 import { TestesPsicologicosModule } from './modules/testes-psicologicos/testes-psicologicos.module';
 import { IaClinicaModule } from './modules/ia-clinica/ia-clinica.module';
+import { InscricoesTesteModule } from './modules/inscricoes-teste/inscricoes-teste.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { IaClinicaModule } from './modules/ia-clinica/ia-clinica.module';
     ObservacoesPacienteModule,
     TestesPsicologicosModule,
     IaClinicaModule,
+    InscricoesTesteModule,
   ],
   providers: [
     // Throttling global. Sem isso o ThrottlerModule acima só valeria onde um

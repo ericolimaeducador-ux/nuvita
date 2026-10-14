@@ -31,6 +31,7 @@ export class EmailSender implements NotificacaoSender {
       to: input.conteudo.destino,
       subject: input.conteudo.assunto ?? 'Notificacao',
       text: input.conteudo.mensagem,
+      ...(input.conteudo.responderPara ? { reply_to: input.conteudo.responderPara } : {}),
     });
   }
 
@@ -42,6 +43,7 @@ export class EmailSender implements NotificacaoSender {
     }, {
       personalizations: [{ to: [{ email: input.conteudo.destino }] }],
       from: { email: this.configService.getConfig().emailFrom },
+      ...(input.conteudo.responderPara ? { reply_to: { email: input.conteudo.responderPara } } : {}),
       subject: input.conteudo.assunto ?? 'Notificacao',
       content: [{ type: 'text/plain', value: input.conteudo.mensagem }],
     });

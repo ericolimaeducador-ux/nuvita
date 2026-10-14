@@ -9,6 +9,9 @@ import { InscricaoTeste } from '../domain/inscricao-teste.entity';
  * de notificações. Falha de e-mail NUNCA derruba a inscrição: a inscrição já está salva
  * e aparece na listagem do SUPER_ADMIN. Logs sem dado pessoal.
  */
+/** Endereço que recebe as respostas das candidatas (Reply-To da confirmação). */
+const RESPOSTA_PADRAO = 'contato@nuvita.app.br';
+
 @Injectable()
 export class InscricoesTesteMailer {
   private readonly logger = new Logger(InscricoesTesteMailer.name);
@@ -26,6 +29,8 @@ export class InscricoesTesteMailer {
     }
     await this.enviar({
       destino,
+      // Responder ao aviso interno responde direto à candidata.
+      responderPara: inscricao.email,
       assunto: 'Nova inscrição - Teste Nuvita Psi (15 dias)',
       mensagem: [
         'Nova inscrição recebida.',
@@ -49,6 +54,7 @@ export class InscricoesTesteMailer {
   async confirmarRecebimento(inscricao: InscricaoTeste): Promise<void> {
     await this.enviar({
       destino: inscricao.email,
+      responderPara: this.config.get<string>('INSCRICOES_TESTE_EMAIL_RESPOSTA') || RESPOSTA_PADRAO,
       assunto: 'Recebemos sua inscrição no teste do Nuvita Psi',
       mensagem: [
         `Olá, ${inscricao.nome.split(' ')[0]}!`,
@@ -65,7 +71,7 @@ export class InscricoesTesteMailer {
     });
   }
 
-  private async enviar(conteudo: { destino: string; assunto: string; mensagem: string }): Promise<void> {
+  private async enviar(conteudo: { destino: string; responderPara?: string; assunto: string; mensagem: string }): Promise<void> {
     try {
       await this.email.send({ canal: CanalNotificacao.EMAIL, conteudo });
     } catch (error) {

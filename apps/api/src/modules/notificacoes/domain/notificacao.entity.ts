@@ -23,6 +23,8 @@ export interface ConteudoNotificacao {
   assunto?: string;
   mensagem: string;
   destino: string;
+  /** Endereço de resposta (Reply-To). Só e-mail; opcional. */
+  responderPara?: string;
   variaveis?: Record<string, string>;
 }
 

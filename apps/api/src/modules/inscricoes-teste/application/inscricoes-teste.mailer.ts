@@ -74,6 +74,7 @@ export class InscricoesTesteMailer {
   private async enviar(conteudo: { destino: string; responderPara?: string; assunto: string; mensagem: string }): Promise<void> {
     try {
       await this.email.send({ canal: CanalNotificacao.EMAIL, conteudo });
+      this.logger.log(`E-mail da inscrição de teste aceito pelo provedor: ${conteudo.assunto}`);
     } catch (error) {
       this.logger.error(`Falha ao enviar e-mail da inscrição de teste: ${(error as Error).message}`);
     }

@@ -84,7 +84,7 @@ export function Fundo({
   const liberado = useLiberarDepoisDoLoad(marcador);
 
   if (!liberado) {
-    return <span ref={marcador} aria-hidden="true" className={cn('pointer-events-none absolute inset-0', className)} />;
+    return <span ref={marcador} aria-hidden="true" className={cn('fundo-deco pointer-events-none absolute inset-0', className)} />;
   }
   return (
     <img
@@ -98,7 +98,7 @@ export function Fundo({
       loading="lazy"
       decoding="async"
       draggable={false}
-      className={cn('pointer-events-none absolute inset-0 h-full w-full select-none object-cover', className)}
+      className={cn('fundo-deco pointer-events-none absolute inset-0 h-full w-full select-none object-cover', className)}
       style={style}
     />
   );

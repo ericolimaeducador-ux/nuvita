@@ -9,7 +9,7 @@ export function CookieBanner({ onAceitar, onRecusar }: { onAceitar: () => void; 
       role="dialog"
       aria-live="polite"
       aria-label="Consentimento de cookies"
-      className="fixed inset-x-0 bottom-0 z-[60] border-t border-border bg-card px-4 py-4 shadow-[0_-4px_24px_rgba(0,0,0,0.12)] sm:px-6"
+      className="fixed inset-x-0 bottom-0 z-[60] border-t border-border bg-card px-4 py-4 text-foreground shadow-[0_-4px_24px_rgba(0,0,0,0.12)] sm:px-6"
     >
       <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <p className="text-sm text-foreground">
@@ -21,8 +21,8 @@ export function CookieBanner({ onAceitar, onRecusar }: { onAceitar: () => void; 
           .
         </p>
         <div className="flex shrink-0 gap-2">
-          <Button variant="outline" size="sm" onClick={onRecusar}>Recusar</Button>
-          <Button size="sm" onClick={onAceitar}>Aceitar</Button>
+          <Button variant="outline" size="sm" className="rounded-full border-navy-800/30 text-navy-800" onClick={onRecusar}>Recusar</Button>
+          <Button size="sm" className="rounded-full bg-ambar font-extrabold text-navy-900 hover:bg-ambar-dark" onClick={onAceitar}>Aceitar</Button>
         </div>
       </div>
     </div>

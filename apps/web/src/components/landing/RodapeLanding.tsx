@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import logoDourado from '@/assets/logo-dourado.png';
+import { Logo } from '@/components/Logo';
 import { EMPRESA } from '@/lib/empresa';
 
 const ESTOMOTERAPIA_URL = 'https://estomoterapia.nuvita.app.br';
@@ -10,10 +10,10 @@ const linkClasse = 'w-fit text-left hover:text-ouro focus-visible:outline-none f
 // comBanner: reserva espaço no fim da página para o banner de cookies (fixo) não cobrir o rodapé.
 export function RodapeLanding({ comBanner = false, onEntrarUrologia }: { comBanner?: boolean; onEntrarUrologia: () => void }) {
   return (
-    <footer className={`bg-petroleo px-6 pt-14 text-quente/80 ${comBanner ? 'pb-32 sm:pb-24' : 'pb-10'}`}>
+    <footer className={`bg-navy-900 px-6 pt-14 text-texto-2 ${comBanner ? 'pb-32 sm:pb-24' : 'pb-10'}`}>
       <div className="mx-auto grid max-w-6xl gap-10 sm:grid-cols-[1.4fr_1fr_1fr]">
         <div>
-          <img src={logoDourado} alt="Nuvita — gestão de saúde na nuvem" className="h-12 w-auto" />
+          <Logo width={150} />
           <a href={`mailto:${EMPRESA.emailComercial}`} className="mt-5 inline-block text-sm hover:text-ouro">
             {EMPRESA.emailComercial}
           </a>
@@ -30,7 +30,7 @@ export function RodapeLanding({ comBanner = false, onEntrarUrologia }: { comBann
           <Link to="/termos" className={linkClasse}>Termos de Uso</Link>
         </nav>
       </div>
-      <p className="mx-auto mt-12 max-w-6xl border-t border-sage/30 pt-6 text-xs text-quente/60">
+      <p className="mx-auto mt-12 max-w-6xl border-t border-linha pt-6 text-xs text-texto-2">
         © {new Date().getFullYear()} Nuvita · Todos os direitos reservados
       </p>
     </footer>

@@ -7,10 +7,10 @@ const passos = [
 
 export function ComoFunciona() {
   return (
-    <section id="como-funciona" className="scroll-mt-16 bg-petroleo-medio px-6 py-24 text-quente">
+    <section id="como-funciona" className="faixa-escura scroll-mt-16 px-6 py-24 text-quente">
       <div className="mx-auto max-w-6xl">
-        <h2 className="max-w-xl font-display text-4xl font-medium leading-tight sm:text-5xl">Como funciona</h2>
-        <p className="mt-3 max-w-md text-quente/75">Do plano ao primeiro atendimento, em quatro passos.</p>
+        <h2 className="max-w-xl font-display text-4xl font-extrabold leading-tight tracking-[-0.02em] text-white sm:text-5xl">Como funciona</h2>
+        <p className="mt-3 max-w-md text-texto-2">Do plano ao primeiro atendimento, em quatro passos.</p>
 
         {/* Mobile: linha vertical à esquerda. Desktop: linha horizontal atravessando os marcadores. */}
         <ol className="relative mt-14 grid gap-10 lg:grid-cols-4 lg:gap-8">
@@ -20,12 +20,12 @@ export function ComoFunciona() {
           />
           {passos.map((p, i) => (
             <li key={p.titulo} className="relative flex gap-5 lg:block">
-              <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-ouro bg-petroleo-medio font-display text-lg text-ouro">
+              <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ambar font-display text-lg font-extrabold text-navy-900">
                 {i + 1}
               </span>
               <div className="lg:mt-6">
                 <h3 className="text-lg font-semibold leading-snug">{p.titulo}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-quente/75">{p.texto}</p>
+                <p className="mt-2 text-sm leading-relaxed text-texto-2">{p.texto}</p>
               </div>
             </li>
           ))}

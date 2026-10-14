@@ -20,11 +20,11 @@ const cartoes: {
     icone: Cloud,
     titulo: 'Na nuvem, sem instalação',
     texto: 'Acesse direto pelo navegador, sem instalar nada no computador.',
-    cartao: 'sm:col-span-2 sm:min-h-80',
+    cartao: 'sm:col-span-2',
     // No celular o cartão é estreito e o texto cairia sobre a fumaça clara (contraste
     // medido ~1,4:1): empilha imagem em cima e texto embaixo. Do sm em diante, texto na metade esquerda.
-    fundoPos: 'relative h-44 sm:absolute sm:inset-0 sm:h-auto',
-    textoPos: 'relative sm:absolute sm:inset-y-0 sm:left-0 sm:flex sm:w-1/2 sm:flex-col sm:justify-center',
+    fundoPos: 'absolute inset-0',
+    textoPos: 'relative',
   },
   {
     fundo: 'cifragem',
@@ -32,29 +32,29 @@ const cartoes: {
     titulo: 'Dados sensíveis cifrados',
     texto: 'Os dados sensíveis dos pacientes ficam cifrados em repouso, com AES-256-GCM.',
     // Altura calibrada para o desenho do fundo não invadir o terço inferior (texto).
-    cartao: 'aspect-[4/5] sm:aspect-auto sm:min-h-[27.5rem]',
+    cartao: '',
     fundoPos: 'absolute inset-0',
-    textoPos: 'absolute bottom-0 left-0 w-full',
+    textoPos: 'relative',
   },
   {
     fundo: 'doisFatores',
     icone: KeyRound,
     titulo: 'Autenticação em dois fatores',
     texto: 'Além da senha, um código temporário (TOTP) do seu app autenticador.',
-    cartao: 'aspect-[4/5] sm:aspect-auto sm:min-h-[27.5rem]',
+    cartao: '',
     fundoPos: 'absolute inset-0',
-    textoPos: 'absolute bottom-0 left-0 w-full',
+    textoPos: 'relative',
   },
 ];
 
 export function GridConfianca() {
   return (
-    <section aria-labelledby="confianca-titulo" className="bg-noite px-6 pb-24 pt-4 text-quente">
+    <section aria-labelledby="confianca-titulo" className="faixa-clara px-6 py-24">
       <motion.div className="mx-auto max-w-6xl" variants={cascata} initial="hidden" whileInView="show" viewport={naViewport}>
         <motion.h2
           id="confianca-titulo"
           variants={subir}
-          className="max-w-xl font-display text-3xl font-semibold leading-tight tracking-tight sm:text-4xl"
+          className="max-w-xl font-display text-3xl font-extrabold leading-tight tracking-[-0.02em] text-navy-800 sm:text-4xl"
         >
           Segurança desde o primeiro acesso
         </motion.h2>
@@ -67,7 +67,7 @@ export function GridConfianca() {
               // Hover via framer: o transform inline da entrada anularia um translate de classe CSS.
               whileHover={{ y: -4, transition: { duration: 0.25 } }}
               className={cn(
-                'relative isolate overflow-hidden rounded-2xl border border-white/10 bg-noite transition-colors duration-300 hover:border-turquesa/40',
+                'relative isolate overflow-hidden rounded-[22px] border border-l-[3px] border-navy-800/10 border-l-ambar bg-white shadow-[0_20px_50px_rgba(8,31,69,0.12)] transition-colors duration-300',
                 cartao,
               )}
             >
@@ -75,9 +75,9 @@ export function GridConfianca() {
                 <Fundo nome={fundo} />
               </div>
               <div className={cn('p-6', textoPos)}>
-                <Icone className="h-6 w-6 text-turquesa" strokeWidth={1.6} aria-hidden="true" />
-                <h3 className="mt-4 text-lg font-semibold tracking-tight">{titulo}</h3>
-                <p className="mt-1.5 max-w-xs text-sm leading-relaxed text-quente/80">{texto}</p>
+                <Icone className="h-6 w-6 text-navy-600" strokeWidth={1.6} aria-hidden="true" />
+                <h3 className="mt-4 text-lg font-extrabold tracking-[-0.01em] text-navy-800">{titulo}</h3>
+                <p className="mt-1.5 max-w-xs text-sm leading-relaxed text-ink-claro-2">{texto}</p>
               </div>
             </motion.li>
           ))}

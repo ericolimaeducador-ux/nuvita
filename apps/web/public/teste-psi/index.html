@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teste o Nuvita Psi por 15 dias | 25 vagas para psicólogas e psicólogos</title>
+<meta name="description" content="25 vagas para testar o Nuvita Psi por 15 dias, sem cartão e sem pacientes reais. Quem testa entra no grupo de fundadores.">
+<style>
+/* =====================================================================
+   CORES (amostradas do logo Nuvita Psi enviado)
+   Fundo azul-marinho ~ #081f45 a #09295c | Âmbar ~ #ffb800 | Branco #ffffff
+   Se o seu site tiver os códigos oficiais da marca, troque aqui.
+   ===================================================================== */
+:root{
+  --navy-900:#061836;
+  --navy-800:#081f45;
+  --navy-700:#09295c;
+  --navy-600:#123a78;
+  --line:rgba(255,255,255,.14);
+  --amber:#ffb800;
+  --amber-dark:#e6a600;
+  --white:#ffffff;
+  --text:#e8eefb;
+  --muted:#aebbd6;
+  --error:#ffb4a8;
+  --ok:#9be7b5;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+  background:var(--navy-800);
+  background-image:linear-gradient(180deg,var(--navy-800) 0%,var(--navy-700) 100%);
+  background-attachment:fixed;
+  color:var(--text);
+  line-height:1.6;
+  font-size:17px;
+}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+a{color:var(--amber)}
+:focus-visible{outline:3px solid var(--amber);outline-offset:3px;border-radius:4px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- topo ---------- */
+header.top{padding:22px 0}
+.brand{display:flex;align-items:center;gap:12px;font-weight:800;color:var(--white);font-size:1.35rem;letter-spacing:.2px;text-decoration:none}
+.brand svg{width:46px;height:auto}
+
+/* ---------- hero ---------- */
+.hero{padding:34px 0 56px}
+.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}
+h1{
+  font-size:clamp(2.1rem,5.2vw,3.5rem);
+  line-height:1.08;margin:0 0 18px;color:var(--white);font-weight:800;letter-spacing:-.8px;
+}
+.lead{font-size:1.15rem;color:var(--text);max-width:34em;margin:0 0 26px}
+.btn{
+  display:inline-block;background:var(--amber);color:var(--navy-900);font-weight:800;font-size:1.05rem;
+  padding:15px 28px;border-radius:999px;border:0;text-decoration:none;cursor:pointer;
+}
+.btn:hover{background:var(--amber-dark)}
+.btn[disabled]{opacity:.6;cursor:wait}
+.hero-note{margin:14px 0 0;color:var(--muted);font-size:.95rem}
+
+/* painel de vagas: o elemento marcante da página */
+.vagas{
+  background:linear-gradient(160deg,var(--navy-600),var(--navy-700));
+  border:1px solid var(--line);border-radius:22px;padding:26px 26px 22px;
+  box-shadow:0 20px 50px rgba(0,0,0,.35);
+}
+.vagas h2{margin:0 0 4px;font-size:1.05rem;color:var(--muted);font-weight:600}
+.vagas .n{font-size:4.2rem;font-weight:800;color:var(--amber);line-height:1}
+.vagas .n small{font-size:1.1rem;color:var(--white);font-weight:600;margin-left:8px}
+.pulse{width:100%;height:56px;margin:14px 0 6px;display:block}
+.pulse path{
+  fill:none;stroke:var(--amber);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:420;stroke-dashoffset:420;animation:draw 2.4s ease-out .3s forwards;
+}
+@keyframes draw{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){.pulse path{animation:none;stroke-dashoffset:0}}
+.vagas ul{list-style:none;margin:0;padding:0;font-size:.98rem}
+.vagas li{padding:9px 0;border-top:1px solid var(--line)}
+.vagas li b{color:var(--white)}
+
+/* ---------- seções ---------- */
+section{padding:52px 0}
+section.alt{background:rgba(6,24,54,.55);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+h2.sec{font-size:clamp(1.55rem,3.4vw,2.1rem);color:var(--white);margin:0 0 10px;line-height:1.2;letter-spacing:-.3px}
+.sub{color:var(--muted);margin:0 0 28px;max-width:40em}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:22px}
+.col{border-left:3px solid var(--amber);padding:2px 0 2px 18px}
+.col h3{margin:0 0 6px;color:var(--white);font-size:1.12rem}
+.col p{margin:0;color:var(--text)}
+
+.steps{list-style:none;margin:0;padding:0;counter-reset:s;display:grid;gap:14px;max-width:720px}
+.steps li{counter-increment:s;display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:start}
+.steps li::before{
+  content:counter(s);width:44px;height:44px;border-radius:50%;background:var(--amber);color:var(--navy-900);
+  font-weight:800;display:grid;place-items:center;font-size:1.1rem;
+}
+.steps b{color:var(--white)}
+
+.fundadores{
+  border:1px solid rgba(255,184,0,.55);border-radius:20px;padding:26px;
+  background:linear-gradient(135deg,rgba(255,184,0,.12),rgba(255,184,0,.03));
+}
+.fundadores h2{margin-top:0}
+
+/* ---------- formulário ---------- */
+.form-card{
+  background:var(--white);color:#13233f;border-radius:22px;padding:30px 28px;max-width:720px;margin:0 auto;
+  box-shadow:0 24px 60px rgba(0,0,0,.4);
+}
+.form-card h2{color:var(--navy-800);margin:0 0 6px;font-size:1.6rem}
+.form-card .hint{color:#4a5c7d;margin:0 0 22px;font-size:.98rem}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.field{margin-bottom:16px}
+label,legend{display:block;font-weight:700;margin-bottom:6px;color:var(--navy-800);font-size:.97rem}
+.opt{font-weight:400;color:#5b6c8c}
+input[type=text],input[type=email],input[type=tel],select,textarea{
+  width:100%;font:inherit;padding:12px 14px;border:2px solid #c3cde0;border-radius:10px;background:#fff;color:#13233f;
+}
+textarea{min-height:84px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy-600);box-shadow:0 0 0 3px rgba(255,184,0,.55)}
+.err{color:#b3261e;font-size:.9rem;margin:5px 0 0;min-height:0}
+input[aria-invalid=true],select[aria-invalid=true]{border-color:#b3261e}
+.check{display:flex;gap:12px;align-items:flex-start;margin:14px 0}
+.check input{width:22px;height:22px;margin-top:3px;flex:none;accent-color:var(--navy-700)}
+.check label{font-weight:400;margin:0;color:#13233f}
+.termo{border:1px solid #c3cde0;border-radius:12px;padding:4px 16px;margin:12px 0 4px;background:#f4f7fc}
+.termo summary{cursor:pointer;font-weight:700;color:var(--navy-800);padding:10px 0}
+.termo .txt{font-size:.93rem;color:#22324f;padding-bottom:12px}
+.termo .txt ol{padding-left:20px;margin:8px 0}
+.termo .txt li{margin-bottom:6px}
+.aviso{font-size:.88rem;color:#4a5c7d;margin:10px 0 18px}
+.status{margin-top:16px;padding:14px 16px;border-radius:12px;font-weight:600;display:none}
+.status.ok{display:block;background:#e5f7ec;color:#14532d}
+.status.bad{display:block;background:#fdeceb;color:#8a1c14}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.form-card .btn{width:100%;text-align:center;font-size:1.1rem}
+
+/* ---------- FAQ e rodapé ---------- */
+details.faq{border-top:1px solid var(--line);padding:14px 0}
+details.faq summary{cursor:pointer;font-weight:700;color:var(--white)}
+details.faq p{margin:10px 0 0;color:var(--text)}
+footer{padding:36px 0 48px;color:var(--muted);font-size:.9rem;border-top:1px solid var(--line)}
+
+@media (max-width:820px){
+  .hero-grid{grid-template-columns:1fr}
+  .row{grid-template-columns:1fr}
+  .form-card{padding:24px 18px}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#topo" aria-label="Nuvita Psi">
+      <!-- Ícone simplificado nuvem + batimento. Para usar o logo oficial, troque este <svg> por <img src="SEU-LOGO.png" alt="Nuvita Psi" height="46"> -->
+      <svg viewBox="0 0 64 44" aria-hidden="true">
+        <path d="M17 38h30a13 13 0 0 0 2-25.8A16 16 0 0 0 18.5 14 12 12 0 0 0 17 38z" fill="none" stroke="#ffb800" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M13 26h10l4-8 6 15 4-9h10" fill="none" stroke="#ffb800" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Nuvita Psi
+    </a>
+  </div>
+</header>
+
+<main id="topo">
+
+<!-- ================= HERO ================= -->
+<div class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <h1>25 vagas para testar o Nuvita Psi por 15 dias</h1>
+      <p class="lead">Um sistema para psicólogas e psicólogos organizarem a clínica. Você testa com casos fictícios, sem cartão e sem pagar nada. Quem testa entra no grupo de fundadores.</p>
+      <a class="btn" href="#inscricao">Quero participar do teste</a>
+      <p class="hero-note">Início do teste até 30 de outubro de 2026. Vagas limitadas, com lista de espera.</p>
+    </div>
+    <aside class="vagas" aria-label="Resumo do teste">
+      <h2>Vagas no teste</h2>
+      <div class="n">25<small>psicólogas e psicólogos</small></div>
+      <svg class="pulse" viewBox="0 0 300 56" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 30 H90 L108 8 L132 50 L152 18 L166 30 H300"/>
+      </svg>
+      <ul>
+        <li><b>15 dias</b> de uso gratuito</li>
+        <li><b>Sem cartão</b> e sem dados de pagamento</li>
+        <li><b>Sem pacientes reais</b>: só casos fictícios</li>
+      </ul>
+    </aside>
+  </div>
+</div>
+
+<!-- ================= O QUE É O TESTE ================= -->
+<section class="alt">
+  <div class="wrap">
+    <h2 class="sec">Como funciona o teste</h2>
+    <p class="sub">Você usa o sistema como se estivesse atendendo, mas com pacientes inventados. Assim ninguém expõe dado real e você avalia tudo com tranquilidade.</p>
+    <div class="cols">
+      <div class="col">
+        <h3>Casos fictícios</h3>
+        <p>Cadastre pacientes de mentira, monte prontuários de exemplo e simule sessões. Nenhum dado de paciente real entra no teste.</p>
+      </div>
+      <div class="col">
+        <h3>Recursos de IA funcionando</h3>
+        <p>Os recursos de inteligência artificial já estão ativos. Teste todos e conte o que ajuda e o que atrapalha.</p>
+      </div>
+      <div class="col">
+        <h3>Sem cartão, sem cobrança</h3>
+        <p>A inscrição pede apenas seus dados de contato e profissionais, e a assinatura do termo de teste.</p>
+      </div>
+      <div class="col">
+        <h3>Sua opinião muda o produto</h3>
+        <p>Ao final, você conta o que funcionou e o que faltou. O que for mais pedido entra na fila de melhorias.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PASSO A PASSO ================= -->
+<section>
+  <div class="wrap">
+    <h2 class="sec">Do cadastro ao teste</h2>
+    <p class="sub">Quatro passos, nenhum deles envolve pagamento.</p>
+    <ol class="steps">
+      <li><div><b>Preencha a inscrição</b> e assine o termo de teste marcando a caixa no formulário.</div></li>
+      <li><div><b>Receba a confirmação</b> por e-mail ou WhatsApp. As 25 primeiras inscrições confirmadas entram no teste; as demais ficam na lista de espera.</div></li>
+      <li><div><b>Use por 15 dias</b> com casos fictícios. O início do teste acontece até 30 de outubro de 2026.</div></li>
+      <li><div><b>Conte sua experiência</b> e fique no grupo de fundadores.</div></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ================= FUNDADORES ================= -->
+<section class="alt">
+  <div class="wrap">
+    <div class="fundadores">
+      <h2 class="sec">Grupo de fundadores do Nuvita Psi</h2>
+      <p style="margin:0 0 10px">Quem participa do teste na versão beta passa a fazer parte do grupo de fundadores do produto e terá condição especial de assinatura quando o Nuvita Psi for lançado.</p>
+      <p style="margin:0;color:var(--muted)">Os valores e o prazo dessa condição serão informados por escrito antes do lançamento. Participar do teste não obriga você a assinar.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= INSCRIÇÃO ================= -->
+<section id="inscricao">
+  <div class="wrap">
+    <div class="form-card">
+      <h2>Inscrição para o teste de 15 dias</h2>
+      <p class="hint">Leva cerca de 2 minutos. Não peça nem informe dados de pacientes aqui.</p>
+
+      <form id="form" novalidate>
+        <!-- campo anti-robô: pessoas não veem; robôs preenchem -->
+        <div class="hp" aria-hidden="true">
+          <label for="site">Não preencha este campo</label>
+          <input type="text" id="site" name="_gotcha" tabindex="-1" autocomplete="off">
+        </div>
+
+        <div class="field">
+          <label for="nome">Nome completo</label>
+          <input type="text" id="nome" name="nome" autocomplete="name" required>
+          <div class="err" id="e-nome" role="alert"></div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="email">E-mail</label>
+            <input type="email" id="email" name="email" autocomplete="email" required>
+            <div class="err" id="e-email" role="alert"></div>
+          </div>
+          <div class="field">
+            <label for="whats">WhatsApp com DDD</label>
+            <input type="tel" id="whats" name="whatsapp" autocomplete="tel" inputmode="tel" placeholder="(11) 90000-0000" required>
+            <div class="err" id="e-whats" role="alert"></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="crp">Número do CRP</label>
+            <input type="text" id="crp" name="crp_numero" placeholder="Ex.: 06/123456" required>
+            <div class="err" id="e-crp" role="alert"></div>
+          </div>
+          <div class="field">
+            <label for="cidade">Cidade e estado</label>
+            <input type="text" id="cidade" name="cidade_estado" autocomplete="address-level2" placeholder="Ex.: São Paulo, SP" required>
+            <div class="err" id="e-cidade" role="alert"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="modo">Como você atende hoje?</label>
+          <select id="modo" name="modo_atendimento" required>
+            <option value="">Selecione</option>
+            <option>Online</option>
+            <option>Presencial</option>
+            <option>Online e presencial</option>
+            <option>Ainda não atendo</option>
+          </select>
+          <div class="err" id="e-modo" role="alert"></div>
+        </div>
+
+        <div class="field">
+          <label for="uso">O que você usa hoje para organizar a clínica? <span class="opt">(opcional)</span></label>
+          <textarea id="uso" name="ferramenta_atual" placeholder="Ex.: papel, planilha, outro sistema"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="espera">O que mais pesa na sua rotina de consultório? <span class="opt">(opcional)</span></label>
+          <textarea id="espera" name="maior_dor" placeholder="Ex.: prontuário, agenda, documentos, cobrança"></textarea>
+        </div>
+
+        <details class="termo">
+          <summary>Ler o termo de teste</summary>
+          <div class="txt" id="termo-texto">
+            <p><b>Termo de participação no teste do Nuvita Psi (versão beta)</b></p>
+            <ol>
+              <li>O teste dura 15 dias e é gratuito. Não é pedido cartão nem qualquer dado de pagamento.</li>
+              <li>Eu me comprometo a usar o sistema <b>somente com dados fictícios</b>. Não vou cadastrar nem inserir nenhum dado de paciente real, em nenhum campo, anexo ou recurso de inteligência artificial.</li>
+              <li>Entendo que o sistema está em versão beta e pode apresentar falhas. Os dados inseridos durante o teste podem ser apagados ao final.</li>
+              <li>Concordo em dar retorno sobre minha experiência para ajudar a melhorar o produto.</li>
+              <li>Participar do teste não me obriga a contratar o sistema nem garante vaga ou preço fora do que for informado por escrito pela empresa antes do lançamento.</li>
+              <li>Autorizo o uso dos meus dados de inscrição para contato sobre o teste e sobre o Nuvita Psi, conforme o aviso de privacidade abaixo.</li>
+            </ol>
+          </div>
+        </details>
+
+        <div class="check">
+          <input type="checkbox" id="termo" name="aceite_termo" value="sim" required>
+          <label for="termo">Li e aceito o termo de teste. Declaro que <b>não usarei pacientes reais</b> durante o teste.</label>
+        </div>
+        <div class="err" id="e-termo" role="alert"></div>
+
+        <div class="check">
+          <input type="checkbox" id="priv" name="aceite_privacidade" value="sim" required>
+          <label for="priv">Estou de acordo com o tratamento dos meus dados de inscrição para esta finalidade.</label>
+        </div>
+        <div class="err" id="e-priv" role="alert"></div>
+
+        <p class="aviso" id="aviso-priv">
+          <b>Privacidade:</b> usamos nome, e-mail, WhatsApp, CRP, cidade e as respostas acima apenas para organizar o teste, falar com você sobre ele e sobre o Nuvita Psi. Você pode pedir a correção ou a exclusão dos seus dados a qualquer momento pelo e-mail <span id="contato-mail">[E-MAIL DE CONTATO]</span>.
+        </p>
+
+        <button class="btn" type="submit" id="enviar">Enviar inscrição</button>
+        <div class="status" id="status" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section class="alt">
+  <div class="wrap">
+    <h2 class="sec">Perguntas frequentes</h2>
+    <details class="faq"><summary>Preciso pagar ou colocar cartão?</summary><p>Não. O teste é gratuito e a inscrição não pede cartão nem dados de pagamento.</p></details>
+    <details class="faq"><summary>Posso usar com meus pacientes?</summary><p>Não neste teste. Ele é só com casos fictícios, e o termo que você assina diz isso. O objetivo é você avaliar as funções com segurança.</p></details>
+    <details class="faq"><summary>Os recursos de IA estão disponíveis?</summary><p>Sim, os recursos de inteligência artificial já funcionam e fazem parte do teste.</p></details>
+    <details class="faq"><summary>E se eu passar da vaga 25?</summary><p>Você entra na lista de espera e avisamos se abrir vaga ou quando houver nova turma.</p></details>
+    <details class="faq"><summary>Quando o teste começa?</summary><p>O teste com as 25 pessoas começa até 30 de outubro de 2026. Você recebe a data exata por e-mail ou WhatsApp ao ser confirmada.</p></details>
+    <details class="faq"><summary>Tenho que assinar depois do teste?</summary><p>Não. Você decide depois, sem obrigação. Quem testa fica no grupo de fundadores e recebe a condição especial informada por escrito antes do lançamento.</p></details>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    Nuvita Psi. Sistema para psicólogas e psicólogos. Este teste não substitui orientações do seu Conselho Regional de Psicologia sobre guarda e sigilo de registros.
+  </div>
+</footer>
+
+<script>
+/* =====================================================================
+   CONFIGURAÇÃO — preencha antes de publicar
+   ===================================================================== */
+var CONFIG = {
+  // API do Nuvita Psi (módulo inscricoes-teste). Rota pública: POST /inscricoes-teste.
+  // Host conforme o Firebase Hosting do repositório nuvita-psi [A CONFIRMAR no ambiente de teste].
+  FORM_ENDPOINT: "https://api-psi.nuvita.app.br/inscricoes-teste",
+  // E-mail exibido no aviso de privacidade (pedidos de correção/exclusão). Preencher antes de publicar.
+  CONTATO_EMAIL: "[E-MAIL DE CONTATO]",
+  // Precisa ser IGUAL a TERMO_TESTE_VERSAO_ATUAL da API (inscricoes-teste.constants.ts).
+  TERMO_VERSAO: "teste-beta-v1-2026-10"
+};
+
+(function(){
+  var form = document.getElementById("form");
+  var statusBox = document.getElementById("status");
+  var btn = document.getElementById("enviar");
+
+  if (CONFIG.CONTATO_EMAIL && CONFIG.CONTATO_EMAIL.indexOf("[") === -1) {
+    var el = document.getElementById("contato-mail");
+    el.innerHTML = "";
+    var a = document.createElement("a");
+    a.href = "mailto:" + CONFIG.CONTATO_EMAIL;
+    a.textContent = CONFIG.CONTATO_EMAIL;
+    el.appendChild(a);
+  }
+
+  function setErr(id, msg, inputId){
+    document.getElementById(id).textContent = msg || "";
+    var i = document.getElementById(inputId);
+    if (i) { if (msg) i.setAttribute("aria-invalid","true"); else i.removeAttribute("aria-invalid"); }
+  }
+
+  function validar(){
+    var ok = true, primeiro = null;
+    function falha(eid, msg, iid){ setErr(eid, msg, iid); ok = false; if(!primeiro) primeiro = document.getElementById(iid); }
+    var v = function(id){ return form.elements[id] ? form.elements[id].value.trim() : ""; };
+
+    v("nome").length < 5 || v("nome").indexOf(" ") === -1 ? falha("e-nome","Informe seu nome completo.","nome") : setErr("e-nome","","nome");
+    /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v("email")) ? setErr("e-email","","email") : falha("e-email","Informe um e-mail válido.","email");
+    v("whatsapp").replace(/\D/g,"").length >= 10 ? setErr("e-whats","","whats") : falha("e-whats","Informe o WhatsApp com DDD.","whats");
+    v("crp_numero").length >= 4 ? setErr("e-crp","","crp") : falha("e-crp","Informe o número do seu CRP.","crp");
+    v("cidade_estado").length >= 3 ? setErr("e-cidade","","cidade") : falha("e-cidade","Informe cidade e estado.","cidade");
+    v("modo_atendimento") ? setErr("e-modo","","modo") : falha("e-modo","Escolha uma opção.","modo");
+    document.getElementById("termo").checked ? setErr("e-termo","","termo") : falha("e-termo","Para participar, é preciso aceitar o termo de teste.","termo");
+    document.getElementById("priv").checked ? setErr("e-priv","","priv") : falha("e-priv","Para participar, é preciso concordar com o uso dos dados de inscrição.","priv");
+
+    if (primeiro) primeiro.focus();
+    return ok;
+  }
+
+  function mostrar(tipo, msg){
+    statusBox.className = "status " + tipo;
+    statusBox.textContent = msg;
+  }
+
+  form.addEventListener("submit", function(ev){
+    ev.preventDefault();
+    statusBox.className = "status"; statusBox.textContent = "";
+
+    // robô: campo escondido preenchido -> finge sucesso e não envia
+    if (document.getElementById("site").value) { mostrar("ok","Inscrição recebida."); return; }
+    if (!validar()) return;
+
+    if (!/^https:\/\//.test(CONFIG.FORM_ENDPOINT)) {
+      mostrar("bad","O envio ainda não foi configurado nesta página. Quem administra o site precisa colocar o endereço do formulário em CONFIG.FORM_ENDPOINT.");
+      return;
+    }
+
+    var f = form.elements;
+    var dados = {
+      nome: f["nome"].value.trim(),
+      email: f["email"].value.trim(),
+      whatsapp: f["whatsapp"].value.trim(),
+      crpNumero: f["crp_numero"].value.trim(),
+      cidadeEstado: f["cidade_estado"].value.trim(),
+      modoAtendimento: f["modo_atendimento"].value,
+      termoVersao: CONFIG.TERMO_VERSAO,
+      aceiteTermo: true,
+      aceitePrivacidade: true,
+      website: f["_gotcha"].value
+    };
+    if (f["ferramenta_atual"].value.trim()) dados.ferramentaAtual = f["ferramenta_atual"].value.trim();
+    if (f["maior_dor"].value.trim()) dados.maiorDor = f["maior_dor"].value.trim();
+
+    btn.disabled = true; btn.textContent = "Enviando...";
+    fetch(CONFIG.FORM_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify(dados)
+    }).then(function(r){
+      if (r.status === 429) throw new Error("limite");
+      if (r.status === 400) throw new Error("dados");
+      if (!r.ok) throw new Error("status " + r.status);
+      form.reset();
+      mostrar("ok","Inscrição recebida. Você vai receber a confirmação por e-mail ou WhatsApp. Se as 25 vagas já tiverem sido preenchidas, você entra na lista de espera.");
+    }).catch(function(e){
+      var contato = CONFIG.CONTATO_EMAIL.indexOf("[") === -1 ? " Se continuar, escreva para " + CONFIG.CONTATO_EMAIL + "." : "";
+      if (e.message === "limite") mostrar("bad","Muitas tentativas em pouco tempo. Aguarde um minuto e envie de novo.");
+      else if (e.message === "dados") mostrar("bad","Algum campo não foi aceito. Confira os dados e, se o aviso persistir, recarregue a página para carregar a versão atual do termo.");
+      else mostrar("bad","Não foi possível enviar agora. Confira sua conexão e tente de novo." + contato);
+    }).then(function(){
+      btn.disabled = false; btn.textContent = "Enviar inscrição";
+    });
+  });
+})();
+</script>
+</body>
+</html>

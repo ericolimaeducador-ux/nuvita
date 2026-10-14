@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { InscricaoTeste, InscricaoTesteStatus } from '../../domain/inscricao-teste.entity';
@@ -9,6 +9,8 @@ const MONGO_DUPLICATE_KEY = 11000;
 
 @Injectable()
 export class InscricaoTesteMongoRepository implements InscricaoTesteRepository {
+  private readonly logger = new Logger(InscricaoTesteMongoRepository.name);
+
   constructor(@InjectModel(InscricaoTesteMongo.name) private readonly model: Model<InscricaoTesteDocument>) {}
 
   async existePorEmail(email: string): Promise<boolean> {
@@ -20,7 +22,18 @@ export class InscricaoTesteMongoRepository implements InscricaoTesteRepository {
       const created = await this.model.create({ ...input, status: InscricaoTesteStatus.INSCRITA, criadoEm: new Date() });
       return this.toEntity(created);
     } catch (error) {
-      if ((error as { code?: number }).code === MONGO_DUPLICATE_KEY) return null;
+      const erro = error as { code?: number; keyPattern?: Record<string, unknown> };
+      if (erro.code === MONGO_DUPLICATE_KEY) {
+        // Só é "e-mail repetido" se a colisão for no índice de `email`. Qualquer outro índice
+        // único colidindo é configuração errada (ex.: índice criado sobre campo inexistente) e
+        // não pode ser engolido em silêncio. Loga só os NOMES dos campos, nunca os valores.
+        const campos = Object.keys(erro.keyPattern ?? {});
+        if (campos.length === 1 && campos[0] === 'email') return null;
+        this.logger.error(
+          `Índice único inesperado recusou a inscrição de teste (campos: ${campos.join(', ') || 'desconhecidos'}). ` +
+            'Confira os índices de inscricoes_teste: o esperado é email_1.',
+        );
+      }
       throw error;
     }
   }

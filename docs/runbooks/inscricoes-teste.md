@@ -27,9 +27,18 @@ A regra "quem entra" é do SUPER_ADMIN: `dentroDasVagas` é só um apoio (ordem 
    ```js
    db.inscricoes_teste.createIndex({ email: 1 }, { unique: true })
    ```
-   Sem ele a checagem de e-mail repetido ainda funciona, mas duas inscrições simultâneas podem duplicar.
+   Pela tela do Atlas (Indexes → Create Index): na caixa do **nome do campo** vai só a palavra `email`
+   e, na caixa do tipo, `1 (asc)`; marque **Create unique index**. Não cole `{ "email": 1 }` na caixa do
+   nome do campo.
+
+   **Confira depois de criar:** o índice tem de se chamar **`email_1`**. Se aparecer um nome com chaves ou
+   aspas (ex.: `{ "email": 1 }_1`), ele foi criado sobre um campo literal que não existe: o primeiro
+   documento entra e todos os seguintes são recusados como duplicados. Apague e recrie.
+   (Incidente de 14/10/2026: 2 horas sem gravar inscrições por esse motivo.)
+
+   Sem o índice a checagem de e-mail repetido ainda funciona, mas duas inscrições simultâneas podem duplicar.
 5. **Termo:** `TERMO_TESTE_VERSAO_ATUAL` (constants) e `TERMO_VERSAO` (landing) precisam ser iguais. Ao
-   revisar o texto do termo, suba as duas. Texto atual é PROPOSTA, pendente de revisão do Advogado.
+   revisar o texto do termo, suba as duas. Texto `teste-beta-v1-2026-10` liberado pelo Advogado em 14/10/2026.
 
 ## Teste manual (após deploy em ambiente de teste)
 

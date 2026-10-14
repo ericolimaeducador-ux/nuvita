@@ -27,6 +27,8 @@ const path = require('path');
 // Nuvita original (psi.nuvita.app.br); localhost p/ dev local.
 const PROD_ORIGINS = [
   'https://psi.nuvita.app.br',
+  // Landing do teste beta (pagina extra do site Nuvita) -> POST /inscricoes-teste
+  'https://www.nuvita.app.br',
   'http://localhost:5173',
 ];
 const PROD_ROOT_DOMAIN = 'psi.nuvita.app.br';

@@ -13,7 +13,7 @@ import { SeloGarantia } from './SeloGarantia';
 // Mercado Pago foram desenhados para fundo claro.
 export function PrecosPsicologia() {
   return (
-    <section id="precos-psicologia" className="relative isolate scroll-mt-16 overflow-hidden bg-noite px-6 py-24 text-quente">
+    <section id="precos-psicologia" className="faixa-clara relative isolate scroll-mt-16 overflow-hidden px-6 py-24">
       <Fundo nome="planos" className="-z-10 opacity-30" style={MASCARA_RADIAL} />
       <motion.div
         className="mx-auto grid max-w-6xl items-start gap-10 lg:grid-cols-[1fr_26rem] lg:gap-20"
@@ -23,17 +23,17 @@ export function PrecosPsicologia() {
         viewport={naViewport}
       >
         <motion.div variants={subir}>
-          <h2 className="font-display text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">Psicologia</h2>
-          <p className="mt-3 max-w-sm text-quente/80">Um plano simples, com tudo o que você precisa.</p>
+          <h2 className="font-display text-4xl font-extrabold leading-tight tracking-[-0.02em] text-navy-800 sm:text-5xl">Psicologia</h2>
+          <p className="mt-3 max-w-sm text-ink-claro-2">Um plano simples, com tudo o que você precisa.</p>
         </motion.div>
         <motion.div variants={subir} className="w-full max-w-md">
-          <Card className="relative border border-turquesa/60 shadow-[0_0_60px_-10px_rgba(45,212,191,0.55)]">
-            <span className="absolute -top-3 right-6 rounded-full bg-turquesa px-3 py-1 text-xs font-bold text-noite">
+          <Card className="relative rounded-[22px] border border-ambar/55 shadow-[0_20px_50px_rgba(8,31,69,0.25)]">
+            <span className="absolute -top-3 right-6 rounded-full bg-ambar px-3 py-1 text-xs font-extrabold text-navy-900">
               Assinatura anual
             </span>
             <CardHeader>
               <CardTitle className="text-xl">Plano Único</CardTitle>
-              <p className="pt-3 text-5xl font-bold tracking-tight text-foreground">R$ 789,90</p>
+              <p className="pt-3 text-5xl font-extrabold tracking-[-0.02em] text-card-foreground">R$ 789,90</p>
               <p className="text-sm text-muted-foreground">à vista no Pix ou débito</p>
               <p className="text-sm text-muted-foreground">ou 12x de R$ 69,90 no cartão (total R$ 838,80)</p>
             </CardHeader>
@@ -66,7 +66,7 @@ export function PrecosPsicologia() {
                 </>
               ) : (
                 <div className="space-y-2">
-                  <Button asChild className="h-11 w-full">
+                  <Button asChild className="h-11 w-full rounded-full bg-ambar font-extrabold text-navy-900 hover:bg-ambar-dark">
                     <a href={`mailto:${EMPRESA.emailComercial}?subject=Contratar%20Nuvita%20Psicologia`}>Quero contratar</a>
                   </Button>
                   <p className="text-center text-xs text-muted-foreground">Nossa equipe responde em até 1 dia útil.</p>
@@ -74,7 +74,7 @@ export function PrecosPsicologia() {
               )}
             </CardContent>
           </Card>
-          <p className="mt-4 text-xs text-quente/75">
+          <p className="mt-4 text-xs text-ink-claro-2">
             Assinatura anual. Fidelidade de 12 meses para pagamento parcelado. Pagamento à vista sem fidelidade.
           </p>
         </motion.div>

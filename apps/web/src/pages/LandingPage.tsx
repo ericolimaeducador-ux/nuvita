@@ -1,8 +1,4 @@
 import type { CSSProperties } from 'react';
-// Títulos da landing em Plus Jakarta Sans (600/700/800 já vêm do main.tsx); itálico só aqui.
-import '@fontsource/plus-jakarta-sans/latin-600-italic.css';
-// Fraunces: só o H1 do hero usa essa fonte (decisão do usuário); o resto da landing ficou em Jakarta.
-import '@fontsource-variable/fraunces';
 import { ChevronDown } from 'lucide-react';
 import { MotionConfig, motion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
@@ -11,7 +7,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { LoginForm } from '@/components/LoginForm';
 import { HeroVideo } from '@/components/HeroVideo';
-import logoDourado from '@/assets/logo-dourado.png';
+import { Logo } from '@/components/Logo';
 import { CtaFinal } from '@/components/landing/CtaFinal';
 import { ComoFunciona } from '@/components/landing/ComoFunciona';
 import { CookieBanner } from '@/components/landing/CookieBanner';
@@ -25,29 +21,37 @@ import { useConsentimentoCookies, useGoogleAnalytics } from '@/lib/analytics';
 const ESTOMOTERAPIA_URL = 'https://estomoterapia.nuvita.app.br';
 const PSICOLOGIA_URL = 'https://psi.nuvita.app.br';
 
-// Paleta da landing aplicada aos tokens de cor (Tailwind v4: --color-*) só dentro deste wrapper
-// (petróleo #0F3D3E como primária, branco quente #F7F5F0 de fundo, texto #2B2B28).
+// Identidade navy + âmbar. Os tokens da marca ficam em index.css (@theme); aqui os tokens
+// semânticos e os legados (petroleo, ouro, turquesa...) são reapontados para eles, só dentro do wrapper.
 const tema = {
-  '--color-background': '#F7F5F0',
-  '--color-foreground': '#2B2B28',
-  '--color-card': '#FBFAF7',
-  '--color-card-foreground': '#2B2B28',
-  '--color-primary': '#0F3D3E',
-  '--color-primary-foreground': '#F7F5F0',
-  '--color-secondary': '#ECE7DC',
-  '--color-secondary-foreground': '#2B2B28',
-  '--color-muted': '#ECE7DC',
-  // #8FA69E não passa contraste como texto sobre o fundo claro; versão escurecida do mesmo matiz.
-  '--color-muted-foreground': '#4F625B',
-  '--color-accent': '#ECE7DC',
-  '--color-accent-foreground': '#2B2B28',
-  '--color-border': '#D6DCD7',
-  '--color-input': '#C9D1CC',
-  '--color-ring': '#1B5E5A',
-  // Componentes legados (ex.: LoginForm) usam brand-cobalt: dentro da landing, viram petróleo.
-  '--color-brand-cobalt': '#0F3D3E',
-  '--color-brand-cobalt-dark': '#0B2E2F',
-  '--font-display': '"Plus Jakarta Sans", Inter, system-ui, sans-serif',
+  '--color-background': 'var(--color-navy-800)',
+  '--color-foreground': '#13233f',
+  '--color-card': '#ffffff',
+  '--color-card-foreground': '#13233f',
+  '--color-primary': 'var(--color-ambar)',
+  '--color-primary-foreground': 'var(--color-navy-900)',
+  '--color-secondary': 'var(--color-gelo)',
+  '--color-secondary-foreground': '#13233f',
+  '--color-muted': 'var(--color-gelo)',
+  '--color-muted-foreground': 'var(--color-ink-claro-2)',
+  '--color-accent': 'var(--color-gelo)',
+  '--color-accent-foreground': '#13233f',
+  '--color-border': 'var(--color-linha)',
+  '--color-input': '#c9d3e6',
+  '--color-ring': 'var(--color-ambar)',
+  '--color-petroleo': 'var(--color-navy-800)',
+  '--color-petroleo-medio': 'var(--color-navy-700)',
+  '--color-noite': 'var(--color-navy-900)',
+  '--color-ouro': 'var(--color-ambar)',
+  '--color-turquesa': 'var(--color-ambar)',
+  '--color-quente': 'var(--color-texto)',
+  '--color-sage': 'var(--color-texto-2)',
+  '--color-ink': 'var(--color-ink-claro)',
+  // Componentes legados (ex.: LoginForm) usam brand-cobalt: dentro da landing, viram navy.
+  '--color-brand-cobalt': 'var(--color-navy-700)',
+  '--color-brand-cobalt-dark': 'var(--color-navy-800)',
+  '--font-display': 'var(--font-landing)',
+  '--font-body': 'var(--font-landing)',
 } as CSSProperties;
 
 function rolarPara(id: string) {
@@ -70,17 +74,20 @@ export function LandingPage() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <div style={tema} className="min-h-screen bg-background font-body text-foreground">
+      <div
+        style={{ ...tema, background: 'linear-gradient(180deg, var(--color-navy-800), var(--color-navy-700)) fixed' }}
+        className="landing-tema min-h-screen font-body text-quente"
+      >
         {/* Header fixo */}
-        <header className="fixed inset-x-0 top-0 z-50 h-16 border-b border-white/10 bg-petroleo">
+        <header className="fixed inset-x-0 top-0 z-50 h-16 border-b border-linha bg-navy-900">
           {/* Mesmo container das seções (max-w-6xl + px-6): logo e botão alinham com o conteúdo e não estouram a viewport. */}
           <div className="mx-auto flex h-full w-full max-w-6xl items-center justify-between gap-4 px-6">
-          <img src={logoDourado} alt="Nuvita — gestão de saúde na nuvem" className="h-10 w-auto shrink-0" />
+          <Logo width={144} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="inline-flex h-9 shrink-0 items-center rounded-md border border-ouro/70 px-4 text-sm font-medium text-quente transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ouro"
+                className="inline-flex h-9 shrink-0 items-center rounded-full border border-ouro/70 px-4 text-sm font-medium text-quente transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ouro"
               >
                 Entrar <ChevronDown className="ml-1 h-4 w-4" aria-hidden="true" />
               </button>
@@ -99,7 +106,7 @@ export function LandingPage() {
 
         <main className="pt-16">
           {/* Hero */}
-          <section className="relative isolate flex min-h-[72vh] items-center overflow-hidden bg-petroleo px-6 py-24 text-quente">
+          <section className="relative isolate flex min-h-[72vh] items-center overflow-hidden bg-navy-900 px-6 py-24 text-quente">
             {/* Vídeo decorativo de fundo: mudo, em loop, sem controles e sem interação. */}
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 [container-type:size]">
               <HeroVideo />
@@ -113,8 +120,7 @@ export function LandingPage() {
             >
               <motion.h1
                 variants={heroItem}
-                style={{ fontFamily: '"Fraunces Variable", Georgia, serif' }}
-                className="mb-6 max-w-3xl text-5xl font-medium leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl"
+                className="mb-6 max-w-3xl text-[clamp(2.1rem,5.2vw,3.5rem)] font-extrabold leading-[1.05] tracking-[-0.02em] text-white"
               >
                 Seu portal de saúde <span className="italic text-ouro">na nuvem</span>
               </motion.h1>
@@ -132,7 +138,7 @@ export function LandingPage() {
           <PrecosPsicologia />
 
           {/* Login Urologia (âncora do link "Urologia" do rodapé) */}
-          <section id="entrar-urologia" className="scroll-mt-16 bg-petroleo-medio px-6 py-24">
+          <section id="entrar-urologia" className="faixa-escura scroll-mt-16 px-6 py-24">
             <div className="mx-auto w-full max-w-md">
               <LoginForm />
             </div>

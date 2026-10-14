@@ -24,7 +24,7 @@ export function EspecialidadesAbas({ onVerPlano }: { onVerPlano: () => void }) {
     <section
       id="especialidades"
       aria-labelledby="especialidades-titulo"
-      className="relative isolate scroll-mt-16 overflow-hidden bg-noite px-6 py-24 text-quente"
+      className="faixa-escura relative isolate scroll-mt-16 overflow-hidden px-6 py-24 text-quente"
     >
       <Fundo nome="especialidades" className="-z-10 opacity-50" style={MASCARA_RADIAL} />
 
@@ -38,7 +38,7 @@ export function EspecialidadesAbas({ onVerPlano }: { onVerPlano: () => void }) {
         <motion.h2
           id="especialidades-titulo"
           variants={subir}
-          className="max-w-xl font-display text-4xl font-semibold leading-tight tracking-tight sm:text-5xl"
+          className="max-w-xl font-display text-4xl font-extrabold leading-tight tracking-[-0.02em] text-white sm:text-5xl"
         >
           Especialidades
         </motion.h2>
@@ -50,7 +50,7 @@ export function EspecialidadesAbas({ onVerPlano }: { onVerPlano: () => void }) {
           <TabsPrimitive.Root defaultValue="psicologia" className="mt-10">
             <TabsPrimitive.List
               aria-label="Especialidades"
-              className="inline-flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1"
+              className="inline-flex gap-1 rounded-xl border border-linha bg-white/5 p-1"
             >
               <TabsPrimitive.Trigger value="psicologia" className={gatilho}>
                 Psicologia
@@ -65,14 +65,14 @@ export function EspecialidadesAbas({ onVerPlano }: { onVerPlano: () => void }) {
               className="mt-12 grid items-center gap-12 focus-visible:outline-none lg:grid-cols-[1fr_1.15fr] lg:gap-16 motion-safe:animate-fade-in"
             >
               <div>
-                <h3 className="font-display text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Psicologia</h3>
+                <h3 className="font-display text-3xl font-extrabold leading-tight tracking-[-0.02em] text-white sm:text-4xl">Psicologia</h3>
                 <p className="mt-5 max-w-lg text-lg leading-relaxed text-quente/80">
                   Prontuário eletrônico para psicólogos — sessões, evolução clínica e agenda, com segurança e privacidade de dados.
                 </p>
                 <button
                   type="button"
                   onClick={onVerPlano}
-                  className="mt-9 inline-flex h-11 items-center justify-center rounded-md bg-turquesa px-7 text-sm font-semibold text-noite transition-[transform,background-color] hover:bg-[#5EEAD4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turquesa focus-visible:ring-offset-2 focus-visible:ring-offset-noite motion-safe:hover:-translate-y-0.5"
+                  className="mt-9 inline-flex h-11 items-center justify-center rounded-full bg-ambar px-7 text-sm font-extrabold text-navy-900 transition-[transform,background-color] hover:bg-ambar-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turquesa focus-visible:ring-offset-2 focus-visible:ring-offset-noite motion-safe:hover:-translate-y-0.5"
                 >
                   Ver plano
                 </button>
@@ -89,7 +89,7 @@ export function EspecialidadesAbas({ onVerPlano }: { onVerPlano: () => void }) {
             >
               <div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <h3 className="font-display text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Estomoterapia</h3>
+                  <h3 className="font-display text-3xl font-extrabold leading-tight tracking-[-0.02em] text-white sm:text-4xl">Estomoterapia</h3>
                   {/* Selo sólido: contorno turquesa sobre o brilho do fundo mediu 3,95:1 (abaixo do AA). */}
                   <SeloEmBreve className="border-turquesa bg-turquesa text-noite" />
                 </div>
@@ -106,7 +106,7 @@ export function EspecialidadesAbas({ onVerPlano }: { onVerPlano: () => void }) {
                   ))}
                 </ul>
               </div>
-              <div className="relative aspect-[16/10] overflow-hidden rounded-3xl border border-white/10">
+              <div className="relative aspect-[16/10] overflow-hidden rounded-[22px] border border-linha">
                 <Fundo nome="estomoterapia" />
               </div>
             </TabsPrimitive.Content>

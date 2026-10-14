@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 // Botão de checkout/contato que consome PRICING_LINKS. Sem link configurado
 // (string vazia), fica desabilitado como "Em breve" — nunca um href="" clicável.
@@ -22,7 +23,15 @@ export function BotaoCheckout({
     );
   }
   return (
-    <Button asChild variant={variant} className={className}>
+    <Button
+      asChild
+      variant={variant}
+      className={cn(
+        'rounded-full font-extrabold',
+        variant === 'default' && 'bg-ambar text-navy-900 hover:bg-ambar-dark hover:shadow-ambar/25',
+        className,
+      )}
+    >
       <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
     </Button>
   );

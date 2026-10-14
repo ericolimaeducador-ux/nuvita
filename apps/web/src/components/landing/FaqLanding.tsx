@@ -79,15 +79,15 @@ export function FaqLanding() {
   const atual = categorias[aba];
 
   return (
-    <section id="faq" className="scroll-mt-16 bg-quente px-6 py-24">
+    <section id="faq" className="faixa-clara scroll-mt-16 px-6 py-24">
       <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[1fr_1.7fr] lg:gap-20">
         <div>
-          <h2 className="font-display text-4xl font-medium leading-tight text-petroleo sm:text-5xl">Perguntas frequentes</h2>
+          <h2 className="font-display text-4xl font-extrabold leading-tight tracking-[-0.02em] text-navy-800 sm:text-5xl">Perguntas frequentes</h2>
           <p className="mt-3 max-w-sm text-muted-foreground">O essencial sobre assinatura, pagamento e dados.</p>
         </div>
 
         <div>
-          <div role="tablist" aria-label="Categorias de perguntas" className="flex flex-wrap gap-x-7 gap-y-2 border-b border-sage/60">
+          <div role="tablist" aria-label="Categorias de perguntas" className="flex flex-wrap gap-x-7 gap-y-2 border-b border-navy-800/20">
             {categorias.map((c, i) => (
               <button
                 key={c.id}
@@ -114,7 +114,7 @@ export function FaqLanding() {
             {atual.itens.map((q, i) => {
               const isOpen = aberto === i;
               return (
-                <div key={q.p} className="border-b border-sage/60">
+                <div key={q.p} className="border-b border-navy-800/20">
                   <h3>
                     <button
                       type="button"

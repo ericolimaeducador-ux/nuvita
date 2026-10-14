@@ -47,6 +47,24 @@
   --color-turquesa: #2DD4BF;
   --font-display: "Fraunces Variable", Georgia, serif;
   --font-body: Inter, system-ui, sans-serif;
+
+  /* Landing: identidade Nuvita (azul-marinho + âmbar). Fonte única dos tokens da marca;
+     o wrapper da LandingPage reaponta os tokens legados (petroleo, ouro...) para estes. */
+  --color-navy-900: #061836;
+  --color-navy-800: #081f45;
+  --color-navy-700: #09295c;
+  --color-navy-600: #123a78;
+  --color-ambar: #ffb800;
+  --color-ambar-dark: #e6a600;
+  --color-gelo: #ecf0f9; /* azul-gelo amostrado da referência (faixas claras) */
+  --color-texto: #e8eefb;
+  --color-texto-2: #aebbd6;
+  --color-linha: rgb(255 255 255 / 0.14);
+  --color-ink-claro: #22324f;
+  --color-ink-claro-2: #4a5c7d;
+  --color-ok: #9be7b5;
+  --color-erro: #ffb4a8;
+  --font-landing: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 @keyframes fadeIn {
@@ -91,6 +109,20 @@
     border-color: hsl(var(--border));
   }
 
+  /* Foco visível da landing: contorno de 3px (âmbar nas faixas escuras, navy nas claras).
+     Fica em @layer base para não anular os focus-visible:ring-* já definidos nos componentes. */
+  .landing-tema :focus-visible {
+    outline: 3px solid var(--color-ambar);
+    outline-offset: 2px;
+  }
+  .landing-tema .faixa-clara :focus-visible {
+    outline-color: var(--color-navy-600);
+  }
+  /* Fundos decorativos em WebP (tom petróleo) não combinam com o navy: ficam ocultos. */
+  .landing-tema .fundo-deco {
+    display: none;
+  }
+
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
@@ -106,6 +138,15 @@
 }
 
 @layer components {
+  /* Faixas da landing: escura (gradiente navy) alterna com clara (azul-gelo). */
+  .faixa-escura {
+    background: linear-gradient(180deg, var(--color-navy-800), var(--color-navy-700));
+    color: var(--color-texto);
+  }
+  .faixa-clara {
+    background-color: var(--color-gelo);
+    color: var(--color-ink-claro);
+  }
   /* Superfície de card no light mode: branco com borda suave e leve blur
      (o blur só é perceptível em overlays/popovers translúcidos). */
   .glass {
@@ -124,5 +165,16 @@
 
   .dark {
     color-scheme: dark;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-tema *,
+  .landing-tema *::before,
+  .landing-tema *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

@@ -45,7 +45,8 @@ a{color:var(--amber)}
 /* ---------- topo ---------- */
 header.top{padding:22px 0}
 .brand{display:flex;align-items:center;gap:12px;font-weight:800;color:var(--white);font-size:1.35rem;letter-spacing:.2px;text-decoration:none}
-.brand svg{width:46px;height:auto}
+.brand svg{width:150px;height:auto}
+.brand-psi{color:var(--amber);font-weight:800;margin-left:-6px}
 
 /* ---------- hero ---------- */
 .hero{padding:34px 0 56px}
@@ -158,12 +159,15 @@ footer{padding:36px 0 48px;color:var(--muted);font-size:.9rem;border-top:1px sol
 <header class="top">
   <div class="wrap">
     <a class="brand" href="#topo" aria-label="Nuvita Psi">
-      <!-- Ícone simplificado nuvem + batimento. Para usar o logo oficial, troque este <svg> por <img src="SEU-LOGO.png" alt="Nuvita Psi" height="46"> -->
-      <svg viewBox="0 0 64 44" aria-hidden="true">
-        <path d="M17 38h30a13 13 0 0 0 2-25.8A16 16 0 0 0 18.5 14 12 12 0 0 0 17 38z" fill="none" stroke="#ffb800" stroke-width="4" stroke-linejoin="round"/>
-        <path d="M13 26h10l4-8 6 15 4-9h10" fill="none" stroke="#ffb800" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- Logo oficial Nuvita (vetor de apps/web/src/components/Logo.tsx): nuvem + batimento + wordmark. -->
+      <svg class="logo-nuvita" viewBox="0 0 250 80" fill="none" aria-hidden="true">
+        <g stroke="#ffb800" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M 45 55 L 20 55 C 11.716 55 5 48.284 5 40 C 5 31.716 11.716 25 20 25 C 22.046 25 23.996 25.41 25.756 26.143 C 28.595 16.518 37.604 9.5 48.5 9.5 C 57.697 9.5 65.655 14.805 69.458 22.585 C 70.92 22.197 72.481 21.986 74.095 21.986 C 82.38 21.986 89.095 28.702 89.095 36.986 C 89.095 45.27 82.38 51.986 74.095 51.986 L 68 51.986"/>
+          <path d="M 25 42 L 40 42 L 46 28 L 56 60 L 62 42 L 78 42"/>
+        </g>
+        <text x="105" y="55" font-family="'Plus Jakarta Sans','Inter','Montserrat',sans-serif" font-weight="bold" font-size="44" fill="#ffffff">Nuvita</text>
       </svg>
-      Nuvita Psi
+      <span class="brand-psi">Psi</span>
     </a>
   </div>
 </header>

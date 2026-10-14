@@ -41,6 +41,7 @@ export class InscricoesTesteService {
     }
 
     if (await this.repo.existePorEmail(dto.email)) {
+      this.logger.log('Inscrição de teste ignorada: e-mail já cadastrado.');
       return { recebida: true };
     }
 
@@ -59,7 +60,12 @@ export class InscricoesTesteService {
       aceiteUserAgent: meta.userAgent.slice(0, 300),
     });
 
+    if (!criada) {
+      this.logger.warn('Inscrição de teste não gravada: chave duplicada no banco.');
+    }
+
     if (criada) {
+      this.logger.log('Inscrição de teste gravada; enviando e-mails.');
       // Aguarda os e-mails (no Cloud Run a CPU pode ser reduzida após a resposta). O mailer
       // engole falhas: a inscrição já está salva e não pode ser perdida por erro de e-mail.
       await Promise.all([this.mailer.avisarEquipe(criada), this.mailer.confirmarRecebimento(criada)]);

@@ -46,7 +46,8 @@ export class SuperAdminService {
     const result = await this.clinicasService.onboard(
       {
         nome: dto.clinica.nome,
-        cnpj: dto.clinica.cnpj,
+        documento: dto.clinica.documento,
+        tipoDocumento: dto.clinica.tipoDocumento,
         plano: dto.clinica.plano,
         configuracoes: {
           fusoHorario: dto.clinica.fusoHorario,

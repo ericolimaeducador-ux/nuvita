@@ -1,3 +1,5 @@
+import { TipoDocumentoFiscal } from '../../../../../../packages/shared/src/documentos';
+
 export enum PlanoClinica {
   BASICO = 'basico',
   PROFISSIONAL = 'profissional',
@@ -26,7 +28,9 @@ export interface ConfiguracoesClinica {
 export interface Clinica {
   id: string;
   nome: string;
-  cnpj: string;
+  /** CPF (profissional pessoa física) ou CNPJ, normalizado: maiúsculas, sem pontuação. */
+  documento: string;
+  tipoDocumento: TipoDocumentoFiscal;
   endereco?: EnderecoClinica;
   plano: PlanoClinica;
   configuracoes: ConfiguracoesClinica;

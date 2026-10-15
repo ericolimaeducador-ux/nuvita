@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
+import { TipoDocumentoFiscal } from '../../../../../../../packages/shared/src/documentos';
 import { PlanoClinica } from '../../domain/clinica.entity';
 
 export type ClinicaDocument = HydratedDocument<ClinicaMongo>;
@@ -9,8 +10,17 @@ export class ClinicaMongo {
   @Prop({ required: true })
   nome!: string;
 
+  /**
+   * Documento fiscal da clínica (CNPJ ou CPF), normalizado. O nome do campo continua
+   * `cnpj` por compatibilidade: dados e índice único já existentes em produção.
+   * CPF (11 dígitos) e CNPJ (14 caracteres) nunca colidem nesse índice.
+   */
   @Prop({ required: true, unique: true, index: true })
   cnpj!: string;
+
+  /** Ausente nas clínicas criadas antes desta mudança: tratadas como CNPJ. */
+  @Prop({ enum: Object.values(TipoDocumentoFiscal) })
+  tipoDocumento?: TipoDocumentoFiscal;
 
   @Prop({ type: MongooseSchema.Types.Mixed })
   endereco?: Record<string, unknown>;

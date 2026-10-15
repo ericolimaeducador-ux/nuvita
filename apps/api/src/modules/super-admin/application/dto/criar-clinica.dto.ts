@@ -1,5 +1,7 @@
 import { Type } from 'class-transformer';
-import { IsEmail, IsEnum, IsInt, IsNotEmpty, IsString, Min, ValidateNested } from 'class-validator';
+import { IsEmail, IsEnum, IsInt, IsNotEmpty, IsString, Min, Validate, ValidateNested } from 'class-validator';
+import { TipoDocumentoFiscal } from '../../../../../../../packages/shared/src/documentos';
+import { DocumentoFiscalConstraint } from '../../../clinicas/application/dto/documento-fiscal.validator';
 import { PlanoClinica } from '../../../clinicas/domain/clinica.entity';
 
 class ClinicaInputDto {
@@ -7,9 +9,14 @@ class ClinicaInputDto {
   @IsNotEmpty()
   nome!: string;
 
+  /** CPF para profissional que atende como pessoa física; CNPJ para empresa. */
+  @IsEnum(TipoDocumentoFiscal)
+  tipoDocumento!: TipoDocumentoFiscal;
+
   @IsString()
   @IsNotEmpty()
-  cnpj!: string;
+  @Validate(DocumentoFiscalConstraint)
+  documento!: string;
 
   @IsEnum(PlanoClinica)
   plano!: PlanoClinica;

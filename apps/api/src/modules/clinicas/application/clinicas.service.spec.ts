@@ -1,6 +1,7 @@
 import { ConflictException, Logger } from '@nestjs/common';
 import { Papel } from '../../../../../../packages/shared/src/auth';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
+import { TipoDocumentoFiscal } from '../../../../../../packages/shared/src/documentos';
 import { PlanoClinica } from '../domain/clinica.entity';
 import { CreateClinicaDto } from './dto/create-clinica.dto';
 import { ClinicasService } from './clinicas.service';
@@ -9,7 +10,8 @@ jest.mock('bcrypt', () => ({ hash: jest.fn().mockResolvedValue('hash-bcrypt') })
 
 const dto: CreateClinicaDto = {
   nome: 'Clínica Teste',
-  cnpj: '11222333000181',
+  tipoDocumento: TipoDocumentoFiscal.CNPJ,
+  documento: '11222333000181',
   plano: PlanoClinica.BASICO,
   configuracoes: { fusoHorario: 'America/Sao_Paulo', duracaoConsultaPadrao: 50 },
   primeiroAdmin: { nome: 'Admin', email: 'Admin@Clinica.test', password: 'senhaGerada123' },
@@ -21,7 +23,7 @@ function makeService(overrides: {
   auditLogs?: Record<string, jest.Mock>;
 } = {}) {
   const clinicas = {
-    findByCnpj: jest.fn().mockResolvedValue(null),
+    findByDocumento: jest.fn().mockResolvedValue(null),
     findById: jest.fn(),
     create: jest.fn().mockResolvedValue({ id: 'cli-1', plano: 'basico' }),
     delete: jest.fn().mockResolvedValue(undefined),
@@ -70,12 +72,33 @@ describe('ClinicasService.onboard (Fase 7)', () => {
 
   it('CNPJ já cadastrado → ConflictException, nada é criado', async () => {
     const { service, clinicas, users } = makeService({
-      clinicas: { findByCnpj: jest.fn().mockResolvedValue({ id: 'x' }) },
+      clinicas: { findByDocumento: jest.fn().mockResolvedValue({ id: 'x' }) },
     });
 
     await expect(service.onboard(dto, ctx)).rejects.toThrow(ConflictException);
     expect(clinicas.create).not.toHaveBeenCalled();
     expect(users.create).not.toHaveBeenCalled();
+  });
+
+  it('CPF já cadastrado → ConflictException com "CPF já cadastrado."', async () => {
+    const { service, clinicas } = makeService({
+      clinicas: { findByDocumento: jest.fn().mockResolvedValue({ id: 'x' }) },
+    });
+    const dtoCpf = { ...dto, tipoDocumento: TipoDocumentoFiscal.CPF, documento: '529.982.247-25' };
+
+    await expect(service.onboard(dtoCpf, ctx)).rejects.toThrow('CPF já cadastrado.');
+    expect(clinicas.findByDocumento).toHaveBeenCalledWith('529.982.247-25');
+    expect(clinicas.create).not.toHaveBeenCalled();
+  });
+
+  it('clínica com CPF: repassa documento e tipo ao repositório', async () => {
+    const { service, clinicas } = makeService();
+    const dtoCpf = { ...dto, tipoDocumento: TipoDocumentoFiscal.CPF, documento: '52998224725' };
+
+    await service.onboard(dtoCpf, ctx);
+    expect(clinicas.create).toHaveBeenCalledWith(
+      expect.objectContaining({ documento: '52998224725', tipoDocumento: TipoDocumentoFiscal.CPF }),
+    );
   });
 
   it('e-mail do admin já cadastrado → ConflictException, nada é criado', async () => {
@@ -167,7 +190,7 @@ describe('ClinicasService.onboard — observabilidade (Fase 13)', () => {
     const { service } = makeService({
       users: { create: jest.fn().mockRejectedValue(new Error('boom')) },
       clinicas: {
-        findByCnpj: jest.fn().mockResolvedValue(null),
+        findByDocumento: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue({ id: 'cli-1', plano: 'basico' }),
         delete: jest.fn().mockRejectedValue(new Error('delete down')),
       },

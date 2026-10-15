@@ -28,6 +28,7 @@ import {
   resolvePermissoes, Papel, PAPEL_LABEL, registroLabel, papelTemRegistro,
 } from '@/types';
 import type { UsuarioAdmin } from '@/types';
+import { documentoFiscalValido, formatarDocumentoFiscal, TipoDocumentoFiscal } from '@/lib/documento-fiscal';
 
 const PAPEL_BADGE: Record<Papel, string> = {
   [Papel.SUPER_ADMIN]: 'bg-purple-500/10 text-purple-600 border border-purple-500/20',
@@ -75,9 +76,12 @@ type ClinicaForm = z.infer<typeof clinicaSchema>;
 
 // Campos mínimos p/ criar clínica + 1º admin pela UI (mesmos da CLI bootstrap-admin).
 // A senha do admin NÃO é digitada aqui — é gerada no backend.
-const novaClinicaSchema = z.object({
+const novaClinicaSchema = z
+  .object({
   nome: z.string().min(1, 'Informe o nome.'),
-  cnpj: z.string().min(11, 'CNPJ inválido.'),
+  // CPF: profissional que atende como pessoa física. CNPJ: empresa (aceita o alfanumérico).
+  tipoDocumento: z.nativeEnum(TipoDocumentoFiscal),
+  documento: z.string().min(1, 'Informe o documento.'),
   plano: z.enum(['basico', 'profissional', 'enterprise']),
   fusoHorario: z.string().min(1, 'Informe o fuso horário.'),
   duracaoConsultaPadrao: z
@@ -85,7 +89,12 @@ const novaClinicaSchema = z.object({
     .refine((s) => Number.isInteger(Number(s)) && Number(s) >= 5, 'Mínimo de 5 minutos.'),
   adminNome: z.string().min(1, 'Informe o nome do admin.'),
   adminEmail: z.string().email('E-mail inválido.'),
-});
+  })
+  .superRefine((v, ctx) => {
+    if (!documentoFiscalValido(v.tipoDocumento, v.documento)) {
+      ctx.addIssue({ code: 'custom', path: ['documento'], message: `${v.tipoDocumento} inválido. Confira os números.` });
+    }
+  });
 type NovaClinicaForm = z.infer<typeof novaClinicaSchema>;
 
 const PLANO_LABEL: Record<ClinicaAdmin['plano'], string> = {
@@ -140,7 +149,7 @@ export function SuperAdminPage() {
   const clinicaForm = useForm<ClinicaForm>({ resolver: zodResolver(clinicaSchema) });
   const novaClinicaForm = useForm<NovaClinicaForm>({
     resolver: zodResolver(novaClinicaSchema),
-    defaultValues: { plano: 'basico', fusoHorario: 'America/Sao_Paulo', duracaoConsultaPadrao: '50' },
+    defaultValues: { tipoDocumento: TipoDocumentoFiscal.CNPJ, plano: 'basico', fusoHorario: 'America/Sao_Paulo', duracaoConsultaPadrao: '50' },
   });
 
   // Query params
@@ -235,7 +244,8 @@ export function SuperAdminPage() {
       superAdminApi.criarClinica({
         clinica: {
           nome: v.nome,
-          cnpj: v.cnpj,
+          tipoDocumento: v.tipoDocumento,
+          documento: v.documento,
           plano: v.plano,
           fusoHorario: v.fusoHorario,
           duracaoConsultaPadrao: Number(v.duracaoConsultaPadrao),
@@ -446,7 +456,7 @@ export function SuperAdminPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
-                    <TableHead>CNPJ</TableHead>
+                    <TableHead>CPF / CNPJ</TableHead>
                     <TableHead>Plano</TableHead>
                     <TableHead>Usuários</TableHead>
                     <TableHead>Status</TableHead>
@@ -470,7 +480,10 @@ export function SuperAdminPage() {
                           {c.nome}
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-sm font-mono">{c.cnpj}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        <span className="text-xs mr-1.5">{c.tipoDocumento}</span>
+                        <span className="font-mono">{formatarDocumentoFiscal(c.tipoDocumento as TipoDocumentoFiscal, c.documento)}</span>
+                      </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{PLANO_LABEL[c.plano]}</Badge>
                       </TableCell>
@@ -856,7 +869,11 @@ export function SuperAdminPage() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              CNPJ: <span className="font-mono">{clinicaTarget?.cnpj}</span> (não editável)
+              {clinicaTarget?.tipoDocumento ?? 'Documento'}:{' '}
+              <span className="font-mono">
+                {clinicaTarget ? formatarDocumentoFiscal(clinicaTarget.tipoDocumento as TipoDocumentoFiscal, clinicaTarget.documento) : ''}
+              </span>{' '}
+              (não editável)
             </p>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setClinicaTarget(null)}>Cancelar</Button>
@@ -887,10 +904,28 @@ export function SuperAdminPage() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label>CNPJ</Label>
-                <Input placeholder="Só números" {...novaClinicaForm.register('cnpj')} />
-                {novaClinicaForm.formState.errors.cnpj && (
-                  <p className="text-xs text-destructive">{novaClinicaForm.formState.errors.cnpj.message}</p>
+                <Label>Tipo de documento</Label>
+                <Select
+                  defaultValue={TipoDocumentoFiscal.CNPJ}
+                  onValueChange={(t) =>
+                    novaClinicaForm.setValue('tipoDocumento', t as TipoDocumentoFiscal, { shouldValidate: novaClinicaForm.formState.isSubmitted })
+                  }
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TipoDocumentoFiscal.CNPJ}>CNPJ (empresa)</SelectItem>
+                    <SelectItem value={TipoDocumentoFiscal.CPF}>CPF (pessoa física)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>{novaClinicaForm.watch('tipoDocumento') === TipoDocumentoFiscal.CPF ? 'CPF' : 'CNPJ'}</Label>
+                <Input
+                  placeholder={novaClinicaForm.watch('tipoDocumento') === TipoDocumentoFiscal.CPF ? '000.000.000-00' : '00.000.000/0000-00'}
+                  {...novaClinicaForm.register('documento')}
+                />
+                {novaClinicaForm.formState.errors.documento && (
+                  <p className="text-xs text-destructive">{novaClinicaForm.formState.errors.documento.message}</p>
                 )}
               </div>
               <div className="space-y-1.5">

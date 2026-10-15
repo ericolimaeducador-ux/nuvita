@@ -1,4 +1,5 @@
 import { Papel } from '../../../../../packages/shared/src/auth';
+import { TipoDocumentoFiscal } from '../../../../../packages/shared/src/documentos';
 import { PlanoClinica } from '../clinicas/domain/clinica.entity';
 import { CriarClinicaDto } from './application/dto/criar-clinica.dto';
 import { CreateAdminUserDto } from './application/dto/create-admin-user.dto';
@@ -9,7 +10,8 @@ jest.mock('bcrypt', () => ({ hash: jest.fn().mockResolvedValue('hash-bcrypt') })
 const dto: CriarClinicaDto = {
   clinica: {
     nome: 'Clínica Nova',
-    cnpj: '11222333000181',
+    tipoDocumento: TipoDocumentoFiscal.CNPJ,
+    documento: '11222333000181',
     plano: PlanoClinica.BASICO,
     fusoHorario: 'America/Sao_Paulo',
     duracaoConsultaPadrao: 50,

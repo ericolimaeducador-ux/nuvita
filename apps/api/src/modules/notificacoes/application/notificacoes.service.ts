@@ -74,7 +74,7 @@ export class NotificacoesService {
       conteudo: {
         ...rendered,
         destino,
-        variaveis,
+        variaveis: this.variaveisPersistidas(dto.tipo, variaveis),
       },
     });
 
@@ -159,6 +159,13 @@ export class NotificacoesService {
     });
 
     return preference;
+  }
+
+  /** Aviso de documento não grava título nem nome do paciente (sigilo): só quem/quando/qual evento. */
+  private variaveisPersistidas(tipo: TipoNotificacao, variaveis: Record<string, string>): Record<string, string> {
+    if (tipo !== TipoNotificacao.RESULTADO_DISPONIVEL) return variaveis;
+    const { documento: _documento, nomePaciente: _nomePaciente, ...seguras } = variaveis;
+    return seguras;
   }
 
   private resolveDestino(dto: CreateNotificacaoDto): string {

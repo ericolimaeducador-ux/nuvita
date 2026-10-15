@@ -334,9 +334,7 @@ export class DocumentosService {
           canal: CanalNotificacao.EMAIL,
           email: paciente.email,
           nome: paciente.nomeDestinatario,
-          nomePaciente: paciente.nome,
           paraResponsavel: paciente.ehResponsavel,
-          documento: documento.nome,
         } as CreateNotificacaoDto,
         context,
       );

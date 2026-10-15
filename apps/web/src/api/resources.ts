@@ -61,10 +61,16 @@ export interface CriarUsuarioPayload {
   password: string;
   papel: Papel;
 }
+export interface CriarUsuarioResponse {
+  user: { id: string; nome: string; email: string; papel: Papel };
+  /** Segundo fator do usuário criado (psicólogo): exibido UMA vez para o ADMIN repassar. */
+  twoFactorSetup?: { otpauthUrl: string; base32: string };
+}
+
 export const clinicasApi = {
   // Cria um usuário (profissional ou secretaria) dentro da clínica do ADMIN.
   criarUsuario: (clinicaId: string, payload: CriarUsuarioPayload) =>
-    api.post(`/clinicas/${clinicaId}/usuarios`, payload).then((r) => r.data),
+    api.post<CriarUsuarioResponse>(`/clinicas/${clinicaId}/usuarios`, payload).then((r) => r.data),
 };
 
 // ---------- Pacientes ----------
@@ -371,6 +377,8 @@ export interface ClinicaAdmin {
   tipoDocumento: TipoDocumentoClinica;
   plano: 'basico' | 'profissional' | 'enterprise';
   ativo: boolean;
+  /** Teste beta: usuários aceitam o Termo de Teste. Ausente em respostas antigas = false. */
+  faseTeste?: boolean;
   criadoEm: string;
   totalUsuarios: number;
 }
@@ -379,6 +387,7 @@ export interface UpdateClinicaPayload {
   nome?: string;
   plano?: ClinicaAdmin['plano'];
   ativo?: boolean;
+  faseTeste?: boolean;
 }
 
 export interface CriarClinicaPayload {
@@ -389,6 +398,7 @@ export interface CriarClinicaPayload {
     plano: ClinicaAdmin['plano'];
     fusoHorario: string;
     duracaoConsultaPadrao: number;
+    faseTeste?: boolean;
   };
   primeiroAdmin: { nome: string; email: string };
 }
@@ -398,7 +408,7 @@ export interface CriarClinicaResponse {
   admin: { id: string; nome: string; email: string; papel: Papel };
   /** Devolvida UMA vez — repassar ao cliente por fora. */
   senhaTemporaria: string;
-  twoFactorSetup?: { base32: string };
+  twoFactorSetup?: { base32: string; otpauthUrl?: string };
 }
 
 export const superAdminApi = {

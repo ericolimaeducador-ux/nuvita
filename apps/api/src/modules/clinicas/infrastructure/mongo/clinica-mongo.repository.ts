@@ -23,6 +23,7 @@ export class ClinicaMongoRepository implements ClinicaRepository {
       ...resto,
       cnpj: normalizarDocumentoFiscal(documento),
       tipoDocumento: input.tipoDocumento,
+      faseTeste: input.faseTeste ?? false,
       ativo: true,
     });
 
@@ -53,6 +54,7 @@ export class ClinicaMongoRepository implements ClinicaRepository {
     if (input.nome !== undefined) update.nome = input.nome;
     if (input.plano !== undefined) update.plano = input.plano;
     if (input.ativo !== undefined) update.ativo = input.ativo;
+    if (input.faseTeste !== undefined) update.faseTeste = input.faseTeste;
 
     const document = await this.model.findByIdAndUpdate(id, { $set: update }, { new: true }).exec();
     return document ? this.toEntity(document) : null;
@@ -69,6 +71,7 @@ export class ClinicaMongoRepository implements ClinicaRepository {
       plano: object.plano,
       configuracoes: object.configuracoes as unknown as Clinica['configuracoes'],
       ativo: object.ativo,
+      faseTeste: object.faseTeste ?? false,
       criadoEm: object.criadoEm,
     };
   }

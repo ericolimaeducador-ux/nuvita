@@ -73,6 +73,7 @@ export class ClinicasService {
       nome: dto.nome,
       documento: dto.documento,
       tipoDocumento: dto.tipoDocumento,
+      faseTeste: dto.faseTeste ?? false,
       endereco: dto.endereco,
       plano: dto.plano,
       configuracoes: dto.configuracoes,
@@ -91,6 +92,7 @@ export class ClinicasService {
         clinicaId: clinica.id,
         twoFactorSecret: twoFactorSetup?.base32,
         deveTrocarSenha: options?.deveTrocarSenha,
+        faseTeste: clinica.faseTeste,
       });
     } catch (error) {
       // Clínica sem admin é lixo — compensa para não deixar órfã. Se a
@@ -182,6 +184,8 @@ export class ClinicasService {
       // WhatsApp que motivou a feature original) — nasce com troca obrigatória.
       // SECRETARIA fica fora do escopo.
       deveTrocarSenha: dto.papel === Papel.PSICOLOGO,
+      // Usuário de clínica em teste beta aceita o Termo de Teste, como o ADMIN dela.
+      faseTeste: clinica.faseTeste,
     });
 
     await this.auditLogs.create({

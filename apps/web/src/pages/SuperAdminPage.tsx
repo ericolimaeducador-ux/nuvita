@@ -29,6 +29,7 @@ import {
 } from '@/types';
 import type { UsuarioAdmin } from '@/types';
 import { documentoFiscalValido, formatarDocumentoFiscal, TipoDocumentoFiscal } from '@/lib/documento-fiscal';
+import { SegredoDoisFatores } from '@/components/SegredoDoisFatores';
 
 const PAPEL_BADGE: Record<Papel, string> = {
   [Papel.SUPER_ADMIN]: 'bg-purple-500/10 text-purple-600 border border-purple-500/20',
@@ -71,6 +72,9 @@ const clinicaSchema = z.object({
   nome: z.string().min(1, 'Informe o nome.'),
   plano: z.enum(['basico', 'profissional', 'enterprise']),
   ativo: z.boolean(),
+  // Teste beta: enquanto marcada, os usuários aceitam o Termo de Teste. Desmarcar no
+  // lançamento faz todos aceitarem os Termos de Uso no próximo acesso.
+  faseTeste: z.boolean(),
 });
 type ClinicaForm = z.infer<typeof clinicaSchema>;
 
@@ -89,6 +93,7 @@ const novaClinicaSchema = z
     .refine((s) => Number.isInteger(Number(s)) && Number(s) >= 5, 'Mínimo de 5 minutos.'),
   adminNome: z.string().min(1, 'Informe o nome do admin.'),
   adminEmail: z.string().email('E-mail inválido.'),
+  faseTeste: z.boolean(),
   })
   .superRefine((v, ctx) => {
     if (!documentoFiscalValido(v.tipoDocumento, v.documento)) {
@@ -131,6 +136,7 @@ export function SuperAdminPage() {
     adminEmail: string;
     senhaTemporaria: string;
     base32: string | null;
+    otpauthUrl: string | null;
   } | null>(null);
   // Chave TOTP recém-gerada, exibida uma única vez para cadastrar no autenticador.
   const [twoFaSetup, setTwoFaSetup] = useState<{ email: string; setup: TwoFactorSetup } | null>(null);
@@ -149,7 +155,7 @@ export function SuperAdminPage() {
   const clinicaForm = useForm<ClinicaForm>({ resolver: zodResolver(clinicaSchema) });
   const novaClinicaForm = useForm<NovaClinicaForm>({
     resolver: zodResolver(novaClinicaSchema),
-    defaultValues: { tipoDocumento: TipoDocumentoFiscal.CNPJ, plano: 'basico', fusoHorario: 'America/Sao_Paulo', duracaoConsultaPadrao: '50' },
+    defaultValues: { tipoDocumento: TipoDocumentoFiscal.CNPJ, faseTeste: true, plano: 'basico', fusoHorario: 'America/Sao_Paulo', duracaoConsultaPadrao: '50' },
   });
 
   // Query params
@@ -249,6 +255,7 @@ export function SuperAdminPage() {
           plano: v.plano,
           fusoHorario: v.fusoHorario,
           duracaoConsultaPadrao: Number(v.duracaoConsultaPadrao),
+          faseTeste: v.faseTeste,
         },
         primeiroAdmin: { nome: v.adminNome, email: v.adminEmail },
       }),
@@ -260,6 +267,7 @@ export function SuperAdminPage() {
         adminEmail: res.admin.email,
         senhaTemporaria: res.senhaTemporaria,
         base32: res.twoFactorSetup?.base32 ?? null,
+        otpauthUrl: res.twoFactorSetup?.otpauthUrl ?? null,
       });
       void qc.invalidateQueries({ queryKey: ['super-admin', 'clinicas'] });
     },
@@ -268,7 +276,7 @@ export function SuperAdminPage() {
 
   function openEditClinica(c: ClinicaAdmin) {
     setClinicaTarget(c);
-    clinicaForm.reset({ nome: c.nome, plano: c.plano, ativo: c.ativo });
+    clinicaForm.reset({ nome: c.nome, plano: c.plano, ativo: c.ativo, faseTeste: c.faseTeste ?? false });
   }
 
   function openEdit(u: UsuarioAdmin) {
@@ -478,6 +486,11 @@ export function SuperAdminPage() {
                         <div className="flex items-center gap-2">
                           <Building2 className="h-4 w-4 text-muted-foreground" />
                           {c.nome}
+                          {c.faseTeste && (
+                            <Badge variant="secondary" className="bg-amber-500/10 text-amber-700 border border-amber-500/20" title="Usuários aceitam o Termo de Teste">
+                              Teste beta
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
@@ -785,29 +798,9 @@ export function SuperAdminPage() {
             <DialogTitle>Chave 2FA — {twoFaSetup?.email}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Cadastre no <span className="font-medium text-foreground">Google Authenticator</span>:
-              toque em <span className="font-medium text-foreground">+</span> →{' '}
-              <span className="font-medium text-foreground">Inserir chave de configuração</span>, informe o
-              e-mail como nome da conta e a chave abaixo (tipo: baseado em tempo).
-            </p>
-            <div className="flex items-center gap-2 rounded-md border border-border bg-secondary p-3">
-              <code className="flex-1 text-sm font-mono break-all select-all">{twoFaSetup?.setup.base32}</code>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                title="Copiar chave"
-                onClick={() => {
-                  if (twoFaSetup) {
-                    void navigator.clipboard.writeText(twoFaSetup.setup.base32);
-                    toast.success('Chave copiada.');
-                  }
-                }}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
+            {twoFaSetup && (
+              <SegredoDoisFatores base32={twoFaSetup.setup.base32} otpauthUrl={twoFaSetup.setup.otpauthUrl} />
+            )}
             <p className="text-xs text-destructive">
               Esta chave não será exibida novamente — repasse ao usuário agora. Se ela se perder,
               gere outra pelo botão de escudo na lista de usuários.
@@ -868,6 +861,19 @@ export function SuperAdminPage() {
                 </Select>
               </div>
             </div>
+            <label className="flex items-start gap-2 text-sm cursor-pointer select-none">
+              <Checkbox
+                checked={clinicaForm.watch('faseTeste')}
+                onCheckedChange={(c) => clinicaForm.setValue('faseTeste', c === true)}
+              />
+              <span>
+                Clínica do teste beta
+                <span className="block text-xs text-muted-foreground">
+                  Marcada: os usuários aceitam o Termo de Teste. Ao desmarcar (lançamento), todos
+                  passam a aceitar os Termos de Uso no próximo acesso.
+                </span>
+              </span>
+            </label>
             <p className="text-xs text-muted-foreground">
               {clinicaTarget?.tipoDocumento ?? 'Documento'}:{' '}
               <span className="font-mono">
@@ -958,6 +964,18 @@ export function SuperAdminPage() {
                   </p>
                 )}
               </div>
+              <label className="col-span-2 flex items-start gap-2 text-sm cursor-pointer select-none">
+                <Checkbox
+                  checked={novaClinicaForm.watch('faseTeste')}
+                  onCheckedChange={(c) => novaClinicaForm.setValue('faseTeste', c === true)}
+                />
+                <span>
+                  Clínica do teste beta
+                  <span className="block text-xs text-muted-foreground">
+                    Os usuários desta clínica aceitam o Termo de Teste, não os Termos de Uso.
+                  </span>
+                </span>
+              </label>
               <div className="col-span-2 border-t border-border pt-3 space-y-1">
                 <p className="text-sm font-medium">Primeiro administrador da clínica</p>
                 <p className="text-xs text-muted-foreground">
@@ -1023,21 +1041,8 @@ export function SuperAdminPage() {
 
             {segredosClinica?.base32 && (
               <div className="space-y-1">
-                <Label className="text-xs">Chave 2FA (Google Authenticator)</Label>
-                <div className="flex items-center gap-2 rounded-md border border-border bg-secondary p-3">
-                  <code className="flex-1 text-sm font-mono break-all select-all">{segredosClinica.base32}</code>
-                  <Button
-                    type="button" variant="ghost" size="icon" title="Copiar chave"
-                    onClick={() => {
-                      if (segredosClinica?.base32) {
-                        void navigator.clipboard.writeText(segredosClinica.base32);
-                        toast.success('Chave copiada.');
-                      }
-                    }}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Label className="text-xs">Segundo fator do administrador</Label>
+                <SegredoDoisFatores base32={segredosClinica.base32} otpauthUrl={segredosClinica.otpauthUrl} />
               </div>
             )}
 

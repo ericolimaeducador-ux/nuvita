@@ -37,6 +37,7 @@ inpi-deposito/
 # Termos de Uso: cópia gerada por apps/web/scripts/copy-legal.mjs no prebuild.
 # Fonte única versionada: docs/legal/termos-de-uso.md.
 apps/web/src/legal/termos-de-uso.md
+apps/web/src/legal/termo-de-teste.md
 
 # Playwright MCP – screenshots/snapshots de sessão (browser tooling), estado local
 .playwright-mcp/

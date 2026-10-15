@@ -23,6 +23,8 @@ describe('AuthService.aceitarTermos — terms_source_unavailable (Fase 13)', () 
     jest.doMock('../../../../../../packages/shared/src/termos', () => ({
       TERMOS_DE_USO_VERSAO_ATUAL: '',
       TERMOS_DE_USO_VIGENCIA: '',
+      TERMO_DE_TESTE_VERSAO_ATUAL: '',
+      versaoTermosExigida: () => '',
     }));
     jest.doMock('bcrypt', () => ({ compare: jest.fn(), hash: jest.fn() }));
 
@@ -34,7 +36,9 @@ describe('AuthService.aceitarTermos — terms_source_unavailable (Fase 13)', () 
       .mockImplementation(() => undefined);
 
     const service = new AuthService(
-      { findById: jest.fn() } as never,
+      // Usuário ativo: a versão exigida depende da fase de teste dele, então o
+      // aceite carrega o usuário antes de validar a versão.
+      { findById: jest.fn().mockResolvedValue({ id: 'u1', ativo: true, faseTeste: false }) } as never,
       { create: jest.fn() } as never,
       {} as never,
       {} as never,

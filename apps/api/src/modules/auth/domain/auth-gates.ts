@@ -1,5 +1,5 @@
 import { Papel } from '../../../../../../packages/shared/src/auth';
-import { TERMOS_DE_USO_VERSAO_ATUAL } from '../../../../../../packages/shared/src/termos';
+import { versaoTermosExigida } from '../../../../../../packages/shared/src/termos';
 import { TermosAceitos } from './user.entity';
 
 /** Subconjunto de AuthenticatedUser que o predicado da cadeia de gates avalia. */
@@ -7,6 +7,8 @@ export interface GateAvaliavel {
   papel: Papel;
   deveTrocarSenha?: boolean;
   termosAceitos?: TermosAceitos | null;
+  /** Clínica em fase de teste: o termo exigido é o Termo de Teste. */
+  faseTeste?: boolean;
 }
 
 /**
@@ -27,7 +29,9 @@ export interface GateAvaliavel {
  * - aceite dos Termos de Uso: PSICOLOGO e ADMIN, quando a versão aceita
  *   difere da vigente — inclui "nunca aceitou"
  *   (feature-terms-of-service-acceptance, amendment 2026-09-10: escopo
- *   estendido de "só PSICOLOGO" para "PSICOLOGO e ADMIN")
+ *   estendido de "só PSICOLOGO" para "PSICOLOGO e ADMIN"). A versão exigida é
+ *   a do Termo de Teste quando `faseTeste` (teste beta, 2026-10-15) e a dos
+ *   Termos de Uso fora dela — ver versaoTermosExigida().
  */
 export function gatePendente(user: GateAvaliavel): boolean {
   if (user.deveTrocarSenha === true) {
@@ -35,7 +39,7 @@ export function gatePendente(user: GateAvaliavel): boolean {
   }
 
   if (user.papel === Papel.PSICOLOGO || user.papel === Papel.ADMIN) {
-    return user.termosAceitos?.versao !== TERMOS_DE_USO_VERSAO_ATUAL;
+    return user.termosAceitos?.versao !== versaoTermosExigida(user.faseTeste);
   }
 
   return false;

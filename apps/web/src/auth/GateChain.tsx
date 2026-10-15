@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { TERMOS_DE_USO_VERSAO_ATUAL } from '@/legal/termos';
+import { versaoTermosExigida } from '@/legal/termos';
 import { Papel, type AuthUser } from '@/types';
 
 export const ROTA_ACEITAR_TERMOS = '/aceitar-termos';
@@ -23,7 +23,7 @@ export function gateAtivo(user: AuthUser | null): string | null {
 
   const termosDefasados =
     (user.papel === Papel.PSICOLOGO || user.papel === Papel.ADMIN) &&
-    user.termosAceitos?.versao !== TERMOS_DE_USO_VERSAO_ATUAL;
+    user.termosAceitos?.versao !== versaoTermosExigida(user.faseTeste);
   if (termosDefasados) return ROTA_ACEITAR_TERMOS;
 
   if (user.deveTrocarSenha) return ROTA_DEFINIR_SENHA;

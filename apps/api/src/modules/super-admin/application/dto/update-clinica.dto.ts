@@ -14,4 +14,9 @@ export class UpdateClinicaDto {
   @IsOptional()
   @IsBoolean()
   ativo?: boolean;
+
+  /** Desmarcar no lançamento: todos os usuários da clínica passam a aceitar os Termos de Uso. */
+  @IsOptional()
+  @IsBoolean()
+  faseTeste?: boolean;
 }

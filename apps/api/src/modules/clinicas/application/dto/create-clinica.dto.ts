@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength, ValidateNested, IsInt, Min, Validate } from 'class-validator';
+import { IsBoolean, IsEmail, IsEnum, IsOptional, IsString, MinLength, ValidateNested, IsInt, Min, Validate } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TipoDocumentoFiscal } from '../../../../../../../packages/shared/src/documentos';
 import { PlanoClinica } from '../../domain/clinica.entity';
@@ -90,6 +90,11 @@ export class CreateClinicaDto {
 
   @IsEnum(PlanoClinica)
   plano!: PlanoClinica;
+
+  /** Clínica do teste beta (Termo de Teste no aceite). Ausente = false. */
+  @IsOptional()
+  @IsBoolean()
+  faseTeste?: boolean;
 
   @ValidateNested()
   @Type(() => ConfiguracoesClinicaDto)

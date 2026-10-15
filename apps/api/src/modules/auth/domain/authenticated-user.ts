@@ -10,4 +10,6 @@ import { TermosAceitos } from './user.entity';
 export type AuthenticatedUser = AuthTokenPayload & {
   deveTrocarSenha: boolean;
   termosAceitos: TermosAceitos | null;
+  /** Clínica em fase de teste: o termo exigido é o Termo de Teste. */
+  faseTeste: boolean;
 };

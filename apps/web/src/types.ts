@@ -225,6 +225,8 @@ export interface AuthUser {
   deveTrocarSenha?: boolean;
   /** Aceite dos Termos de Uso (feature-terms-of-service-acceptance). null/ausente = não aceito. */
   termosAceitos?: TermosAceitos | null;
+  /** Clínica em fase de teste: o termo exigido é o Termo de Teste. Ausente = false. */
+  faseTeste?: boolean;
 }
 
 /** Rótulo do registro profissional conforme o papel (CRM/COREN/OAB). */

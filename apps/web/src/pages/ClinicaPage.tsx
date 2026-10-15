@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { SegredoDoisFatores } from '@/components/SegredoDoisFatores';
 import { clinicasApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
@@ -34,10 +37,28 @@ export function ClinicaPage() {
     defaultValues: { papel: Papel.PSICOLOGO },
   });
 
+  // Dados de acesso do usuário recém-criado, exibidos UMA vez (correção C2 do teste beta):
+  // sem o segundo fator, o psicólogo criado aqui não conseguiria entrar.
+  const [acessoCriado, setAcessoCriado] = useState<{
+    nome: string;
+    email: string;
+    senha: string;
+    twoFactorSetup?: { otpauthUrl: string; base32: string };
+  } | null>(null);
+
   const mut = useMutation({
     mutationFn: (payload: { nome: string; email: string; password: string; papel: Papel }) =>
       clinicasApi.criarUsuario(user?.clinicaId ?? '', payload),
-    onSuccess: () => { toast.success('Usuário criado com sucesso.'); reset(); },
+    onSuccess: (res, payload) => {
+      toast.success('Usuário criado com sucesso.');
+      setAcessoCriado({
+        nome: res.user.nome,
+        email: res.user.email,
+        senha: payload.password,
+        twoFactorSetup: res.twoFactorSetup,
+      });
+      reset();
+    },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
@@ -100,6 +121,39 @@ export function ClinicaPage() {
           </form>
         </CardContent>
       </Card>
+
+      <Dialog open={!!acessoCriado} onOpenChange={(o) => { if (!o) setAcessoCriado(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Acesso criado — {acessoCriado?.nome}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              Para entrar, use este e-mail e a senha provisória. A troca de senha é pedida no primeiro acesso.
+            </p>
+            <div className="rounded-md border border-border bg-secondary p-3 space-y-1">
+              <p><span className="text-muted-foreground">E-mail:</span> <span className="font-mono">{acessoCriado?.email}</span></p>
+              <p><span className="text-muted-foreground">Senha provisória:</span> <span className="font-mono select-all">{acessoCriado?.senha}</span></p>
+            </div>
+            {acessoCriado?.twoFactorSetup && (
+              <>
+                <p className="font-medium">Segundo fator (obrigatório para entrar)</p>
+                <SegredoDoisFatores
+                  base32={acessoCriado.twoFactorSetup.base32}
+                  otpauthUrl={acessoCriado.twoFactorSetup.otpauthUrl}
+                />
+              </>
+            )}
+            <p className="text-xs text-destructive">
+              O segundo fator não será exibido de novo. Cadastre-o agora no aplicativo autenticador
+              (ou repasse a quem vai usar este acesso) antes de fechar.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button type="button" onClick={() => setAcessoCriado(null)}>Já cadastrei, fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

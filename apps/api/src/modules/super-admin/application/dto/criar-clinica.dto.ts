@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsEmail, IsEnum, IsInt, IsNotEmpty, IsString, Min, Validate, ValidateNested } from 'class-validator';
+import { IsBoolean, IsEmail, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Min, Validate, ValidateNested } from 'class-validator';
 import { TipoDocumentoFiscal } from '../../../../../../../packages/shared/src/documentos';
 import { DocumentoFiscalConstraint } from '../../../clinicas/application/dto/documento-fiscal.validator';
 import { PlanoClinica } from '../../../clinicas/domain/clinica.entity';
@@ -20,6 +20,11 @@ class ClinicaInputDto {
 
   @IsEnum(PlanoClinica)
   plano!: PlanoClinica;
+
+  /** Clínica do teste beta: usuários aceitam o Termo de Teste. Ausente = false. */
+  @IsOptional()
+  @IsBoolean()
+  faseTeste?: boolean;
 
   @IsString()
   @IsNotEmpty()

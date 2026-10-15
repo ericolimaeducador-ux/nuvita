@@ -2,6 +2,7 @@ import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { Papel } from '../../../../../packages/shared/src/auth';
 import { ClinicaMongoRepository } from '../clinicas/infrastructure/mongo/clinica-mongo.repository';
 import { ConfiguracoesClinicaDto } from '../clinicas/application/dto/create-clinica.dto';
+import { TipoDocumentoFiscal } from '../../../../../packages/shared/src/documentos';
 import { PlanoClinica } from '../clinicas/domain/clinica.entity';
 import { CriarClinicaDto } from './application/dto/criar-clinica.dto';
 import { UpdateClinicaDto } from './application/dto/update-clinica.dto';
@@ -19,7 +20,8 @@ const body = (metatype: new () => unknown) => ({ type: 'body' as const, metatype
 
 const clinicaInput = {
   nome: 'Clínica Nova',
-  cnpj: '11222333000181',
+  tipoDocumento: TipoDocumentoFiscal.CNPJ,
+  documento: '11222333000181',
   plano: PlanoClinica.BASICO,
   fusoHorario: 'America/Sao_Paulo',
   duracaoConsultaPadrao: 50,
@@ -91,7 +93,8 @@ describe('Clínica: telefone e emailContato aceitos pelo SUPER_ADMIN (RED 6)', (
       toObject: () => ({
         _id: { toString: () => 'cli-1' },
         nome: 'Clínica',
-        cnpj: '1',
+        documento: '11222333000181',
+        tipoDocumento: TipoDocumentoFiscal.CNPJ,
         plano: PlanoClinica.BASICO,
         configuracoes: {},
         ativo: true,

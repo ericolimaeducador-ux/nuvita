@@ -7,19 +7,21 @@ import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
 import { ClinicasService } from '../application/clinicas.service';
+import { TipoDocumentoFiscal } from '../../../../../../packages/shared/src/documentos';
 import { PlanoClinica } from '../domain/clinica.entity';
 import { ClinicasController } from './clinicas.controller';
 
 /**
  * GET /clinicas/minha (feature-timbre-clinico-dinamico, PR 1 backend).
  * Contratos novos assumidos (não existem hoje):
- *   ClinicasService.obterMinha(user): Promise<{ nome, cnpj, endereco, telefone, emailContato, logoUrl }>
+ *   ClinicasService.obterMinha(user): Promise<{ nome, documento, tipoDocumento, endereco, telefone, emailContato, logoUrl }>
  *   ClinicasController.minha(user)  — @Get('minha'), JwtAuthGuard + RolesGuard(ADMIN, PSICOLOGO, SECRETARIA)
  */
 const clinica = (id: string, nome: string) => ({
   id,
   nome,
-  cnpj: '11222333000181',
+  documento: '11222333000181',
+  tipoDocumento: TipoDocumentoFiscal.CNPJ,
   endereco: { logradouro: 'Rua A', numero: '10', cidade: 'São Paulo', estado: 'SP', cep: '01000-000' },
   plano: PlanoClinica.BASICO,
   configuracoes: {
@@ -64,7 +66,8 @@ describe('GET /clinicas/minha', () => {
 
     expect(r).toEqual({
       nome: 'Clínica A',
-      cnpj: '11222333000181',
+      documento: '11222333000181',
+      tipoDocumento: TipoDocumentoFiscal.CNPJ,
       endereco: { logradouro: 'Rua A', numero: '10', cidade: 'São Paulo', estado: 'SP', cep: '01000-000' },
       telefone: '(11) 4000-1234',
       emailContato: 'contato@clinica.test',

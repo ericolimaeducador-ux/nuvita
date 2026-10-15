@@ -11,6 +11,8 @@ export interface CreateUserInput {
   registroProfissional?: string;
   /** true = troca de senha obrigatória no 1º login (feature-forced-password-change). */
   deveTrocarSenha?: boolean;
+  /** Herdado da clínica (teste beta). */
+  faseTeste?: boolean;
 }
 
 export interface UpdateUserInput {
@@ -26,6 +28,8 @@ export interface UpdateUserInput {
   modulosRevogados?: Modulo[];
   deveTrocarSenha?: boolean;
   termosAceitos?: TermosAceitos | null;
+  /** Herdado da clínica (teste beta). */
+  faseTeste?: boolean;
   /** Revogação de sessão na troca de senha (feature-session-revocation-on-password-change). */
   tokensValidosApartirDe?: Date | null;
 }
@@ -45,4 +49,6 @@ export interface UserRepository {
   findAll(filters: UserFilters, skip: number, limit: number): Promise<User[]>;
   count(filters: UserFilters): Promise<number>;
   update(id: string, input: UpdateUserInput): Promise<User | null>;
+  /** Propaga a marcação de fase de teste da clínica a todos os usuários dela. Devolve quantos mudaram. */
+  definirFaseTesteDaClinica(clinicaId: string, faseTeste: boolean): Promise<number>;
 }

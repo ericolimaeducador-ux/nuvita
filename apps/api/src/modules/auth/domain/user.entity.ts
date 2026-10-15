@@ -22,6 +22,12 @@ export interface User {
   deveTrocarSenha: boolean;
   /** Aceite dos Termos de Uso (feature-terms-of-service-acceptance). null/ausente = não aceito. */
   termosAceitos?: TermosAceitos | null;
+  /**
+   * Cópia da marcação `faseTeste` da clínica (teste beta): enquanto true, o termo
+   * exigido no aceite é o Termo de Teste, não os Termos de Uso. Mantida em sincronia
+   * pelo cadastro de usuários e pela edição da clínica (super-admin). Ausente = false.
+   */
+  faseTeste?: boolean;
   /** Exceções por usuário sobre o padrão do papel (ver resolvePermissoes). */
   modulosConcedidos?: Modulo[];
   modulosRevogados?: Modulo[];

@@ -19,6 +19,7 @@ export class UserMongoRepository implements UserRepository {
       '2faSecret': input.twoFactorSecret,
       registroProfissional: input.registroProfissional,
       deveTrocarSenha: input.deveTrocarSenha,
+      faseTeste: input.faseTeste ?? false,
       ativo: true,
     });
 
@@ -72,12 +73,20 @@ export class UserMongoRepository implements UserRepository {
     if (input.modulosRevogados !== undefined) set['modulosRevogados'] = input.modulosRevogados;
     if (input.deveTrocarSenha !== undefined) set['deveTrocarSenha'] = input.deveTrocarSenha;
     if (input.termosAceitos !== undefined) set['termosAceitos'] = input.termosAceitos;
+    if (input.faseTeste !== undefined) set['faseTeste'] = input.faseTeste;
     if (input.tokensValidosApartirDe !== undefined) set['tokensValidosApartirDe'] = input.tokensValidosApartirDe;
 
     const doc = await this.userModel
       .findByIdAndUpdate(id, { $set: set }, { new: true })
       .exec();
     return doc ? this.toEntity(doc) : null;
+  }
+
+  async definirFaseTesteDaClinica(clinicaId: string, faseTeste: boolean): Promise<number> {
+    const result = await this.userModel
+      .updateMany({ clinicaId, faseTeste: { $ne: faseTeste } }, { $set: { faseTeste } })
+      .exec();
+    return result.modifiedCount;
   }
 
   private buildQuery(filters: UserFilters): FilterQuery<UserDocument> {
@@ -110,6 +119,7 @@ export class UserMongoRepository implements UserRepository {
       termosAceitos: object.termosAceitos
         ? { versao: object.termosAceitos.versao, dataAceite: object.termosAceitos.dataAceite }
         : null,
+      faseTeste: object.faseTeste ?? false,
       modulosConcedidos: object.modulosConcedidos,
       modulosRevogados: object.modulosRevogados,
       tokensValidosApartirDe: object.tokensValidosApartirDe,

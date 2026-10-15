@@ -260,3 +260,20 @@ describe('ClinicasService.createUsuario — deveTrocarSenha para PSICOLOGO (amen
     );
   });
 });
+
+describe('ClinicasService — fase de teste (C3, 2026-10-15)', () => {
+  it('onboard: clínica marcada como teste e o ADMIN herda faseTeste', async () => {
+    const { service, clinicas, users } = makeService({
+      clinicas: { create: jest.fn().mockResolvedValue({ id: 'cli-1', plano: 'basico', faseTeste: true }) },
+    });
+    await service.onboard({ ...dto, faseTeste: true }, ctx);
+    expect(clinicas.create).toHaveBeenCalledWith(expect.objectContaining({ faseTeste: true }));
+    expect(users.create).toHaveBeenCalledWith(expect.objectContaining({ papel: Papel.ADMIN, faseTeste: true }));
+  });
+
+  it('onboard sem a marcação: fora do teste', async () => {
+    const { service, clinicas } = makeService();
+    await service.onboard(dto, ctx);
+    expect(clinicas.create).toHaveBeenCalledWith(expect.objectContaining({ faseTeste: false }));
+  });
+});

@@ -35,6 +35,11 @@ export interface Clinica {
   plano: PlanoClinica;
   configuracoes: ConfiguracoesClinica;
   ativo: boolean;
+  /**
+   * Clínica do teste beta: seus usuários aceitam o Termo de Teste em vez dos Termos
+   * de Uso. Desmarcar no lançamento faz todos aceitarem os Termos de Uso no próximo acesso.
+   */
+  faseTeste: boolean;
   criadoEm: Date;
 }
 

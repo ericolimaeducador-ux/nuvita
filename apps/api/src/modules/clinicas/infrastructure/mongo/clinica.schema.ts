@@ -34,6 +34,10 @@ export class ClinicaMongo {
   @Prop({ default: true, index: true })
   ativo!: boolean;
 
+  /** Teste beta: termo exigido é o Termo de Teste. Ausente em docs antigos = false. */
+  @Prop({ default: false })
+  faseTeste!: boolean;
+
   @Prop({ default: Date.now, immutable: true })
   criadoEm!: Date;
 }

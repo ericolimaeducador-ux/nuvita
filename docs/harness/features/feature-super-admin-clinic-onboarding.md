@@ -207,3 +207,9 @@ problema e da solução?"* — recorded verbatim (Portuguese) as given by the us
   the object.
 - The forced first-login gate is **not** designed here — it belongs to
   [[feature-forced-password-change]] and its Chain of Responsibility.
+
+### Amendment (2026-10-15) — QR code
+
+O "sem QR code" deste arquivo foi revisto pelo Erico em 15/10/2026 (correção C1 do teste beta,
+ver feature-acesso-teste-beta): o diálogo de clínica criada mostra QR code e chave em texto, e
+`POST /super-admin/clinicas` devolve `twoFactorSetup: { base32, otpauthUrl }`.

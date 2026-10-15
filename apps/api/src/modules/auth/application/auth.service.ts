@@ -18,7 +18,7 @@ import {
   exigeTwoFactor,
   Papel,
 } from '../../../../../../packages/shared/src/auth';
-import { TERMOS_DE_USO_VERSAO_ATUAL } from '../../../../../../packages/shared/src/termos';
+import { versaoTermosExigida } from '../../../../../../packages/shared/src/termos';
 import {
   ACCESS_TOKEN_TTL,
   AUDIT_LOG_REPOSITORY,
@@ -207,6 +207,7 @@ export class AuthService {
 
   /**
    * Registra o aceite dos Termos de Uso do PSICOLOGO (feature-terms-of-service-acceptance).
+   * Em clínica na fase de teste, o termo aceito é o Termo de Teste (versaoTermosExigida).
    * Endpoint isento do gate (@GateExempt), senão o usuário travaria: não pode
    * aceitar porque aceitar está bloqueado pelo próprio gate de termos.
    *
@@ -217,8 +218,15 @@ export class AuthService {
     versao: string,
     context: RequestContext,
   ): Promise<{ user: PublicUser }> {
-    if (versao !== TERMOS_DE_USO_VERSAO_ATUAL) {
-      if (!TERMOS_DE_USO_VERSAO_ATUAL) {
+    const user = await this.users.findById(userId);
+    if (!user || !user.ativo) {
+      throw new UnauthorizedException('Usuario inativo ou inexistente.');
+    }
+
+    // Termo de Teste para clínica em fase de teste; Termos de Uso fora dela.
+    const versaoExigida = versaoTermosExigida(user.faseTeste);
+    if (versao !== versaoExigida) {
+      if (!versaoExigida) {
         // Constante compartilhada vazia no runtime (build quebrado): o gate não
         // tem versão vigente para validar. Fail-closed — ninguém aceita nada.
         this.logEventoObservabilidade('error', {
@@ -236,11 +244,6 @@ export class AuthService {
         userId,
       });
       throw new BadRequestException('Versao dos Termos de Uso invalida ou desatualizada.');
-    }
-
-    const user = await this.users.findById(userId);
-    if (!user || !user.ativo) {
-      throw new UnauthorizedException('Usuario inativo ou inexistente.');
     }
 
     if (user.termosAceitos?.versao === versao) {
@@ -372,6 +375,7 @@ export class AuthService {
       ...payload,
       deveTrocarSenha: user.deveTrocarSenha ?? false,
       termosAceitos: user.termosAceitos ?? null,
+      faseTeste: user.faseTeste ?? false,
     };
   }
 

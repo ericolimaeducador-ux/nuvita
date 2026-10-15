@@ -1,6 +1,9 @@
 import { BadRequestException, ConflictException, Logger, UnauthorizedException } from '@nestjs/common';
 import { Papel } from '../../../../../../packages/shared/src/auth';
-import { TERMOS_DE_USO_VERSAO_ATUAL } from '../../../../../../packages/shared/src/termos';
+import {
+  TERMO_DE_TESTE_VERSAO_ATUAL,
+  TERMOS_DE_USO_VERSAO_ATUAL,
+} from '../../../../../../packages/shared/src/termos';
 import { AuditLogRepository } from './ports/audit-log.repository';
 import { UserRepository } from './ports/user.repository';
 import { AuditEvent } from '../domain/audit-event.enum';
@@ -668,5 +671,28 @@ describe('AuthService — visibilidade e isolamento da revogação de sessão (F
         expect.arrayContaining([expect.objectContaining({ event: 'token_rejected_stale_session' })]),
       );
     });
+  });
+});
+
+describe('AuthService.aceitarTermos — fase de teste (C3, 2026-10-15)', () => {
+  it('usuário de clínica em teste aceita o Termo de Teste', async () => {
+    const user = makeUser({ papel: Papel.ADMIN, termosAceitos: null, faseTeste: true });
+    const { service, users } = makeService(user);
+
+    await service.aceitarTermos('u1', TERMO_DE_TESTE_VERSAO_ATUAL, context);
+    expect(users.update).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ termosAceitos: expect.objectContaining({ versao: TERMO_DE_TESTE_VERSAO_ATUAL }) }),
+    );
+  });
+
+  it('usuário de clínica em teste NÃO aceita os Termos de Uso no lugar do Termo de Teste', async () => {
+    const { service } = makeService(makeUser({ papel: Papel.ADMIN, termosAceitos: null, faseTeste: true }));
+    await expect(service.aceitarTermos('u1', TERMOS_DE_USO_VERSAO_ATUAL, context)).rejects.toThrow(BadRequestException);
+  });
+
+  it('usuário fora do teste NÃO aceita o Termo de Teste', async () => {
+    const { service } = makeService(makeUser({ papel: Papel.PSICOLOGO, termosAceitos: null, faseTeste: false }));
+    await expect(service.aceitarTermos('u1', TERMO_DE_TESTE_VERSAO_ATUAL, context)).rejects.toThrow(BadRequestException);
   });
 });

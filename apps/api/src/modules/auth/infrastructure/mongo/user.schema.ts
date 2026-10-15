@@ -65,6 +65,11 @@ export class UserMongo {
   @Prop({ type: TermosAceitosSchema })
   termosAceitos?: TermosAceitosMongo;
 
+  // Cópia da marcação `faseTeste` da clínica (teste beta): define que o termo exigido
+  // é o Termo de Teste. Ausente em docs antigos = false (Termos de Uso).
+  @Prop({ default: false })
+  faseTeste!: boolean;
+
   // Revogação de sessão na troca de senha (feature-session-revocation-on-password-change).
   // Estampado a cada troca de senha bem-sucedida. Ausente = nenhuma troca de senha
   // jamais invalidou sessões deste usuário — NUNCA tratar ausência como rejeição.

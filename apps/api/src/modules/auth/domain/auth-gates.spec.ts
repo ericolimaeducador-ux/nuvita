@@ -1,5 +1,8 @@
 import { Papel } from '../../../../../../packages/shared/src/auth';
-import { TERMOS_DE_USO_VERSAO_ATUAL } from '../../../../../../packages/shared/src/termos';
+import {
+  TERMO_DE_TESTE_VERSAO_ATUAL,
+  TERMOS_DE_USO_VERSAO_ATUAL,
+} from '../../../../../../packages/shared/src/termos';
 import { gatePendente } from './auth-gates';
 
 describe('gatePendente — predicado da cadeia de gates pós-login (Fase 2b)', () => {
@@ -65,6 +68,34 @@ describe('gatePendente — predicado da cadeia de gates pós-login (Fase 2b)', (
   it('conta comum sem nada pendente => false', () => {
     expect(
       gatePendente({ papel: Papel.SECRETARIA, deveTrocarSenha: false, termosAceitos: null }),
+    ).toBe(false);
+  });
+});
+
+describe('gatePendente — clínica em fase de teste exige o Termo de Teste (C3, 2026-10-15)', () => {
+  const aceite = (versao: string) => ({ versao, dataAceite: new Date('2026-10-30T12:00:00Z') });
+
+  it('faseTeste + Termo de Teste aceito => nenhum gate', () => {
+    expect(
+      gatePendente({ papel: Papel.ADMIN, faseTeste: true, termosAceitos: aceite(TERMO_DE_TESTE_VERSAO_ATUAL) }),
+    ).toBe(false);
+  });
+
+  it('faseTeste + só os Termos de Uso aceitos => gate pendente (precisa aceitar o Termo de Teste)', () => {
+    expect(
+      gatePendente({ papel: Papel.PSICOLOGO, faseTeste: true, termosAceitos: aceite(TERMOS_DE_USO_VERSAO_ATUAL) }),
+    ).toBe(true);
+  });
+
+  it('saiu da fase de teste com o Termo de Teste aceito => gate pendente (aceitar os Termos de Uso no lançamento)', () => {
+    expect(
+      gatePendente({ papel: Papel.PSICOLOGO, faseTeste: false, termosAceitos: aceite(TERMO_DE_TESTE_VERSAO_ATUAL) }),
+    ).toBe(true);
+  });
+
+  it('faseTeste ausente = fora do teste (usuários antigos seguem nos Termos de Uso)', () => {
+    expect(
+      gatePendente({ papel: Papel.ADMIN, termosAceitos: aceite(TERMOS_DE_USO_VERSAO_ATUAL) }),
     ).toBe(false);
   });
 });

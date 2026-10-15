@@ -48,6 +48,7 @@ export class SuperAdminService {
         nome: dto.clinica.nome,
         documento: dto.clinica.documento,
         tipoDocumento: dto.clinica.tipoDocumento,
+        faseTeste: dto.clinica.faseTeste ?? false,
         plano: dto.clinica.plano,
         configuracoes: {
           fusoHorario: dto.clinica.fusoHorario,
@@ -67,8 +68,9 @@ export class SuperAdminService {
       clinica: result.clinica,
       admin: result.admin,
       senhaTemporaria,
+      // otpauthUrl: o painel desenha o QR code a partir dela (mesmo segredo do base32).
       twoFactorSetup: result.twoFactorSetup
-        ? { base32: result.twoFactorSetup.base32 }
+        ? { base32: result.twoFactorSetup.base32, otpauthUrl: result.twoFactorSetup.otpauthUrl }
         : undefined,
     };
   }
@@ -89,7 +91,19 @@ export class SuperAdminService {
   async updateClinica(id: string, dto: UpdateClinicaDto) {
     const updated = await this.clinicas.update(id, dto);
     if (!updated) throw new NotFoundException('Clínica não encontrada.');
+    // A marcação de fase de teste vale para todos os usuários da clínica: é ela que
+    // decide qual termo eles aceitam (ver versaoTermosExigida).
+    if (dto.faseTeste !== undefined) {
+      await this.users.definirFaseTesteDaClinica(id, dto.faseTeste);
+    }
     return updated;
+  }
+
+  /** Fase de teste herdada da clínica do usuário; sem clínica = fora do teste. */
+  private async faseTesteDaClinica(clinicaId: string | null | undefined): Promise<boolean> {
+    if (!clinicaId) return false;
+    const clinica = await this.clinicas.findById(clinicaId);
+    return clinica?.faseTeste ?? false;
   }
 
   async listUsuarios(query: ListUsersQueryDto) {
@@ -127,6 +141,7 @@ export class SuperAdminService {
       clinicaId: dto.clinicaId ?? null,
       twoFactorSecret: twoFactorSetup?.base32,
       registroProfissional: dto.registroProfissional,
+      faseTeste: await this.faseTesteDaClinica(dto.clinicaId),
       // Amendment (2026-09-11) em feature-forced-password-change.md: mesma
       // regra do ClinicasService.createUsuario() — PSICOLOGO criado aqui
       // (endpoint genérico do super-admin, qualquer clínica) também nasce
@@ -172,9 +187,14 @@ export class SuperAdminService {
         ? dto.modulosConcedidos
         : dto.modulosConcedidos?.filter((m) => m !== Modulo.SUPER_ADMIN);
 
+    // Mudou de clínica: passa a seguir a fase de teste da clínica nova.
+    const faseTeste =
+      dto.clinicaId !== undefined ? await this.faseTesteDaClinica(dto.clinicaId) : undefined;
+
     const updated = await this.users.update(id, {
       ...dto,
       email: novoEmail,
+      ...(faseTeste !== undefined ? { faseTeste } : {}),
       ...(modulosConcedidos !== undefined ? { modulosConcedidos } : {}),
       ...(twoFactorSetup ? { twoFactorSecret: twoFactorSetup.base32 } : {}),
     });

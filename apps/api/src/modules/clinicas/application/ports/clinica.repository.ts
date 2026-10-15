@@ -7,6 +7,7 @@ export interface UpdateClinicaInput {
   nome?: string;
   plano?: Clinica['plano'];
   ativo?: boolean;
+  faseTeste?: boolean;
 }
 
 export interface ClinicaRepository {

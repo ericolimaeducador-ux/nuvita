@@ -97,7 +97,7 @@ describe('DocumentosService.confirmUpload — wiring de resultado_disponivel (Ca
     );
   });
 
-  it('aciona NotificacoesService.create() com os dados de resultado_disponivel, SEM o nome do documento (sigilo)', async () => {
+  it('aciona NotificacoesService.create() com os dados de resultado_disponivel, incluindo o nome do documento', async () => {
     const { service, notificacoesService } = makeService();
 
     await service.confirmUpload('doc-1', 'cli-1', ctx);
@@ -110,12 +110,10 @@ describe('DocumentosService.confirmUpload — wiring de resultado_disponivel (Ca
         canal: CanalNotificacao.EMAIL,
         email: 'paciente@teste.com',
         nome: 'Paciente Teste',
+        documento: 'Laudo neuropsicológico',
       }),
       ctx,
     );
-    const dto = notificacoesService.create.mock.calls[0][0];
-    expect(dto).not.toHaveProperty('documento');
-    expect(JSON.stringify(dto)).not.toContain('Laudo neuropsicológico');
   });
 
   it('paciente sem e-mail cadastrado → não aciona NotificacoesService, mas a confirmação de upload prossegue normalmente', async () => {

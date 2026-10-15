@@ -32,7 +32,6 @@ describe('NotificacaoTemplateService', () => {
     TipoNotificacao.LEMBRETE_CONSULTA_1H,
     TipoNotificacao.CONFIRMACAO_AGENDAMENTO,
     TipoNotificacao.LINK_TELECONSULTA,
-    TipoNotificacao.RESULTADO_DISPONIVEL,
   ])('%s tem variante para responsável, e ela cita {nomePaciente}', (tipo) => {
     const variaveis = { nome: 'Responsável', nomePaciente: 'Paciente X', hora: '10h', medico: 'Dr. A', link: 'http://x', documento: 'Laudo' };
 

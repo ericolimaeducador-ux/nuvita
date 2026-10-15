@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Command, CommandRunner, Option } from 'nest-commander';
 import { AppConfigService } from '../common/security/config.service';
+import { TipoDocumentoFiscal } from '../../../../packages/shared/src/documentos';
 import { PlanoClinica } from '../modules/clinicas/domain/clinica.entity';
 import { ClinicasService } from '../modules/clinicas/application/clinicas.service';
 
@@ -8,6 +9,7 @@ interface BootstrapAdminOptions {
   secret?: string;
   nome?: string;
   cnpj?: string;
+  cpf?: string;
   plano?: PlanoClinica;
   adminNome?: string;
   adminEmail?: string;
@@ -36,7 +38,8 @@ export class BootstrapAdminCommand extends CommandRunner {
     const result = await this.clinicasService.onboard(
       {
         nome: options.nome!,
-        cnpj: options.cnpj!,
+        documento: (options.cnpj ?? options.cpf)!,
+        tipoDocumento: options.cnpj ? TipoDocumentoFiscal.CNPJ : TipoDocumentoFiscal.CPF,
         plano: options.plano!,
         configuracoes: {
           fusoHorario: options.fusoHorario!,
@@ -78,8 +81,13 @@ export class BootstrapAdminCommand extends CommandRunner {
     return value;
   }
 
-  @Option({ flags: '--cnpj <cnpj>', description: 'CNPJ da clinica.' })
+  @Option({ flags: '--cnpj <cnpj>', description: 'CNPJ da clinica (use --cnpj OU --cpf).' })
   parseCnpj(value: string): string {
+    return value;
+  }
+
+  @Option({ flags: '--cpf <cpf>', description: 'CPF do profissional pessoa fisica (use --cnpj OU --cpf).' })
+  parseCpf(value: string): string {
     return value;
   }
 
@@ -134,7 +142,6 @@ export class BootstrapAdminCommand extends CommandRunner {
   private assertRequiredOptions(options: BootstrapAdminOptions): void {
     const missing = [
       ['--nome', options.nome],
-      ['--cnpj', options.cnpj],
       ['--plano', options.plano],
       ['--admin-nome', options.adminNome],
       ['--admin-email', options.adminEmail],
@@ -147,6 +154,12 @@ export class BootstrapAdminCommand extends CommandRunner {
 
     if (missing.length) {
       throw new Error(`Opcoes obrigatorias ausentes: ${missing.join(', ')}.`);
+    }
+
+    const temCnpj = options.cnpj !== undefined && options.cnpj !== '';
+    const temCpf = options.cpf !== undefined && options.cpf !== '';
+    if (temCnpj === temCpf) {
+      throw new Error('Informe exatamente um documento: --cnpj OU --cpf.');
     }
   }
 }

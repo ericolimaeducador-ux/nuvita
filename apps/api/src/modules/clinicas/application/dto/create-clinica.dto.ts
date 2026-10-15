@@ -1,6 +1,8 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength, ValidateNested, IsInt, Min } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, MinLength, ValidateNested, IsInt, Min, Validate } from 'class-validator';
 import { Type } from 'class-transformer';
+import { TipoDocumentoFiscal } from '../../../../../../../packages/shared/src/documentos';
 import { PlanoClinica } from '../../domain/clinica.entity';
+import { DocumentoFiscalConstraint } from './documento-fiscal.validator';
 
 export class EnderecoClinicaDto {
   @IsOptional()
@@ -73,8 +75,13 @@ export class CreateClinicaDto {
   @IsString()
   nome!: string;
 
+  @IsEnum(TipoDocumentoFiscal)
+  tipoDocumento!: TipoDocumentoFiscal;
+
+  /** CPF ou CNPJ conforme `tipoDocumento`; aceita com ou sem pontuação. */
   @IsString()
-  cnpj!: string;
+  @Validate(DocumentoFiscalConstraint)
+  documento!: string;
 
   @IsOptional()
   @ValidateNested()

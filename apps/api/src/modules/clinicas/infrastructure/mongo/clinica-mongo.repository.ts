@@ -6,6 +6,10 @@ import {
   ClinicaRepository,
   UpdateClinicaInput,
 } from '../../application/ports/clinica.repository';
+import {
+  normalizarDocumentoFiscal,
+  TipoDocumentoFiscal,
+} from '../../../../../../../packages/shared/src/documentos';
 import { Clinica } from '../../domain/clinica.entity';
 import { ClinicaDocument, ClinicaMongo } from './clinica.schema';
 
@@ -14,9 +18,11 @@ export class ClinicaMongoRepository implements ClinicaRepository {
   constructor(@InjectModel(ClinicaMongo.name) private readonly model: Model<ClinicaDocument>) {}
 
   async create(input: CreateClinicaInput): Promise<Clinica> {
+    const { documento, ...resto } = input;
     const created = await this.model.create({
-      ...input,
-      cnpj: this.onlyDigits(input.cnpj),
+      ...resto,
+      cnpj: normalizarDocumentoFiscal(documento),
+      tipoDocumento: input.tipoDocumento,
       ativo: true,
     });
 
@@ -28,8 +34,8 @@ export class ClinicaMongoRepository implements ClinicaRepository {
     return document ? this.toEntity(document) : null;
   }
 
-  async findByCnpj(cnpj: string): Promise<Clinica | null> {
-    const document = await this.model.findOne({ cnpj: this.onlyDigits(cnpj) }).exec();
+  async findByDocumento(documento: string): Promise<Clinica | null> {
+    const document = await this.model.findOne({ cnpj: normalizarDocumentoFiscal(documento) }).exec();
     return document ? this.toEntity(document) : null;
   }
 
@@ -57,16 +63,13 @@ export class ClinicaMongoRepository implements ClinicaRepository {
     return {
       id: object._id.toString(),
       nome: object.nome,
-      cnpj: object.cnpj,
+      documento: object.cnpj,
+      tipoDocumento: object.tipoDocumento ?? TipoDocumentoFiscal.CNPJ,
       endereco: object.endereco as unknown as Clinica['endereco'],
       plano: object.plano,
       configuracoes: object.configuracoes as unknown as Clinica['configuracoes'],
       ativo: object.ativo,
       criadoEm: object.criadoEm,
     };
-  }
-
-  private onlyDigits(value: string): string {
-    return value.replace(/\D/g, '');
   }
 }

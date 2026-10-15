@@ -12,7 +12,8 @@ export interface UpdateClinicaInput {
 export interface ClinicaRepository {
   create(input: CreateClinicaInput): Promise<Clinica>;
   findById(id: string): Promise<Clinica | null>;
-  findByCnpj(cnpj: string): Promise<Clinica | null>;
+  /** Busca pelo documento fiscal (CPF ou CNPJ), em qualquer formatação. */
+  findByDocumento(documento: string): Promise<Clinica | null>;
   findAll(): Promise<Clinica[]>;
   update(id: string, input: UpdateClinicaInput): Promise<Clinica | null>;
   /** Usado só para compensar onboarding parcial (admin não criado). Não é operação de produto. */

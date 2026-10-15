@@ -59,9 +59,9 @@ export class ClinicasService {
     limites: (typeof LIMITES_POR_PLANO)[Clinica['plano']];
     twoFactorSetup?: { required: true; otpauthUrl: string; base32: string };
   }> {
-    const existingClinic = await this.clinicas.findByCnpj(dto.cnpj);
+    const existingClinic = await this.clinicas.findByDocumento(dto.documento);
     if (existingClinic) {
-      throw new ConflictException('CNPJ ja cadastrado.');
+      throw new ConflictException(`${dto.tipoDocumento} já cadastrado.`);
     }
 
     const existingUser = await this.users.findByEmail(dto.primeiroAdmin.email.toLowerCase());
@@ -71,7 +71,8 @@ export class ClinicasService {
 
     const clinica = await this.clinicas.create({
       nome: dto.nome,
-      cnpj: dto.cnpj,
+      documento: dto.documento,
+      tipoDocumento: dto.tipoDocumento,
       endereco: dto.endereco,
       plano: dto.plano,
       configuracoes: dto.configuracoes,

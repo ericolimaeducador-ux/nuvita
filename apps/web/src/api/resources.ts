@@ -361,10 +361,14 @@ export interface TwoFactorSetup {
   base32: string;
 }
 
+export type TipoDocumentoClinica = 'CPF' | 'CNPJ';
+
 export interface ClinicaAdmin {
   id: string;
   nome: string;
-  cnpj: string;
+  /** CPF ou CNPJ, normalizado (sem pontuação). */
+  documento: string;
+  tipoDocumento: TipoDocumentoClinica;
   plano: 'basico' | 'profissional' | 'enterprise';
   ativo: boolean;
   criadoEm: string;
@@ -380,7 +384,8 @@ export interface UpdateClinicaPayload {
 export interface CriarClinicaPayload {
   clinica: {
     nome: string;
-    cnpj: string;
+    tipoDocumento: TipoDocumentoClinica;
+    documento: string;
     plano: ClinicaAdmin['plano'];
     fusoHorario: string;
     duracaoConsultaPadrao: number;

@@ -114,7 +114,7 @@ export class DocumentosService {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
     const documento = await this.getDocumentoOrThrow(resolvedClinicaId, documentoId);
     const confirmadoEm = documento.confirmadoEm ?? (await this.confirmarObjetoNoStorage(documento, resolvedClinicaId));
-    const thumbnailUrl = await this.storage.createThumbnailIfSupported(documento);
+    const thumbnailUrl = await this.criarThumbnailBestEffort(documento);
     if (thumbnailUrl) {
       await this.documentos.setThumbnail(resolvedClinicaId, documentoId, thumbnailUrl);
     }
@@ -134,6 +134,19 @@ export class DocumentosService {
       confirmadoEm,
       thumbnailUrl: thumbnailUrl ?? documento.thumbnailUrl,
     };
+  }
+
+  /**
+   * Miniatura é best-effort: o objeto já foi validado (HeadObject) e confirmadoEm já foi gravado,
+   * então falhar aqui não pode virar 500 nem esconder o documento. Só ids e a mensagem do erro no log.
+   */
+  private async criarThumbnailBestEffort(documento: Documento): Promise<string | undefined> {
+    try {
+      return await this.storage.createThumbnailIfSupported(documento);
+    } catch (error) {
+      this.logger.warn(`Miniatura nao gerada para o documento ${documento.id}: ${(error as Error).message}`);
+      return undefined;
+    }
   }
 
   async list(query: ListDocumentosQueryDto, context: DocumentoRequestContext) {

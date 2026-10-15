@@ -1,5 +1,8 @@
-import { IsBoolean, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { PlanoClinica } from '../../../clinicas/domain/clinica.entity';
+
+const trimTexto = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
 export class UpdateClinicaDto {
   @IsOptional()
@@ -19,4 +22,17 @@ export class UpdateClinicaDto {
   @IsOptional()
   @IsBoolean()
   faseTeste?: boolean;
+
+  /** Contato impresso no timbre dos documentos clínicos (gravado em configuracoes). */
+  @IsOptional()
+  @Transform(trimTexto)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(30)
+  telefone?: string;
+
+  @IsOptional()
+  @Transform(trimTexto)
+  @IsEmail()
+  emailContato?: string;
 }

@@ -1,4 +1,5 @@
-import { IsArray, IsBoolean, IsEmail, IsEnum, IsOptional, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsArray, IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { Modulo, Papel } from '../../../../../../../packages/shared/src/auth';
 
 export class UpdateUserDto {
@@ -25,6 +26,14 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   registroProfissional?: string;
+
+  /** Correção do CRP pelo super-admin (auditada). Formato do CRP não validado — confirmar em fonte do CFP. */
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(40)
+  crp?: string;
 
   // Exceções de permissão por usuário sobre o padrão do papel.
   @IsOptional()

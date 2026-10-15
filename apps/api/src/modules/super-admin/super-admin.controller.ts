@@ -39,8 +39,13 @@ export class SuperAdminController {
   }
 
   @Patch('clinicas/:id')
-  updateClinica(@Param('id') id: string, @Body() dto: UpdateClinicaDto) {
-    return this.service.updateClinica(id, dto);
+  updateClinica(
+    @Param('id') id: string,
+    @Body() dto: UpdateClinicaDto,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.service.updateClinica(id, dto, { ...extractRequestMeta(request), userId: user.sub });
   }
 
   @Get('usuarios')
@@ -59,8 +64,13 @@ export class SuperAdminController {
   }
 
   @Patch('usuarios/:id')
-  updateUsuario(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    return this.service.updateUsuario(id, dto);
+  updateUsuario(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.service.updateUsuario(id, dto, { ...extractRequestMeta(request), userId: user.sub });
   }
 
   @Post('usuarios/:id/reset-password')

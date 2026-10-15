@@ -21,6 +21,9 @@ export interface ConfiguracoesClinica {
   corPrimaria?: string;
   whatsappNumero?: string;
   emailRemetente?: string;
+  /** Telefone e e-mail de contato impressos no timbre dos documentos clínicos. Ausentes = o campo some. */
+  telefone?: string;
+  emailContato?: string;
   fusoHorario: string;
   duracaoConsultaPadrao: number;
 }

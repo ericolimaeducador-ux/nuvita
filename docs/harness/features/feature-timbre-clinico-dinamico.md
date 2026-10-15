@@ -55,3 +55,33 @@ Verbatim answer from the user (question 3):
 Verbatim answer from the user (question 4):
 
 > Exemplo: psicólogo da "Clínica X" emite atestado → cabeçalho "Clínica X · endereço · telefone", rodapé idem, assinatura "Fulano — CRP 06/12345". Zero menção a Nuvita/Dealer/7Safe.
+
+### Amendment (2026-10-15): CRP lifecycle and field mutability
+
+Decisions recorded by the repository owner (Erico) while implementing PR 1. They refine the answers above; the verbatim answers stay unchanged.
+
+**CRP lifecycle**
+
+- The professional fills their own CRP once, through `PATCH /auth/me` (body accepts only `crp`; the user id always comes from the token). The first fill is audited as `USER_CRP_SET` (new value).
+- Once filled, the same endpoint answers `409` "CRP já definido; correção só pelo administrador" (also for the same value).
+- Only the SUPER_ADMIN can correct it afterwards, through `PATCH /super-admin/usuarios/:id` (`crp`), audited as `USER_CRP_CORRECTED` (previous and new value).
+- `User.crp` is optional, trimmed, with no unique index. The CRP format is NOT validated (no official CFP source yet): confirm it in a CFP source before adding a regex.
+
+**Who can change which letterhead field (goal: prevent fraud in reports)**
+
+| Field | Who can change it |
+|---|---|
+| Logo, trade name, phone (`telefone`), contact e-mail (`emailContato`) | The clinic (ADMIN) |
+| Tax document (CPF/CNPJ), legal name, company data | SUPER_ADMIN only |
+| CRP after the first fill | SUPER_ADMIN only |
+
+In PR 1 the SUPER_ADMIN is the only one who edits `telefone` and `emailContato` (`PATCH /super-admin/clinicas/:id`), audited as `CLINIC_CONTACT_UPDATED` (fields, before and after).
+
+### Contract of GET /clinicas/minha
+
+`{ nome, documento, tipoDocumento, endereco, telefone, emailContato, logoUrl }`. Absent values are `undefined` (never an empty string). The tenant comes only from the token; no other clinic field is exposed. Guards: `JwtAuthGuard`, `AuthGatesGuard`, `TenantRequiredGuard`, `RolesGuard` (ADMIN, PSICOLOGO, SECRETARIA).
+
+### Follow-ups (not in PR 1)
+
+- ADMIN-facing endpoint to edit logo, trade name, `telefone` and `emailContato` of their own clinic (today only the SUPER_ADMIN can).
+- Web changes (letterhead, signature block, `brand.ts` cleanup) in PR 2.

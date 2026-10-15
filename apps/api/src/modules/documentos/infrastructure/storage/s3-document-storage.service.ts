@@ -8,7 +8,6 @@ import {
 } from '@aws-sdk/client-s3';
 import { AppConfigService } from '../../../../common/security/config.service';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import sharp from 'sharp';
 import { Readable } from 'stream';
 import { DOCUMENT_ACCESS_URL_TTL_SECONDS } from '../../documentos.constants';
 import { Documento } from '../../domain/documento.entity';
@@ -17,6 +16,12 @@ import {
   PresignedUploadInput,
   PresignedUploadOutput,
 } from '../../application/ports/document-storage';
+
+// sharp exporta a função direto (module.exports = Sharp), sem .default. Sem esModuleInterop, o import
+// default (import sharp from) compilava para sharp_1.default (undefined) e quebrava toda miniatura em runtime. Aceita as duas formas (função direta ou { default }).
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const sharpModule = require('sharp') as typeof import('sharp').default | { default: typeof import('sharp').default };
+const sharp: typeof import('sharp').default = typeof sharpModule === 'function' ? sharpModule : sharpModule.default;
 
 @Injectable()
 export class S3DocumentStorageService implements DocumentStorage {

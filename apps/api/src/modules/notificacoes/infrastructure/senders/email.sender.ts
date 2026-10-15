@@ -42,11 +42,10 @@ export class EmailSender implements NotificacaoSender {
       'Content-Type': 'application/json',
     }, {
       from: `${remetente.nome} <${remetente.email}>`,
-      reply_to: REPLY_TO,
+      reply_to: input.conteudo.responderPara ?? REPLY_TO,
       to: input.conteudo.destino,
       subject: this.assuntoSeguro(input.conteudo.assunto),
       text: input.conteudo.mensagem,
-      ...(input.conteudo.responderPara ? { reply_to: input.conteudo.responderPara } : {}),
     });
   }
 

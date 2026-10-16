@@ -1,7 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { Papel } from '../../../../../../packages/shared/src/auth';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
-import { CanalNotificacao, TipoNotificacao } from '../../notificacoes/domain/notificacao.entity';
 import { TipoDocumento } from '../domain/documento.entity';
 import { DocumentosService } from './documentos.service';
 
@@ -97,25 +96,16 @@ describe('DocumentosService.confirmUpload — wiring de resultado_disponivel (Ca
     );
   });
 
-  it('aciona NotificacoesService.create() com os dados de resultado_disponivel, sem o nome do documento', async () => {
-    const { service, notificacoesService } = makeService();
+  // Upload de prontuário é arquivo interno do profissional: não notifica o paciente (decisão do Erico).
+  it('conclui a confirmação do upload de prontuário (confirmadoEm gravado) sem acionar NotificacoesService', async () => {
+    const { service, documentos, notificacoesService } = makeService();
 
-    await service.confirmUpload('doc-1', 'cli-1', ctx);
+    const resultado = await service.confirmUpload('doc-1', 'cli-1', ctx);
 
-    expect(notificacoesService.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        clinicaId: 'cli-1',
-        destinatarioId: 'pac-1',
-        tipo: TipoNotificacao.RESULTADO_DISPONIVEL,
-        canal: CanalNotificacao.EMAIL,
-        email: 'paciente@teste.com',
-        nome: 'Paciente Teste',
-      }),
-      ctx,
-    );
-    const dto = notificacoesService.create.mock.calls[0][0];
-    expect(dto).not.toHaveProperty('documento');
-    expect(JSON.stringify(dto)).not.toContain('Laudo neuropsicológico');
+    expect(resultado.id).toBe('doc-1');
+    expect(resultado.confirmadoEm).toBeInstanceOf(Date);
+    expect(documentos.setConfirmadoEm).toHaveBeenCalledTimes(1);
+    expect(notificacoesService.create).not.toHaveBeenCalled();
   });
 
   it('paciente sem e-mail cadastrado → não aciona NotificacoesService, mas a confirmação de upload prossegue normalmente', async () => {
@@ -132,26 +122,5 @@ describe('DocumentosService.confirmUpload — wiring de resultado_disponivel (Ca
     expect(resultado.id).toBe('doc-1');
     expect(documentos.findById).toHaveBeenCalled();
     expect(notificacoesService.create).not.toHaveBeenCalled();
-  });
-
-  it('falha em NotificacoesService.create() não derruba a confirmação de upload, e loga o evento estruturado notification_trigger_failed', async () => {
-    const { service, notificacoesService } = makeService({
-      notificacoesService: { create: jest.fn().mockRejectedValue(new Error('falha no envio')) },
-    });
-
-    const resultado = await service.confirmUpload('doc-1', 'cli-1', ctx);
-
-    expect(resultado.id).toBe('doc-1');
-    expect(notificacoesService.create).toHaveBeenCalled();
-
-    expect(warnSpy).toHaveBeenCalled();
-    const payload = JSON.parse(warnSpy.mock.calls[0][0] as string);
-    expect(payload).toMatchObject({
-      level: 'warn',
-      event: 'notification_trigger_failed',
-      tipo: TipoNotificacao.RESULTADO_DISPONIVEL,
-      clinicaId: 'cli-1',
-      erro: 'falha no envio',
-    });
   });
 });

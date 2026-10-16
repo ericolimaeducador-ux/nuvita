@@ -55,3 +55,11 @@ Verbatim answer from the user (question 3):
 Verbatim answer from the user (question 4):
 
 > Exemplo: SECRETARIA sobe um PDF. Se o PUT falha, o registro fica com confirmadoEm null e some da lista; a limpeza o remove por soft-delete após 24h. Se o PUT sucede e o confirm roda, o HeadObject acha o objeto, seta confirmadoEm, e o documento aparece e abre. Nenhum fantasma visível ao fiscal, em qualquer caminho.
+
+### Amendment (2026-10-16): record uploads do not notify the patient
+
+Decision recorded by the repository owner (Erico) after the production smoke test.
+
+- (a) Uploading a document to a patient's record (prontuário) is an INTERNAL file of the professional. Confirming the upload no longer triggers any notification to the patient or guardian (the former `RESULTADO_DISPONIVEL` e-mail), because the patient has no portal to open. The trigger was removed from `DocumentosService.confirmUpload`; the notification template and the `EmailSender` are kept on purpose for the future feature below.
+- The upload confirmation itself is unchanged: HeadObject first, then `confirmadoEm`, then the best-effort thumbnail.
+- (b) BACKLOG — future feature "psychologist sends a document to the patient": delivery by e-mail/link, with the patient's consent. Out of scope here; it needs its own `feature-*.md` with the four required answers from the owner.

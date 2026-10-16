@@ -93,7 +93,9 @@ const novaClinicaSchema = z
     .refine((s) => Number.isInteger(Number(s)) && Number(s) >= 5, 'Mínimo de 5 minutos.'),
   adminNome: z.string().min(1, 'Informe o nome do admin.'),
   adminEmail: z.string().email('E-mail inválido.'),
-  faseTeste: z.boolean(),
+  // Sem valor padrão: o super-admin precisa escolher Sim ou Não (esquecer a marcação no lançamento
+  // colocaria o Termo de Teste na frente de clientes reais).
+  faseTeste: z.boolean({ message: 'Escolha se é clínica do teste beta.' }),
   })
   .superRefine((v, ctx) => {
     if (!documentoFiscalValido(v.tipoDocumento, v.documento)) {
@@ -155,7 +157,7 @@ export function SuperAdminPage() {
   const clinicaForm = useForm<ClinicaForm>({ resolver: zodResolver(clinicaSchema) });
   const novaClinicaForm = useForm<NovaClinicaForm>({
     resolver: zodResolver(novaClinicaSchema),
-    defaultValues: { tipoDocumento: TipoDocumentoFiscal.CNPJ, faseTeste: true, plano: 'basico', fusoHorario: 'America/Sao_Paulo', duracaoConsultaPadrao: '50' },
+    defaultValues: { tipoDocumento: TipoDocumentoFiscal.CNPJ, plano: 'basico', fusoHorario: 'America/Sao_Paulo', duracaoConsultaPadrao: '50' },
   });
 
   // Query params
@@ -964,18 +966,21 @@ export function SuperAdminPage() {
                   </p>
                 )}
               </div>
-              <label className="col-span-2 flex items-start gap-2 text-sm cursor-pointer select-none">
-                <Checkbox
-                  checked={novaClinicaForm.watch('faseTeste')}
-                  onCheckedChange={(c) => novaClinicaForm.setValue('faseTeste', c === true)}
-                />
-                <span>
-                  Clínica do teste beta
-                  <span className="block text-xs text-muted-foreground">
-                    Os usuários desta clínica aceitam o Termo de Teste, não os Termos de Uso.
-                  </span>
-                </span>
-              </label>
+              <div className="col-span-2 space-y-1.5">
+                <Label>Clínica do teste beta?</Label>
+                <Select
+                  onValueChange={(v) => novaClinicaForm.setValue('faseTeste', v === 'sim', { shouldValidate: true })}
+                >
+                  <SelectTrigger aria-label="Clínica do teste beta"><SelectValue placeholder="Escolha uma opção" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sim">Sim — os usuários aceitam o Termo de Teste</SelectItem>
+                    <SelectItem value="nao">Não — os usuários aceitam os Termos de Uso</SelectItem>
+                  </SelectContent>
+                </Select>
+                {novaClinicaForm.formState.errors.faseTeste && (
+                  <p className="text-xs text-destructive">{novaClinicaForm.formState.errors.faseTeste.message}</p>
+                )}
+              </div>
               <div className="col-span-2 border-t border-border pt-3 space-y-1">
                 <p className="text-sm font-medium">Primeiro administrador da clínica</p>
                 <p className="text-xs text-muted-foreground">

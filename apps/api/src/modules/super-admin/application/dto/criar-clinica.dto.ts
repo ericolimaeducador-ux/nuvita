@@ -1,5 +1,5 @@
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsEmail, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min, Validate, ValidateNested } from 'class-validator';
+import { IsBoolean, IsDefined, IsEmail, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min, Validate, ValidateNested } from 'class-validator';
 import { TipoDocumentoFiscal } from '../../../../../../../packages/shared/src/documentos';
 import { DocumentoFiscalConstraint } from '../../../clinicas/application/dto/documento-fiscal.validator';
 import { PlanoClinica } from '../../../clinicas/domain/clinica.entity';
@@ -23,8 +23,12 @@ class ClinicaInputDto {
   @IsEnum(PlanoClinica)
   plano!: PlanoClinica;
 
-  /** Clínica do teste beta: usuários aceitam o Termo de Teste. Ausente = false. */
-  @IsOptional()
+  /**
+   * Clínica do teste beta (usuários aceitam o Termo de Teste)? A escolha é OBRIGATÓRIA, sem padrão silencioso:
+   * esquecer a marcação depois do lançamento colocaria o Termo de Teste na frente de clientes reais.
+   * O tipo fica opcional só para não quebrar quem monta o DTO em código; a validação (IsDefined) exige.
+   */
+  @IsDefined({ message: 'faseTeste é obrigatório: informe se é clínica do teste beta.' })
   @IsBoolean()
   faseTeste?: boolean;
 

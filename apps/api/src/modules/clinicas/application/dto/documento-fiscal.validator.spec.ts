@@ -56,6 +56,7 @@ describe('CriarClinicaDto — validação do documento conforme o tipo', () => {
       plano: 'basico',
       fusoHorario: 'America/Sao_Paulo',
       duracaoConsultaPadrao: 50,
+      faseTeste: false,
     },
     primeiroAdmin: { nome: 'Fulana', email: 'fulana@teste.com' },
   };

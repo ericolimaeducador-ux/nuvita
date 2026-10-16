@@ -25,6 +25,7 @@ const clinicaInput = {
   plano: PlanoClinica.BASICO,
   fusoHorario: 'America/Sao_Paulo',
   duracaoConsultaPadrao: 50,
+  faseTeste: false,
 };
 
 describe('Clínica: telefone e emailContato aceitos pelo SUPER_ADMIN (RED 6)', () => {

@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import * as speakeasy from 'speakeasy';
 import { exigeTwoFactor, Modulo, Papel } from '../../../../../packages/shared/src/auth';
@@ -9,7 +9,8 @@ import { toPublicUser } from '../auth/domain/user.entity';
 import { AppConfigService } from '../../common/security/config.service';
 import { gerarSenhaTemporaria } from '../../common/security/gerar-senha-temporaria';
 import { CLINICA_REPOSITORY } from '../clinicas/clinicas.constants';
-import { ClinicaRepository } from '../clinicas/application/ports/clinica.repository';
+import { ClinicaRepository, UpdateClinicaInput } from '../clinicas/application/ports/clinica.repository';
+import { Clinica } from '../clinicas/domain/clinica.entity';
 import { ClinicasService } from '../clinicas/application/clinicas.service';
 import { ListUsersQueryDto } from './application/dto/list-users-query.dto';
 import { UpdateUserDto } from './application/dto/update-user.dto';
@@ -25,6 +26,8 @@ export interface CriarClinicaContext {
 
 @Injectable()
 export class SuperAdminService {
+  private readonly logger = new Logger(SuperAdminService.name);
+
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(CLINICA_REPOSITORY) private readonly clinicas: ClinicaRepository,
@@ -49,7 +52,7 @@ export class SuperAdminService {
         nome: dto.clinica.nome,
         documento: dto.clinica.documento,
         tipoDocumento: dto.clinica.tipoDocumento,
-        faseTeste: dto.clinica.faseTeste ?? false,
+        faseTeste: dto.clinica.faseTeste,
         plano: dto.clinica.plano,
         configuracoes: {
           fusoHorario: dto.clinica.fusoHorario,
@@ -93,10 +96,24 @@ export class SuperAdminService {
 
   async updateClinica(id: string, dto: UpdateClinicaDto, context?: CriarClinicaContext) {
     const camposContato = (['telefone', 'emailContato'] as const).filter((campo) => dto[campo] !== undefined);
-    const antes = camposContato.length > 0 ? await this.clinicas.findById(id) : null;
+    // Estado anterior quando há auditoria de contato ou 2º passo (propagação aos usuários): é o que a compensação restaura.
+    const antes =
+      camposContato.length > 0 || dto.faseTeste !== undefined ? await this.clinicas.findById(id) : null;
 
     const updated = await this.clinicas.update(id, dto);
     if (!updated) throw new NotFoundException('Clínica não encontrada.');
+    // A marcação de fase de teste vale para todos os usuários da clínica: é ela que
+    // decide qual termo eles aceitam (ver versaoTermosExigida). São dois passos sem transação
+    // (clínica, depois usuários): se o 2º falha, a edição inteira é desfeita para que clínica e
+    // usuários nunca divirjam.
+    if (dto.faseTeste !== undefined) {
+      try {
+        await this.users.definirFaseTesteDaClinica(id, dto.faseTeste);
+      } catch (error) {
+        await this.desfazerEdicaoDaClinica(id, antes, dto);
+        throw error;
+      }
+    }
     if (camposContato.length > 0 && context) {
       await this.clinicasService.registrarAuditoriaAdministrativa({
         event: AuditEvent.CLINIC_CONTACT_UPDATED,
@@ -111,12 +128,37 @@ export class SuperAdminService {
         },
       });
     }
-    // A marcação de fase de teste vale para todos os usuários da clínica: é ela que
-    // decide qual termo eles aceitam (ver versaoTermosExigida).
-    if (dto.faseTeste !== undefined) {
-      await this.users.definirFaseTesteDaClinica(id, dto.faseTeste);
-    }
     return updated;
+  }
+
+  /** Compensação do updateClinica: devolve a clínica e os usuários ao estado anterior (melhor esforço, logado). */
+  private async desfazerEdicaoDaClinica(
+    id: string,
+    antes: Clinica | null,
+    dto: UpdateClinicaDto,
+  ): Promise<void> {
+    if (!antes) return;
+    try {
+      const restaurar: UpdateClinicaInput = {};
+      if (dto.nome !== undefined) restaurar.nome = antes.nome;
+      if (dto.plano !== undefined) restaurar.plano = antes.plano;
+      if (dto.ativo !== undefined) restaurar.ativo = antes.ativo;
+      if (dto.faseTeste !== undefined) restaurar.faseTeste = antes.faseTeste;
+      if (dto.telefone !== undefined) restaurar.telefone = antes.configuracoes.telefone;
+      if (dto.emailContato !== undefined) restaurar.emailContato = antes.configuracoes.emailContato;
+      await this.clinicas.update(id, restaurar);
+      // A propagação pode ter falhado no meio (updateMany parcial): reaplica o valor anterior a todos.
+      await this.users.definirFaseTesteDaClinica(id, antes.faseTeste);
+    } catch (compensacaoErro) {
+      this.logger.error(
+        JSON.stringify({
+          level: 'error',
+          event: 'clinica_fase_teste_compensacao_falhou',
+          clinicaId: id,
+          erro: compensacaoErro instanceof Error ? compensacaoErro.message : String(compensacaoErro),
+        }),
+      );
+    }
   }
 
   /** Fase de teste herdada da clínica do usuário; sem clínica = fora do teste. */

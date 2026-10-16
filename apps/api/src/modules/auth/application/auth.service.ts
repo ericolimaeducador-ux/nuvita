@@ -272,6 +272,37 @@ export class AuthService {
   }
 
   /**
+   * O profissional preenche o PRÓPRIO CRP uma única vez (feature-timbre-clinico-dinamico). Depois de
+   * preenchido fica travado (409): a correção é só do super-admin, também auditada. O id vem do token,
+   * nunca do corpo. Formato do CRP não validado — confirmar em fonte do CFP.
+   */
+  async atualizarMeuCrp(userId: string, crp: string, context: RequestContext): Promise<{ user: PublicUser }> {
+    const user = await this.users.findById(userId);
+    if (!user || !user.ativo) {
+      throw new UnauthorizedException('Usuario inativo ou inexistente.');
+    }
+    if (user.crp) {
+      throw new ConflictException('CRP já definido; correção só pelo administrador.');
+    }
+
+    const updated = await this.users.update(userId, { crp });
+    if (!updated) {
+      throw new UnauthorizedException('Usuario inativo ou inexistente.');
+    }
+
+    await this.auditLogs.create({
+      event: AuditEvent.USER_CRP_SET,
+      userId,
+      email: user.email,
+      ip: context.ip,
+      userAgent: context.userAgent,
+      metadata: { crpNovo: crp },
+    });
+
+    return { user: toPublicUser(updated) };
+  }
+
+  /**
    * Conclui a troca de senha obrigatória do primeiro login
    * (feature-forced-password-change). Válido só enquanto `deveTrocarSenha` é
    * true; não é um "trocar minha senha" genérico (esse não passa por aqui e

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Patch,
   Post,
   Req,
   Res,
@@ -19,6 +20,7 @@ import {
   REFRESH_TOKEN_TTL_SECONDS,
 } from '../auth.constants';
 import { AceitarTermosDto } from '../application/dto/aceitar-termos.dto';
+import { AtualizarPerfilDto } from '../application/dto/atualizar-perfil.dto';
 import { TrocarSenhaObrigatoriaDto } from '../application/dto/trocar-senha-obrigatoria.dto';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { GateExempt } from './decorators/gate-exempt.decorator';
@@ -129,6 +131,19 @@ export class AuthController {
       dto.novaSenha,
       this.contextFromRequest(request),
     );
+  }
+
+  // O profissional grava o PRÓPRIO CRP (uma vez). O id vem do token; o corpo só aceita `crp`.
+  @Patch('me')
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
+  @UseGuards(JwtAuthGuard, AuthGatesGuard)
+  @AllowWithoutTenant()
+  async atualizarPerfil(
+    @Body() dto: AtualizarPerfilDto,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.authService.atualizarMeuCrp(user.sub, dto.crp, this.contextFromRequest(request));
   }
 
   private setRefreshCookie(response: Response, tokens: AuthTokens): void {

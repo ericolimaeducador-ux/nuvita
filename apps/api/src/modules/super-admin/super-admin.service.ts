@@ -4,6 +4,7 @@ import * as speakeasy from 'speakeasy';
 import { exigeTwoFactor, Modulo, Papel } from '../../../../../packages/shared/src/auth';
 import { USER_REPOSITORY } from '../auth/auth.constants';
 import { UserRepository } from '../auth/application/ports/user.repository';
+import { AuditEvent } from '../auth/domain/audit-event.enum';
 import { toPublicUser } from '../auth/domain/user.entity';
 import { AppConfigService } from '../../common/security/config.service';
 import { gerarSenhaTemporaria } from '../../common/security/gerar-senha-temporaria';
@@ -53,6 +54,8 @@ export class SuperAdminService {
         configuracoes: {
           fusoHorario: dto.clinica.fusoHorario,
           duracaoConsultaPadrao: dto.clinica.duracaoConsultaPadrao,
+          telefone: dto.clinica.telefone,
+          emailContato: dto.clinica.emailContato,
         },
         primeiroAdmin: {
           nome: dto.primeiroAdmin.nome,
@@ -88,9 +91,26 @@ export class SuperAdminService {
     return { items, total: items.length };
   }
 
-  async updateClinica(id: string, dto: UpdateClinicaDto) {
+  async updateClinica(id: string, dto: UpdateClinicaDto, context?: CriarClinicaContext) {
+    const camposContato = (['telefone', 'emailContato'] as const).filter((campo) => dto[campo] !== undefined);
+    const antes = camposContato.length > 0 ? await this.clinicas.findById(id) : null;
+
     const updated = await this.clinicas.update(id, dto);
     if (!updated) throw new NotFoundException('Clínica não encontrada.');
+    if (camposContato.length > 0 && context) {
+      await this.clinicasService.registrarAuditoriaAdministrativa({
+        event: AuditEvent.CLINIC_CONTACT_UPDATED,
+        userId: context.userId,
+        ip: context.ip,
+        userAgent: context.userAgent,
+        metadata: {
+          clinicaId: id,
+          campos: camposContato,
+          antes: Object.fromEntries(camposContato.map((c) => [c, antes?.configuracoes[c]])),
+          depois: Object.fromEntries(camposContato.map((c) => [c, dto[c]])),
+        },
+      });
+    }
     // A marcação de fase de teste vale para todos os usuários da clínica: é ela que
     // decide qual termo eles aceitam (ver versaoTermosExigida).
     if (dto.faseTeste !== undefined) {
@@ -152,7 +172,7 @@ export class SuperAdminService {
     return { ...toPublicUser(user), twoFactorSetup };
   }
 
-  async updateUsuario(id: string, dto: UpdateUserDto) {
+  async updateUsuario(id: string, dto: UpdateUserDto, context?: CriarClinicaContext) {
     const current = await this.users.findById(id);
     if (!current) throw new NotFoundException('Usuário não encontrado.');
 
@@ -199,6 +219,16 @@ export class SuperAdminService {
       ...(twoFactorSetup ? { twoFactorSecret: twoFactorSetup.base32 } : {}),
     });
     if (!updated) throw new NotFoundException('Usuário não encontrado.');
+    // Correção do CRP pelo super-admin: sempre permitida, sempre auditada (anterior/novo).
+    if (dto.crp !== undefined && dto.crp !== current.crp && context) {
+      await this.clinicasService.registrarAuditoriaAdministrativa({
+        event: AuditEvent.USER_CRP_CORRECTED,
+        userId: context.userId,
+        ip: context.ip,
+        userAgent: context.userAgent,
+        metadata: { alvoUserId: id, crpAnterior: current.crp, crpNovo: dto.crp },
+      });
+    }
     return { ...toPublicUser(updated), twoFactorSetup };
   }
 

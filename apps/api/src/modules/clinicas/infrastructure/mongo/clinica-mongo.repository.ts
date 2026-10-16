@@ -55,6 +55,8 @@ export class ClinicaMongoRepository implements ClinicaRepository {
     if (input.plano !== undefined) update.plano = input.plano;
     if (input.ativo !== undefined) update.ativo = input.ativo;
     if (input.faseTeste !== undefined) update.faseTeste = input.faseTeste;
+    if (input.telefone !== undefined) update['configuracoes.telefone'] = input.telefone;
+    if (input.emailContato !== undefined) update['configuracoes.emailContato'] = input.emailContato;
 
     const document = await this.model.findByIdAndUpdate(id, { $set: update }, { new: true }).exec();
     return document ? this.toEntity(document) : null;

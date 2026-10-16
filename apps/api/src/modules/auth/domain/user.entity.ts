@@ -16,6 +16,11 @@ export interface User {
   twoFactorSecret?: string;
   /** Registro do conselho profissional: CRM (médico), COREN (enfermeiro). */
   registroProfissional?: string;
+  /**
+   * CRP do psicólogo (assinatura dos documentos clínicos). Preenchido uma vez pelo próprio
+   * profissional; depois só o super-admin corrige. Sem unique. Ausente = ainda não informado.
+   */
+  crp?: string;
   ativo: boolean;
   criadoEm: Date;
   /** Troca de senha obrigatória no próximo login (feature-forced-password-change). Ausente = false. */

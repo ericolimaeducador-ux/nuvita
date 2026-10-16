@@ -11,15 +11,27 @@ import * as speakeasy from 'speakeasy';
 import { AppConfigService } from '../../../common/security/config.service';
 import { AuthTokenPayload, exigeTwoFactor, Papel } from '../../../../../../packages/shared/src/auth';
 import { AUDIT_LOG_REPOSITORY, USER_REPOSITORY } from '../../auth/auth.constants';
-import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
+import { AuditLogRepository, CreateAuditLogInput } from '../../auth/application/ports/audit-log.repository';
 import { UserRepository } from '../../auth/application/ports/user.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
 import { PublicUser, toPublicUser } from '../../auth/domain/user.entity';
 import { CLINICA_REPOSITORY } from '../clinicas.constants';
-import { Clinica, LIMITES_POR_PLANO } from '../domain/clinica.entity';
+import { Clinica, EnderecoClinica, LIMITES_POR_PLANO } from '../domain/clinica.entity';
+import { TipoDocumentoFiscal } from '../../../../../../packages/shared/src/documentos';
 import { CreateClinicaUsuarioDto } from './dto/create-clinica-usuario.dto';
 import { CreateClinicaDto } from './dto/create-clinica.dto';
 import { ClinicaRepository } from './ports/clinica.repository';
+
+/** Contrato de GET /clinicas/minha: só o necessário para o timbre dos documentos clínicos. */
+export interface MinhaClinica {
+  nome: string;
+  documento: string;
+  tipoDocumento: TipoDocumentoFiscal;
+  endereco?: EnderecoClinica;
+  telefone?: string;
+  emailContato?: string;
+  logoUrl?: string;
+}
 
 export interface OnboardingContext {
   ip: string;
@@ -206,6 +218,40 @@ export class ClinicasService {
       user: toPublicUser(user),
       twoFactorSetup,
     };
+  }
+
+  /**
+   * Dados do timbre dos documentos clínicos da clínica do PRÓPRIO usuário (feature-timbre-clinico-dinamico).
+   * O tenant vem só do token. Só os campos do timbre; ausentes ficam undefined (nunca string vazia).
+   */
+  async obterMinha(user: AuthTokenPayload): Promise<MinhaClinica> {
+    if (!user.clinicaId) {
+      throw new ForbiddenException('Usuario sem clinica no token.');
+    }
+
+    const clinica = await this.clinicas.findById(user.clinicaId);
+    if (!clinica) {
+      throw new NotFoundException('Clinica nao encontrada.');
+    }
+
+    const { telefone, emailContato, logoUrl } = clinica.configuracoes;
+    return {
+      nome: clinica.nome,
+      documento: clinica.documento,
+      tipoDocumento: clinica.tipoDocumento,
+      endereco: clinica.endereco,
+      telefone: telefone || undefined,
+      emailContato: emailContato || undefined,
+      logoUrl: logoUrl || undefined,
+    };
+  }
+
+  /**
+   * Grava um AuditLog de ação administrativa do super-admin. O SuperAdminService não tem repositório de
+   * auditoria próprio; este serviço já grava AuditLog e é injetado nele.
+   */
+  async registrarAuditoriaAdministrativa(input: CreateAuditLogInput): Promise<void> {
+    await this.auditLogs.create(input);
   }
 
   async findById(id: string): Promise<Clinica | null> {

@@ -1,8 +1,10 @@
-import { Type } from 'class-transformer';
-import { IsBoolean, IsEmail, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Min, Validate, ValidateNested } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsBoolean, IsEmail, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min, Validate, ValidateNested } from 'class-validator';
 import { TipoDocumentoFiscal } from '../../../../../../../packages/shared/src/documentos';
 import { DocumentoFiscalConstraint } from '../../../clinicas/application/dto/documento-fiscal.validator';
 import { PlanoClinica } from '../../../clinicas/domain/clinica.entity';
+
+const trimTexto = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
 class ClinicaInputDto {
   @IsString()
@@ -33,6 +35,19 @@ class ClinicaInputDto {
   @IsInt()
   @Min(5)
   duracaoConsultaPadrao!: number;
+
+  /** Contato impresso no timbre dos documentos clínicos. */
+  @IsOptional()
+  @Transform(trimTexto)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(30)
+  telefone?: string;
+
+  @IsOptional()
+  @Transform(trimTexto)
+  @IsEmail()
+  emailContato?: string;
 }
 
 class PrimeiroAdminInputDto {

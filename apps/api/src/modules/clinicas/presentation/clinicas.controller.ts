@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { extractRequestMeta } from '../../../common/http/client-ip';
 import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
@@ -14,6 +14,14 @@ import { CreateClinicaUsuarioDto } from '../application/dto/create-clinica-usuar
 @Controller('clinicas')
 export class ClinicasController {
   constructor(private readonly clinicasService: ClinicasService) {}
+
+  // Declarada antes das rotas com :clinicaId. Sem @Param/@Query: o tenant vem só do token.
+  @Get('minha')
+  @UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
+  @Roles(Papel.ADMIN, Papel.PSICOLOGO, Papel.SECRETARIA)
+  minha(@CurrentUser() user: AuthTokenPayload) {
+    return this.clinicasService.obterMinha(user);
+  }
 
   @Post(':clinicaId/usuarios')
   @UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)

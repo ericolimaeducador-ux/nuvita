@@ -24,6 +24,7 @@ export interface UpdateUserInput {
   passwordHash?: string;
   twoFactorSecret?: string;
   registroProfissional?: string;
+  crp?: string;
   modulosConcedidos?: Modulo[];
   modulosRevogados?: Modulo[];
   deveTrocarSenha?: boolean;

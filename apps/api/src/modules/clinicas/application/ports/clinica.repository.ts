@@ -8,6 +8,9 @@ export interface UpdateClinicaInput {
   plano?: Clinica['plano'];
   ativo?: boolean;
   faseTeste?: boolean;
+  /** Gravados em configuracoes.* (dotted path), sem trocar o objeto inteiro. */
+  telefone?: string;
+  emailContato?: string;
 }
 
 export interface ClinicaRepository {

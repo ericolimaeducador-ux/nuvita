@@ -13,9 +13,7 @@ import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-
 import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
-import { CreateNotificacaoDto } from '../../notificacoes/application/dto/create-notificacao.dto';
 import { NotificacoesService } from '../../notificacoes/application/notificacoes.service';
-import { CanalNotificacao, TipoNotificacao } from '../../notificacoes/domain/notificacao.entity';
 import { PacientesService } from '../../pacientes/application/pacientes.service';
 import {
   DOCUMENTO_REPOSITORY,
@@ -54,6 +52,8 @@ export class DocumentosService {
     @Inject(DOCUMENTO_REPOSITORY) private readonly documentos: DocumentoRepository,
     @Inject('DOCUMENT_STORAGE') private readonly storage: DocumentStorage,
     @Inject(AUDIT_LOG_REPOSITORY) private readonly auditLogs: AuditLogRepository,
+    // Sem uso hoje: upload de prontuário é arquivo interno e não notifica o paciente. Mantidos para a futura
+    // feature "psicólogo envia documento ao paciente" (template RESULTADO_DISPONIVEL e EmailSender seguem existindo).
     private readonly pacientesService: PacientesService,
     private readonly notificacoesService: NotificacoesService,
   ) {}
@@ -126,8 +126,6 @@ export class DocumentosService {
       documentoId,
       thumbnail: Boolean(thumbnailUrl),
     });
-
-    await this.notificarResultadoDisponivel(documento, resolvedClinicaId, context);
 
     return {
       ...documento,
@@ -315,63 +313,5 @@ export class DocumentosService {
       userAgent: context.userAgent,
       metadata,
     });
-  }
-
-  /**
-   * Dispara a notificação de resultado disponível (RESULTADO_DISPONIVEL) via
-   * NotificacoesService.create() — mesmo padrão de
-   * AgendamentosService.notificarConfirmacaoAgendamento() e
-   * TelemedicinaService.notificarLinkTeleconsulta(): método público
-   * (enfileira no BullMQ de verdade), efeito colateral não crítico, falha
-   * logada (fail-closed com visibilidade) e nunca derruba a confirmação de
-   * upload.
-   */
-  private async notificarResultadoDisponivel(
-    documento: Documento,
-    clinicaId: string,
-    context: DocumentoRequestContext,
-  ): Promise<void> {
-    const paciente = (await this.pacientesService.resumoPorIds(clinicaId, [documento.pacienteId])).get(
-      documento.pacienteId,
-    );
-    if (!paciente?.email) {
-      return;
-    }
-
-    try {
-      await this.notificacoesService.create(
-        {
-          clinicaId,
-          destinatarioId: documento.pacienteId,
-          tipo: TipoNotificacao.RESULTADO_DISPONIVEL,
-          canal: CanalNotificacao.EMAIL,
-          email: paciente.email,
-          nome: paciente.nomeDestinatario,
-          paraResponsavel: paciente.ehResponsavel,
-        } as CreateNotificacaoDto,
-        context,
-      );
-    } catch (error) {
-      this.logFalhaNotificacao(TipoNotificacao.RESULTADO_DISPONIVEL, clinicaId, documento.id, error);
-    }
-  }
-
-  private logFalhaNotificacao(
-    tipo: TipoNotificacao,
-    clinicaId: string,
-    documentoId: string,
-    error: unknown,
-  ): void {
-    this.logger.warn(
-      JSON.stringify({
-        level: 'warn',
-        msg: 'Falha ao acionar notificacao pos-confirmacao de upload; documento foi confirmado normalmente.',
-        event: 'notification_trigger_failed',
-        tipo,
-        clinicaId,
-        documentoId,
-        erro: error instanceof Error ? error.message : String(error),
-      }),
-    );
   }
 }

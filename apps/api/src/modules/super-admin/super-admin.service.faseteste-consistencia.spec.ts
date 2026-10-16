@@ -119,3 +119,82 @@ describe('CriarClinicaDto — faseTeste explícito (D2)', () => {
     await expect(pipe.transform(payload('sim'), meta)).rejects.toBeInstanceOf(BadRequestException);
   });
 });
+
+describe('SuperAdminService.updateClinica — contato + faseTeste com rollback (D1 × #27)', () => {
+  const antes = {
+    id: 'cli-1',
+    nome: 'Clínica A',
+    plano: PlanoClinica.BASICO,
+    ativo: true,
+    faseTeste: true,
+    configuracoes: { telefone: '(11) 4000-0000', emailContato: 'velho@clinica.test' },
+  };
+  const ator = { ip: '203.0.113.9', userAgent: 'jest', userId: 'super-1' };
+
+  function montar(propagar: jest.Mock) {
+    let atual = { ...antes, configuracoes: { ...antes.configuracoes } };
+    const clinicas = {
+      findById: jest.fn(async () => ({ ...atual, configuracoes: { ...atual.configuracoes } })),
+      update: jest.fn(async (_id: string, input: Record<string, unknown>) => {
+        const { telefone, emailContato, ...resto } = input as { telefone?: string; emailContato?: string };
+        atual = {
+          ...atual,
+          ...resto,
+          configuracoes: {
+            ...atual.configuracoes,
+            ...(telefone !== undefined ? { telefone } : {}),
+            ...(emailContato !== undefined ? { emailContato } : {}),
+          },
+        };
+        return { ...atual };
+      }),
+    };
+    const clinicasService = { registrarAuditoriaAdministrativa: jest.fn().mockResolvedValue(undefined) };
+    const service = new SuperAdminService(
+      { definirFaseTesteDaClinica: propagar } as never,
+      clinicas as never,
+      {} as never,
+      clinicasService as never,
+    );
+    return { service, clinicasService, estado: () => atual };
+  }
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('propagação falha (rollback): NÃO grava a auditoria CLINIC_CONTACT_UPDATED', async () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const propagar = jest.fn().mockRejectedValueOnce(new Error('mongo caiu')).mockResolvedValue(3);
+    const { service, clinicasService } = montar(propagar);
+
+    await expect(
+      service.updateClinica('cli-1', { faseTeste: false, telefone: '(11) 4000-1234' }, ator),
+    ).rejects.toThrow('mongo caiu');
+
+    expect(clinicasService.registrarAuditoriaAdministrativa).not.toHaveBeenCalled();
+  });
+
+  it('propagação falha (rollback): telefone e emailContato voltam aos valores anteriores', async () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const propagar = jest.fn().mockRejectedValueOnce(new Error('mongo caiu')).mockResolvedValue(3);
+    const { service, estado } = montar(propagar);
+
+    await expect(
+      service.updateClinica(
+        'cli-1',
+        { faseTeste: false, telefone: '(11) 4000-1234', emailContato: 'novo@clinica.test' },
+        ator,
+      ),
+    ).rejects.toThrow('mongo caiu');
+
+    expect(estado().configuracoes).toEqual(antes.configuracoes);
+    expect(estado().faseTeste).toBe(true);
+  });
+
+  it('caminho feliz: com faseTeste e contato, a auditoria é gravada uma vez', async () => {
+    const { service, clinicasService } = montar(jest.fn().mockResolvedValue(3));
+
+    await service.updateClinica('cli-1', { faseTeste: false, telefone: '(11) 4000-1234' }, ator);
+
+    expect(clinicasService.registrarAuditoriaAdministrativa).toHaveBeenCalledTimes(1);
+  });
+});

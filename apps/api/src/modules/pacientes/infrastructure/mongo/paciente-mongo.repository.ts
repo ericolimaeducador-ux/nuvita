@@ -410,7 +410,13 @@ export class PacienteMongoRepository implements PacienteRepository {
   }
 
   private decryptOptional(value?: string): string | undefined {
-    return value ? this.crypto.decryptString(value) : undefined;
+    if (!value) return undefined;
+    try {
+      return this.crypto.decryptString(value);
+    } catch (error) {
+      this.logger.warn(`Campo cifrado de paciente ilegível e omitido na leitura: ${(error as Error).message}`);
+      return undefined;
+    }
   }
 
   private encryptJsonOptional<T>(value?: T): string | undefined {
@@ -418,6 +424,12 @@ export class PacienteMongoRepository implements PacienteRepository {
   }
 
   private decryptJsonOptional<T>(value?: string): T | undefined {
-    return value ? this.crypto.decryptJson<T>(value) : undefined;
+    if (!value) return undefined;
+    try {
+      return this.crypto.decryptJson<T>(value);
+    } catch (error) {
+      this.logger.warn(`Campo cifrado de paciente ilegível e omitido na leitura: ${(error as Error).message}`);
+      return undefined;
+    }
   }
 }

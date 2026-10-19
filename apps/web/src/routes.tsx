@@ -32,6 +32,8 @@ import { ProntuarioImpressaoPage } from '@/pages/ProntuarioImpressaoPage';
 import { AtendimentoPsicologicoPage } from '@/pages/AtendimentoPsicologicoPage';
 import { SuperAdminPage } from '@/pages/SuperAdminPage';
 import { RelatoriosGerenciaisPage } from '@/pages/RelatoriosGerenciaisPage';
+import { CaptacaoPage } from '@/pages/CaptacaoPage';
+import { CaptacaoPacientesPage } from '@/pages/CaptacaoPacientesPage';
 import { Modulo, Papel } from '@/types';
 
 // Usado em "/" e no catch-all: sessão válida → dashboard; senão → landing.
@@ -60,6 +62,10 @@ export function AppRoutes() {
       <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
       <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
       <Route path="/esqueci-login" element={<ForgotLoginPage />} />
+      {/* Posto do enfermeiro captador. Sem login do Nuvita e sem caminho para o prontuário.
+          O código do enfermeiro só é gravado aqui. */}
+      <Route path="/captacao_pacientes" element={<CaptacaoPage />} />
+      <Route path="/captacao" element={<Navigate to="/captacao_pacientes" replace />} />
       {/* Sala de teleatendimento é PÚBLICA: o paciente entra pelo link com o
           token da sala, sem conta no sistema. O token UUID é a credencial. */}
       <Route path="/tele/:token" element={<AtendimentoTelemedicinaPage />} />
@@ -80,6 +86,7 @@ export function AppRoutes() {
           <Route element={<ProtectedRoute modulo={Modulo.PACIENTES} />}>
             <Route path="/pacientes" element={<PacientesPage />} />
             <Route path="/pacientes/:id" element={<PacienteDetailPage />} />
+            <Route path="/captacao-pacientes" element={<CaptacaoPacientesPage />} />
           </Route>
           <Route element={<ProtectedRoute modulo={Modulo.AGENDA} />}>
             <Route path="/agenda" element={<AgendaPage />} />

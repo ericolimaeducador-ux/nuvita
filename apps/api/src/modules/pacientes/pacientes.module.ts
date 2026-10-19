@@ -30,6 +30,6 @@ import { PacientesController } from './presentation/pacientes.controller';
     { provide: PACIENTE_REPOSITORY, useClass: PacienteMongoRepository },
     { provide: AUDIT_LOG_REPOSITORY, useClass: AuditLogMongoRepository },
   ],
-  exports: [PacientesService],
+  exports: [PacientesService, PacienteCryptoService],
 })
 export class PacientesModule {}

@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  LayoutDashboard, Users, Calendar, Bell, DollarSign,
+  LayoutDashboard, Users, UserPlus, Calendar, Bell, DollarSign,
   Video, Building2, LogOut, ChevronLeft, ChevronRight, Activity, Shield, Brain, Wallet, BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,7 @@ import { Logo, LogoIcon } from '@/components/Logo';
 const navItems: { to: string; icon: React.ElementType; label: string; modulo: Modulo; roles?: Papel[] }[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', modulo: Modulo.DASHBOARD },
   { to: '/pacientes', icon: Users, label: 'Pacientes', modulo: Modulo.PACIENTES },
+  { to: '/captacao-pacientes', icon: UserPlus, label: 'Captação de Pacientes', modulo: Modulo.PACIENTES },
   { to: '/fluxo-clinico', icon: Activity, label: 'Fluxo Clínico', modulo: Modulo.FLUXO_CLINICO },
   { to: '/atendimento-psicologico', icon: Brain, label: 'Atend. Psicológico', modulo: Modulo.ATENDIMENTO_PSICOLOGICO },
   { to: '/financeiro-psicologia', icon: Wallet, label: 'Financeiro (Psi)', modulo: Modulo.FINANCEIRO_PSICOLOGIA },

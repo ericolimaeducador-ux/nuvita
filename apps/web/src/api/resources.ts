@@ -109,6 +109,28 @@ export const pacientesApi = {
     api.patch<Paciente>(`/pacientes/${id}/fluxo/avancar`).then((r) => r.data),
 };
 
+// ---------- Captação de pacientes (fila de campo) ----------
+export interface CaptacaoPendente {
+  id: string;
+  nome: string;
+  cpf: string;
+  dataNascimento: string;
+  endereco: string;
+  telefone: string;
+  email: string;
+  codigoEnfermeiro: string;
+  status: 'pendente' | 'exportado';
+  criadoEm: string;
+}
+export const captacaoApi = {
+  listarPendentes: () =>
+    api.get<{ success: true; data: CaptacaoPendente[] }>('/captacao').then((r) => r.data),
+  exportar: (id: string) =>
+    api
+      .post<{ success: true; message: string; pacienteId: string }>(`/captacao/${id}/exportar`)
+      .then((r) => r.data),
+};
+
 // ---------- Agenda ----------
 export interface ListAgendamentosParams {
   medicoId?: string;

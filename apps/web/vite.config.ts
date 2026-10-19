@@ -34,7 +34,7 @@ export default defineConfig(({ command }) => ({
   server: {
     port: 5173,
     proxy: {
-      '^/(auth|clinicas|pacientes|agendamentos|prontuarios|documentos|notificacoes|financeiro|telemedicina|super-admin|analytics|avaliacao-iu|followup|laudo-medico|produtos|entregas|health|checklist-documentos|observacoes-paciente|pagamentos)(?=$|[/?])':
+      '^/(auth|clinicas|pacientes|captacao|agendamentos|prontuarios|documentos|notificacoes|financeiro|telemedicina|super-admin|analytics|avaliacao-iu|followup|laudo-medico|produtos|entregas|health|checklist-documentos|observacoes-paciente|pagamentos)(?=$|[/?])':
         apiProxy,
     },
   },

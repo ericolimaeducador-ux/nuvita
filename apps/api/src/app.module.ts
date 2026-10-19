@@ -25,6 +25,7 @@ import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { ChecklistDocumentosModule } from './modules/checklist-documentos/checklist-documentos.module';
 import { ObservacoesPacienteModule } from './modules/observacoes-paciente/observacoes-paciente.module';
 import { MercadoPagoModule } from './modules/mercado-pago/mercado-pago.module';
+import { CaptacaoModule } from './modules/captacao/captacao.module';
 
 @Module({
   imports: [
@@ -34,8 +35,8 @@ import { MercadoPagoModule } from './modules/mercado-pago/mercado-pago.module';
     }),
     SecurityModule,
     TenancyModule,
-    // Limite padrão para onde o AuthThrottlerGuard for aplicado (hoje, só as
-    // rotas de /auth). Rotas específicas apertam com @Throttle().
+    // Limite padrão para onde o AuthThrottlerGuard for aplicado (auth e
+    // captação pública). Rotas específicas apertam com @Throttle().
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 30 }]),
     MongooseModule.forRootAsync({
       imports: [SecurityModule],
@@ -64,6 +65,7 @@ import { MercadoPagoModule } from './modules/mercado-pago/mercado-pago.module';
     ChecklistDocumentosModule,
     ObservacoesPacienteModule,
     MercadoPagoModule,
+    CaptacaoModule,
   ],
 })
 export class AppModule {}

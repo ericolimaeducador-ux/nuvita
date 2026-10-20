@@ -41,3 +41,7 @@ apps/web/src/legal/termo-de-teste.md
 
 # Playwright MCP – screenshots/snapshots de sessão (browser tooling), estado local
 .playwright-mcp/
+
+# Playwright (harness do timbre)
+apps/web/test-results/
+apps/web/playwright-report/

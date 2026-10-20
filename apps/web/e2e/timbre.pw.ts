@@ -97,14 +97,14 @@ test.describe('timbre clínico dinâmico', () => {
   test('6a. PSICOLOGO sem CRP: emissão bloqueada com aviso', async ({ page }) => {
     const { crp: _c, ...semCrp } = PSICOLOGO;
     await abrir(page, semCrp);
-    await expect(page.getByText('preencha seu CRP no perfil', { exact: false })).toBeVisible();
+    await expect(page.getByText('Preencha seu CRP para emitir documentos', { exact: false })).toBeVisible();
     await expect(page.getByTestId('corpo-clinico')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /imprimir/i })).toHaveCount(0);
   });
 
   test('6a2. CRP só com espaços também bloqueia (presença, sem validar formato)', async ({ page }) => {
     await abrir(page, { ...PSICOLOGO, crp: '   ' });
-    await expect(page.getByText('preencha seu CRP no perfil', { exact: false })).toBeVisible();
+    await expect(page.getByText('Preencha seu CRP para emitir documentos', { exact: false })).toBeVisible();
   });
 
   test('6a3. CRP em qualquer formato não vazio NÃO bloqueia (sem regex)', async ({ page }) => {
@@ -116,7 +116,34 @@ test.describe('timbre clínico dinâmico', () => {
   test('6b. SECRETARIA sem CRP NÃO é bloqueada', async ({ page }) => {
     await abrir(page, SECRETARIA);
     await expect(page.getByTestId('corpo-clinico')).toBeVisible();
-    await expect(page.getByText('preencha seu CRP no perfil', { exact: false })).toHaveCount(0);
+    await expect(page.getByText('Preencha seu CRP para emitir documentos', { exact: false })).toHaveCount(0);
     await expect(page.getByTestId('assinatura')).not.toContainText('CRP');
+  });
+
+  test('7. PSICOLOGO sem CRP preenche o campo inline: o bloqueio some e o documento renderiza', async ({ page }) => {
+    const { crp: _c, ...semCrp } = PSICOLOGO;
+    await page.route('**/auth/me', (route) =>
+      route.fulfill({ json: { user: { ...semCrp, crp: '06/99999' } } }),
+    );
+    await abrir(page, semCrp);
+    await expect(page.getByTestId('corpo-clinico')).toHaveCount(0);
+    await page.getByLabel('Seu CRP').fill('06/99999');
+    await page.getByRole('button', { name: 'Salvar CRP' }).click();
+    await expect(page.getByTestId('corpo-clinico')).toBeVisible();
+    await expect(page.getByTestId('bloqueio-crp')).toHaveCount(0);
+    await expect(page.getByTestId('assinatura')).toContainText('Dra. Ana Souza — CRP 06/99999');
+  });
+
+  test('7b. 409 (CRP já cadastrado) mostra mensagem clara, não erro cru', async ({ page }) => {
+    const { crp: _c, ...semCrp } = PSICOLOGO;
+    await page.route('**/auth/me', (route) =>
+      route.fulfill({ status: 409, json: { message: 'CRP já definido; correção só pelo administrador.' } }),
+    );
+    await abrir(page, semCrp);
+    await page.getByLabel('Seu CRP').fill('06/12345');
+    await page.getByRole('button', { name: 'Salvar CRP' }).click();
+    await expect(page.getByText('Seu CRP já está cadastrado. Saia e entre novamente.')).toBeVisible();
+    await expect(page.getByTestId('corpo-clinico')).toHaveCount(0);
+    await expect(page.getByText('CRP já definido')).toHaveCount(0);
   });
 });

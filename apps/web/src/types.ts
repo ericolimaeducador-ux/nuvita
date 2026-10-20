@@ -59,6 +59,7 @@ export const SEXO_LABEL: Record<Sexo, string> = {
 export enum ProjetoPaciente {
   ALPHA = 'ALPHA',
   BETA = 'BETA',
+  SIGMA = 'SIGMA',
   // Pacientes de atendimento psicológico — só aparecem para o papel PSICOLOGO
   // (o backend filtra); nunca aparecem para os demais profissionais.
   PSI = 'PSI',
@@ -67,6 +68,7 @@ export enum ProjetoPaciente {
 export const PROJETO_LABEL: Record<ProjetoPaciente, string> = {
   [ProjetoPaciente.ALPHA]: 'Projeto Alpha',
   [ProjetoPaciente.BETA]: 'Projeto Beta',
+  [ProjetoPaciente.SIGMA]: 'Projeto Sigma',
   [ProjetoPaciente.PSI]: 'Projeto PSI (Psicologia)',
 };
 

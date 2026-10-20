@@ -13,6 +13,7 @@
     "preview": "vite preview",
     "pretypecheck": "npm run copy:legal",
     "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
     "prelint": "npm run copy:legal",
     "lint": "tsc --noEmit"
   },
@@ -52,6 +53,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/react": "^18.3.10",
     "@types/react-big-calendar": "^1.16.3",
     "@types/react-dom": "^18.3.0",

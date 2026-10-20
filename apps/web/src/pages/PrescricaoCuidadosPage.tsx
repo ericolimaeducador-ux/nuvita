@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -12,8 +12,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/PageHeader';
 import { DocumentoClinicoLayout } from '@/components/DocumentoClinicoLayout';
+import { DocumentoAssinatura } from '@/components/DocumentoAssinatura';
 import { toast } from '@/components/ui/use-toast';
-import { useAuth } from '@/auth/AuthContext';
 import { pacientesApi, iaClinicaApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { SUGESTOES_CUIDADOS_POR_LINHA } from '@/lib/linhaTerapeutica';
@@ -29,11 +29,9 @@ const CHECKLIST_FIXO = [
 export function PrescricaoCuidadosPage() {
   const { id: pacienteId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [modo, setModo] = useState<'compor' | 'imprimir'>('compor');
   const [checklist, setChecklist] = useState<string[]>([]);
   const [textoLivre, setTextoLivre] = useState('');
-  const [crp, setCrp] = useState('');
   // Rascunho da IA aguardando decisão do psicólogo (null = sem sugestão pendente).
   const [sugestaoIa, setSugestaoIa] = useState<{ texto: string; registroUsoIaId: string } | null>(null);
 
@@ -44,10 +42,6 @@ export function PrescricaoCuidadosPage() {
   });
   const paciente = pacienteQ.data;
   const sugestoes = paciente?.linhaTerapeutica ? SUGESTOES_CUIDADOS_POR_LINHA[paciente.linhaTerapeutica] : [];
-
-  useEffect(() => {
-    setCrp(user?.registroProfissional ?? '');
-  }, [user?.registroProfissional]);
 
   function toggleChecklist(item: string) {
     setChecklist((cur) => (cur.includes(item) ? cur.filter((i) => i !== item) : [...cur, item]));
@@ -103,11 +97,7 @@ export function PrescricaoCuidadosPage() {
           <p className="whitespace-pre-wrap leading-relaxed">{textoLivre}</p>
         )}
 
-        <div className="mt-16 flex flex-col items-center gap-1 text-sm">
-          <p>_____________________________________</p>
-          <p className="font-semibold">{user?.nome ?? 'Psicólogo(a) responsável'}</p>
-          <p className="text-gray-600">{crp ? `Psicólogo(a) — CRP ${crp}` : 'Psicólogo(a)'}</p>
-        </div>
+        <DocumentoAssinatura />
       </DocumentoClinicoLayout>
     );
   }

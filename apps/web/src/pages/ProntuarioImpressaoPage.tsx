@@ -7,6 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { prontuariosApi, pacientesApi } from '@/api/resources';
 import { formatData, formatEndereco } from '@/utils';
 import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
+import { GateCrpEmissao } from '@/components/GateCrpEmissao';
+import { useEmissor } from '@/components/DocumentoAssinatura';
 import { TipoAtendimento, TIPO_ATENDIMENTO_LABEL, REGISTRO_PSICOLOGICO_CAMPOS, type ExameSegmentar } from '@/types';
 
 const EXAME_SEGMENTAR_CAMPOS: { key: keyof ExameSegmentar; label: string }[] = [
@@ -33,6 +35,7 @@ function Campo({ label, children }: { label: string; children?: React.ReactNode 
 export function ProntuarioImpressaoPage() {
   const { id: pacienteId, prontuarioId } = useParams<{ id: string; prontuarioId: string }>();
   const navigate = useNavigate();
+  const emissor = useEmissor();
 
   const pacienteQ = useQuery({
     queryKey: ['paciente', pacienteId],
@@ -69,7 +72,7 @@ export function ProntuarioImpressaoPage() {
   const seg = pr?.objetivo?.exameSegmentar;
 
   return (
-    <>
+    <GateCrpEmissao>
       {/* Botões só na tela, não imprimem */}
       <div className="print:hidden flex items-center gap-3 p-4 border-b border-border">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -189,7 +192,7 @@ export function ProntuarioImpressaoPage() {
               </div>
             )}
             <div className="border-t-2 border-gray-800 pt-1">
-              <p className="text-sm font-semibold">Profissional Responsável</p>
+              <p className="text-sm font-semibold">{emissor.identificacao || 'Profissional Responsável'}</p>
             </div>
           </div>
           <div className="text-sm text-gray-500 text-right">
@@ -214,6 +217,6 @@ export function ProntuarioImpressaoPage() {
           }
         }
       `}</style>
-    </>
+    </GateCrpEmissao>
   );
 }

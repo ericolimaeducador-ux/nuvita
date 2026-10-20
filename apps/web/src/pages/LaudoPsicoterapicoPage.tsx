@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/PageHeader';
 import { DocumentoClinicoLayout } from '@/components/DocumentoClinicoLayout';
-import { useAuth } from '@/auth/AuthContext';
+import { DocumentoAssinatura } from '@/components/DocumentoAssinatura';
 import { pacientesApi, prontuariosApi } from '@/api/resources';
 import { toItems } from '@/utils';
 import { TipoAtendimento, type Prontuario } from '@/types';
@@ -48,10 +48,8 @@ function montarRascunho(sessoes: Prontuario[]): string {
 export function LaudoPsicoterapicoPage() {
   const { id: pacienteId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [modo, setModo] = useState<'compor' | 'imprimir'>('compor');
   const [texto, setTexto] = useState('');
-  const [crp, setCrp] = useState('');
   const [rascunhoAplicado, setRascunhoAplicado] = useState(false);
 
   const pacienteQ = useQuery({
@@ -75,10 +73,6 @@ export function LaudoPsicoterapicoPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessoesQ.isLoading]);
 
-  useEffect(() => {
-    setCrp(user?.registroProfissional ?? '');
-  }, [user?.registroProfissional]);
-
   const paciente = pacienteQ.data;
   const carregando = pacienteQ.isLoading || sessoesQ.isLoading;
 
@@ -94,11 +88,7 @@ export function LaudoPsicoterapicoPage() {
 
         <p className="whitespace-pre-wrap leading-relaxed">{texto}</p>
 
-        <div className="mt-16 flex flex-col items-center gap-1 text-sm">
-          <p>_____________________________________</p>
-          <p className="font-semibold">{user?.nome ?? 'Psicólogo(a) responsável'}</p>
-          <p className="text-gray-600">{crp ? `Psicólogo(a) — CRP ${crp}` : 'Psicólogo(a)'}</p>
-        </div>
+        <DocumentoAssinatura />
       </DocumentoClinicoLayout>
     );
   }

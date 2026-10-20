@@ -262,7 +262,7 @@ describe('GET /clinicas/minha — logoUrl presignada', () => {
     expect(privateUrl).toBe('s3://bucket/logos/cli-A/x.png');
     expect(ttl).toBeGreaterThanOrEqual(60);
     expect(ttl).toBeLessThanOrEqual(3600);
-    expect(r.logoUrl).toBe(`https://r2.test/get/bucket/logos/cli-A/x.png?ttl=${ttl}`);
+    expect(r.logoUrl).toBe(`https://r2.test/get/logos/cli-A/x.png?ttl=${ttl}`);
     expect(r).not.toHaveProperty('logoKey');
   });
 

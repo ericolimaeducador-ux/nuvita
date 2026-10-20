@@ -51,6 +51,7 @@ export class ClinicaMongoRepository implements ClinicaRepository {
 
   async update(id: string, input: UpdateClinicaInput): Promise<Clinica | null> {
     const update: Record<string, unknown> = {};
+    const unset: Record<string, 1> = {};
     if (input.nome !== undefined) update.nome = input.nome;
     if (input.plano !== undefined) update.plano = input.plano;
     if (input.ativo !== undefined) update.ativo = input.ativo;
@@ -58,7 +59,13 @@ export class ClinicaMongoRepository implements ClinicaRepository {
     if (input.telefone !== undefined) update['configuracoes.telefone'] = input.telefone;
     if (input.emailContato !== undefined) update['configuracoes.emailContato'] = input.emailContato;
 
-    const document = await this.model.findByIdAndUpdate(id, { $set: update }, { new: true }).exec();
+    if (typeof input.logoKey === 'string') update['configuracoes.logoKey'] = input.logoKey;
+    if (input.logoKey === null) unset['configuracoes.logoKey'] = 1;
+
+    const operacao: Record<string, unknown> = {};
+    if (Object.keys(update).length) operacao.$set = update;
+    if (Object.keys(unset).length) operacao.$unset = unset;
+    const document = await this.model.findByIdAndUpdate(id, operacao, { new: true }).exec();
     return document ? this.toEntity(document) : null;
   }
 

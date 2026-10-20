@@ -76,7 +76,7 @@ describe('GET /clinicas/minha', () => {
       endereco: { logradouro: 'Rua A', numero: '10', cidade: 'São Paulo', estado: 'SP', cep: '01000-000' },
       telefone: '(11) 4000-1234',
       emailContato: 'contato@clinica.test',
-      logoUrl: 'https://r2.test/get/bucket/logos/cli-A/logo.png?sig=x',
+      logoUrl: 'https://r2.test/get/logos/cli-A/logo.png?sig=x',
     });
   });
 

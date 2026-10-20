@@ -11,6 +11,8 @@ export interface UpdateClinicaInput {
   /** Gravados em configuracoes.* (dotted path), sem trocar o objeto inteiro. */
   telefone?: string;
   emailContato?: string;
+  /** configuracoes.logoKey: string define/troca; null remove. */
+  logoKey?: string | null;
 }
 
 export interface ClinicaRepository {

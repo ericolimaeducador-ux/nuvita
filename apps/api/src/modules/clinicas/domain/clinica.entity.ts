@@ -17,7 +17,10 @@ export interface EnderecoClinica {
 }
 
 export interface ConfiguracoesClinica {
+  /** Legado: nada o grava mais e /clinicas/minha o ignora. A logo vigente é `logoKey`. */
   logoUrl?: string;
+  /** Chave do objeto da logo no bucket privado (logos/<clinicaId>/...). Nunca exposta ao cliente. */
+  logoKey?: string;
   corPrimaria?: string;
   whatsappNumero?: string;
   emailRemetente?: string;

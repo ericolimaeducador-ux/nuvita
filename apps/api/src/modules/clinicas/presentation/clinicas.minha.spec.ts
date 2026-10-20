@@ -29,7 +29,7 @@ const clinica = (id: string, nome: string) => ({
     duracaoConsultaPadrao: 50,
     telefone: '(11) 4000-1234',
     emailContato: 'contato@clinica.test',
-    logoUrl: 'https://cdn.test/logo.png',
+    logoKey: 'logos/cli-A/logo.png',
   },
   ativo: true,
   criadoEm: new Date('2026-01-01T00:00:00.000Z'),
@@ -50,7 +50,12 @@ function makeService() {
     'cli-B': clinica('cli-B', 'Clínica B'),
   };
   const clinicas = { findById: jest.fn(async (id: string) => bancoDeClinicas[id] ?? null) };
-  const service = new ClinicasService(clinicas as never, {} as never, {} as never, {} as never);
+  // logoUrl vem de um GET presignado gerado da logoKey (bucket privado); a chave crua não sai.
+  const storage = {
+    privateUrlForKey: (key: string) => `s3://bucket/${key}`,
+    createReadUrl: jest.fn(async (u: string) => `https://r2.test/get/${u.slice(12)}?sig=x`),
+  };
+  const service = new ClinicasService(clinicas as never, {} as never, {} as never, {} as never, storage as never);
   return { service, clinicas };
 }
 
@@ -71,7 +76,7 @@ describe('GET /clinicas/minha', () => {
       endereco: { logradouro: 'Rua A', numero: '10', cidade: 'São Paulo', estado: 'SP', cep: '01000-000' },
       telefone: '(11) 4000-1234',
       emailContato: 'contato@clinica.test',
-      logoUrl: 'https://cdn.test/logo.png',
+      logoUrl: 'https://r2.test/get/bucket/logos/cli-A/logo.png?sig=x',
     });
   });
 

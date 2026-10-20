@@ -1,14 +1,21 @@
 import { useAuth } from '@/auth/AuthContext';
+import { preenchido } from '@/lib/timbre';
 
-/** Bloco de assinatura dos documentos clínicos: identifica quem emite. */
-export function DocumentoAssinatura() {
+/** Quem assina/emite: nome e CRP vêm da conta logada (user.crp), nunca de campo digitável. */
+export function useEmissor() {
   const { user } = useAuth();
-  const crp = user?.registroProfissional;
+  const nome = preenchido(user?.nome);
+  const crp = preenchido(user?.crp);
+  return { nome, crp, identificacao: [nome, crp && `CRP ${crp}`].filter(Boolean).join(' — ') };
+}
+
+/** Bloco de assinatura dos documentos clínicos: "<nome> — CRP <crp>". */
+export function DocumentoAssinatura() {
+  const { identificacao } = useEmissor();
   return (
     <div className="mt-16 flex flex-col items-center gap-1 text-sm" data-testid="assinatura">
       <p>_____________________________________</p>
-      <p className="font-semibold">{user?.nome ?? 'Psicólogo(a) responsável'}</p>
-      <p className="text-gray-600">{crp ? `Psicólogo(a) — CRP ${crp}` : 'Psicólogo(a)'}</p>
+      {identificacao && <p className="font-semibold">{identificacao}</p>}
     </div>
   );
 }

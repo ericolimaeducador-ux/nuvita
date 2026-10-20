@@ -219,6 +219,8 @@ export interface AuthUser {
   clinicaId?: string;
   /** Registro do conselho (CRM/COREN/OAB) — usado p/ preencher documentos. Ausente em sessões antigas. */
   registroProfissional?: string;
+  /** CRP do psicólogo (assinatura dos documentos clínicos). Preenchido uma vez pelo próprio; ausente = sem CRP. */
+  crp?: string;
   /** Permissões efetivas calculadas pela API; ausente em sessões antigas. */
   permissoes?: Modulo[];
   /** Troca de senha obrigatória no próximo login (feature-forced-password-change). Ausente em sessões antigas. */

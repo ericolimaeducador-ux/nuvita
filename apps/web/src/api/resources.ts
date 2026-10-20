@@ -4,6 +4,7 @@ import type {
   AuthUser,
   DecisaoUsoIA,
   Documento,
+  Endereco,
   Lancamento,
   LinhaTerapeutica,
   ListUsuariosResult,
@@ -44,6 +45,9 @@ export const authApi = {
       .post<LoginResponse>('/auth/login', { email, password, totpCode })
       .then((r) => r.data),
   logout: () => api.post('/auth/logout').then((r) => r.data),
+  // O próprio profissional grava o CRP (a API aceita uma única vez; depois só o super-admin corrige).
+  salvarMeuCrp: (crp: string) =>
+    api.patch<{ user: AuthUser }>('/auth/me', { crp }).then((r) => r.data),
   aceitarTermos: (versao: string) =>
     api
       .post<GateResolvidoResponse>('/auth/aceitar-termos', { versao })
@@ -67,7 +71,19 @@ export interface CriarUsuarioResponse {
   twoFactorSetup?: { otpauthUrl: string; base32: string };
 }
 
+/** Contrato de GET /clinicas/minha (timbre dos documentos clínicos). Campos ausentes = não preenchidos. */
+export interface MinhaClinica {
+  nome: string;
+  documento: string;
+  tipoDocumento: 'CPF' | 'CNPJ';
+  endereco?: Endereco;
+  telefone?: string;
+  emailContato?: string;
+  logoUrl?: string;
+}
+
 export const clinicasApi = {
+  minha: () => api.get<MinhaClinica>('/clinicas/minha').then((r) => r.data),
   // Cria um usuário (profissional ou secretaria) dentro da clínica do ADMIN.
   criarUsuario: (clinicaId: string, payload: CriarUsuarioPayload) =>
     api.post<CriarUsuarioResponse>(`/clinicas/${clinicaId}/usuarios`, payload).then((r) => r.data),

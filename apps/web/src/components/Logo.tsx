@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 // Logo Nuvita Psi (baseado no vetorial oficial do Nuvita): nuvem + batimento cardíaco + wordmark.
 // Cores controladas por variáveis CSS (--logo-icon-color / --logo-text-color) para
-// reuso em fundos claros e escuros. Os PNGs de `lib/brand.ts` seguem nos documentos
+// reuso em fundos claros e escuros. Os PNGs de `lib/brand.ts` servem só à interface do app (não aos documentos)
 // impressos (fundo branco, sem dependência de fonte web).
 
 // Traçado da nuvem + linha do batimento, compartilhado entre o logo completo e o ícone.

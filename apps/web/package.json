@@ -13,6 +13,7 @@
     "preview": "vite preview",
     "pretypecheck": "npm run copy:legal",
     "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
     "prelint": "npm run copy:legal",
     "lint": "tsc --noEmit"
   },

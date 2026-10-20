@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/PageHeader';
 import { DocumentoClinicoLayout } from '@/components/DocumentoClinicoLayout';
-import { useAuth } from '@/auth/AuthContext';
+import { DocumentoAssinatura } from '@/components/DocumentoAssinatura';
 import { pacientesApi, prontuariosApi } from '@/api/resources';
 import { toItems } from '@/utils';
 import { TipoAtendimento, type Prontuario } from '@/types';
@@ -18,7 +18,6 @@ import { TipoAtendimento, type Prontuario } from '@/types';
 export function AtestadoComparecimentoPage() {
   const { id: pacienteId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [modo, setModo] = useState<'compor' | 'imprimir'>('compor');
 
   const pacienteQ = useQuery({
@@ -37,17 +36,12 @@ export function AtestadoComparecimentoPage() {
   const ultimaSessao = sessoes[0];
 
   const [dataAtendimento, setDataAtendimento] = useState('');
-  const [crp, setCrp] = useState('');
 
   useEffect(() => {
     setDataAtendimento(
       ultimaSessao ? dayjs(ultimaSessao.dataAtendimento).format('YYYY-MM-DDTHH:mm') : dayjs().format('YYYY-MM-DDTHH:mm'),
     );
   }, [ultimaSessao]);
-
-  useEffect(() => {
-    setCrp(user?.registroProfissional ?? '');
-  }, [user?.registroProfissional]);
 
   const paciente = pacienteQ.data;
   const carregando = pacienteQ.isLoading || sessoesQ.isLoading;
@@ -66,11 +60,7 @@ export function AtestadoComparecimentoPage() {
           <strong>{dayjs(dataAtendimento).format('HH:mm')}</strong>.
         </p>
 
-        <div className="mt-16 flex flex-col items-center gap-1 text-sm">
-          <p>_____________________________________</p>
-          <p className="font-semibold">{user?.nome ?? 'Psicólogo(a) responsável'}</p>
-          <p className="text-gray-600">{crp ? `Psicólogo(a) — CRP ${crp}` : 'Psicólogo(a)'}</p>
-        </div>
+        <DocumentoAssinatura />
       </DocumentoClinicoLayout>
     );
   }
@@ -99,10 +89,6 @@ export function AtestadoComparecimentoPage() {
                   id="dataAtendimento" type="datetime-local"
                   value={dataAtendimento} onChange={(e) => setDataAtendimento(e.target.value)}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="crp">CRP do profissional</Label>
-                <Input id="crp" placeholder="CRP 00/00000" value={crp} onChange={(e) => setCrp(e.target.value)} />
               </div>
             </div>
 

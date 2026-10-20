@@ -10,13 +10,9 @@ import { documentosApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/auth/AuthContext';
+import { sha256Hex } from '@/lib/sha256';
 import { TipoDocumento, TIPO_DOCUMENTO_LABEL } from '@/types';
 
-async function sha256Hex(file: File): Promise<string> {
-  const buf = await file.arrayBuffer();
-  const hashBuf = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
 
 // Deve espelhar MAX_DOCUMENT_SIZE_BYTES no backend (economia de armazenamento no R2).
 const MAX_TAMANHO_MB = 10;

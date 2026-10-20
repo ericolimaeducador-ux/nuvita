@@ -14,6 +14,7 @@ import { PasswordInput } from '@/components/ui/password-input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { LogoClinicaCard } from '@/components/LogoClinicaCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
@@ -820,6 +821,7 @@ export function SuperAdminPage() {
           <DialogHeader>
             <DialogTitle>Editar clínica — {clinicaTarget?.nome}</DialogTitle>
           </DialogHeader>
+          {clinicaTarget && <LogoClinicaCard clinicaId={clinicaTarget.id} logoAtualDesconhecida />}
           <form
             onSubmit={clinicaForm.handleSubmit((v) => {
               if (!clinicaTarget) return;

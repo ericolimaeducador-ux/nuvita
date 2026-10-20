@@ -87,6 +87,14 @@ export const clinicasApi = {
   // Cria um usuário (profissional ou secretaria) dentro da clínica do ADMIN.
   criarUsuario: (clinicaId: string, payload: CriarUsuarioPayload) =>
     api.post<CriarUsuarioResponse>(`/clinicas/${clinicaId}/usuarios`, payload).then((r) => r.data),
+  // Logo da clínica (ADMIN da própria clínica; SUPER_ADMIN por id). Bucket privado: PUT presignado + confirmar.
+  solicitarUploadLogo: (clinicaId: string, payload: { mimeType: string; tamanho: number; hash: string }) =>
+    api
+      .post<{ uploadUrl: string; logoKey: string; expiresInSeconds: number }>(`/clinicas/${clinicaId}/logo/upload-url`, payload)
+      .then((r) => r.data),
+  confirmarLogo: (clinicaId: string, logoKey: string) =>
+    api.post(`/clinicas/${clinicaId}/logo/confirmar`, { logoKey }).then(() => undefined),
+  removerLogo: (clinicaId: string) => api.delete(`/clinicas/${clinicaId}/logo`).then(() => undefined),
 };
 
 // ---------- Pacientes ----------

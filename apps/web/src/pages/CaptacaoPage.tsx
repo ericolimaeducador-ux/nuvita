@@ -11,6 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
+// Em dev fica vazio e o proxy do Vite encaminha /captacao. Em produção o site
+// está no GitHub Pages, sem proxy, então a chamada vai para a API pública.
+const API_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+
 const PIN_KEY = 'nuvita.captacao.pin';
 const FORM_KEY = 'nuvita.captacao.rascunho';
 const SESSAO_KEY = 'nuvita.captacao.sessao';
@@ -99,7 +103,7 @@ export function CaptacaoPage() {
     setStatusMsg(null);
 
     try {
-      const response = await fetch('/captacao', {
+      const response = await fetch(`${API_URL}/captacao`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -15,7 +15,8 @@ import { AuditLogRepository, CreateAuditLogInput } from '../../auth/application/
 import { UserRepository } from '../../auth/application/ports/user.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
 import { PublicUser, toPublicUser } from '../../auth/domain/user.entity';
-import { CLINICA_REPOSITORY } from '../clinicas.constants';
+import { DocumentStorage } from '../../documentos/application/ports/document-storage';
+import { CLINICA_REPOSITORY, LOGO_READ_URL_TTL_SECONDS } from '../clinicas.constants';
 import { Clinica, EnderecoClinica, LIMITES_POR_PLANO } from '../domain/clinica.entity';
 import { TipoDocumentoFiscal } from '../../../../../../packages/shared/src/documentos';
 import { CreateClinicaUsuarioDto } from './dto/create-clinica-usuario.dto';
@@ -59,6 +60,7 @@ export class ClinicasService {
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(AUDIT_LOG_REPOSITORY) private readonly auditLogs: AuditLogRepository,
     private readonly configService: AppConfigService,
+    @Inject('DOCUMENT_STORAGE') private readonly storage: DocumentStorage,
   ) {}
 
   async onboard(
@@ -234,7 +236,7 @@ export class ClinicasService {
       throw new NotFoundException('Clinica nao encontrada.');
     }
 
-    const { telefone, emailContato, logoUrl } = clinica.configuracoes;
+    const { telefone, emailContato, logoKey } = clinica.configuracoes;
     return {
       nome: clinica.nome,
       documento: clinica.documento,
@@ -242,8 +244,20 @@ export class ClinicasService {
       endereco: clinica.endereco,
       telefone: telefone || undefined,
       emailContato: emailContato || undefined,
-      logoUrl: logoUrl || undefined,
+      logoUrl: await this.logoUrlPresignada(logoKey),
     };
+  }
+
+  /** Bucket privado: a logo sai como GET presignado de curta duração; a chave crua nunca vai ao cliente. */
+  private async logoUrlPresignada(logoKey?: string): Promise<string | undefined> {
+    if (!logoKey) return undefined;
+    try {
+      return await this.storage.createReadUrl(this.storage.privateUrlForKey(logoKey), LOGO_READ_URL_TTL_SECONDS);
+    } catch (error) {
+      // Logo é cosmética: sem storage o timbre cai no cabeçalho textual.
+      this.logger.warn(`Falha ao presignar a logo da clinica: ${(error as Error).message}`);
+      return undefined;
+    }
   }
 
   /**

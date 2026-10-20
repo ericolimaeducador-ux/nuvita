@@ -9,6 +9,8 @@ import { UserMongoRepository } from '../auth/infrastructure/mongo/user-mongo.rep
 import { UserMongo, UserSchema } from '../auth/infrastructure/mongo/user.schema';
 import { JwtAuthGuard } from '../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/presentation/guards/roles.guard';
+import { S3DocumentStorageService } from '../documentos/infrastructure/storage/s3-document-storage.service';
+import { ClinicaLogoService } from './application/clinica-logo.service';
 import { ClinicasService } from './application/clinicas.service';
 import { CLINICA_REPOSITORY } from './clinicas.constants';
 import { ClinicaMongoRepository } from './infrastructure/mongo/clinica-mongo.repository';
@@ -28,6 +30,10 @@ import { ClinicasController } from './presentation/clinicas.controller';
   controllers: [ClinicasController],
   providers: [
     ClinicasService,
+    ClinicaLogoService,
+    // Mesmo adapter S3/R2 dos documentos (bucket privado); só presign/HeadObject da logo.
+    S3DocumentStorageService,
+    { provide: 'DOCUMENT_STORAGE', useExisting: S3DocumentStorageService },
     JwtAuthGuard,
     RolesGuard,
     { provide: CLINICA_REPOSITORY, useClass: ClinicaMongoRepository },

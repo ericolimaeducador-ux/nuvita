@@ -48,6 +48,7 @@ function makeService(overrides: {
     users as never,
     auditLogs as never,
     configService as never,
+    {} as never,
   );
   return { service, clinicas, users, auditLogs };
 }

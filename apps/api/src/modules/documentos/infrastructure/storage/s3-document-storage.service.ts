@@ -111,12 +111,12 @@ export class S3DocumentStorageService implements DocumentStorage {
     return this.privateUrl(thumbnailKey);
   }
 
-  async headObject(privateUrl: string): Promise<{ tamanho: number } | undefined> {
+  async headObject(privateUrl: string): Promise<{ tamanho: number; mimeType?: string } | undefined> {
     try {
       const head = await this.client.send(
         new HeadObjectCommand({ Bucket: this.bucket, Key: this.keyFromPrivateUrl(privateUrl) }),
       );
-      return { tamanho: head.ContentLength ?? 0 };
+      return { tamanho: head.ContentLength ?? 0, mimeType: head.ContentType };
     } catch (error) {
       const e = error as { name?: string; $metadata?: { httpStatusCode?: number } };
       if (e.name === 'NotFound' || e.name === 'NoSuchKey' || e.$metadata?.httpStatusCode === 404) {
@@ -135,6 +135,10 @@ export class S3DocumentStorageService implements DocumentStorage {
       this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key })),
       this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: `${key}.thumb.jpg` })),
     ]);
+  }
+
+  privateUrlForKey(key: string): string {
+    return this.privateUrl(key);
   }
 
   private privateUrl(key: string): string {

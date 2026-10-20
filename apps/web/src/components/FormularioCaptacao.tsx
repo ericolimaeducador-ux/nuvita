@@ -56,6 +56,7 @@ export function FormularioCaptacao({
         <select
           id="codigoEnfermeiro"
           name="codigoEnfermeiro"
+          required
           value={values.codigoEnfermeiro}
           onChange={onChange}
           className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm text-foreground"
@@ -67,12 +68,11 @@ export function FormularioCaptacao({
       </div>
 
       <div className={`${campo} min-[480px]:col-span-2`}>
-        <Label htmlFor="nome">Nome completo do paciente</Label>
+        <Label htmlFor="nome">Nome completo do paciente (opcional)</Label>
         <Input
           ref={nomeRef}
           id="nome"
           name="nome"
-          required
           value={values.nome}
           onChange={onChange}
           autoComplete="name"
@@ -80,11 +80,10 @@ export function FormularioCaptacao({
       </div>
 
       <div className={campo}>
-        <Label htmlFor="cpf">CPF</Label>
+        <Label htmlFor="cpf">CPF (opcional)</Label>
         <Input
           id="cpf"
           name="cpf"
-          required
           inputMode="numeric"
           placeholder="000.000.000-00"
           pattern="\d{3}\.?\d{3}\.?\d{3}-?\d{2}"
@@ -96,23 +95,21 @@ export function FormularioCaptacao({
       </div>
 
       <div className={campo}>
-        <Label htmlFor="dataNascimento">Data de nascimento</Label>
+        <Label htmlFor="dataNascimento">Data de nascimento (opcional)</Label>
         <Input
           id="dataNascimento"
           name="dataNascimento"
           type="date"
-          required
           value={values.dataNascimento}
           onChange={onChange}
         />
       </div>
 
       <div className={`${campo} min-[480px]:col-span-2`}>
-        <Label htmlFor="endereco">Endereço completo</Label>
+        <Label htmlFor="endereco">Endereço completo (opcional)</Label>
         <Input
           id="endereco"
           name="endereco"
-          required
           value={values.endereco}
           onChange={onChange}
           autoComplete="street-address"
@@ -134,12 +131,11 @@ export function FormularioCaptacao({
       </div>
 
       <div className={campo}>
-        <Label htmlFor="email">E-mail</Label>
+        <Label htmlFor="email">E-mail (opcional)</Label>
         <Input
           id="email"
           name="email"
           type="email"
-          required
           value={values.email}
           onChange={onChange}
           autoComplete="email"
@@ -148,7 +144,7 @@ export function FormularioCaptacao({
 
       <div className="pt-1 min-[480px]:col-span-2">
         <Button type="submit" disabled={carregando} className="w-full">
-          {carregando ? 'Salvando captação...' : 'Cadastrar paciente'}
+          {carregando ? 'Salvando captação...' : 'Cadastrar interessado'}
         </Button>
       </div>
     </form>

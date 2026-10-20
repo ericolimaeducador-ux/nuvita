@@ -20,12 +20,12 @@ const LOCK_MS = 2 * 60 * 1000;
 
 export interface CaptacaoPublica {
   id: string;
-  nome: string;
-  cpf: string;
-  dataNascimento: string;
-  endereco: string;
+  nome?: string;
+  cpf?: string;
+  dataNascimento?: string;
+  endereco?: string;
   telefone: string;
-  email: string;
+  email?: string;
   codigoEnfermeiro: string;
   status: string;
   criadoEm: string;
@@ -43,16 +43,21 @@ export class CaptacaoService {
   ) {}
 
   async create(dto: CreateCaptacaoDto): Promise<{ success: true; message: string }> {
-    const cpfHash = this.crypto.cpfHash(dto.cpf);
+    const nome = dto.nome?.trim() || undefined;
+    const cpf = dto.cpf?.trim() || undefined;
+    const endereco = dto.endereco?.trim() || undefined;
+    const telefone = dto.telefone.trim();
+    const email = dto.email?.trim().toLowerCase() || undefined;
+    if (!telefone) throw new BadRequestException('Telefone obrigatorio.');
+    const cpfHash = cpf ? this.crypto.cpfHash(cpf) : undefined;
     try {
       await this.captacoes.create({
-        nome: dto.nome.trim(),
-        cpf: this.crypto.encryptString(this.crypto.normalizeCpf(dto.cpf)),
-        cpfHash,
-        dataNascimento: new Date(dto.dataNascimento),
-        endereco: this.crypto.encryptString(dto.endereco.trim()),
-        telefone: this.crypto.encryptString(dto.telefone.trim()),
-        email: this.crypto.encryptString(dto.email.trim().toLowerCase()),
+        ...(nome ? { nome } : {}),
+        ...(cpf && cpfHash ? { cpf: this.crypto.encryptString(this.crypto.normalizeCpf(cpf)), cpfHash } : {}),
+        ...(dto.dataNascimento ? { dataNascimento: new Date(dto.dataNascimento) } : {}),
+        ...(endereco ? { endereco: this.crypto.encryptString(endereco) } : {}),
+        telefone: this.crypto.encryptString(telefone),
+        ...(email ? { email: this.crypto.encryptString(email) } : {}),
         codigoEnfermeiro: dto.codigoEnfermeiro,
         status: 'pendente',
         criadoEm: new Date(),
@@ -122,12 +127,12 @@ export class CaptacaoService {
       const paciente = await this.pacientes.create(
         {
           clinicaId,
-          nome: dados.nome,
+          nome: dados.nome || `Interessado sem nome (${dados.telefone})`,
           cpf: dados.cpf,
           dataNascimento: dados.dataNascimento,
           telefone: dados.telefone,
           email: dados.email,
-          endereco: { logradouro: dados.endereco },
+          endereco: dados.endereco ? { logradouro: dados.endereco } : undefined,
           representante: dados.codigoEnfermeiro,
         },
         context,
@@ -181,11 +186,11 @@ export class CaptacaoService {
     return {
       id: doc._id.toString(),
       nome: doc.nome,
-      cpf: this.crypto.decryptString(doc.cpf),
-      dataNascimento: doc.dataNascimento.toISOString(),
-      endereco: this.crypto.decryptString(doc.endereco),
+      cpf: doc.cpf ? this.crypto.decryptString(doc.cpf) : undefined,
+      dataNascimento: doc.dataNascimento?.toISOString(),
+      endereco: doc.endereco ? this.crypto.decryptString(doc.endereco) : undefined,
       telefone: this.crypto.decryptString(doc.telefone),
-      email: this.crypto.decryptString(doc.email),
+      email: doc.email ? this.crypto.decryptString(doc.email) : undefined,
       codigoEnfermeiro: doc.codigoEnfermeiro,
       status: doc.status,
       criadoEm: doc.criadoEm.toISOString(),

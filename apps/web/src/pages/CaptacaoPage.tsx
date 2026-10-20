@@ -110,7 +110,9 @@ export function CaptacaoPage() {
           Accept: 'application/json',
           'x-captador-pin': pin,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(Object.fromEntries(
+          Object.entries(formData).map(([key, value]) => [key, value.trim() || undefined]),
+        )),
       });
 
       const result = (await response.json().catch(() => ({}))) as { message?: string | string[] };
@@ -136,7 +138,7 @@ export function CaptacaoPage() {
       }
 
       const registro: RegistroSessao = {
-        nome: formData.nome.trim(),
+        nome: formData.nome.trim() || 'Interessado sem nome',
         codigo: formData.codigoEnfermeiro,
         hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       };
@@ -195,7 +197,7 @@ export function CaptacaoPage() {
         <header className="flex shrink-0 items-center border-b border-border bg-card px-4 py-4 lg:h-[68px] lg:px-8 lg:py-0">
           <div>
             <h1 className="text-lg font-semibold text-foreground">
-              {autenticado ? 'Novo paciente' : 'Acesso do enfermeiro'}
+              {autenticado ? 'Novo interessado' : 'Acesso do enfermeiro'}
             </h1>
             <p className="text-sm text-muted-foreground">
               {autenticado

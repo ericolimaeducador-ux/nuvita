@@ -79,11 +79,11 @@ export function AbaCaptacaoPacientes() {
                     return (
                       <TableRow key={p.id}>
                         <TableCell className="whitespace-nowrap font-semibold text-brand-cobalt">{p.codigoEnfermeiro}</TableCell>
-                        <TableCell className="truncate font-medium" title={p.nome}>{p.nome}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatCpf(p.cpf)}</TableCell>
+                        <TableCell className="truncate font-medium" title={p.nome || 'Interessado sem nome'}>{p.nome || 'Interessado sem nome'}</TableCell>
+                        <TableCell className="whitespace-nowrap">{p.cpf ? formatCpf(p.cpf) : 'Sem informacao'}</TableCell>
                         <TableCell>
                           <div className="whitespace-nowrap">{p.telefone}</div>
-                          <div className="truncate text-xs text-muted-foreground" title={p.email}>{p.email}</div>
+                          <div className="truncate text-xs text-muted-foreground" title={p.email}>{p.email || 'Sem informacao'}</div>
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-muted-foreground">
                           {dayjs(p.criadoEm).format('DD/MM/YYYY')}
@@ -92,7 +92,7 @@ export function AbaCaptacaoPacientes() {
                           <Button
                             size="sm"
                             disabled={exportar.isPending}
-                            onClick={() => handleExportar(p.id, p.nome)}
+                            onClick={() => handleExportar(p.id, p.nome || 'Interessado sem nome')}
                           >
                             {processando ? 'Processando...' : 'Exportar'}
                           </Button>

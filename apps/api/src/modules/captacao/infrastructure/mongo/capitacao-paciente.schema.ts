@@ -15,26 +15,26 @@ export type CapitacaoPacienteDocument = HydratedDocument<CapitacaoPacienteMongo>
  */
 @Schema({ collection: 'capitacao_paciente', versionKey: false })
 export class CapitacaoPacienteMongo {
-  @Prop({ required: true, trim: true })
-  nome!: string;
+  @Prop({ trim: true })
+  nome?: string;
 
-  @Prop({ required: true })
-  cpf!: string;
+  @Prop()
+  cpf?: string;
 
-  @Prop({ required: true })
-  cpfHash!: string;
+  @Prop()
+  cpfHash?: string;
 
-  @Prop({ required: true })
-  dataNascimento!: Date;
+  @Prop()
+  dataNascimento?: Date;
 
-  @Prop({ required: true })
-  endereco!: string;
+  @Prop()
+  endereco?: string;
 
   @Prop({ required: true })
   telefone!: string;
 
-  @Prop({ required: true })
-  email!: string;
+  @Prop()
+  email?: string;
 
   @Prop({ required: true, enum: [...CODIGOS_ENFERMEIRO_CAPTADOR], index: true })
   codigoEnfermeiro!: string;
@@ -66,5 +66,5 @@ CapitacaoPacienteSchema.index({ status: 1, criadoEm: -1 });
 // e o mesmo CPF pode ser captado de novo se preciso.
 CapitacaoPacienteSchema.index(
   { cpfHash: 1 },
-  { unique: true, partialFilterExpression: { status: 'pendente' } },
+  { unique: true, partialFilterExpression: { status: 'pendente', cpfHash: { $type: 'string' } } },
 );

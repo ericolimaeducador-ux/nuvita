@@ -112,12 +112,12 @@ export const pacientesApi = {
 // ---------- Captação de pacientes (fila de campo) ----------
 export interface CaptacaoPendente {
   id: string;
-  nome: string;
-  cpf: string;
-  dataNascimento: string;
-  endereco: string;
+  nome?: string;
+  cpf?: string;
+  dataNascimento?: string;
+  endereco?: string;
   telefone: string;
-  email: string;
+  email?: string;
   codigoEnfermeiro: string;
   status: 'pendente' | 'exportado';
   criadoEm: string;

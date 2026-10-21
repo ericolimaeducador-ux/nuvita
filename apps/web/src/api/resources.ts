@@ -412,6 +412,9 @@ export interface UpdateClinicaPayload {
   plano?: ClinicaAdmin['plano'];
   ativo?: boolean;
   faseTeste?: boolean;
+  /** Correção da identidade fiscal (só SUPER_ADMIN): sempre os dois juntos. */
+  tipoDocumento?: TipoDocumentoClinica;
+  documento?: string;
 }
 
 export interface CriarClinicaPayload {

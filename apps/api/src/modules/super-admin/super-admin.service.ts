@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Inject, Injectable, Logger, Not
 import * as bcrypt from 'bcrypt';
 import * as speakeasy from 'speakeasy';
 import { exigeTwoFactor, Modulo, Papel } from '../../../../../packages/shared/src/auth';
+import { normalizarDocumentoFiscal } from '../../../../../packages/shared/src/documentos';
 import { USER_REPOSITORY } from '../auth/auth.constants';
 import { UserRepository } from '../auth/application/ports/user.repository';
 import { AuditEvent } from '../auth/domain/audit-event.enum';
@@ -97,8 +98,18 @@ export class SuperAdminService {
   async updateClinica(id: string, dto: UpdateClinicaDto, context?: CriarClinicaContext) {
     const camposContato = (['telefone', 'emailContato'] as const).filter((campo) => dto[campo] !== undefined);
     // Estado anterior quando há auditoria de contato ou 2º passo (propagação aos usuários): é o que a compensação restaura.
+    const corrigeDocumento = dto.documento !== undefined && dto.tipoDocumento !== undefined;
     const antes =
-      camposContato.length > 0 || dto.faseTeste !== undefined ? await this.clinicas.findById(id) : null;
+      camposContato.length > 0 || dto.faseTeste !== undefined || corrigeDocumento
+        ? await this.clinicas.findById(id)
+        : null;
+
+    if (corrigeDocumento) {
+      if (!antes) throw new NotFoundException('Clínica não encontrada.');
+      // Mesma garantia do create: nenhum CPF/CNPJ em duas clínicas (a própria clínica não conta).
+      const dona = await this.clinicas.findByDocumento(dto.documento!);
+      if (dona && dona.id !== id) throw new ConflictException(`${dto.tipoDocumento} já cadastrado.`);
+    }
 
     const updated = await this.clinicas.update(id, dto);
     if (!updated) throw new NotFoundException('Clínica não encontrada.');
@@ -113,6 +124,19 @@ export class SuperAdminService {
         await this.desfazerEdicaoDaClinica(id, antes, dto);
         throw error;
       }
+    }
+    if (corrigeDocumento && antes && context) {
+      await this.clinicasService.registrarAuditoriaAdministrativa({
+        event: AuditEvent.CLINIC_FISCAL_DOCUMENT_UPDATED,
+        userId: context.userId,
+        ip: context.ip,
+        userAgent: context.userAgent,
+        metadata: {
+          clinicaId: id,
+          antes: { tipoDocumento: antes.tipoDocumento, documento: normalizarDocumentoFiscal(antes.documento) },
+          depois: { tipoDocumento: dto.tipoDocumento, documento: normalizarDocumentoFiscal(dto.documento!) },
+        },
+      });
     }
     if (camposContato.length > 0 && context) {
       await this.clinicasService.registrarAuditoriaAdministrativa({
@@ -146,6 +170,8 @@ export class SuperAdminService {
       if (dto.faseTeste !== undefined) restaurar.faseTeste = antes.faseTeste;
       if (dto.telefone !== undefined) restaurar.telefone = antes.configuracoes.telefone;
       if (dto.emailContato !== undefined) restaurar.emailContato = antes.configuracoes.emailContato;
+      if (dto.documento !== undefined) restaurar.documento = antes.documento;
+      if (dto.tipoDocumento !== undefined) restaurar.tipoDocumento = antes.tipoDocumento;
       await this.clinicas.update(id, restaurar);
       // A propagação pode ter falhado no meio (updateMany parcial): reaplica o valor anterior a todos.
       await this.users.definirFaseTesteDaClinica(id, antes.faseTeste);

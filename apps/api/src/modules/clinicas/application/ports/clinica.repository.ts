@@ -1,3 +1,4 @@
+import { TipoDocumentoFiscal } from '../../../../../../../packages/shared/src/documentos';
 import { Clinica } from '../../domain/clinica.entity';
 import { CreateClinicaDto } from '../dto/create-clinica.dto';
 
@@ -11,6 +12,9 @@ export interface UpdateClinicaInput {
   /** Gravados em configuracoes.* (dotted path), sem trocar o objeto inteiro. */
   telefone?: string;
   emailContato?: string;
+  /** Identidade fiscal (só o SUPER_ADMIN altera): gravada normalizada, no par. */
+  documento?: string;
+  tipoDocumento?: TipoDocumentoFiscal;
   /** configuracoes.logoKey: string define/troca; null remove. */
   logoKey?: string | null;
 }

@@ -21,7 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
-import { superAdminApi } from '@/api/resources';
+import { superAdminApi, type UpdateClinicaPayload } from '@/api/resources';
 import type { CreateAdminUserPayload, UpdateUsuarioPayload, ClinicaAdmin, TwoFactorSetup } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import {
@@ -29,7 +29,7 @@ import {
   resolvePermissoes, Papel, PAPEL_LABEL, registroLabel, papelTemRegistro,
 } from '@/types';
 import type { UsuarioAdmin } from '@/types';
-import { documentoFiscalValido, formatarDocumentoFiscal, TipoDocumentoFiscal } from '@/lib/documento-fiscal';
+import { documentoFiscalValido, formatarDocumentoFiscal, normalizarDocumentoFiscal, TipoDocumentoFiscal } from '@/lib/documento-fiscal';
 import { SegredoDoisFatores } from '@/components/SegredoDoisFatores';
 
 const PAPEL_BADGE: Record<Papel, string> = {
@@ -76,6 +76,9 @@ const clinicaSchema = z.object({
   // Teste beta: enquanto marcada, os usuários aceitam o Termo de Teste. Desmarcar no
   // lançamento faz todos aceitarem os Termos de Uso no próximo acesso.
   faseTeste: z.boolean(),
+  // Identidade fiscal: corrigível só aqui (super-admin). O servidor é o gate; o cliente só avisa cedo.
+  tipoDocumento: z.nativeEnum(TipoDocumentoFiscal),
+  documento: z.string().min(1, 'Informe o documento.'),
 });
 type ClinicaForm = z.infer<typeof clinicaSchema>;
 
@@ -237,15 +240,26 @@ export function SuperAdminPage() {
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
+  const [erroDocumentoFiscal, setErroDocumentoFiscal] = useState<string | null>(null);
   const clinicaMut = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: ClinicaForm }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateClinicaPayload }) =>
       superAdminApi.updateClinica(id, payload),
+    onMutate: () => setErroDocumentoFiscal(null),
     onSuccess: () => {
       toast.success('Clínica atualizada.');
       setClinicaTarget(null);
       void qc.invalidateQueries({ queryKey: ['super-admin', 'clinicas'] });
     },
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+    onError: (e, { payload }) => {
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      if (payload.documento !== undefined && status === 409) {
+        setErroDocumentoFiscal(`Este ${payload.tipoDocumento} já está cadastrado em outra clínica.`);
+      } else if (payload.documento !== undefined && (status === 400 || status === 422)) {
+        setErroDocumentoFiscal('Documento inválido para o tipo escolhido. Confira os números.');
+      } else {
+        toast.error('Erro', apiErrorMessage(e));
+      }
+    },
   });
 
   const criarClinicaMut = useMutation({
@@ -279,7 +293,12 @@ export function SuperAdminPage() {
 
   function openEditClinica(c: ClinicaAdmin) {
     setClinicaTarget(c);
-    clinicaForm.reset({ nome: c.nome, plano: c.plano, ativo: c.ativo, faseTeste: c.faseTeste ?? false });
+    setErroDocumentoFiscal(null);
+    clinicaForm.reset({
+      nome: c.nome, plano: c.plano, ativo: c.ativo, faseTeste: c.faseTeste ?? false,
+      tipoDocumento: c.tipoDocumento as TipoDocumentoFiscal,
+      documento: formatarDocumentoFiscal(c.tipoDocumento as TipoDocumentoFiscal, c.documento),
+    });
   }
 
   function openEdit(u: UsuarioAdmin) {
@@ -825,13 +844,27 @@ export function SuperAdminPage() {
           <form
             onSubmit={clinicaForm.handleSubmit((v) => {
               if (!clinicaTarget) return;
-              clinicaMut.mutate({ id: clinicaTarget.id, payload: v });
+              const { tipoDocumento, documento, ...resto } = v;
+              const mudouFiscal =
+                tipoDocumento !== clinicaTarget.tipoDocumento ||
+                normalizarDocumentoFiscal(documento) !== normalizarDocumentoFiscal(clinicaTarget.documento);
+              if (mudouFiscal && !documentoFiscalValido(tipoDocumento, documento)) {
+                clinicaForm.setError('documento', { message: `${tipoDocumento} inválido. Confira os números.` });
+                return;
+              }
+              // Os dois campos fiscais vão juntos, e só quando mudaram.
+              clinicaMut.mutate({
+                id: clinicaTarget.id,
+                payload: mudouFiscal
+                  ? { ...resto, tipoDocumento, documento: normalizarDocumentoFiscal(documento) }
+                  : resto,
+              });
             })}
             className="space-y-4 py-2"
           >
             <div className="space-y-1.5">
-              <Label>Nome</Label>
-              <Input {...clinicaForm.register('nome')} />
+              <Label htmlFor="clinica-nome">Nome</Label>
+              <Input id="clinica-nome" {...clinicaForm.register('nome')} />
               {clinicaForm.formState.errors.nome && (
                 <p className="text-xs text-destructive">{clinicaForm.formState.errors.nome.message}</p>
               )}
@@ -878,12 +911,49 @@ export function SuperAdminPage() {
                 </span>
               </span>
             </label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Tipo de documento</Label>
+                <Select
+                  value={clinicaForm.watch('tipoDocumento')}
+                  onValueChange={(t) => {
+                    clinicaForm.setValue('tipoDocumento', t as TipoDocumentoFiscal);
+                    clinicaForm.clearErrors('documento');
+                  }}
+                >
+                  <SelectTrigger aria-label="Tipo de documento"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TipoDocumentoFiscal.CNPJ}>CNPJ (empresa)</SelectItem>
+                    <SelectItem value={TipoDocumentoFiscal.CPF}>CPF (pessoa física)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="clinica-documento">Documento</Label>
+                <Input
+                  id="clinica-documento"
+                  className="font-mono"
+                  placeholder={clinicaForm.watch('tipoDocumento') === TipoDocumentoFiscal.CPF ? '000.000.000-00' : '00.000.000/0000-00'}
+                  {...clinicaForm.register('documento', {
+                    onBlur: (e) =>
+                      clinicaForm.setValue(
+                        'documento',
+                        formatarDocumentoFiscal(clinicaForm.getValues('tipoDocumento'), e.target.value),
+                      ),
+                  })}
+                />
+              </div>
+            </div>
+            {clinicaForm.formState.errors.documento && (
+              <p className="text-xs text-destructive">{clinicaForm.formState.errors.documento.message}</p>
+            )}
+            {erroDocumentoFiscal && (
+              <p role="alert" data-testid="erro-documento-fiscal" className="text-xs text-destructive">
+                {erroDocumentoFiscal}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
-              {clinicaTarget?.tipoDocumento ?? 'Documento'}:{' '}
-              <span className="font-mono">
-                {clinicaTarget ? formatarDocumentoFiscal(clinicaTarget.tipoDocumento as TipoDocumentoFiscal, clinicaTarget.documento) : ''}
-              </span>{' '}
-              (não editável)
+              Corrigir o documento é uma ação de super-admin e fica registrada na auditoria.
             </p>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setClinicaTarget(null)}>Cancelar</Button>

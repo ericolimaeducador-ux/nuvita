@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { SegredoDoisFatores } from '@/components/SegredoDoisFatores';
+import { LogoClinicaCard } from '@/components/LogoClinicaCard';
+import { useClinicaMinha } from '@/lib/useClinicaMinha';
 import { clinicasApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
@@ -31,6 +33,8 @@ type UsuarioForm = z.infer<typeof usuarioSchema>;
 
 export function ClinicaPage() {
   const { user } = useAuth();
+  const qc = useQueryClient();
+  const { data: clinica } = useClinicaMinha();
 
   const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<UsuarioForm>({
     resolver: zodResolver(usuarioSchema),
@@ -72,6 +76,14 @@ export function ClinicaPage() {
         title="Clínica · Usuários"
         subtitle="Cadastro de profissionais e equipe da sua clínica (multi-tenant)"
       />
+
+      {user?.clinicaId && (
+        <LogoClinicaCard
+          clinicaId={user.clinicaId}
+          logoUrl={clinica?.logoUrl}
+          onAlterada={() => qc.invalidateQueries({ queryKey: ['clinica-minha'] })}
+        />
+      )}
 
       <div className="flex items-start gap-3 glass rounded-xl p-4 mb-6 border-blue-500/20">
         <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />

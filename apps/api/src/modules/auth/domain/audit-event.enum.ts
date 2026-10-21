@@ -40,6 +40,8 @@ export enum AuditEvent {
   USER_CRP_SET = 'USER_CRP_SET',
   USER_CRP_CORRECTED = 'USER_CRP_CORRECTED',
   CLINIC_CONTACT_UPDATED = 'CLINIC_CONTACT_UPDATED',
+  // identidade fiscal da clínica (documento + tipoDocumento): correção só pelo super-admin, com antes/depois
+  CLINIC_FISCAL_DOCUMENT_UPDATED = 'CLINIC_FISCAL_DOCUMENT_UPDATED',
   // feature-logo-clinica: definir/trocar e remover a logo (só a clínica no metadata; nunca chave nem URL)
   CLINIC_LOGO_UPDATED = 'CLINIC_LOGO_UPDATED',
   CLINIC_LOGO_REMOVED = 'CLINIC_LOGO_REMOVED',

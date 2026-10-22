@@ -77,9 +77,12 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_HOSTING_SA_EMAIL }}
 
+      # Versao FIXA de proposito: com @latest, a 15.34.1 (2026-10-21) passou a falhar com 403 em
+      # serviceusage.services.get para esta SA. Ao subir de versao, conceda antes a role
+      # roles/serviceusage.serviceUsageViewer a github-hosting-deployer@.
       - name: Deploy to Firebase Hosting
         run: >-
-          npx --yes firebase-tools@latest deploy
+          npx --yes firebase-tools@15.34.0 deploy
           --only hosting
           --project "${{ secrets.GCP_PROJECT_ID }}"
           --non-interactive

@@ -818,6 +818,7 @@ function TestesPsicologicosSecao({ pacienteId }: { pacienteId: string }) {
   const testes = toItems<TestePsicologico>(listQ.data as never);
 
   return (
+    <>
     <Secao
       icon={<ClipboardCheck className="h-4 w-4" />}
       titulo="Testes Psicológicos"
@@ -854,6 +855,8 @@ function TestesPsicologicosSecao({ pacienteId }: { pacienteId: string }) {
         </Table>
       )}
 
+    </Secao>
+    {/* Dialog fora do Secao: o clique em "Aplicar teste" abre mesmo com a seção recolhida, e recolher não o desmonta. */}
       <Dialog open={open} onOpenChange={saida.onOpenChange}>
         <DialogContent className="max-w-md" {...saida.contentProps}>
           <DialogHeader>
@@ -893,6 +896,6 @@ function TestesPsicologicosSecao({ pacienteId }: { pacienteId: string }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Secao>
+    </>
   );
 }

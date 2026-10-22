@@ -354,6 +354,7 @@ export function PacientesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
+                      {(user?.papel === Papel.PSICOLOGO || user?.papel === Papel.ADMIN) && (
                       <Button
                         variant="ghost" size="icon" title="Exportar dados (LGPD)"
                         onClick={() =>
@@ -364,6 +365,7 @@ export function PacientesPage() {
                       >
                         <Download className="h-4 w-4" />
                       </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

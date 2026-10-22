@@ -15,31 +15,30 @@ import { ListLancamentosQueryDto } from '../application/dto/list-lancamentos-que
 import { ReceiveLancamentoDto } from '../application/dto/receive-lancamento.dto';
 
 @Controller('financeiro')
+// Financeiro legado da clínica, SEM tela no web: só a plataforma. O único financeiro do produto é o da
+// psicologia (PsicologiaFinanceiroController). Admin e secretária não acessam.
 @UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
+@Roles(Papel.SUPER_ADMIN)
 export class FinanceiroController {
   constructor(private readonly financeiroService: FinanceiroService) {}
 
   @Post('lancamentos')
-  @Roles(Papel.SECRETARIA, Papel.ADMIN)
-  create(@Body() dto: CreateLancamentoDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
+    create(@Body() dto: CreateLancamentoDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
     return this.financeiroService.create(dto, this.ctx(req, user));
   }
 
   @Get('lancamentos')
-  @Roles(Papel.SECRETARIA, Papel.ADMIN)
-  list(@Query() query: ListLancamentosQueryDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
+    list(@Query() query: ListLancamentosQueryDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
     return this.financeiroService.list(query, this.ctx(req, user));
   }
 
   @Get('dashboard')
-  @Roles(Papel.SECRETARIA, Papel.ADMIN)
-  dashboard(@Query() query: FinancialDashboardQueryDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
+    dashboard(@Query() query: FinancialDashboardQueryDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
     return this.financeiroService.dashboard(query, this.ctx(req, user));
   }
 
   @Get('lancamentos/:id')
-  @Roles(Papel.SECRETARIA, Papel.ADMIN)
-  findOne(
+    findOne(
     @Param('id') id: string,
     @Query('clinicaId') clinicaId: string | undefined,
     @CurrentUser() user: AuthTokenPayload,
@@ -49,8 +48,7 @@ export class FinanceiroController {
   }
 
   @Patch('lancamentos/:id/receber')
-  @Roles(Papel.SECRETARIA, Papel.ADMIN)
-  receive(
+    receive(
     @Param('id') id: string,
     @Body() dto: ReceiveLancamentoDto,
     @Query('clinicaId') clinicaId: string | undefined,
@@ -61,8 +59,7 @@ export class FinanceiroController {
   }
 
   @Patch('lancamentos/:id/cancelar')
-  @Roles(Papel.SECRETARIA, Papel.ADMIN)
-  cancel(
+    cancel(
     @Param('id') id: string,
     @Query('clinicaId') clinicaId: string | undefined,
     @CurrentUser() user: AuthTokenPayload,

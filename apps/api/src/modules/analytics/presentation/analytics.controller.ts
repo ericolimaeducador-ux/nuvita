@@ -1,5 +1,7 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
+import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
+import { Roles } from '../../auth/presentation/decorators/roles.decorator';
+import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { AuthGatesGuard } from '../../auth/presentation/guards/auth-gates.guard';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
@@ -11,11 +13,11 @@ import {
   RelatorioPsicologiaQueryDto,
 } from '../application/dto/analytics-query.dto';
 
-// Este sistema não restringe por papel/módulo: qualquer usuário autenticado
-// da clínica (RolesGuard removido de propósito) enxerga os relatórios —
-// mesma decisão já aplicada em PERMISSOES_PADRAO_POR_PAPEL.
+// Relatórios gerenciais: só a equipe da clínica. O papel PACIENTE NUNCA lê estes dados (trazem nomes de
+// outros pacientes e o financeiro da clínica). Ver authorization-matrix.spec.ts.
 @Controller('analytics')
-@UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard)
+@UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
+@Roles(Papel.ADMIN, Papel.PSICOLOGO, Papel.SECRETARIA)
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 

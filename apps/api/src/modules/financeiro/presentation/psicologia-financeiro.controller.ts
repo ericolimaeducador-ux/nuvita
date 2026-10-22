@@ -16,7 +16,7 @@ import { SalvarConfigPsicologoDto } from '../application/dto/salvar-config-psico
 /** Recebimento das consultas do psicólogo autônomo — separado do financeiro da clínica. */
 @Controller('financeiro/psicologia')
 @UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
-@Roles(Papel.PSICOLOGO, Papel.ADMIN)
+@Roles(Papel.PSICOLOGO)
 export class PsicologiaFinanceiroController {
   constructor(private readonly service: PsicologiaFinanceiroService) {}
 

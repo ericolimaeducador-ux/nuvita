@@ -45,7 +45,7 @@ export class TelemedicinaController {
   }
 
   @Get('salas/:id')
-  @Roles(...PAPEIS_PROFISSIONAIS, Papel.PACIENTE, Papel.ADMIN)
+  @Roles(...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   findById(
     @Param('id') id: string,
     @Query('clinicaId') clinicaId: string | undefined,
@@ -56,7 +56,7 @@ export class TelemedicinaController {
   }
 
   @Post('salas/:token/entrar')
-  @Roles(...PAPEIS_PROFISSIONAIS, Papel.PACIENTE)
+  @Roles(...PAPEIS_PROFISSIONAIS)
   joinSala(@Param('token') token: string, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
     return this.telemedicinaService.joinSala(token, this.ctx(req, user));
   }

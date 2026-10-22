@@ -1,0 +1,38 @@
+{
+  "medico": [
+    {
+      "temStream": true,
+      "trilhas": 2,
+      "readyState": 4,
+      "largura": 640,
+      "tocando": true
+    },
+    {
+      "temStream": true,
+      "trilhas": 2,
+      "readyState": 4,
+      "largura": 1280,
+      "tocando": true
+    }
+  ],
+  "paciente": [
+    {
+      "temStream": true,
+      "trilhas": 2,
+      "readyState": 4,
+      "largura": 480,
+      "tocando": true
+    },
+    {
+      "temStream": true,
+      "trilhas": 2,
+      "readyState": 4,
+      "largura": 1280,
+      "tocando": true
+    }
+  ],
+  "textoMedico": "Teleatendimento — Psicologia Conectado 00:07",
+  "textoPaciente": "Teleatendimento — Psicologia Conectado 00:06",
+  "errosMedico": [],
+  "errosPaciente": []
+}

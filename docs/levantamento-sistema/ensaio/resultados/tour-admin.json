@@ -1,0 +1,529 @@
+{
+  "perfil": "admin",
+  "depoisDoLogin": "/dashboard",
+  "rotas": [
+    {
+      "slug": "dashboard",
+      "pedida": "/dashboard",
+      "final": "/dashboard",
+      "redirecionou": false,
+      "titulos": [
+        "Olá, Admin Demonstração Clínica"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Agenda",
+        "Notificações",
+        "Telemedicina",
+        "Relatórios",
+        "Clínica"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Agenda Notificações Telemedicina Relatórios Clínica AD Admin Demonstração Clínica ADMIN Sair Admin Demonstração Clínica ADMIN AD Olá, Admin Demonstração Clínica quinta-feira, 22 de outubro de 2026 Pacientes ativos 1 Agendamentos ",
+      "img": "screenshots/perfis/admin/dashboard.png"
+    },
+    {
+      "slug": "pacientes",
+      "pedida": "/pacientes",
+      "final": "/pacientes",
+      "redirecionou": false,
+      "titulos": [
+        "Pacientes"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Agenda",
+        "Notificações",
+        "Telemedicina",
+        "Relatórios",
+        "Clínica"
+      ],
+      "botoes": [
+        "Sair",
+        "Novo paciente",
+        "Mais recentes",
+        "Todos os projetos",
+        "Todas as linhas"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Agenda Notificações Telemedicina Relatórios Clínica AD Admin Demonstração Clínica ADMIN Sair Admin Demonstração Clínica ADMIN AD Pacientes Cadastro e prontuário base dos pacientes da clínica Novo paciente Buscar Data de nasciment",
+      "img": "screenshots/perfis/admin/pacientes.png"
+    },
+    {
+      "slug": "paciente-ficha",
+      "pedida": "/pacientes/:id",
+      "final": "/pacientes/:id",
+      "redirecionou": false,
+      "titulos": [
+        "Ana Exemplo Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Agenda",
+        "Notificações",
+        "Telemedicina",
+        "Relatórios",
+        "Clínica"
+      ],
+      "botoes": [
+        "Sair",
+        "Voltar",
+        "Exportar (LGPD)",
+        "Dados cadastrais",
+        "Prontuários e atendimentos0",
+        "Observações0",
+        "Documentos0",
+        "Novo documento",
+        "Histórico de agenda1"
+      ],
+      "erros": [
+        "403 GET /prontuarios",
+        "403 GET /prontuarios"
+      ],
+      "consoleErros": 3,
+      "texto": "Nuvita Psi Dashboard Pacientes Agenda Notificações Telemedicina Relatórios Clínica AD Admin Demonstração Clínica ADMIN Sair Admin Demonstração Clínica ADMIN AD Voltar Ana Exemplo Demonstração 390.533.447-05 36 anos Ativo Exportar (LGPD) Dados cadastrais Prontu",
+      "img": "screenshots/perfis/admin/paciente-ficha.png"
+    },
+    {
+      "slug": "imprimir-prontuario",
+      "pedida": "/pacientes/6ada6457601ae7ce8e864969/prontuario/6ada6458601ae7ce8e864987/imprimir",
+      "final": "/pacientes/6ada6457601ae7ce8e864969/prontuario/6ada6458601ae7ce8e864987/imprimir",
+      "redirecionou": false,
+      "titulos": [
+        "Clínica Demonstração (Manual)",
+        "Prontuário — SOAP",
+        "Paciente",
+        "S — Subjetivo / Anamnese",
+        "O — Objetivo / Exame físico",
+        "A — Avaliação",
+        "P — Plano"
+      ],
+      "menu": [],
+      "botoes": [
+        "Imprimir / Salvar PDF"
+      ],
+      "erros": [
+        "403 GET /prontuarios/6ada6458601ae7ce8e864987",
+        "403 GET /prontuarios/6ada6458601ae7ce8e864987"
+      ],
+      "consoleErros": 3,
+      "texto": "Prévia do Prontuário (SOAP) Imprimir / Salvar PDF Clínica Demonstração (Manual) CNPJ: 11.222.333/0001-81 PRONTUÁRIO — SOAP — Data do atendimento: — PACIENTE Nome: Bruno Exemplo Demonstração CPF: 52998224725 Data de Nascimento: 30/09/1985 Sexo: MASCULINO Telefo",
+      "img": "screenshots/perfis/admin/imprimir-prontuario.png"
+    },
+    {
+      "slug": "doc-atestado",
+      "pedida": "/pacientes/:id/documentos/atestado",
+      "final": "/pacientes/:id/documentos/atestado",
+      "redirecionou": false,
+      "titulos": [
+        "Atestado de Comparecimento"
+      ],
+      "menu": [],
+      "botoes": [
+        "Voltar",
+        "Gerar atestado"
+      ],
+      "erros": [
+        "403 GET /prontuarios",
+        "403 GET /prontuarios"
+      ],
+      "consoleErros": 3,
+      "texto": "Atestado de Comparecimento Paciente: Ana Exemplo Demonstração Voltar Data e horário do atendimento Gerar atestado Acesso negado Acesso negado para este papel.",
+      "img": "screenshots/perfis/admin/doc-atestado.png"
+    },
+    {
+      "slug": "doc-laudo",
+      "pedida": "/pacientes/:id/documentos/laudo",
+      "final": "/pacientes/:id/documentos/laudo",
+      "redirecionou": false,
+      "titulos": [
+        "Laudo Psicoterápico"
+      ],
+      "menu": [],
+      "botoes": [
+        "Voltar",
+        "Gerar laudo"
+      ],
+      "erros": [
+        "403 GET /prontuarios",
+        "403 GET /prontuarios"
+      ],
+      "consoleErros": 3,
+      "texto": "Laudo Psicoterápico Paciente: Ana Exemplo Demonstração Voltar Rascunho gerado a partir do histórico de sessões — revise e edite livremente antes de emitir. Texto do laudo Gerar laudo Acesso negado Acesso negado para este papel.",
+      "img": "screenshots/perfis/admin/doc-laudo.png"
+    },
+    {
+      "slug": "doc-encaminhamento",
+      "pedida": "/pacientes/:id/documentos/encaminhamento",
+      "final": "/pacientes/:id/documentos/encaminhamento",
+      "redirecionou": false,
+      "titulos": [
+        "Encaminhamento a outro profissional"
+      ],
+      "menu": [],
+      "botoes": [
+        "Voltar",
+        "Gerar encaminhamento"
+      ],
+      "erros": [
+        "403 GET /prontuarios",
+        "403 GET /prontuarios"
+      ],
+      "consoleErros": 3,
+      "texto": "Encaminhamento a outro profissional Paciente: Ana Exemplo Demonstração Voltar Profissional / especialidade de destino Motivo do encaminhamento Gerar encaminhamento Acesso negado Acesso negado para este papel.",
+      "img": "screenshots/perfis/admin/doc-encaminhamento.png"
+    },
+    {
+      "slug": "doc-prescricao",
+      "pedida": "/pacientes/:id/documentos/prescricao",
+      "final": "/pacientes/:id/documentos/prescricao",
+      "redirecionou": false,
+      "titulos": [
+        "Prescrição de Cuidados em Psicologia"
+      ],
+      "menu": [],
+      "botoes": [
+        "Voltar",
+        "Gerar com IA",
+        "Gerar prescrição"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Prescrição de Cuidados em Psicologia Paciente: Ana Exemplo Demonstração Voltar Checklist de cuidados Exercícios de respiração/relaxamento Diário comportamental Leituras/filmes indicados Encaminhamento a outro profissional (se necessário) Sugestões — TCC (Terap",
+      "img": "screenshots/perfis/admin/doc-prescricao.png"
+    },
+    {
+      "slug": "agenda",
+      "pedida": "/agenda",
+      "final": "/agenda",
+      "redirecionou": false,
+      "titulos": [
+        "Agenda"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Agenda",
+        "Notificações",
+        "Telemedicina",
+        "Relatórios",
+        "Clínica"
+      ],
+      "botoes": [
+        "Sair",
+        "Calendário",
+        "Lista",
+        "Novo agendamento",
+        "Hoje",
+        "‹",
+        "›",
+        "Mês",
+        "Semana",
+        "Dia",
+        "27",
+        "28",
+        "29",
+        "30",
+        "01"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Agenda Notificações Telemedicina Relatórios Clínica AD Admin Demonstração Clínica ADMIN Sair Admin Demonstração Clínica ADMIN AD Agenda Agendamentos das três modalidades: médica, enfermagem e jurídica Calendário Lista Novo agenda",
+      "img": "screenshots/perfis/admin/agenda.png"
+    },
+    {
+      "slug": "prontuarios",
+      "pedida": "/prontuarios",
+      "final": "/prontuarios",
+      "redirecionou": false,
+      "titulos": [
+        "Prontuários"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Agenda",
+        "Notificações",
+        "Telemedicina",
+        "Relatórios",
+        "Clínica"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /prontuarios",
+        "403 GET /prontuarios"
+      ],
+      "consoleErros": 3,
+      "texto": "Nuvita Psi Dashboard Pacientes Agenda Notificações Telemedicina Relatórios Clínica AD Admin Demonstração Clínica ADMIN Sair Admin Demonstração Clínica ADMIN AD Prontuários Registros de atendimento — criados a partir do Atendimento Psicológico Data Paciente Tip",
+      "img": "screenshots/perfis/admin/prontuarios.png"
+    },
+    {
+      "slug": "documentos",
+      "pedida": "/documentos",
+      "final": "/documentos",
+      "redirecionou": false,
+      "titulos": [
+        "Documentos"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Agenda",
+        "Notificações",
+        "Telemedicina",
+        "Relatórios",
+        "Clínica"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Agenda Notificações Telemedicina Relatórios Clínica AD Admin Demonstração Clínica ADMIN Sair Admin Demonstração Clínica ADMIN AD Documentos Arquivos clínicos e administrativos de todos os pacientes (só leitura — o envio é feito n",
+      "img": "screenshots/perfis/admin/documentos.png"
+    },
+    {
+      "slug": "notificacoes",
+      "pedida": "/notificacoes",
+      "final": "/notificacoes",
+      "redirecionou": false,
+      "titulos": [
+        "Notificações"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Agenda",
+        "Notificações",
+        "Telemedicina",
+        "Relatórios",
+        "Clínica"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Agenda Notificações Telemedicina Relatórios Clínica AD Admin Demonstração Clínica ADMIN Sair Admin Demonstração Clínica ADMIN AD Notificações Lembretes e comunicações automáticas (fila de processamento) Enviadas 0 Entregues 0 Pen",
+      "img": "screenshots/perfis/admin/notificacoes.png"
+    },
+    {
+      "slug": "telemedicina",
+      "pedida": "/telemedicina",
+      "final": "/telemedicina",
+      "redirecionou": false,
+      "titulos": [
+        "Telemedicina"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Agenda",
+        "Notificações",
+        "Telemedicina",
+        "Relatórios",
+        "Clínica"
+      ],
+      "botoes": [
+        "Sair",
+        "Nova sala",
+        "Selecione o agendamento",
+        "Buscar",
+        "22/10/2026(2)"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Agenda Notificações Telemedicina Relatórios Clínica AD Admin Demonstração Clínica ADMIN Sair Admin Demonstração Clínica ADMIN AD Telemedicina Nova sala Buscar sala por agendamento Selecione o agendamento Buscar Histórico de atend",
+      "img": "screenshots/perfis/admin/telemedicina.png"
+    },
+    {
+      "slug": "atendimento-psicologico",
+      "pedida": "/atendimento-psicologico",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Admin Demonstração Clínica"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Agenda",
+        "Notificações",
+        "Telemedicina",
+        "Relatórios",
+        "Clínica"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Agenda Notificações Telemedicina Relatórios Clínica AD Admin Demonstração Clínica ADMIN Sair Admin Demonstração Clínica ADMIN AD Olá, Admin Demonstração Clínica quinta-feira, 22 de outubro de 2026 Pacientes ativos 1 Agendamentos ",
+      "img": "screenshots/perfis/admin/atendimento-psicologico.png"
+    },
+    {
+      "slug": "financeiro-psicologia",
+      "pedida": "/financeiro-psicologia",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Admin Demonstração Clínica"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Agenda",
+        "Notificações",
+        "Telemedicina",
+        "Relatórios",
+        "Clínica"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Agenda Notificações Telemedicina Relatórios Clínica AD Admin Demonstração Clínica ADMIN Sair Admin Demonstração Clínica ADMIN AD Olá, Admin Demonstração Clínica quinta-feira, 22 de outubro de 2026 Pacientes ativos 1 Agendamentos ",
+      "img": "screenshots/perfis/admin/financeiro-psicologia.png"
+    },
+    {
+      "slug": "clinica",
+      "pedida": "/clinica",
+      "final": "/clinica",
+      "redirecionou": false,
+      "titulos": [
+        "Clínica · Usuários",
+        "Logo da clínica"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Agenda",
+        "Notificações",
+        "Telemedicina",
+        "Relatórios",
+        "Clínica"
+      ],
+      "botoes": [
+        "Sair",
+        "Adicionar logo",
+        "Psicólogo(a)",
+        "Criar usuário"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Agenda Notificações Telemedicina Relatórios Clínica AD Admin Demonstração Clínica ADMIN Sair Admin Demonstração Clínica ADMIN AD Clínica · Usuários Cadastro de profissionais e equipe da sua clínica (multi-tenant) Logo da clínica ",
+      "img": "screenshots/perfis/admin/clinica.png"
+    },
+    {
+      "slug": "relatorios",
+      "pedida": "/relatorios",
+      "final": "/relatorios",
+      "redirecionou": false,
+      "titulos": [
+        "Relatórios Gerenciais"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Agenda",
+        "Notificações",
+        "Telemedicina",
+        "Relatórios",
+        "Clínica"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Agenda Notificações Telemedicina Relatórios Clínica AD Admin Demonstração Clínica ADMIN Sair Admin Demonstração Clínica ADMIN AD Relatórios Gerenciais Visão consolidada de pacientes e atendimentos para a gestão da clínica Período",
+      "img": "screenshots/perfis/admin/relatorios.png"
+    },
+    {
+      "slug": "super-admin",
+      "pedida": "/super-admin",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Admin Demonstração Clínica"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Agenda",
+        "Notificações",
+        "Telemedicina",
+        "Relatórios",
+        "Clínica"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Agenda Notificações Telemedicina Relatórios Clínica AD Admin Demonstração Clínica ADMIN Sair Admin Demonstração Clínica ADMIN AD Olá, Admin Demonstração Clínica quinta-feira, 22 de outubro de 2026 Pacientes ativos 1 Agendamentos ",
+      "img": "screenshots/perfis/admin/super-admin.png"
+    },
+    {
+      "slug": "tickets",
+      "pedida": "/tickets",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Admin Demonstração Clínica"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Agenda",
+        "Notificações",
+        "Telemedicina",
+        "Relatórios",
+        "Clínica"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Agenda Notificações Telemedicina Relatórios Clínica AD Admin Demonstração Clínica ADMIN Sair Admin Demonstração Clínica ADMIN AD Olá, Admin Demonstração Clínica quinta-feira, 22 de outubro de 2026 Pacientes ativos 1 Agendamentos ",
+      "img": "screenshots/perfis/admin/tickets.png"
+    },
+    {
+      "slug": "rota-inexistente",
+      "pedida": "/rota-que-nao-existe",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Admin Demonstração Clínica"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Agenda",
+        "Notificações",
+        "Telemedicina",
+        "Relatórios",
+        "Clínica"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Agenda Notificações Telemedicina Relatórios Clínica AD Admin Demonstração Clínica ADMIN Sair Admin Demonstração Clínica ADMIN AD Olá, Admin Demonstração Clínica quinta-feira, 22 de outubro de 2026 Pacientes ativos 1 Agendamentos ",
+      "img": "screenshots/perfis/admin/rota-inexistente.png"
+    }
+  ]
+}

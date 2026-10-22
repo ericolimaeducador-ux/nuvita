@@ -1,0 +1,147 @@
+[
+  {
+    "alvo": "/agendamentos",
+    "status": 200,
+    "forma": "array[1]"
+  },
+  {
+    "alvo": "/agendamentos/bloqueios",
+    "status": 200,
+    "forma": "array[0]"
+  },
+  {
+    "alvo": "/analytics/pacientes",
+    "status": 200,
+    "forma": "obj{totalAtivos,novosPorMes,porSexo}"
+  },
+  {
+    "alvo": "/analytics/agendamentos",
+    "status": 200,
+    "forma": "obj{porStatus,porTipo,topMedicos,porMes,porDia,porSemana}"
+  },
+  {
+    "alvo": "/analytics/financeiro",
+    "status": 200,
+    "forma": "obj{receitasPorMes,despesasPorMes,porFormaPagamento,totalGeral}"
+  },
+  {
+    "alvo": "/analytics/notificacoes",
+    "status": 200,
+    "forma": "obj{porStatus,porCanal,porTipo,taxaEntrega}"
+  },
+  {
+    "alvo": "/analytics/pacientes-por-representante",
+    "status": 200,
+    "forma": "array[0]"
+  },
+  {
+    "alvo": "/analytics/cobrancas-psicologia",
+    "status": 200,
+    "forma": "obj{vencidas,aVencer,semData,totalVencido,totalAVencer}"
+  },
+  {
+    "alvo": "/analytics/perda-seguimento",
+    "status": 200,
+    "forma": "array[1]"
+  },
+  {
+    "alvo": "/analytics/horarios-vagos",
+    "status": 400,
+    "forma": "data must be a valid ISO 8601 date string"
+  },
+  {
+    "alvo": "/clinicas/minha",
+    "status": 200,
+    "forma": "obj{nome,documento,tipoDocumento}"
+  },
+  {
+    "alvo": "/documentos",
+    "status": 200,
+    "forma": "array[0]"
+  },
+  {
+    "alvo": "/financeiro/lancamentos",
+    "status": 403,
+    "forma": "Acesso negado para este papel."
+  },
+  {
+    "alvo": "/financeiro/dashboard",
+    "status": 403,
+    "forma": "Acesso negado para este papel."
+  },
+  {
+    "alvo": "/financeiro/psicologia/painel",
+    "status": 200,
+    "forma": "obj{sessoesPorCiclo,recebidoNoMes,aReceber,ciclosACobrar,pacientes}"
+  },
+  {
+    "alvo": "/inscricoes-teste",
+    "status": 403,
+    "forma": "Acesso negado para este papel."
+  },
+  {
+    "alvo": "/notificacoes/dashboard",
+    "status": 403,
+    "forma": "Acesso negado para este papel."
+  },
+  {
+    "alvo": "/observacoes-paciente?pacienteId=:pac",
+    "status": 200,
+    "forma": "array[0]"
+  },
+  {
+    "alvo": "/pacientes",
+    "status": 200,
+    "forma": "items[2] total=?"
+  },
+  {
+    "alvo": "/pacientes/:pac",
+    "status": 200,
+    "forma": "obj{id,clinicaId,nome,cpf,dataNascimento,sexo,telefone,email}"
+  },
+  {
+    "alvo": "/pacientes/:pac/export",
+    "status": 200,
+    "forma": "obj{exportadoEm,formato,dados}"
+  },
+  {
+    "alvo": "/pacientes/representantes",
+    "status": 200,
+    "forma": "array[0]"
+  },
+  {
+    "alvo": "/prontuarios",
+    "status": 400,
+    "forma": "pacienteId e obrigatorio para listar historico de prontuario."
+  },
+  {
+    "alvo": "/prontuarios/:pront",
+    "status": 200,
+    "forma": "obj{id,clinicaId,pacienteId,medicoId,dataAtendimento,tipo,registroPsicologico,arquivos}"
+  },
+  {
+    "alvo": "/telemedicina/salas",
+    "status": 200,
+    "forma": "array[2]"
+  },
+  {
+    "alvo": "/testes-psicologicos?pacienteId=:pac",
+    "status": 200,
+    "forma": "array[1]"
+  },
+  {
+    "alvo": "/tickets",
+    "status": 403,
+    "forma": "Acesso negado para este papel."
+  },
+  {
+    "alvo": "/super-admin/clinicas",
+    "status": 403,
+    "forma": "Acesso permitido apenas para SUPER_ADMIN."
+  },
+  {
+    "alvo": "/super-admin/usuarios",
+    "status": 403,
+    "forma": "Acesso permitido apenas para SUPER_ADMIN."
+  }
+]

@@ -14,7 +14,6 @@ import { PageHeader } from '@/components/PageHeader';
 import { DocumentoClinicoLayout } from '@/components/DocumentoClinicoLayout';
 import { DocumentoAssinatura } from '@/components/DocumentoAssinatura';
 import { toast } from '@/components/ui/use-toast';
-import { useAuth } from '@/auth/AuthContext';
 import { ErroConsulta } from '@/components/ErroConsulta';
 import { pacientesApi, iaClinicaApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';

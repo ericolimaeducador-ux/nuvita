@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/auth/AuthContext', () => ({
   useAuth: () => ({
-    user: { id: 'u1', clinicaId: 'c1', papel: 'PSICOLOGO', nome: 'Psi Teste', registroProfissional: '06/123' },
+    user: { id: 'u1', clinicaId: 'c1', papel: 'PSICOLOGO', nome: 'Psi Teste', registroProfissional: '06/123', crp: '06/123' },
   }),
 }));
 

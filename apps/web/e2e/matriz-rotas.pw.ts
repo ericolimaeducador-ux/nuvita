@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 // MATRIZ perfil × rota do web: para cada papel, tenta o acesso DIRETO (URL) a cada rota e confere se
 // entra (caminho final = pedido) ou é barrado (volta para /dashboard). Esconder no menu NUNCA é a proteção.
 // Roda no CI (job Web — E2E). Rota nova no web sem linha aqui NÃO é detectada por este arquivo: o teste
-// `rotas-declaradas` abaixo compara com o conjunto de rotas de routes.tsx.
+// `rotas-declaradas` (no fim do arquivo) compara com o conjunto de rotas reais de routes.tsx e FALHA.
 
 type Papel = 'SUPER_ADMIN' | 'ADMIN' | 'PSICOLOGO' | 'SECRETARIA' | 'PACIENTE';
 const PAPEIS: Papel[] = ['SUPER_ADMIN', 'ADMIN', 'PSICOLOGO', 'SECRETARIA', 'PACIENTE'];
@@ -13,7 +15,7 @@ const ROTAS: Array<[string, string, Papel[]]> = [
   ['/pacientes', '/pacientes', ['SUPER_ADMIN', 'ADMIN', 'PSICOLOGO', 'SECRETARIA']],
   ['/pacientes/:id', '/pacientes/p1', ['SUPER_ADMIN', 'ADMIN', 'PSICOLOGO', 'SECRETARIA']],
   // documentos clínicos e impressão do prontuário: PRIVATIVOS do psicólogo
-  ['/pacientes/:id/prontuario/:pid/imprimir', '/pacientes/p1/prontuario/r1/imprimir', ['PSICOLOGO']],
+  ['/pacientes/:id/prontuario/:prontuarioId/imprimir', '/pacientes/p1/prontuario/r1/imprimir', ['PSICOLOGO']],
   ['/pacientes/:id/documentos/atestado', '/pacientes/p1/documentos/atestado', ['PSICOLOGO']],
   ['/pacientes/:id/documentos/laudo', '/pacientes/p1/documentos/laudo', ['PSICOLOGO']],
   ['/pacientes/:id/documentos/encaminhamento', '/pacientes/p1/documentos/encaminhamento', ['PSICOLOGO']],
@@ -71,4 +73,37 @@ test('rota inexistente cai no dashboard para todo papel logado', async ({ page }
   await expect(page.locator('#sonda')).toBeAttached();
   await page.waitForTimeout(400);
   expect(await page.locator('#sonda').getAttribute('data-pathname')).toBe('/dashboard');
+});
+
+// Rotas fora da matriz de papéis, cada uma com o motivo. Rota nova em routes.tsx precisa entrar em ROTAS
+// (com os papéis permitidos) ou aqui (com justificativa); senão o teste reprova.
+const FORA_DA_MATRIZ: Record<string, string> = {
+  '/login': 'pública: tela de login',
+  '/tele/:token': 'pública: a credencial é o token da sala (paciente)',
+  '/aceitar-termos': 'gate de sessão (GateChain): vale para qualquer papel logado',
+  '/definir-senha': 'gate de sessão (GateChain): vale para qualquer papel logado',
+  '/': 'redireciona para /dashboard',
+  '*': 'rota desconhecida: redireciona para /dashboard (coberto pelo teste acima)',
+};
+
+test('rotas-declaradas: toda rota real de routes.tsx tem linha na matriz do web', () => {
+  const fonte = readFileSync(resolve(process.cwd(), 'src/routes.tsx'), 'utf-8');
+  const gates = readFileSync(resolve(process.cwd(), 'src/auth/GateChain.tsx'), 'utf-8');
+  const constante = (nome: string) => new RegExp(`${nome}\\s*=\\s*'([^']+)'`).exec(gates)?.[1];
+  const reais = new Set<string>();
+  for (const m of fonte.matchAll(/<Route\s+path=(?:"([^"]+)"|\{([A-Z_]+)\})/g)) {
+    const caminho = m[1] ?? constante(m[2]);
+    expect(caminho, `constante de rota ${m[2]} não resolvida`).toBeTruthy();
+    reais.add(caminho as string);
+  }
+  // <Route> de layout (sem path) é aceito; <Route index> ou path fora do padrão reprova
+  expect(fonte).not.toMatch(/<Route\s+index/);
+  expect(reais.size).toBeGreaterThan(20);
+
+  const declaradas = new Set([...ROTAS.map(([rotulo]) => rotulo), ...Object.keys(FORA_DA_MATRIZ)]);
+  const semLinha = [...reais].filter((r) => !declaradas.has(r));
+  expect(semLinha, 'rota em routes.tsx sem linha na matriz do web').toEqual([]);
+
+  const obsoletas = [...declaradas].filter((d) => !reais.has(d));
+  expect(obsoletas, 'linha da matriz sem rota em routes.tsx').toEqual([]);
 });

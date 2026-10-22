@@ -1,3 +1,4 @@
+import { useSaidaProtegida } from '@/lib/saida-protegida';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -25,6 +26,8 @@ export function SolicitarCorrecaoDialog({
 }) {
   const qc = useQueryClient();
   const [justificativa, setJustificativa] = useState('');
+  // Clique fora/ESC não fecham; Cancelar/X com justificativa digitada pede confirmação.
+  const saida = useSaidaProtegida(!!justificativa.trim(), () => { setJustificativa(''); onOpenChange(false); });
 
   const mut = useMutation({
     mutationFn: () => ticketsApi.abrir({ pacienteId, justificativa: justificativa.trim() }),
@@ -38,8 +41,8 @@ export function SolicitarCorrecaoDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={saida.onOpenChange}>
+      <DialogContent className="max-w-md" {...saida.contentProps}>
         <DialogHeader>
           <DialogTitle>Solicitar correção de dados</DialogTitle>
         </DialogHeader>
@@ -59,7 +62,7 @@ export function SolicitarCorrecaoDialog({
           />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={saida.solicitarFechar}>Cancelar</Button>
           <Button disabled={!justificativa.trim() || mut.isPending} onClick={() => mut.mutate()}>
             {mut.isPending ? 'Enviando...' : 'Enviar solicitação'}
           </Button>

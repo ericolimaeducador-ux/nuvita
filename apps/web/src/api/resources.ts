@@ -1,4 +1,5 @@
 import { api } from './client';
+import { comoLista, comoObjetoComLista } from '@/lib/consulta';
 import type {
   Agendamento,
   AuthUser,
@@ -115,9 +116,9 @@ export interface ListPacientesParams {
 }
 export const pacientesApi = {
   list: (params: ListPacientesParams = {}) =>
-    api.get<PageResult<Paciente>>('/pacientes', { params }).then((r) => r.data),
+    api.get<PageResult<Paciente>>('/pacientes', { params }).then((r) => comoLista<Paciente>(r.data) as PageResult<Paciente>),
   listarRepresentantes: () =>
-    api.get<string[]>('/pacientes/representantes').then((r) => r.data),
+    api.get<string[]>('/pacientes/representantes').then((r) => comoLista<string>(r.data) as string[]),
   get: (id: string) => api.get<Paciente>(`/pacientes/${id}`).then((r) => r.data),
   create: (payload: Record<string, unknown>) =>
     api.post<Paciente>('/pacientes', payload).then((r) => r.data),
@@ -154,7 +155,7 @@ export const agendaApi = {
   list: (params: ListAgendamentosParams = {}) =>
     api
       .get<PageResult<Agendamento> | Agendamento[]>('/agendamentos', { params })
-      .then((r) => r.data),
+      .then((r) => comoLista<Agendamento>(r.data)),
   create: (payload: CreateAgendamentoPayload) =>
     api.post<Agendamento>('/agendamentos', payload).then((r) => r.data),
   // Reagendar = atualizar data/hora (PATCH /:id).
@@ -175,7 +176,7 @@ export const prontuariosApi = {
   list: (params: { pacienteId?: string } = {}) =>
     api
       .get<PageResult<Prontuario> | Prontuario[]>('/prontuarios', { params })
-      .then((r) => r.data),
+      .then((r) => comoLista<Prontuario>(r.data)),
   get: (id: string) =>
     api.get<Prontuario>(`/prontuarios/${id}`).then((r) => r.data),
   create: (payload: Record<string, unknown>) =>
@@ -198,7 +199,7 @@ export const documentosApi = {
   list: (params: { pacienteId?: string; prontuarioId?: string } = {}) =>
     api
       .get<PageResult<Documento> | Documento[]>('/documentos', { params })
-      .then((r) => r.data),
+      .then((r) => comoLista<Documento>(r.data)),
   presignUpload: (payload: {
     clinicaId: string; pacienteId: string; prontuarioId?: string;
     nome: string; nomePaciente?: string; tipo: TipoDocumento; mimeType: string; tamanho: number; hash: string;
@@ -231,7 +232,10 @@ export interface CobrarCicloPayload {
 }
 
 export const psicoFinanceiroApi = {
-  painel: () => api.get<PainelPsicologia>('/financeiro/psicologia/painel').then((r) => r.data),
+  painel: () =>
+    api
+      .get<PainelPsicologia>('/financeiro/psicologia/painel')
+      .then((r) => comoObjetoComLista<PainelPsicologia>(r.data, 'pacientes')),
   salvarConfig: (valorSessao: number) =>
     api.post('/financeiro/psicologia/configuracao', { valorSessao }).then((r) => r.data),
   cobrar: (payload: CobrarCicloPayload) =>
@@ -254,7 +258,7 @@ export const telemedicinaApi = {
   createSala: (payload: CreateSalaPayload) =>
     api.post<SalaTelemedicina>('/telemedicina/salas', payload).then((r) => r.data),
   listar: (params?: { dataInicio?: string; dataFim?: string }) =>
-    api.get<SalaTelemedicina[]>('/telemedicina/salas', { params }).then((r) => r.data),
+    api.get<SalaTelemedicina[]>('/telemedicina/salas', { params }).then((r) => comoLista<SalaTelemedicina>(r.data) as SalaTelemedicina[]),
   findByAgendamento: (agendamentoId: string) =>
     api
       .get<SalaTelemedicina>(`/telemedicina/salas/agendamento/${agendamentoId}`)
@@ -264,7 +268,7 @@ export const telemedicinaApi = {
   encerrar: (id: string) =>
     api.patch(`/telemedicina/salas/${id}/encerrar`).then((r) => r.data),
   eventos: (salaId: string) =>
-    api.get<SalaEvento[]>(`/telemedicina/salas/${salaId}/eventos`).then((r) => r.data),
+    api.get<SalaEvento[]>(`/telemedicina/salas/${salaId}/eventos`).then((r) => comoLista<SalaEvento>(r.data) as SalaEvento[]),
 };
 
 // Acesso à sala pelo token do link (paciente entra sem login; o token é a credencial).
@@ -302,7 +306,7 @@ export const observacoesPacienteApi = {
   create: (payload: { pacienteId: string; texto: string }) =>
     api.post<ObservacaoPaciente>('/observacoes-paciente', payload).then((r) => r.data),
   listByPaciente: (pacienteId: string) =>
-    api.get<ObservacaoPaciente[]>('/observacoes-paciente', { params: { pacienteId } }).then((r) => r.data),
+    api.get<ObservacaoPaciente[]>('/observacoes-paciente', { params: { pacienteId } }).then((r) => comoLista<ObservacaoPaciente>(r.data) as ObservacaoPaciente[]),
 };
 
 // ---------- Testes psicológicos (placeholder — sem catálogo ainda) ----------
@@ -321,7 +325,7 @@ export const testesPsicologicosApi = {
   create: (payload: { pacienteId: string; nomeTeste: string; dataAplicacao: string; resultado?: string }) =>
     api.post<TestePsicologico>('/testes-psicologicos', payload).then((r) => r.data),
   listByPaciente: (pacienteId: string) =>
-    api.get<TestePsicologico[]>('/testes-psicologicos', { params: { pacienteId } }).then((r) => r.data),
+    api.get<TestePsicologico[]>('/testes-psicologicos', { params: { pacienteId } }).then((r) => comoLista<TestePsicologico>(r.data) as TestePsicologico[]),
 };
 
 // ---------- IA clínica (sugestão de abordagem + prescrição de exercícios) ----------
@@ -440,7 +444,7 @@ export interface CriarClinicaResponse {
 
 export const superAdminApi = {
   listUsuarios: (params: ListUsersParams = {}) =>
-    api.get<ListUsuariosResult>('/super-admin/usuarios', { params }).then((r) => r.data),
+    api.get<ListUsuariosResult>('/super-admin/usuarios', { params }).then((r) => (comoLista(r.data), r.data)),
   getUsuario: (id: string) =>
     api.get<UsuarioAdmin>(`/super-admin/usuarios/${id}`).then((r) => r.data),
   createUsuario: (payload: CreateAdminUserPayload) =>
@@ -452,7 +456,7 @@ export const superAdminApi = {
   reset2fa: (id: string) =>
     api.post<TwoFactorSetup>(`/super-admin/usuarios/${id}/reset-2fa`).then((r) => r.data),
   listClinicas: () =>
-    api.get<{ items: ClinicaAdmin[]; total: number }>('/super-admin/clinicas').then((r) => r.data),
+    api.get<{ items: ClinicaAdmin[]; total: number }>('/super-admin/clinicas').then((r) => (comoLista(r.data), r.data)),
   criarClinica: (payload: CriarClinicaPayload) =>
     api.post<CriarClinicaResponse>('/super-admin/clinicas', payload).then((r) => r.data),
   updateClinica: (id: string, payload: UpdateClinicaPayload) =>
@@ -520,17 +524,25 @@ export interface SlotVago {
 
 export const analyticsApi = {
   pacientes: (params: AnalyticsPeriodParams = {}) =>
-    api.get<DashboardPacientes>('/analytics/pacientes', { params }).then((r) => r.data),
+    api
+      .get<DashboardPacientes>('/analytics/pacientes', { params })
+      .then((r) => comoObjetoComLista<DashboardPacientes>(r.data, 'novosPorMes')),
   pacientesPorRepresentante: (params: AnalyticsPeriodParams = {}) =>
-    api.get<Array<{ _id: string; total: number }>>('/analytics/pacientes-por-representante', { params }).then((r) => r.data),
+    api.get<Array<{ _id: string; total: number }>>('/analytics/pacientes-por-representante', { params }).then((r) => comoLista<{ _id: string; total: number }>(r.data) as Array<{ _id: string; total: number }>),
   agendamentos: (params: AnalyticsPeriodParams = {}) =>
-    api.get<DashboardAgendamentos>('/analytics/agendamentos', { params }).then((r) => r.data),
+    api
+      .get<DashboardAgendamentos>('/analytics/agendamentos', { params })
+      .then((r) => comoObjetoComLista<DashboardAgendamentos>(r.data, ['porMes', 'porDia', 'porSemana'])),
   financeiro: (params: AnalyticsPeriodParams = {}) =>
-    api.get<DashboardFinanceiroAnalytics>('/analytics/financeiro', { params }).then((r) => r.data),
+    api
+      .get<DashboardFinanceiroAnalytics>('/analytics/financeiro', { params })
+      .then((r) => comoObjetoComLista<DashboardFinanceiroAnalytics>(r.data, 'receitasPorMes')),
   cobrancasPsicologia: (params: { clinicaId?: string; profissionalId?: string } = {}) =>
-    api.get<CobrancasPsicologia>('/analytics/cobrancas-psicologia', { params }).then((r) => r.data),
+    api
+      .get<CobrancasPsicologia>('/analytics/cobrancas-psicologia', { params })
+      .then((r) => comoObjetoComLista<CobrancasPsicologia>(r.data, ['vencidas', 'aVencer'])),
   perdaSeguimento: (params: { clinicaId?: string; profissionalId?: string; diasLimite?: number } = {}) =>
-    api.get<PacientePerdaSeguimento[]>('/analytics/perda-seguimento', { params }).then((r) => r.data),
+    api.get<PacientePerdaSeguimento[]>('/analytics/perda-seguimento', { params }).then((r) => comoLista<PacientePerdaSeguimento>(r.data) as PacientePerdaSeguimento[]),
   horariosVagos: (params: {
     data: string;
     clinicaId?: string;
@@ -538,5 +550,5 @@ export const analyticsApi = {
     horaInicio?: number;
     horaFim?: number;
     slotMinutos?: number;
-  }) => api.get<SlotVago[]>('/analytics/horarios-vagos', { params }).then((r) => r.data),
+  }) => api.get<SlotVago[]>('/analytics/horarios-vagos', { params }).then((r) => comoLista<SlotVago>(r.data) as SlotVago[]),
 };

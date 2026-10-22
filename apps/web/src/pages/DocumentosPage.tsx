@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { documentosApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toItems } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import { toast } from '@/components/ui/use-toast';
 import { TIPO_DOCUMENTO_LABEL, type Documento } from '@/types';
 
@@ -61,6 +62,8 @@ export function DocumentosPage() {
         <CardContent className="p-6">
           {listQ.isLoading ? (
             <div className="space-y-3">{[1,2,3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+          ) : listQ.isError ? (
+            <ErroConsulta erro={listQ.error} refetch={listQ.refetch} recurso="os documentos" />
           ) : (
             <Table>
               <TableHeader>

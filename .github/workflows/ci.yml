@@ -70,3 +70,8 @@ jobs:
       - name: Type check & build
         working-directory: apps/web
         run: npm run build
+
+      # Testes unitários do web (vitest). Teste que não roda no CI não entra: o job falha se algum quebrar.
+      - name: Testes unitários (vitest)
+        working-directory: apps/web
+        run: npm test

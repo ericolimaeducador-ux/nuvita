@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { prontuariosApi, pacientesApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toItems } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import { toast } from '@/components/ui/use-toast';
 import { ProntuarioDetailDialog } from '@/components/ProntuarioDialogs';
 import { TIPO_ATENDIMENTO_LABEL, type Prontuario, type Paciente } from '@/types';
@@ -41,8 +42,19 @@ export function ProntuariosPage() {
 
       <Card>
         <CardContent className="p-6">
+          {/* Sem os nomes, a coluna Paciente mostraria só IDs. */}
+          {pacientesQ.isError && (
+            <ErroConsulta
+              className="mb-4"
+              erro={pacientesQ.error}
+              refetch={pacientesQ.refetch}
+              recurso="os nomes dos pacientes"
+            />
+          )}
           {listQ.isLoading ? (
             <div className="space-y-3">{[1,2,3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+          ) : listQ.isError ? (
+            <ErroConsulta erro={listQ.error} refetch={listQ.refetch} recurso="os prontuários" />
           ) : (
             <Table>
               <TableHeader>

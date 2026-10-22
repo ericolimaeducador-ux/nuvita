@@ -21,6 +21,7 @@ import { SalaVideo } from '@/components/SalaVideo';
 import { useAuth } from '@/auth/AuthContext';
 import { agendaApi, iaClinicaApi, pacientesApi, prontuariosApi, psicoFinanceiroApi, telemedicinaApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import { formatData, formatEndereco, linkDaSala, toItems } from '@/utils';
 import { CAMPOS_POR_LINHA } from '@/lib/linhaTerapeutica';
 import {
@@ -139,7 +140,8 @@ function BlocoContexto({ label, valor }: { label: string; valor?: string }) {
  * "Prontuário" e ao lado do vídeo, na tela de atendimento — por isso não traz
  * moldura própria.
  */
-function RegistroSessao({
+// Exportado para teste de componente (a tela só o usa via RegistroSessaoDialog e AtendimentoVideo).
+export function RegistroSessao({
   agendamento, open, onClose, fecharRef,
 }: {
   agendamento: Agendamento;
@@ -189,7 +191,9 @@ function RegistroSessao({
   const primeiraSessao = sessoes[0];
   const ultimaSessao = sessoes[sessoes.length - 1];
 
-  const carregando = sessoesQ.isLoading || (open && !sessoesQ.data);
+  // Sem o histórico não dá para saber se é 1ª consulta ou seguimento: falha explícita, nunca "carregando" eterno.
+  const historicoErro = sessoesQ.isError;
+  const carregando = !historicoErro && (sessoesQ.isLoading || (open && !sessoesQ.data));
   const ehSeguimento = sessoes.length > 0;
   const completo = !ehSeguimento || forcarCompleto;
 
@@ -277,6 +281,10 @@ function RegistroSessao({
   });
 
   const salvar = (assinar: boolean) => {
+    if (historicoErro) {
+      toast({ title: 'Não é possível salvar sem o histórico do paciente carregado.', variant: 'destructive' });
+      return;
+    }
     if (completo && !reg.motivoAtendimento && !reg.evolucao && !reg.anotacoesLivres) {
       toast({ title: 'Preencha ao menos o motivo do atendimento, a evolução ou as anotações da sessão.', variant: 'destructive' });
       return;
@@ -303,7 +311,8 @@ function RegistroSessao({
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        {carregando ? 'Carregando o histórico do paciente…'
+        {historicoErro ? 'Registro da sessão indisponível enquanto o histórico do paciente não for carregado.'
+          : carregando ? 'Carregando o histórico do paciente…'
           : completo
             ? `${ehSeguimento ? 'Prontuário completo' : 'Primeira consulta'} — anamnese psicológica. Registro documental conforme a Resolução CFP nº 006/2019: após assinado, fica imutável (correções só por adendo).`
             : `Consulta de seguimento — ${sessoes.length + 1}ª sessão. Contexto da primeira consulta e anotações livres da psicoterapia.`}
@@ -318,6 +327,14 @@ function RegistroSessao({
           <Skeleton className="h-16 w-full" />
         ) : (
           <>
+            {pacienteQ.isError && (
+              <ErroConsulta
+                className="mb-2"
+                erro={pacienteQ.error}
+                refetch={pacienteQ.refetch}
+                recurso="os dados cadastrais do paciente (incluindo os campos da linha terapêutica)"
+              />
+            )}
             <p className="font-medium text-base">{paciente?.nome ?? agendamento?.pacienteNome ?? '—'}</p>
             <p className="text-muted-foreground">
               CPF: {paciente?.cpf ?? agendamento?.pacienteCpf ?? '—'} · Nascimento: {formatData(paciente?.dataNascimento)} · Sexo: {paciente?.sexo ?? '—'}
@@ -330,7 +347,7 @@ function RegistroSessao({
       </div>
 
       {/* Sugestão de abordagem via IA — apoio ao psicólogo, nunca decide por ele. */}
-      {!carregando && (
+      {!carregando && !historicoErro && (
         <div className="rounded-xl border border-dashed bg-muted/20 p-4 space-y-2 text-sm">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -385,7 +402,9 @@ function RegistroSessao({
         </div>
       )}
 
-      {carregando ? (
+      {historicoErro ? (
+          <ErroConsulta erro={sessoesQ.error} refetch={sessoesQ.refetch} recurso="o histórico do paciente" />
+        ) : carregando ? (
           <div className="space-y-2 py-4">
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-40 w-full" />
@@ -522,12 +541,17 @@ function RegistroSessao({
           </div>
         )}
 
+      {historicoErro && (
+        <p data-testid="salvar-bloqueado" className="pt-2 text-xs text-destructive sm:text-right">
+          Salvar bloqueado: sem o histórico não dá para saber se esta é a primeira consulta ou um seguimento.
+        </p>
+      )}
       <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
         <Button variant="outline" onClick={fechar} disabled={salvarM.isPending}>Fechar</Button>
-        <Button variant="secondary" onClick={() => salvar(false)} disabled={salvarM.isPending || carregando}>
+        <Button variant="secondary" onClick={() => salvar(false)} disabled={salvarM.isPending || carregando || historicoErro}>
           {salvarM.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Salvar rascunho
         </Button>
-        <Button onClick={() => salvar(true)} disabled={salvarM.isPending || carregando}>
+        <Button onClick={() => salvar(true)} disabled={salvarM.isPending || carregando || historicoErro}>
           {salvarM.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PenLine className="h-4 w-4 mr-2" />}
           Salvar e assinar
         </Button>
@@ -639,6 +663,8 @@ function HistoricoSessoesDialog({
         </DialogHeader>
         {sessoesQ.isLoading ? (
           <div className="space-y-2"><Skeleton className="h-14 w-full" /><Skeleton className="h-14 w-full" /></div>
+        ) : sessoesQ.isError ? (
+          <ErroConsulta erro={sessoesQ.error} refetch={sessoesQ.refetch} recurso="o histórico de sessões" />
         ) : sessoes.length === 0 ? (
           <p className="text-sm text-muted-foreground py-6 text-center">Nenhuma sessão registrada ainda.</p>
         ) : (
@@ -750,6 +776,9 @@ function NovoAgendamentoDialog({ open, onClose }: { open: boolean; onClose: () =
           <div className="space-y-2">
             <Label>Paciente</Label>
             <Input placeholder="Buscar por nome…" value={busca} onChange={(e) => setBusca(e.target.value)} />
+            {pacientesQ.isError && (
+              <ErroConsulta erro={pacientesQ.error} refetch={pacientesQ.refetch} recurso="a lista de pacientes" />
+            )}
             <Select value={pacienteId} onValueChange={setPacienteId}>
               <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
               <SelectContent>
@@ -929,8 +958,20 @@ export function AtendimentoPsicologicoPage() {
         </Select>
       </div>
 
+      {/* A numeração (sessão/ciclo) é calculada pela API; sem o painel, nenhum número é exibido. */}
+      {painelQ.isError && (
+        <ErroConsulta
+          className="mb-3"
+          erro={painelQ.error}
+          refetch={painelQ.refetch}
+          recurso="a numeração das sessões e dos ciclos"
+        />
+      )}
+
       {agendamentosQ.isLoading ? (
         <div className="space-y-2"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>
+      ) : agendamentosQ.isError ? (
+        <ErroConsulta erro={agendamentosQ.error} refetch={agendamentosQ.refetch} recurso="os agendamentos" />
       ) : agendamentos.length === 0 ? (
         <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
           Nenhum paciente agendado para o psicólogo neste filtro.
@@ -956,13 +997,21 @@ export function AtendimentoPsicologicoPage() {
                 </p>
               </div>
               <div className="text-sm">
-                <p className="font-medium">
-                  {situacao ? rotuloProximaSessao(situacao) : '1ª consulta'}
-                </p>
-                {situacao && situacao.sessoesRealizadas > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Ciclo {situacao.cicloAtual} · {situacao.sessoesNoCiclo}/{painelQ.data?.sessoesPorCiclo ?? 4} sessões
+                {painelQ.isError ? (
+                  <p data-testid="numero-sessao-indisponivel" className="text-xs text-muted-foreground">
+                    Nº da sessão indisponível
                   </p>
+                ) : (
+                  <>
+                    <p className="font-medium">
+                      {situacao ? rotuloProximaSessao(situacao) : '1ª consulta'}
+                    </p>
+                    {situacao && situacao.sessoesRealizadas > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Ciclo {situacao.cicloAtual} · {situacao.sessoesNoCiclo}/{painelQ.data?.sessoesPorCiclo ?? 4} sessões
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
               <Badge variant="outline" className={STATUS_BADGE[a.status]}>

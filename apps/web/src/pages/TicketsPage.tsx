@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { LifeBuoy } from 'lucide-react';
 import { ticketsApi, type Ticket } from '@/api/tickets';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import { AtenderTicketDialog, RecusarTicketDialog } from '@/components/CorrecaoIdentidadeDialogs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,7 @@ export function TicketsPage() {
       <div className="flex items-center gap-2">
         <LifeBuoy className="h-5 w-5 text-primary" />
         <h1 className="text-xl font-bold text-foreground">Tickets de correção</h1>
-        <Badge variant="secondary">{tickets.length}</Badge>
+        <Badge variant="secondary">{q.isError ? '—' : tickets.length}</Badge>
       </div>
       <p className="text-sm text-muted-foreground">
         Solicitações de correção de nome, CPF ou data de nascimento da clínica selecionada.
@@ -33,6 +34,10 @@ export function TicketsPage() {
         <CardContent className="p-0">
           {q.isLoading ? (
             <div className="space-y-2 p-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
+          ) : q.isError ? (
+            <div className="p-4">
+              <ErroConsulta erro={q.error} refetch={q.refetch} recurso="os tickets abertos" />
+            </div>
           ) : tickets.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">Nenhum ticket aberto.</p>
           ) : (

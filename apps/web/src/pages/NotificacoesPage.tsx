@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { Send, CheckCircle, Clock, XCircle, AlertTriangle } from 'lucide-react';
+import { Send, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { notificacoesApi } from '@/api/resources';
-import { apiErrorMessage } from '@/api/client';
+import { ErroConsulta } from '@/components/ErroConsulta';
 
 interface DashboardData {
   enviadas?: number;
@@ -41,10 +41,7 @@ export function NotificacoesPage() {
       />
 
       {q.isError && (
-        <div className="flex items-center gap-2 glass rounded-xl p-4 mb-4 text-amber-600 border-amber-500/20">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          <p className="text-sm">Não foi possível carregar o painel de notificações. {apiErrorMessage(q.error)}</p>
-        </div>
+        <ErroConsulta className="mb-4" erro={q.error} refetch={q.refetch} recurso="o painel de notificações" />
       )}
 
       {q.isLoading ? (
@@ -64,7 +61,7 @@ export function NotificacoesPage() {
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">{c.title}</p>
-                      <p className="text-2xl font-bold text-foreground">{c.value}</p>
+                      <p className="text-2xl font-bold text-foreground">{q.isError ? '—' : c.value}</p>
                     </div>
                   </div>
                 </CardContent>

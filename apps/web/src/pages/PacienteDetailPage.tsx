@@ -39,6 +39,8 @@ import {
 } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { formatCpf, formatData, idade, toItems, formatEndereco } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
+import { classificarErro } from '@/lib/consulta';
 import { classificarIdadePorString } from '@/paciente-idade';
 import {
   Sexo, SEXO_LABEL, ProjetoPaciente, PROJETO_LABEL, STATUS_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_LABEL,
@@ -145,12 +147,25 @@ export function PacienteDetailPage() {
     </div>
   );
 
-  if (pacQ.isError || !pacQ.data) return (
-    <div className="p-6 text-center">
-      <p className="text-lg font-semibold text-foreground mb-4">Paciente não encontrado</p>
-      <Button onClick={() => navigate('/pacientes')}>Voltar para Pacientes</Button>
-    </div>
-  );
+  // Só 404 significa "não encontrado"; 403/500/rede usam ErroConsulta (não podem parecer paciente inexistente).
+  if (pacQ.isError || !pacQ.data) {
+    const naoEncontrado = pacQ.isError && classificarErro(pacQ.error).tipo === 'nao-encontrado';
+    return (
+      <div className="p-6 text-center">
+        {naoEncontrado ? (
+          <p className="text-lg font-semibold text-foreground mb-4">Paciente não encontrado</p>
+        ) : (
+          <ErroConsulta
+            className="mb-4 justify-center"
+            erro={pacQ.error}
+            refetch={pacQ.refetch}
+            recurso="os dados do paciente"
+          />
+        )}
+        <Button onClick={() => navigate('/pacientes')}>Voltar para Pacientes</Button>
+      </div>
+    );
+  }
 
   const p = pacQ.data;
   const classificacaoIdade = classificarIdadePorString(p.dataNascimento);
@@ -212,7 +227,7 @@ export function PacienteDetailPage() {
       <Secao
         icon={<Stethoscope className="h-4 w-4" />}
         titulo="Prontuários e atendimentos"
-        contagem={prontuarios.length}
+        contagem={prontQ.isError ? undefined : prontuarios.length}
         acao={
           prontuarios.length > 0 ? (
             <Select onValueChange={(v) => setViewProntuarioId(v)}>
@@ -230,6 +245,8 @@ export function PacienteDetailPage() {
       >
         {prontQ.isLoading ? (
           <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+        ) : prontQ.isError ? (
+          <ErroConsulta erro={prontQ.error} refetch={prontQ.refetch} recurso="os atendimentos deste paciente" />
         ) : prontuarios.length === 0 ? (
           <Vazio>Nenhum atendimento registrado ainda.</Vazio>
         ) : (
@@ -294,7 +311,7 @@ export function PacienteDetailPage() {
       <Secao
         icon={<FileText className="h-4 w-4" />}
         titulo="Documentos"
-        contagem={toItems<Documento>(docsQ.data as never).length}
+        contagem={docsQ.isError ? undefined : toItems<Documento>(docsQ.data as never).length}
         defaultOpen={false}
         acao={
           <Button size="sm" variant="outline" onClick={() => setNovoDocOpen(true)}>
@@ -304,6 +321,8 @@ export function PacienteDetailPage() {
       >
         {docsQ.isLoading ? (
           <Skeleton className="h-20 w-full" />
+        ) : docsQ.isError ? (
+          <ErroConsulta erro={docsQ.error} refetch={docsQ.refetch} recurso="os documentos deste paciente" />
         ) : toItems<Documento>(docsQ.data as never).length === 0 ? (
           <Vazio>Nenhum documento anexado.</Vazio>
         ) : (
@@ -341,9 +360,11 @@ export function PacienteDetailPage() {
 
       {/* Histórico de agenda — fora do escopo do psicólogo (agenda dele fica em Atendimento Psicológico) */}
       {!ehPsicologo && (
-        <Secao icon={<CalendarClock className="h-4 w-4" />} titulo="Histórico de agenda" contagem={toItems<Agendamento>(agendaQ.data as never).length} defaultOpen={false}>
+        <Secao icon={<CalendarClock className="h-4 w-4" />} titulo="Histórico de agenda" contagem={agendaQ.isError ? undefined : toItems<Agendamento>(agendaQ.data as never).length} defaultOpen={false}>
           {agendaQ.isLoading ? (
             <Skeleton className="h-20 w-full" />
+          ) : agendaQ.isError ? (
+            <ErroConsulta erro={agendaQ.error} refetch={agendaQ.refetch} recurso="o histórico de agenda" />
           ) : toItems<Agendamento>(agendaQ.data as never).length === 0 ? (
             <Vazio>Nenhum agendamento.</Vazio>
           ) : (
@@ -724,7 +745,7 @@ function ObservacoesSecao({ pacienteId, observacoesAtuais }: { pacienteId: strin
     <Secao
       icon={<FileText className="h-4 w-4" />}
       titulo="Observações"
-      contagem={observacoes.length + (legado ? 1 : 0)}
+      contagem={listQ.isError ? undefined : observacoes.length + (legado ? 1 : 0)}
       defaultOpen={false}
     >
       <div className="space-y-3">
@@ -748,6 +769,8 @@ function ObservacoesSecao({ pacienteId, observacoesAtuais }: { pacienteId: strin
 
         {listQ.isLoading ? (
           <Skeleton className="h-16 w-full" />
+        ) : listQ.isError ? (
+          <ErroConsulta erro={listQ.error} refetch={listQ.refetch} recurso="as observações" />
         ) : observacoes.length === 0 && !legado ? (
           <Vazio>Nenhuma observação registrada.</Vazio>
         ) : (
@@ -822,7 +845,7 @@ function TestesPsicologicosSecao({ pacienteId }: { pacienteId: string }) {
     <Secao
       icon={<ClipboardCheck className="h-4 w-4" />}
       titulo="Testes Psicológicos"
-      contagem={testes.length}
+      contagem={listQ.isError ? undefined : testes.length}
       defaultOpen={false}
       acao={
         <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
@@ -832,6 +855,8 @@ function TestesPsicologicosSecao({ pacienteId }: { pacienteId: string }) {
     >
       {listQ.isLoading ? (
         <Skeleton className="h-16 w-full" />
+      ) : listQ.isError ? (
+        <ErroConsulta erro={listQ.error} refetch={listQ.refetch} recurso="os testes psicológicos" />
       ) : testes.length === 0 ? (
         <Vazio>Nenhum teste aplicado ainda.</Vazio>
       ) : (

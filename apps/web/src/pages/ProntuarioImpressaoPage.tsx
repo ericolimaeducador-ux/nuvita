@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { prontuariosApi, pacientesApi } from '@/api/resources';
 import { formatData, formatEndereco } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
+import { primeiraFalha } from '@/lib/consulta';
 import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
 import { GateCrpEmissao } from '@/components/GateCrpEmissao';
 import { useEmissor } from '@/components/DocumentoAssinatura';
@@ -53,6 +55,23 @@ export function ProntuarioImpressaoPage() {
 
   if (prontuarioQ.isLoading || pacienteQ.isLoading) {
     return <div className="p-8 space-y-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-96 w-full" /></div>;
+  }
+
+  // Impossível imprimir prontuário em branco: sem paciente e prontuário, só o alerta.
+  const falha = primeiraFalha(prontuarioQ, pacienteQ);
+  if (falha || !pr || !paciente) {
+    return (
+      <div className="p-8 space-y-4">
+        <ErroConsulta
+          erro={falha?.error}
+          refetch={falha?.refetch}
+          recurso="o prontuário e os dados do paciente"
+        />
+        <Button variant="ghost" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+        </Button>
+      </div>
+    );
   }
 
   const isPsicoterapia = pr?.tipo === TipoAtendimento.PSICOTERAPIA;

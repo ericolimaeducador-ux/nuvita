@@ -12,6 +12,7 @@ import { agendaApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toast } from '@/components/ui/use-toast';
 import { toItems, formatCpf } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import {
   ModalidadeAtendimento, MODALIDADE_LABEL, StatusAgendamento, STATUS_AGENDAMENTO_LABEL,
   TIPO_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_POR_AGENDAMENTO,
@@ -113,7 +114,12 @@ export function AgendaCalendario({
         <span className="text-muted-foreground/70">Arraste um evento para reagendar.</span>
       </div>
 
-      <div style={{ height: 650 }}>
+      {/* Calendário vazio por falha não pode parecer agenda livre: alerta e calendário inerte. */}
+      {listQ.isError && (
+        <ErroConsulta erro={listQ.error} refetch={listQ.refetch} recurso="os agendamentos do período" />
+      )}
+
+      <div style={{ height: 650 }} className={listQ.isError ? 'pointer-events-none opacity-40' : undefined}>
         <DnDCalendar
           localizer={localizer}
           culture="pt-br"

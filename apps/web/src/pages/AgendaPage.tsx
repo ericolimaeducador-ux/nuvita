@@ -20,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { agendaApi, pacientesApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toItems, formatCpf } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import {
@@ -180,6 +181,11 @@ export function AgendaPage() {
         }
       />
 
+      {/* Sem a lista de pacientes, linhas sem nome caem no ID e o seletor do novo agendamento fica vazio. */}
+      {pacientesQ.isError && (
+        <ErroConsulta className="mb-4" erro={pacientesQ.error} refetch={pacientesQ.refetch} recurso="os nomes dos pacientes" />
+      )}
+
       {visao === 'calendario' ? (
         <Card>
           <CardContent className="p-6">
@@ -206,6 +212,8 @@ export function AgendaPage() {
 
           {listQ.isLoading ? (
             <div className="space-y-3">{[1,2,3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+          ) : listQ.isError ? (
+            <ErroConsulta erro={listQ.error} refetch={listQ.refetch} recurso="os agendamentos do dia" />
           ) : (
             <Table>
               <TableHeader>

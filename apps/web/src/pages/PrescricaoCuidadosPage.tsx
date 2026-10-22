@@ -14,6 +14,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { DocumentoClinicoLayout } from '@/components/DocumentoClinicoLayout';
 import { DocumentoAssinatura } from '@/components/DocumentoAssinatura';
 import { toast } from '@/components/ui/use-toast';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import { pacientesApi, iaClinicaApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { SUGESTOES_CUIDADOS_POR_LINHA } from '@/lib/linhaTerapeutica';
@@ -41,6 +42,8 @@ export function PrescricaoCuidadosPage() {
     enabled: !!pacienteId,
   });
   const paciente = pacienteQ.data;
+  // Sem o paciente não se emite prescrição (nome em branco, linha terapêutica ausente).
+  const falha = pacienteQ.isError ? pacienteQ : null;
   const sugestoes = paciente?.linhaTerapeutica ? SUGESTOES_CUIDADOS_POR_LINHA[paciente.linhaTerapeutica] : [];
 
   function toggleChecklist(item: string) {
@@ -77,7 +80,7 @@ export function PrescricaoCuidadosPage() {
     onError: (e) => toast.error('Erro ao registrar a decisão', apiErrorMessage(e)),
   });
 
-  if (modo === 'imprimir') {
+  if (modo === 'imprimir' && !falha) {
     return (
       <DocumentoClinicoLayout rotulo="Prescrição de Cuidados" onVoltar={() => setModo('compor')}>
         <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4 mb-6">
@@ -106,7 +109,7 @@ export function PrescricaoCuidadosPage() {
     <div className="p-6 max-w-2xl mx-auto">
       <PageHeader
         title="Prescrição de Cuidados em Psicologia"
-        subtitle={paciente ? `Paciente: ${paciente.nome}` : 'Carregando…'}
+        subtitle={paciente ? `Paciente: ${paciente.nome}` : falha ? 'Dados indisponíveis' : 'Carregando…'}
         extra={
           <Button variant="ghost" onClick={() => navigate(-1)}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
@@ -116,6 +119,8 @@ export function PrescricaoCuidadosPage() {
 
       {pacienteQ.isLoading ? (
         <Skeleton className="h-64 w-full" />
+      ) : falha ? (
+        <ErroConsulta erro={falha.error} refetch={falha.refetch} recurso="os dados do paciente" />
       ) : (
         <Card>
           <CardContent className="p-6 space-y-4">

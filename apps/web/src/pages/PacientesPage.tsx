@@ -21,6 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { pacientesApi, type PacienteSort } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toItems, formatCpf, formatData, idade } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import { classificarIdadePorString } from '@/paciente-idade';
 import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
@@ -309,6 +310,8 @@ export function PacientesPage() {
 
           {listQ.isLoading ? (
             <div className="space-y-3">{[1,2,3,4,5].map((i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+          ) : listQ.isError && !listQ.data ? (
+            <ErroConsulta erro={listQ.error} refetch={listQ.refetch} recurso="a lista de pacientes" />
           ) : (
             <Table>
               <TableHeader>
@@ -371,6 +374,15 @@ export function PacientesPage() {
                 )}
               </TableBody>
             </Table>
+          )}
+
+          {listQ.isFetchNextPageError && (
+            <ErroConsulta
+              className="mt-4"
+              erro={listQ.error}
+              refetch={() => listQ.fetchNextPage()}
+              recurso="mais pacientes"
+            />
           )}
 
           {listQ.hasNextPage && (

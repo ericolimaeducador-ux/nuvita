@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/auth/AuthContext';
 import { superAdminApi } from '@/api/resources';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import { Modulo, Papel } from '@/types';
 import { Logo, LogoIcon } from '@/components/Logo';
 
@@ -175,6 +176,9 @@ export function AppLayout() {
           {ehSuperAdmin && (
             <div className="flex items-center gap-2 mr-auto">
               <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+              {clinicasQ.isError && (
+                <ErroConsulta className="py-1" erro={clinicasQ.error} refetch={clinicasQ.refetch} recurso="as clínicas" />
+              )}
               <Select value={clinicaAtiva ?? undefined} onValueChange={selecionarClinica}>
                 <SelectTrigger className="w-[220px] h-9">
                   <SelectValue placeholder="Selecione a clínica…" />

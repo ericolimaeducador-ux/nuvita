@@ -4,18 +4,26 @@ PRs: #36 (protected dialogs), #37 (pin firebase-tools), #38 (dialog hoist + "Sol
 
 ## 1. Never run a CLI with `@latest` in CI
 
-- `deploy-web.yml` ran `npx --yes firebase-tools@latest deploy ...`.
-- `firebase-tools` went from **15.34.0** (published 2026-10-14) to **15.34.1** (published
-  2026-10-21 22:18Z). The #35 deploy (2026-10-21 18:22Z, green) resolved `@latest` to 15.34.0; the #36
-  deploy (2026-10-22 15:03Z) resolved it to 15.34.1 and failed with:
-  `HTTP Error: 403, Permission denied to get service [firebasehosting.googleapis.com]`
-  (`serviceusage.googleapis.com`).
-- The deploy service account `github-hosting-deployer@` (role `roles/firebasehosting.admin`) lacks
-  `serviceusage.services.get`. The 15.34.1 → 403 link is inferred from publish dates (the logs do not
-  print the CLI version); the green deploy after the pin is what confirms it.
-- **Fix (#37):** pin `firebase-tools@15.34.0` (exact, no caret) in `.github/workflows/deploy-web.yml`.
-- **Before bumping the version:** grant `roles/serviceusage.serviceUsageViewer` to the SA first.
-  A comment in the workflow says the same.
+Evidence levels are labeled in each bullet.
+
+- `deploy-web.yml` ran `npx --yes firebase-tools@latest deploy ...`, so the CLI version floated.
+- **OBSERVED:** the #36 deploy (run 39800844178, 2026-10-22 15:03Z) failed with
+  `HTTP Error: 403, Permission denied to get service [firebasehosting.googleapis.com]` from
+  `serviceusage.googleapis.com`. The error names the permission `serviceusage.services.get`. The deploy
+  service account `github-hosting-deployer@` holds `roles/firebasehosting.admin` and does not hold that
+  permission.
+- **OBSERVED:** pinning `firebase-tools@15.34.0` in `.github/workflows/deploy-web.yml` (#37) restored
+  successful deploys: the runs for `3cadd32` (#37) and `fdfeb98` (#38) both concluded `success`
+  (`gh run list`, 2026-10-22).
+- **INFERRED (publication dates only, NOT verified against the changelog):** that the new permission
+  requirement was introduced in 15.34.1. Basis: npm shows 15.34.0 published 2026-10-14, 15.34.1 published
+  2026-10-21 22:18Z; the green #35 deploy (2026-10-21 18:22Z) preceded 15.34.1 and the failing #36 deploy
+  followed it. The workflow logs do not print the CLI version, so which version each run used is itself
+  inferred. A green deploy after the pin is also consistent with other explanations.
+- To upgrade this to CONFIRMED, check the firebase-tools 15.34.1 release notes / commit history for the
+  added serviceusage call. Not done as of 2026-10-22.
+- **Before bumping the version:** grant `roles/serviceusage.serviceUsageViewer` to the SA first. A
+  comment in the workflow says the same.
 - Rule: every tool executed in CI by `npx`/`curl | sh` gets an exact version.
 
 ## 2. Green CI is not a deployed change
@@ -62,4 +70,6 @@ PRs: #36 (protected dialogs), #37 (pin firebase-tools), #38 (dialog hoist + "Sol
 
 ## 6. Production state (2026-10-22)
 
-#36, #37 and #38 are shipped and smoke-tested.
+- **OBSERVED by this session:** deploys of `3cadd32` (#37) and `fdfeb98` (#38) concluded `success`.
+- **Attributed to Erico:** manual smoke test performed by Erico in production on 2026-10-22.
+  Not verified by automated test and not verified by this session.

@@ -129,6 +129,30 @@ test.describe('Editar cadastro do paciente', () => {
     expect(mensagens).toEqual(['Descartar alterações?']);
     await expect(page.getByRole('dialog')).toBeVisible();
   });
+
+  test('Solicitar correção com edição pendente pede confirmação; recusar mantém a edição, aceitar abre a solicitação', async ({ page }) => {
+    await abrirEdicao(page);
+    await page.getByLabel('Telefone').fill('11888887777');
+    const mensagens: string[] = [];
+    page.once('dialog', (d) => { mensagens.push(d.message()); void d.dismiss(); });
+    await page.getByRole('button', { name: 'Solicitar correção' }).click();
+    expect(mensagens).toEqual(['Você tem alterações não salvas. Descartar e continuar?']);
+    await expect(page.getByRole('dialog')).toContainText('Editar cadastro');
+    await expect(page.getByLabel('Telefone')).toHaveValue('11888887777');
+
+    page.once('dialog', (d) => void d.accept());
+    await page.getByRole('button', { name: 'Solicitar correção' }).click();
+    await expect(page.getByRole('dialog')).toContainText('Solicitar correção de dados');
+  });
+
+  test('Solicitar correção sem edição pendente abre a solicitação direto, sem confirmação', async ({ page }) => {
+    await abrirEdicao(page);
+    let perguntou = false;
+    page.on('dialog', (d) => { perguntou = true; void d.dismiss(); });
+    await page.getByRole('button', { name: 'Solicitar correção' }).click();
+    await expect(page.getByRole('dialog')).toContainText('Solicitar correção de dados');
+    expect(perguntou).toBe(false);
+  });
 });
 
 test.describe('Nova clínica (super-admin)', () => {

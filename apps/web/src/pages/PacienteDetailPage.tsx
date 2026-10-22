@@ -569,7 +569,11 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted p-3 text-sm">
               <span className="text-muted-foreground">Nome, CPF e nascimento só podem ser corrigidos pelo administrador da plataforma.</span>
-              <Button type="button" variant="outline" size="sm" onClick={() => { setOpen(false); setSolicitarOpen(true); }}>
+              <Button type="button" variant="outline" size="sm" onClick={() => {
+                  if (isDirty && !window.confirm('Você tem alterações não salvas. Descartar e continuar?')) return;
+                  setOpen(false);
+                  setSolicitarOpen(true);
+                }}>
                 Solicitar correção
               </Button>
             </div>

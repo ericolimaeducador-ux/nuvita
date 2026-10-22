@@ -44,7 +44,8 @@ const M = Modulo;
 export const PERMISSOES_PADRAO_POR_PAPEL: Record<Papel, Modulo[]> = {
   [Papel.SUPER_ADMIN]: TODOS_MODULOS,
   [Papel.ADMIN]: [
-    M.DASHBOARD, M.PACIENTES, M.AGENDA, M.PRONTUARIOS, M.DOCUMENTOS,
+    // Sem PRONTUARIOS: dado clínico é do psicólogo (a API nega o prontuário ao admin).
+    M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS,
     M.NOTIFICACOES, M.TELEMEDICINA, M.ANALYTICS, M.CLINICA,
   ],
   // O financeiro da psicologia é o único financeiro do produto — é o caixa
@@ -56,9 +57,8 @@ export const PERMISSOES_PADRAO_POR_PAPEL: Record<Papel, Modulo[]> = {
   [Papel.SECRETARIA]: [
     M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS, M.NOTIFICACOES, M.ANALYTICS,
   ],
-  // Este sistema não restringe visibilidade por papel: todo usuário vê tudo
-  // por padrão (super-admin ainda pode revogar módulo individualmente).
-  [Papel.PACIENTE]: [M.DASHBOARD, M.ANALYTICS],
+  // O paciente não tem tela nem API de dados: só o Dashboard. Relatórios trazem dados da clínica inteira.
+  [Papel.PACIENTE]: [M.DASHBOARD],
 };
 
 /**

@@ -110,9 +110,8 @@ export function PacienteDetailPage() {
     },
     onError: (e) => toast.error('Erro ao excluir', apiErrorMessage(e)),
   });
-  // Export LGPD: mesmos papéis autorizados no backend (GET /pacientes/:id/export).
-  const podeExportar =
-    user?.papel === Papel.SECRETARIA || user?.papel === Papel.PSICOLOGO || user?.papel === Papel.ADMIN;
+  // Export LGPD: mesmos papéis autorizados no backend (GET /pacientes/:id/export): não é da secretária.
+  const podeExportar = user?.papel === Papel.PSICOLOGO || user?.papel === Papel.ADMIN;
 
   // Direito de acesso/portabilidade (LGPD): baixa um JSON com todos os dados do
   // paciente. Antes o botão só disparava o GET e descartava a resposta (nada

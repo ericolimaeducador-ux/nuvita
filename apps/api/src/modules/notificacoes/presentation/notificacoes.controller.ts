@@ -39,7 +39,7 @@ export class NotificacoesController {
   }
 
   @Patch('preferencias/:pacienteId/opt-out')
-  @Roles(Papel.PACIENTE, Papel.SECRETARIA, Papel.ADMIN)
+  @Roles(Papel.SECRETARIA, Papel.ADMIN)
   updateOptOut(
     @Param('pacienteId') pacienteId: string,
     @Body() dto: UpdateOptOutDto,

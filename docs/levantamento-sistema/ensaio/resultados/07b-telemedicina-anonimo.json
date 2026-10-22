@@ -1,0 +1,12 @@
+{
+  "url": "http://127.0.0.1:5173/tele/:token",
+  "storageVazio": true,
+  "titulos": [
+    "Teleatendimento — Psicologia"
+  ],
+  "botoes": [
+    "Entrar no atendimento"
+  ],
+  "texto": "Nuvita Psi Teleatendimento — Psicologia Confira sua câmera e microfone antes de entrar. Entrar no atendimento",
+  "erros": []
+}

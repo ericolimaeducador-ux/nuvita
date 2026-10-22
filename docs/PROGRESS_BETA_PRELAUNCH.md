@@ -49,3 +49,13 @@ two rows, which come from this session's own work).
 - Engineering docs (lessons learned, PROGRESS, ADRs): English, per `enforces-english`.
 - End-user documentation (psychologist manual, onboarding, in-product copy): Brazilian Portuguese.
   `enforces-english` does NOT apply to user-facing material.
+
+## Decisions on parked branches (2026-10-22, by Erico) — do not reopen
+
+| Branch | Decision | Reason |
+|--------|----------|--------|
+| `fix/totp-script-sem-segredo-fixo` | **Approved**, squash merge | Removes a hard-coded TOTP secret from `scripts/totp.mjs`; merges clean. The secret stays in git history (see BUG-018: rotate if it was ever real) |
+| `fix/erro-explicito-queries` | **Approved with a condition**: rebase onto `main` and the web `vitest` suite must run in CI **in the same PR** | Replaces "empty list" with an explicit error when a query fails (Prontuários, Dashboard, Notificações...). A test that does not run in CI does not ship |
+| `fix/totp-secret-cifrado` | **Not before the beta**; stays untouched (no merge, no rebase). Revisit at G2 or later | Needs a new required secret `TOTP_ENCRYPTION_KEY` in every environment; merging without it breaks API boot, and losing the key locks out 2FA for SUPER_ADMIN/ADMIN/PSICOLOGO. Runbook in that branch must be followed in order |
+| `fix/deploy-web-observa-docs-legal` | **Discarded**; do not try to resolve the conflict | `main` already has both path triggers, and `deploy-web.yml` carries the `firebase-tools` pin (not worth the risk) |
+| `fix/achados-capturas` | Nothing to do | Already contained in `main` (PR #11) |

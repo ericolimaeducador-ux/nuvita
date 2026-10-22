@@ -1,0 +1,86 @@
+[
+  {
+    "nome": "emitir-atestado",
+    "ok": true,
+    "toast": "",
+    "mudouDeTela": true,
+    "botoes": [
+      "Voltar e editar",
+      "Imprimir / Salvar PDF"
+    ],
+    "textoEmitido": "Prévia — Atestado de Comparecimento Voltar e editar Imprimir / Salvar PDF Clínica Demonstração (Manual) CNPJ: 11.222.333/0001-81 ATESTADO DE COMPARECIMENTO Emitido em 22/10/2026 Atesto para os devidos fins que Ana Exemplo Demonstração compareceu a atendimento psicológico em 22/10/2026, às 14:00. _____________________________________ Psicóloga Demonstração — CRP CRP 00/00000 Clínica Demonstração (Manual) · CNPJ: 11.22",
+    "pdfBytes": 38814,
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "emitir-laudo",
+    "ok": false,
+    "erro": "locator.click: Timeout 30000ms exceeded."
+  },
+  {
+    "nome": "emitir-encaminhamento",
+    "ok": true,
+    "toast": "",
+    "mudouDeTela": true,
+    "botoes": [
+      "Voltar e editar",
+      "Imprimir / Salvar PDF"
+    ],
+    "textoEmitido": "Prévia — Encaminhamento Voltar e editar Imprimir / Salvar PDF Clínica Demonstração (Manual) CNPJ: 11.222.333/0001-81 ENCAMINHAMENTO 22/10/2026 Ao(À) profissional / serviço: Psiquiatra (fictício) Encaminho o(a) paciente Ana Exemplo Demonstração, em acompanhamento psicoterápico nesta clínica, para avaliação/acompanhamento complementar. Motivo: Motivo fictício do encaminhamento. _____________________________________ Psi",
+    "pdfBytes": 38022,
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "emitir-prescricao",
+    "ok": false,
+    "erro": "locator.click: Timeout 30000ms exceeded."
+  },
+  {
+    "nome": "prescricao-ia-sem-chave",
+    "ok": true,
+    "toast": "",
+    "erros": [
+      "500 POST /ia-clinica/gerar-prescricao"
+    ],
+    "confirms": []
+  },
+  {
+    "nome": "ficha-upload-documento",
+    "ok": true,
+    "toast": "",
+    "dialogoAindaAberto": true,
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "agenda-lista-amanha-menu",
+    "ok": true,
+    "temMenu": true,
+    "itens": [
+      "Iniciar atendimento",
+      "Concluir atendimento",
+      "Cancelar"
+    ],
+    "f": [
+      "Sair",
+      "Calendário",
+      "Lista",
+      "Novo agendamento"
+    ],
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "telemedicina-criar-sala-ui",
+    "ok": true,
+    "opcoes": [
+      "Ana Exemplo Demonstração — 23/10 14:00 — Sessão de Psicoterapia"
+    ],
+    "texto": "Telemedicina Nova sala Buscar sala por agendamento Selecione o agendamento Buscar Sala de telemedicina Aguardando Ana Exemplo Demonstração — CPF 390.533.447-05 Encerrar Modalidade Psicologia Criada em 22/10/2026 17:16 Expira em 22/10/2026 21:16 Entrar na sala (profissional) Copiar link do paciente Envie o link ao paciente por WhatsApp ou e-mail — ele entra direto pelo navegador, sem login. O link expira em 21:16. Reg",
+    "toast": "",
+    "erros": [],
+    "confirms": []
+  }
+]

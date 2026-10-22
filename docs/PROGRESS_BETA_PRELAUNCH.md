@@ -36,6 +36,13 @@ two rows, which come from this session's own work).
   actionable as a gate. Rescope to tracked files only. Not fixed as of 2026-10-22.
 - firebase-tools: the claim that 15.34.1 introduced the `serviceusage` requirement is INFERRED, not
   confirmed (see the lessons-learned doc).
+- `enforces-english` lives only as an untracked file inside the `feature/inscricoes-teste-beta` worktree.
+  Rules that steer CC behaviour must be tracked in the repo so they apply across worktrees and pass review.
+  Move it into the repo when that branch is next touched. (The language policy itself is now tracked in
+  `CLAUDE.md`, section "Documentation language".)
+- Graph semantic extraction (LLM descriptions over 46 docs and 6 images) deliberately NOT run on 2026-10-22.
+  Versioned graph stays code-only: deterministic, reviewable diffs. Revisit only when there is an actual
+  consumer for the semantic graph. Decision by Erico.
 
 ## Documentation language policy
 

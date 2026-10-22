@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSaidaProtegida } from '@/lib/saida-protegida';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -125,6 +126,12 @@ export function AgendaPage() {
     setFFim('');
     setFObs('');
   }
+
+  // Clique fora/ESC não fecham; Cancelar com algo preenchido pede confirmação.
+  const saida = useSaidaProtegida(
+    !!fObs.trim() || !!fPacienteId || !!fTipo || !!fInicio || !!fFim,
+    () => { setOpen(false); resetForm(); },
+  );
 
   function submit() {
     if (!fPacienteId || !fMedicoId || !fTipo || !fInicio || !fFim) {
@@ -308,8 +315,8 @@ export function AgendaPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
-        <DialogContent className="max-w-md">
+      <Dialog open={open} onOpenChange={saida.onOpenChange}>
+        <DialogContent className="max-w-md" {...saida.contentProps}>
           <DialogHeader>
             <DialogTitle>Novo agendamento</DialogTitle>
           </DialogHeader>
@@ -363,7 +370,7 @@ export function AgendaPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={saida.solicitarFechar}>Cancelar</Button>
             <Button onClick={submit} disabled={createMut.isPending}>{createMut.isPending ? 'Agendando...' : 'Agendar'}</Button>
           </DialogFooter>
         </DialogContent>

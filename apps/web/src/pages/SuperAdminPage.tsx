@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSaidaProtegida } from '@/lib/saida-protegida';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -163,6 +164,10 @@ export function SuperAdminPage() {
     resolver: zodResolver(novaClinicaSchema),
     defaultValues: { tipoDocumento: TipoDocumentoFiscal.CNPJ, plano: 'basico', fusoHorario: 'America/Sao_Paulo', duracaoConsultaPadrao: '50' },
   });
+
+  // Clique fora/ESC não fecham; Cancelar com algo digitado pede confirmação.
+  const saidaCriar = useSaidaProtegida(createForm.formState.isDirty, () => { setCreateOpen(false); createForm.reset(); });
+  const saidaNovaClinica = useSaidaProtegida(novaClinicaForm.formState.isDirty, () => { setNovaClinicaOpen(false); novaClinicaForm.reset(); });
 
   // Query params
   const queryParams = {
@@ -546,8 +551,8 @@ export function SuperAdminPage() {
       </Tabs>
 
       {/* Dialog: Criar usuário */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={createOpen} onOpenChange={saidaCriar.onOpenChange}>
+        <DialogContent className="max-w-lg" {...saidaCriar.contentProps}>
           <DialogHeader>
             <DialogTitle>Novo usuário</DialogTitle>
           </DialogHeader>
@@ -612,7 +617,7 @@ export function SuperAdminPage() {
               )}
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+              <Button type="button" variant="ghost" onClick={saidaCriar.solicitarFechar}>Cancelar</Button>
               <Button type="submit" disabled={createMut.isPending}>
                 {createMut.isPending ? 'Criando…' : 'Criar usuário'}
               </Button>
@@ -966,8 +971,8 @@ export function SuperAdminPage() {
       </Dialog>
 
       {/* Dialog: Nova clínica (cria clínica + 1º admin; senha gerada no backend) */}
-      <Dialog open={novaClinicaOpen} onOpenChange={setNovaClinicaOpen}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={novaClinicaOpen} onOpenChange={saidaNovaClinica.onOpenChange}>
+        <DialogContent className="max-w-lg" {...saidaNovaClinica.contentProps}>
           <DialogHeader>
             <DialogTitle>Nova clínica</DialogTitle>
           </DialogHeader>
@@ -1075,7 +1080,7 @@ export function SuperAdminPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setNovaClinicaOpen(false)}>Cancelar</Button>
+              <Button type="button" variant="ghost" onClick={saidaNovaClinica.solicitarFechar}>Cancelar</Button>
               <Button type="submit" disabled={criarClinicaMut.isPending}>
                 {criarClinicaMut.isPending ? 'Criando…' : 'Criar clínica'}
               </Button>

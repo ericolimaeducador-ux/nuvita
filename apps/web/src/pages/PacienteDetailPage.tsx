@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSaidaProtegida } from '@/lib/saida-protegida';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -436,7 +437,7 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
   const [solicitarOpen, setSolicitarOpen] = useState(false);
   const [corrigirOpen, setCorrigirOpen] = useState(false);
 
-  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<EditPacienteForm>({
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors, isDirty } } = useForm<EditPacienteForm>({
     resolver: zodResolver(editPacienteSchema),
   });
 
@@ -471,6 +472,9 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
     },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
+
+  // Clique fora/ESC não fecham; Cancelar com edição pendente pede confirmação.
+  const saida = useSaidaProtegida(isDirty, () => setOpen(false));
 
   function onSubmit(v: EditPacienteForm) {
     // Endereço só é enviado se ao menos um campo foi preenchido; senão vai undefined
@@ -557,15 +561,19 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
       </Secao>
       <SolicitarCorrecaoDialog open={solicitarOpen} onOpenChange={setSolicitarOpen} pacienteId={pacienteId} />
       <CorrigirIdentidadeDialog open={corrigirOpen} onOpenChange={setCorrigirOpen} pacienteId={pacienteId} />
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <Dialog open={open} onOpenChange={saida.onOpenChange}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" {...saida.contentProps}>
           <DialogHeader>
             <DialogTitle>Editar cadastro</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted p-3 text-sm">
               <span className="text-muted-foreground">Nome, CPF e nascimento só podem ser corrigidos pelo administrador da plataforma.</span>
-              <Button type="button" variant="outline" size="sm" onClick={() => { setOpen(false); setSolicitarOpen(true); }}>
+              <Button type="button" variant="outline" size="sm" onClick={() => {
+                  if (isDirty && !window.confirm('Você tem alterações não salvas. Descartar e continuar?')) return;
+                  setOpen(false);
+                  setSolicitarOpen(true);
+                }}>
                 Solicitar correção
               </Button>
             </div>
@@ -676,7 +684,7 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="button" variant="outline" onClick={saida.solicitarFechar}>Cancelar</Button>
               <Button type="submit" disabled={updateMut.isPending}>{updateMut.isPending ? 'Salvando...' : 'Salvar'}</Button>
             </DialogFooter>
           </form>
@@ -776,6 +784,12 @@ function TestesPsicologicosSecao({ pacienteId }: { pacienteId: string }) {
   const [nomeTeste, setNomeTeste] = useState('');
   const [dataAplicacao, setDataAplicacao] = useState(() => dayjs().format('YYYY-MM-DD'));
   const [resultado, setResultado] = useState('');
+  const saida = useSaidaProtegida(!!nomeTeste.trim() || !!resultado.trim(), () => {
+    setOpen(false);
+    setNomeTeste('');
+    setDataAplicacao(dayjs().format('YYYY-MM-DD'));
+    setResultado('');
+  });
 
   const listQ = useQuery({
     queryKey: ['testes-psicologicos', pacienteId],
@@ -840,8 +854,8 @@ function TestesPsicologicosSecao({ pacienteId }: { pacienteId: string }) {
         </Table>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
+      <Dialog open={open} onOpenChange={saida.onOpenChange}>
+        <DialogContent className="max-w-md" {...saida.contentProps}>
           <DialogHeader>
             <DialogTitle>Aplicar teste psicológico</DialogTitle>
           </DialogHeader>
@@ -869,7 +883,7 @@ function TestesPsicologicosSecao({ pacienteId }: { pacienteId: string }) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={saida.solicitarFechar}>Cancelar</Button>
             <Button
               onClick={() => createMut.mutate()}
               disabled={!nomeTeste.trim() || !dataAplicacao || createMut.isPending}

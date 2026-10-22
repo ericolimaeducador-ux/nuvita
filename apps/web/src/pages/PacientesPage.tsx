@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSaidaProtegida } from '@/lib/saida-protegida';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -108,10 +109,13 @@ export function PacientesPage() {
     return () => clearTimeout(t);
   }, [buscaInput]);
 
-  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<PacienteForm>({
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors, isDirty } } = useForm<PacienteForm>({
     resolver: zodResolver(pacienteSchema),
     defaultValues: { consentimento: false },
   });
+  // Clique fora/ESC não fecham; Cancelar com algo digitado pede confirmação.
+  const saida = useSaidaProtegida(isDirty, () => { setOpen(false); reset(); });
+
   // Recalcula a cada tecla no campo de nascimento — mostra/esconde a seção de
   // responsável legal em tempo real, sem esperar o submit.
   const ehMenorNoFormulario = classificarIdadePorString(watch('dataNascimento')) === 'menor';
@@ -379,8 +383,8 @@ export function PacientesPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <Dialog open={open} onOpenChange={saida.onOpenChange}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" {...saida.contentProps}>
           <DialogHeader>
             <DialogTitle>Novo paciente</DialogTitle>
           </DialogHeader>
@@ -551,7 +555,7 @@ export function PacientesPage() {
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="button" variant="outline" onClick={saida.solicitarFechar}>Cancelar</Button>
               <Button type="submit" disabled={createMut.isPending}>{createMut.isPending ? 'Cadastrando...' : 'Cadastrar'}</Button>
             </DialogFooter>
           </form>

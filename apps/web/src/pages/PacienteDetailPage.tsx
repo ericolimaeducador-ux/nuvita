@@ -278,6 +278,15 @@ export function PacienteDetailPage() {
         )}
       </Secao>
 
+      {/* Declaração de comparecimento: documento administrativo (só presença, data/hora da agenda). */}
+      {(ehPsicologo || user?.papel === Papel.SECRETARIA || user?.papel === Papel.ADMIN) && (
+        <Secao icon={<FileSignature className="h-4 w-4" />} titulo="Declaração de comparecimento" defaultOpen={false}>
+          <Button variant="outline" size="sm" onClick={() => navigate(`/pacientes/${id}/documentos/declaracao-comparecimento`)}>
+            Emitir declaração de comparecimento
+          </Button>
+        </Secao>
+      )}
+
       {/* Documentos clínicos — emissão de atestado/laudo/encaminhamento/prescrição,
           distinto da seção "Documentos" abaixo (que é upload de arquivo). */}
       {ehPsicologo && (

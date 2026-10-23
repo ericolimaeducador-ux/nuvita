@@ -20,6 +20,7 @@ const ROTAS: Array<[string, string, Papel[]]> = [
   ['/pacientes/:id/documentos/laudo', '/pacientes/p1/documentos/laudo', ['PSICOLOGO']],
   ['/pacientes/:id/documentos/encaminhamento', '/pacientes/p1/documentos/encaminhamento', ['PSICOLOGO']],
   ['/pacientes/:id/documentos/prescricao', '/pacientes/p1/documentos/prescricao', ['PSICOLOGO']],
+  ['/pacientes/:id/documentos/declaracao-comparecimento', '/pacientes/p1/documentos/declaracao-comparecimento', ['ADMIN', 'PSICOLOGO', 'SECRETARIA']],
   ['/agenda', '/agenda', ['SUPER_ADMIN', 'ADMIN', 'PSICOLOGO', 'SECRETARIA']],
   ['/prontuarios', '/prontuarios', ['SUPER_ADMIN']],
   ['/documentos', '/documentos', ['SUPER_ADMIN', 'ADMIN', 'PSICOLOGO', 'SECRETARIA']],

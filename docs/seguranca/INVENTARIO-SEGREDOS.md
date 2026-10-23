@@ -27,7 +27,7 @@ lido, impresso ou gravado.
 
 | Ambiente | O que guarda | Observação |
 |----------|--------------|------------|
-| Cloud Run `nuvita-psi-api` (southamerica-east1) | 43 variáveis de ambiente, todas como valor direto (**nenhuma** vem do Secret Manager) | `CONFIG_SOURCE=env`: a API lê do ambiente, não do GCP |
+| Cloud Run `nuvita-psi-api` (southamerica-east1) | 42 variáveis de ambiente, todas como valor direto (**nenhuma** vem do Secret Manager) | `CONFIG_SOURCE=env`: a API lê do ambiente, não do GCP |
 | GitHub Actions (repo) | `CLOUDRUN_ENV_YAML`, `GCP_PROJECT_ID`, `GCP_SA_EMAIL`, `GCP_WIF_PROVIDER`, `GCP_HOSTING_SA_EMAIL`, `VITE_API_URL` | Só escrita; `CLOUDRUN_ENV_YAML` é o arquivo completo aplicado a cada deploy |
 | GCP Secret Manager | **nada** (API desabilitada) | O caminho `CONFIG_SOURCE=gcp` do código existe, mas não é usado |
 | GCP KMS | **nada** (API desabilitada) | `KMS_KEY_RING`/`KMS_KEY` só servem ao caminho `gcp` |

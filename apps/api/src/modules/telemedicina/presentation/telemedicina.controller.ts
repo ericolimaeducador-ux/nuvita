@@ -8,6 +8,7 @@ import { AuthGatesGuard } from '../../auth/presentation/guards/auth-gates.guard'
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
+import { AgendamentosService } from '../../agendamentos/application/agendamentos.service';
 import { TelemedicinaService, RequestAuditContext } from '../application/telemedicina.service';
 import { CreateSalaDto } from '../application/dto/create-sala.dto';
 import { ListSalasQueryDto } from '../application/dto/list-salas-query.dto';
@@ -15,12 +16,21 @@ import { ListSalasQueryDto } from '../application/dto/list-salas-query.dto';
 @Controller('telemedicina')
 @UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
 export class TelemedicinaController {
-  constructor(private readonly telemedicinaService: TelemedicinaService) {}
+  constructor(
+    private readonly telemedicinaService: TelemedicinaService,
+    private readonly agendamentosService: AgendamentosService,
+  ) {}
 
   @Post('salas')
   @Roles(...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
-  createSala(@Body() dto: CreateSalaDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
-    return this.telemedicinaService.createSala(dto, this.ctx(req, user));
+  async createSala(@Body() dto: CreateSalaDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
+    const ctx = this.ctx(req, user);
+    await this.agendamentosService.validarReferencias(
+      { pacienteId: dto.pacienteId, agendamentoId: dto.agendamentoId },
+      dto.clinicaId,
+      ctx,
+    );
+    return this.telemedicinaService.createSala(dto, ctx);
   }
 
   @Get('salas')

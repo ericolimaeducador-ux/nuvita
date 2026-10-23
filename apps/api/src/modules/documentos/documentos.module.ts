@@ -7,6 +7,7 @@ import { AuditLogMongo, AuditLogSchema } from '../auth/infrastructure/mongo/audi
 import { JwtAuthGuard } from '../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/presentation/guards/roles.guard';
 import { NotificacoesModule } from '../notificacoes/notificacoes.module';
+import { AgendamentosModule } from '../agendamentos/agendamentos.module';
 import { PacientesModule } from '../pacientes/pacientes.module';
 import { DocumentosService } from './application/documentos.service';
 import { DocumentoMongoRepository } from './infrastructure/mongo/documento-mongo.repository';
@@ -23,6 +24,7 @@ import { DocumentosController } from './presentation/documentos.controller';
       { name: AuditLogMongo.name, schema: AuditLogSchema },
     ]),
     PacientesModule,
+    AgendamentosModule,
     NotificacoesModule,
   ],
   controllers: [DocumentosController],

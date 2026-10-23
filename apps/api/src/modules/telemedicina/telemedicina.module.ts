@@ -7,6 +7,7 @@ import { AuditLogMongo, AuditLogSchema } from '../auth/infrastructure/mongo/audi
 import { JwtAuthGuard } from '../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/presentation/guards/roles.guard';
 import { NotificacoesModule } from '../notificacoes/notificacoes.module';
+import { AgendamentosModule } from '../agendamentos/agendamentos.module';
 import { PacientesModule } from '../pacientes/pacientes.module';
 import { TelemedicinaService } from './application/telemedicina.service';
 import {
@@ -33,6 +34,7 @@ import { TelemedicinaAcessoController } from './presentation/telemedicina-acesso
       { name: AuditLogMongo.name, schema: AuditLogSchema },
     ]),
     PacientesModule,
+    AgendamentosModule,
     NotificacoesModule,
   ],
   controllers: [TelemedicinaController, TelemedicinaAcessoController],

@@ -25,7 +25,7 @@ jobs:
 
       - name: Lint
         working-directory: apps/api
-        run: npx eslint "src/**/*.ts" --max-warnings 0 || true
+        run: npx eslint "{src,test}/**/*.ts" --max-warnings 0
 
       - name: Type check
         working-directory: apps/api

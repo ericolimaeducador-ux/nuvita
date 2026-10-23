@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   Logger,
@@ -8,7 +9,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
+import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
 import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
 import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
@@ -194,6 +195,9 @@ export class DocumentosService {
 
   async softDelete(documentoId: string, clinicaId: string | undefined, context: DocumentoRequestContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+    if (context.user.papel === Papel.PSICOLOGO) {
+      this.assertPosse(await this.getDocumentoOrThrow(resolvedClinicaId, documentoId), context.user);
+    }
     const documento = await this.documentos.softDelete(resolvedClinicaId, documentoId, context.user.sub);
     if (!documento) {
       throw new NotFoundException('Documento nao encontrado.');
@@ -269,6 +273,16 @@ export class DocumentosService {
     }
 
     return documento;
+  }
+
+  /**
+   * Abrir e listar: qualquer papel da clínica (documento é do paciente, não de quem enviou).
+   * Excluir é destrutivo: o psicólogo só exclui o que ele mesmo enviou.
+   */
+  private assertPosse(documento: Documento, user: AuthTokenPayload): void {
+    if (user.papel === Papel.PSICOLOGO && documento.uploadPor !== user.sub) {
+      throw new ForbiddenException('Este documento pertence a outro profissional.');
+    }
   }
 
   private assertAllowedMimeType(mimeType: string): void {

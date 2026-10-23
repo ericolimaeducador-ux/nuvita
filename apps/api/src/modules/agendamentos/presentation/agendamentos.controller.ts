@@ -23,8 +23,14 @@ export class AgendamentosController {
 
   @Post()
   @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
-  create(@Body() dto: CreateAgendamentoDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
-    return this.agendamentosService.create(dto, this.ctx(req, user));
+  async create(@Body() dto: CreateAgendamentoDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
+    const ctx = this.ctx(req, user);
+    await this.agendamentosService.validarReferencias(
+      { pacienteId: dto.pacienteId, medicoId: dto.medicoId },
+      dto.clinicaId,
+      ctx,
+    );
+    return this.agendamentosService.create(dto, ctx);
   }
 
   @Get()
@@ -41,8 +47,10 @@ export class AgendamentosController {
 
   @Post('bloqueios')
   @Roles(...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
-  createBloqueio(@Body() dto: CreateBloqueioDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
-    return this.agendamentosService.createBloqueio(dto, this.ctx(req, user));
+  async createBloqueio(@Body() dto: CreateBloqueioDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
+    const ctx = this.ctx(req, user);
+    await this.agendamentosService.validarReferencias({ medicoId: dto.medicoId }, dto.clinicaId, ctx);
+    return this.agendamentosService.createBloqueio(dto, ctx);
   }
 
   @Delete('bloqueios/:id')
@@ -69,14 +77,16 @@ export class AgendamentosController {
 
   @Patch(':id')
   @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
-  update(
+  async update(
     @Param('id') id: string,
     @Body() dto: UpdateAgendamentoDto,
     @Query('clinicaId') clinicaId: string | undefined,
     @CurrentUser() user: AuthTokenPayload,
     @Req() req: Request,
   ) {
-    return this.agendamentosService.update(id, dto, clinicaId, this.ctx(req, user));
+    const ctx = this.ctx(req, user);
+    await this.agendamentosService.validarReferencias({ medicoId: dto.medicoId }, clinicaId, ctx);
+    return this.agendamentosService.update(id, dto, clinicaId, ctx);
   }
 
   @Patch(':id/cancelar')

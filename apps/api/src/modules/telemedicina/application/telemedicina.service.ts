@@ -1,6 +1,6 @@
 import { ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
+import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
 import { RequestMeta } from '../../../common/http/client-ip';
 import { AppConfigService } from '../../../common/security/config.service';
 import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
@@ -92,6 +92,7 @@ export class TelemedicinaService {
     const sala = await this.salas.findById(resolvedClinicaId, id);
 
     if (!sala) throw new NotFoundException('Sala de telemedicina nao encontrada.');
+    this.assertPosse(sala, context.user);
     return sala;
   }
 
@@ -100,6 +101,7 @@ export class TelemedicinaService {
     const sala = await this.salas.findByAgendamento(resolvedClinicaId, agendamentoId);
 
     if (!sala) throw new NotFoundException('Sala nao encontrada para este agendamento.');
+    this.assertPosse(sala, context.user);
     return sala;
   }
 
@@ -107,10 +109,12 @@ export class TelemedicinaService {
   async listar(query: ListSalasQueryDto, context: RequestAuditContext) {
     const clinicaId = this.resolveClinicaId(context.user, query.clinicaId);
 
-    return this.salas.findAll(clinicaId, {
+    const salas = await this.salas.findAll(clinicaId, {
       dataInicio: query.dataInicio ? new Date(query.dataInicio) : undefined,
       dataFim: query.dataFim ? new Date(query.dataFim) : undefined,
     });
+    // Psicólogo vê só as próprias salas; admin segue com o histórico da clínica.
+    return context.user.papel === Papel.PSICOLOGO ? salas.filter((s) => s.medicoId === context.user.sub) : salas;
   }
 
   async joinSala(id: string, context: RequestAuditContext) {
@@ -148,6 +152,11 @@ export class TelemedicinaService {
 
   async encerrarSala(id: string, clinicaId: string | undefined, context: RequestAuditContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+    if (context.user.papel === Papel.PSICOLOGO) {
+      const atual = await this.salas.findById(resolvedClinicaId, id);
+      if (!atual) throw new NotFoundException('Sala nao encontrada.');
+      this.assertPosse(atual, context.user);
+    }
 
     const sala = await this.salas.updateStatus(resolvedClinicaId, id, StatusSala.ENCERRADA, new Date());
     if (!sala) throw new NotFoundException('Sala nao encontrada.');
@@ -160,6 +169,7 @@ export class TelemedicinaService {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
     const sala = await this.salas.findById(resolvedClinicaId, salaId);
     if (!sala) throw new NotFoundException('Sala nao encontrada.');
+    this.assertPosse(sala, context.user);
 
     return this.eventos.listBySala(resolvedClinicaId, salaId);
   }
@@ -314,6 +324,13 @@ export class TelemedicinaService {
     }
 
     return servers;
+  }
+
+  /** Psicólogo só opera a sala em que é o profissional; admin segue com a clínica inteira. */
+  private assertPosse(sala: SalaTelemedicina, user: AuthTokenPayload): void {
+    if (user.papel === Papel.PSICOLOGO && sala.medicoId !== user.sub) {
+      throw new ForbiddenException('Esta sala pertence a outro profissional.');
+    }
   }
 
   private resolveClinicaId(user: AuthTokenPayload, requestedClinicaId?: string): string {

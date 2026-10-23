@@ -18,6 +18,7 @@ import { AuthGatesGuard } from '../../auth/presentation/guards/auth-gates.guard'
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
+import { AgendamentosService } from '../../agendamentos/application/agendamentos.service';
 import { Cid10QueryDto } from '../application/dto/cid10-query.dto';
 import { CreateAddendumDto } from '../application/dto/create-addendum.dto';
 import { CreateProntuarioDto } from '../application/dto/create-prontuario.dto';
@@ -29,15 +30,24 @@ import { ProntuarioRequestContext, ProntuariosService } from '../application/pro
 @UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
 @Roles(...PAPEIS_PROFISSIONAIS)
 export class ProntuariosController {
-  constructor(private readonly prontuariosService: ProntuariosService) {}
+  constructor(
+    private readonly prontuariosService: ProntuariosService,
+    private readonly agendamentosService: AgendamentosService,
+  ) {}
 
   @Post()
-  create(
+  async create(
     @Body() dto: CreateProntuarioDto,
     @CurrentUser() user: AuthTokenPayload,
     @Req() request: Request,
   ) {
-    return this.prontuariosService.create(dto, this.contextFromRequest(request, user));
+    const ctx = this.contextFromRequest(request, user);
+    await this.agendamentosService.validarReferencias(
+      { pacienteId: dto.pacienteId, agendamentoId: dto.agendamentoId },
+      dto.clinicaId,
+      ctx,
+    );
+    return this.prontuariosService.create(dto, ctx);
   }
 
   @Get()

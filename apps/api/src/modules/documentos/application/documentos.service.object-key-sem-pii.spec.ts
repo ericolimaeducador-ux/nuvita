@@ -84,7 +84,7 @@ describe('DocumentosService — chave do objeto sem dado pessoal (NGS1 #1)', () 
     await service.createUploadUrl(dto({ nomePaciente: NOME_PACIENTE }) as never, ctx);
 
     const { key } = storage.createUploadUrl.mock.calls[0][0];
-    expect(key).toMatch(new RegExp(`^${CLINICA_ID}/pacientes/${PACIENTE_ID}/${UUID}\.pdf$`));
+    expect(key).toMatch(new RegExp(`^${CLINICA_ID}/pacientes/${PACIENTE_ID}/${UUID}.pdf$`));
   });
 
   it.each([
@@ -98,7 +98,7 @@ describe('DocumentosService — chave do objeto sem dado pessoal (NGS1 #1)', () 
     await service.createUploadUrl(dto({ mimeType }) as never, ctx);
 
     const { key } = storage.createUploadUrl.mock.calls[0][0];
-    expect(key).toMatch(new RegExp(`^${CLINICA_ID}/pacientes/${PACIENTE_ID}/${UUID}\.${ext}$`));
+    expect(key).toMatch(new RegExp(`^${CLINICA_ID}/pacientes/${PACIENTE_ID}/${UUID}.${ext}$`));
   });
 
   it('rejeita mimeType fora da allowlist sem gerar URL de upload', async () => {

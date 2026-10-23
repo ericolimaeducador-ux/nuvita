@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
 import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
 import { AUDIT_LOG_REPOSITORY, USER_REPOSITORY } from '../../auth/auth.constants';
@@ -10,7 +10,7 @@ import { NotificacoesService } from '../../notificacoes/application/notificacoes
 import { CanalNotificacao, TipoNotificacao } from '../../notificacoes/domain/notificacao.entity';
 import { PacientesService } from '../../pacientes/application/pacientes.service';
 import { AGENDAMENTO_REPOSITORY } from '../agendamentos.constants';
-import { Agendamento, ModalidadeAtendimento, StatusAgendamento, TipoAgendamento } from '../domain/agendamento.entity';
+import { Agendamento, ModalidadeAtendimento, StatusAgendamento } from '../domain/agendamento.entity';
 import { CancelAgendamentoDto } from './dto/cancel-agendamento.dto';
 import { CreateAgendamentoDto } from './dto/create-agendamento.dto';
 import { CreateBloqueioDto } from './dto/create-bloqueio.dto';
@@ -81,6 +81,7 @@ export class AgendamentosService {
     const agendamento = await this.agendamentos.findById(resolvedClinicaId, id);
 
     if (!agendamento) throw new NotFoundException('Agendamento nao encontrado.');
+    this.assertPosse(agendamento, context.user);
 
     await this.audit(AuditEvent.APPOINTMENT_VIEWED, context, { clinicaId: resolvedClinicaId, agendamentoId: id });
     const [enriquecido] = await this.comDadosDoPaciente(resolvedClinicaId, [agendamento]);
@@ -89,6 +90,10 @@ export class AgendamentosService {
 
   async update(id: string, dto: UpdateAgendamentoDto, clinicaId: string | undefined, context: RequestAuditContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+    await this.assertPosseSePsicologo(resolvedClinicaId, id, context.user);
+    if (context.user.papel === Papel.PSICOLOGO && dto.medicoId && dto.medicoId !== context.user.sub) {
+      throw new ForbiddenException('Psicologo nao pode passar o agendamento para outro profissional.');
+    }
 
     const agendamento = await this.agendamentos.update(resolvedClinicaId, id, {
       medicoId: dto.medicoId,
@@ -107,6 +112,7 @@ export class AgendamentosService {
 
   async cancel(id: string, dto: CancelAgendamentoDto, clinicaId: string | undefined, context: RequestAuditContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+    await this.assertPosseSePsicologo(resolvedClinicaId, id, context.user);
 
     const agendamento = await this.agendamentos.updateStatus(
       resolvedClinicaId,
@@ -128,6 +134,7 @@ export class AgendamentosService {
 
   async conclude(id: string, clinicaId: string | undefined, context: RequestAuditContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+    await this.assertPosseSePsicologo(resolvedClinicaId, id, context.user);
 
     const agendamento = await this.agendamentos.updateStatus(
       resolvedClinicaId,
@@ -177,6 +184,48 @@ export class AgendamentosService {
 
     await this.audit(AuditEvent.SCHEDULE_UNBLOCKED, context, { clinicaId: resolvedClinicaId, bloqueioId: id });
     return { ok: true };
+  }
+
+  /**
+   * Os ids do payload de criação precisam pertencer à clínica do token (D4). Para o psicólogo, o
+   * agendamento referenciado também precisa ser dele. Chamado pelos controllers antes de criar.
+   */
+  async validarReferencias(
+    refs: { pacienteId?: string; medicoId?: string; agendamentoId?: string },
+    clinicaId: string | undefined,
+    context: RequestAuditContext,
+  ): Promise<void> {
+    const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+
+    if (refs.pacienteId) {
+      const resumo = await this.pacientesService.resumoPorIds(resolvedClinicaId, [refs.pacienteId]);
+      if (!resumo.has(refs.pacienteId)) throw new NotFoundException('Paciente nao encontrado.');
+    }
+    if (refs.medicoId) {
+      const medico = await this.users.findById(refs.medicoId);
+      if (!medico || medico.clinicaId !== resolvedClinicaId) throw new NotFoundException('Profissional nao encontrado.');
+    }
+    if (refs.agendamentoId) {
+      await this.assertPossePorId(resolvedClinicaId, refs.agendamentoId, context.user);
+    }
+  }
+
+  /** Psicólogo só opera o que é dele; admin e secretária seguem com a clínica inteira. */
+  private assertPosse(agendamento: Agendamento, user: AuthTokenPayload): void {
+    if (user.papel === Papel.PSICOLOGO && agendamento.medicoId !== user.sub) {
+      throw new ForbiddenException('Este agendamento pertence a outro profissional.');
+    }
+  }
+
+  /** Só o psicólogo precisa da leitura extra; os demais papéis seguem direto para a atualização atômica. */
+  private async assertPosseSePsicologo(clinicaId: string, id: string, user: AuthTokenPayload): Promise<void> {
+    if (user.papel === Papel.PSICOLOGO) await this.assertPossePorId(clinicaId, id, user);
+  }
+
+  private async assertPossePorId(clinicaId: string, id: string, user: AuthTokenPayload): Promise<void> {
+    const agendamento = await this.agendamentos.findById(clinicaId, id);
+    if (!agendamento) throw new NotFoundException('Agendamento nao encontrado.');
+    this.assertPosse(agendamento, user);
   }
 
   private resolveClinicaId(user: AuthTokenPayload, requestedClinicaId?: string): string {
@@ -248,7 +297,7 @@ export class AgendamentosService {
       return;
     }
 
-    const nomeMedico = await this.resolverNomeMedico(agendamento.medicoId);
+    const nomeMedico = await this.resolverNomeMedico(agendamento.medicoId, clinicaId);
 
     try {
       await this.notificacoesService.create(
@@ -282,9 +331,11 @@ export class AgendamentosService {
    * notification_trigger_failed: aqui a notificação ainda é enviada, só sem
    * o nome do médico — lá a notificação inteira não sai.
    */
-  private async resolverNomeMedico(medicoId: string): Promise<string | undefined> {
+  private async resolverNomeMedico(medicoId: string, clinicaId: string): Promise<string | undefined> {
     try {
       const medico = await this.users.findById(medicoId);
+      // Nome de profissional de outra clínica nunca entra no template desta.
+      if (medico?.clinicaId && medico.clinicaId !== clinicaId) return undefined;
       return medico?.nome;
     } catch (error) {
       this.logFalhaEnriquecimento('medico', medicoId, error);

@@ -90,3 +90,9 @@ The backup of all secrets was made by Erico (the 4 category-A keys in their own 
 **Product decision:** a document belongs to the patient, not to whoever uploaded it. Any clinic role (psychologist, admin, secretary) opens and lists documents of any patient of the clinic. Only deletion is limited to the uploader (for the psychologist).
 
 Reason: the secretary scans referrals, exams and insurance cards that the psychologist must open during the session; denying access would make the secretary a bottleneck for every attachment. Consistent with the patient being a clinic resource (D3). Deletion is destructive, so authorship applies there. The listing therefore shows exactly what the user can open (no leak of names or types of files they cannot open).
+
+## Post-beta debt: authentication (found in 3.2, 2026-10-23)
+
+- **HIGH priority, right after the beta:** login has no per-account limit across IPs. The lockout is per (IP, account) pair and the `@Throttle` is per IP, so a distributed brute force against one account is not blocked. Accepted for the beta: the password oracle is closed (a guess no longer reveals whether the password was right), which makes distributed guessing much more expensive, and only 7 known users exist.
+- `POST /auth/register` answers 409 "Email ja cadastrado.", which reveals registered e-mails. Does not apply today: public registration is disabled.
+- There is no e-mail confirmation flow, so there is no account-existence distinction to check there. Does not apply today.

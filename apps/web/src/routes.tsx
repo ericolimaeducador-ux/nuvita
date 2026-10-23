@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
 import { GateChain, ROTA_ACEITAR_TERMOS, ROTA_DEFINIR_SENHA } from '@/auth/GateChain';
 import { AppLayout } from '@/layout/AppLayout';
+import { EsqueciSenhaPage } from '@/pages/EsqueciSenhaPage';
+import { RedefinirSenhaPage } from '@/pages/RedefinirSenhaPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { AceitarTermosPage } from '@/pages/AceitarTermosPage';
 import { DefinirSenhaObrigatoriaPage } from '@/pages/DefinirSenhaObrigatoriaPage';
@@ -35,6 +37,8 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
+      <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
       {/* Sala de teleatendimento é PÚBLICA: o paciente entra pelo link com o
           token da sala, sem conta no sistema. O token UUID é a credencial. */}
       <Route path="/tele/:token" element={<AtendimentoTelemedicinaPage />} />

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, ShieldCheck, Loader2 } from 'lucide-react';
 import { useAuth } from '@/auth/AuthContext';
 import { apiErrorMessage } from '@/api/client';
@@ -25,9 +25,10 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
-  const [needs2fa, setNeeds2fa] = useState(false);
 
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? '/';
+  const estado = location.state as { from?: { pathname: string }; senhaRedefinida?: boolean } | null;
+  const from = estado?.from?.pathname ?? '/';
+  const senhaRedefinida = estado?.senhaRedefinida === true;
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -40,13 +41,8 @@ export function LoginPage() {
       toast.success('Bem-vindo ao Nuvita Psi.');
       navigate(from, { replace: true });
     } catch (err) {
-      const msg = apiErrorMessage(err, 'Não foi possível entrar.');
-      if (/2fa|totp|c[óo]digo|two.?factor/i.test(msg)) {
-        setNeeds2fa(true);
-        toast.info('Informe o código de verificação (2FA).');
-      } else {
-        toast.error('Erro ao entrar', msg);
-      }
+      // O servidor responde igual para senha errada e para código 2FA ausente/errado (sem oráculo de senha).
+      toast.error('Erro ao entrar', apiErrorMessage(err, 'Não foi possível entrar.'));
     } finally {
       setLoading(false);
     }
@@ -99,7 +95,12 @@ export function LoginPage() {
 
           <div className="glass rounded-2xl p-8 shadow-2xl">
             <h2 className="text-2xl font-bold text-foreground mb-1">Acessar painel</h2>
-            <p className="text-muted-foreground text-sm mb-6">Entre com suas credenciais corporativas.</p>
+            <p className="text-muted-foreground text-sm mb-6">Entre com seu e-mail e senha.</p>
+            {senhaRedefinida && (
+              <p role="status" className="mb-4 rounded-md border border-border bg-secondary p-3 text-sm">
+                Senha alterada. Entre com a nova senha.
+              </p>
+            )}
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
@@ -133,9 +134,8 @@ export function LoginPage() {
                 {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
               </div>
 
-              {needs2fa && (
-                <div className="space-y-2">
-                  <Label htmlFor="totpCode">Código de verificação (2FA)</Label>
+              <div className="space-y-2">
+                  <Label htmlFor="totpCode">Código de verificação (2FA), se sua conta usa</Label>
                   <div className="relative">
                     <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -147,8 +147,8 @@ export function LoginPage() {
                       {...register('totpCode')}
                     />
                   </div>
+                  <p className="text-xs text-muted-foreground">Deixe em branco se você não usa autenticador.</p>
                 </div>
-              )}
 
               <Button type="submit" className="w-full h-11 text-base mt-2" disabled={loading}>
                 {loading ? (
@@ -158,6 +158,14 @@ export function LoginPage() {
                 )}
               </Button>
             </form>
+
+            <div className="mt-5 space-y-2 text-sm">
+              <Link to="/esqueci-senha" className="underline">Esqueci minha senha</Link>
+              <p className="text-xs text-muted-foreground">
+                Perdeu o acesso ao código de verificação (2FA)? Ele não é recuperado automaticamente: escreva para{' '}
+                <a className="underline" href="mailto:contato@nuvita.app.br">contato@nuvita.app.br</a>.
+              </p>
+            </div>
           </div>
         </div>
       </div>

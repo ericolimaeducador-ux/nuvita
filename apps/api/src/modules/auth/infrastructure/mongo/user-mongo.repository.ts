@@ -77,8 +77,31 @@ export class UserMongoRepository implements UserRepository {
     if (input.faseTeste !== undefined) set['faseTeste'] = input.faseTeste;
     if (input.tokensValidosApartirDe !== undefined) set['tokensValidosApartirDe'] = input.tokensValidosApartirDe;
 
+    // Qualquer troca de senha (reset do super-admin, troca obrigatória, reset por e-mail) invalida
+    // o link de redefinição pendente.
+    const update: Record<string, unknown> = { $set: set };
+    if (input.passwordHash !== undefined) update['$unset'] = { resetSenha: '' };
+
+    const doc = await this.userModel.findByIdAndUpdate(id, update, { new: true }).exec();
+    return doc ? this.toEntity(doc) : null;
+  }
+
+  async salvarResetSenha(id: string, tokenHash: string, expiraEm: Date): Promise<void> {
+    await this.userModel
+      .findByIdAndUpdate(id, { $set: { resetSenha: { tokenHash, expiraEm } } }, { new: true })
+      .exec();
+  }
+
+  async redefinirSenhaComToken(tokenHash: string, passwordHash: string, agora: Date): Promise<User | null> {
     const doc = await this.userModel
-      .findByIdAndUpdate(id, { $set: set }, { new: true })
+      .findOneAndUpdate(
+        { 'resetSenha.tokenHash': tokenHash, 'resetSenha.expiraEm': { $gt: agora }, ativo: true },
+        {
+          $set: { passwordHash, deveTrocarSenha: false, tokensValidosApartirDe: agora },
+          $unset: { resetSenha: '' },
+        },
+        { new: true },
+      )
       .exec();
     return doc ? this.toEntity(doc) : null;
   }

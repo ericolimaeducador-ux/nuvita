@@ -50,6 +50,13 @@ export interface UserRepository {
   findAll(filters: UserFilters, skip: number, limit: number): Promise<User[]>;
   count(filters: UserFilters): Promise<number>;
   update(id: string, input: UpdateUserInput): Promise<User | null>;
+  /** Guarda o HASH do token de redefinição (um por conta; novo pedido substitui o anterior). */
+  salvarResetSenha(id: string, tokenHash: string, expiraEm: Date): Promise<void>;
+  /**
+   * Atômico e de uso único: casa hash + validade + conta ativa, troca a senha, apaga o token e
+   * derruba as sessões. Não toca no 2FA. Devolve a conta, ou null se o token não vale.
+   */
+  redefinirSenhaComToken(tokenHash: string, passwordHash: string, agora: Date): Promise<User | null>;
   /** Propaga a marcação de fase de teste da clínica a todos os usuários dela. Devolve quantos mudaram. */
   definirFaseTesteDaClinica(clinicaId: string, faseTeste: boolean): Promise<number>;
 }

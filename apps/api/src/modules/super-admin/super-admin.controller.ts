@@ -7,6 +7,7 @@ import { CurrentUser } from '../auth/presentation/decorators/current-user.decora
 import { JwtAuthGuard } from '../auth/presentation/guards/jwt-auth.guard';
 import { SuperAdminGuard } from '../auth/presentation/guards/super-admin.guard';
 import { AllowWithoutTenant } from '../../common/tenancy/tenant-required.guard';
+import { PasswordResetService } from '../auth/application/password-reset.service';
 import { SuperAdminService } from './super-admin.service';
 import { ListUsersQueryDto } from './application/dto/list-users-query.dto';
 import { UpdateUserDto } from './application/dto/update-user.dto';
@@ -19,7 +20,10 @@ import { UpdateClinicaDto } from './application/dto/update-clinica.dto';
 @UseGuards(JwtAuthGuard, AuthGatesGuard, SuperAdminGuard)
 @AllowWithoutTenant()
 export class SuperAdminController {
-  constructor(private readonly service: SuperAdminService) {}
+  constructor(
+    private readonly service: SuperAdminService,
+    private readonly passwordReset: PasswordResetService,
+  ) {}
 
   @Get('clinicas')
   listClinicas() {
@@ -74,12 +78,33 @@ export class SuperAdminController {
   }
 
   @Post('usuarios/:id/reset-password')
-  resetPassword(@Param('id') id: string, @Body() dto: ResetPasswordDto) {
-    return this.service.resetPassword(id, dto.novaSenha);
+  async resetPassword(
+    @Param('id') id: string,
+    @Body() dto: ResetPasswordDto,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    const result = await this.service.resetPassword(id, dto.novaSenha);
+    const alvo = await this.service.getUsuario(id);
+    await this.passwordReset.registrarResetPeloAdmin(
+      'SENHA', { id, email: alvo.email }, { userId: user.sub, email: user.email }, extractRequestMeta(request),
+    );
+    return result;
   }
 
   @Post('usuarios/:id/reset-2fa')
-  reset2fa(@Param('id') id: string) {
-    return this.service.reset2fa(id);
+  async reset2fa(@Param('id') id: string, @CurrentUser() user: AuthTokenPayload, @Req() request: Request) {
+    const result = await this.service.reset2fa(id);
+    const alvo = await this.service.getUsuario(id);
+    await this.passwordReset.registrarResetPeloAdmin(
+      '2FA', { id, email: alvo.email }, { userId: user.sub, email: user.email }, extractRequestMeta(request),
+    );
+    return result;
+  }
+
+  // Quem pediu / concluiu / está travado na recuperação de senha (autoatendimento e super-admin).
+  @Get('recuperacao-senha')
+  recuperacaoSenha() {
+    return this.passwordReset.listarRecentes();
   }
 }

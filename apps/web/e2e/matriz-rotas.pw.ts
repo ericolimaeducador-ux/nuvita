@@ -80,6 +80,8 @@ test('rota inexistente cai no dashboard para todo papel logado', async ({ page }
 // (com os papéis permitidos) ou aqui (com justificativa); senão o teste reprova.
 const FORA_DA_MATRIZ: Record<string, string> = {
   '/login': 'pública: tela de login',
+  '/esqueci-senha': 'pública: pedido de link de redefinição de senha (resposta idêntica para qualquer e-mail)',
+  '/redefinir-senha': 'pública: a credencial é o token de uso único do e-mail',
   '/tele/:token': 'pública: a credencial é o token da sala (paciente)',
   '/aceitar-termos': 'gate de sessão (GateChain): vale para qualquer papel logado',
   '/definir-senha': 'gate de sessão (GateChain): vale para qualquer papel logado',

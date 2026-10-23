@@ -121,14 +121,12 @@ describe('SuperAdminService.createUsuario — deveTrocarSenha para PSICOLOGO (am
     expect(users.create).toHaveBeenCalledWith(expect.objectContaining({ deveTrocarSenha: true }));
   });
 
-  it('outros papéis (ex.: ADMIN) → users.create() NÃO recebe deveTrocarSenha: true (fora do escopo)', async () => {
+  it('outros papéis (ex.: ADMIN) → users.create() recebe deveTrocarSenha: true (troca obrigatória para todos os papéis)', async () => {
     const { service, users } = makeCreateUsuarioService();
 
     await service.createUsuario({ ...dtoBase, papel: Papel.ADMIN } as CreateAdminUserDto);
 
-    expect(users.create).toHaveBeenCalledWith(
-      expect.not.objectContaining({ deveTrocarSenha: true }),
-    );
+    expect(users.create).toHaveBeenCalledWith(expect.objectContaining({ deveTrocarSenha: true }));
   });
 });
 

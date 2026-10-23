@@ -53,6 +53,11 @@ export const authApi = {
     api
       .post<GateResolvidoResponse>('/auth/aceitar-termos', { versao })
       .then((r) => r.data),
+  // Públicos e sem oráculo: a resposta não depende de o e-mail existir.
+  esqueciSenha: (email: string) =>
+    api.post<{ ok: true; mensagem: string }>('/auth/esqueci-senha', { email }).then((r) => r.data),
+  redefinirSenha: (token: string, novaSenha: string) =>
+    api.post<{ ok: true }>('/auth/redefinir-senha', { token, novaSenha }).then((r) => r.data),
   trocarSenhaObrigatoria: (novaSenha: string) =>
     api
       .post<GateResolvidoResponse>('/auth/trocar-senha-obrigatoria', { novaSenha })
@@ -442,7 +447,17 @@ export interface CriarClinicaResponse {
   twoFactorSetup?: { base32: string; otpauthUrl?: string };
 }
 
+export interface EventoRecuperacaoSenha {
+  evento: string;
+  quando: string;
+  email?: string;
+  caminho?: string;
+  resultado?: string;
+}
+
 export const superAdminApi = {
+  recuperacaoSenha: () =>
+    api.get<EventoRecuperacaoSenha[]>('/super-admin/recuperacao-senha').then((r) => r.data),
   listUsuarios: (params: ListUsersParams = {}) =>
     api.get<ListUsuariosResult>('/super-admin/usuarios', { params }).then((r) => (comoLista(r.data), r.data)),
   getUsuario: (id: string) =>

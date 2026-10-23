@@ -21,6 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RecuperacaoSenhaPainel } from '@/components/RecuperacaoSenhaPainel';
 import { toast } from '@/components/ui/use-toast';
 import { superAdminApi, type UpdateClinicaPayload } from '@/api/resources';
 import { ErroConsulta } from '@/components/ErroConsulta';
@@ -355,6 +356,7 @@ export function SuperAdminPage() {
         <TabsList>
           <TabsTrigger value="usuarios">Usuários</TabsTrigger>
           <TabsTrigger value="clinicas">Clínicas</TabsTrigger>
+          <TabsTrigger value="recuperacao-senha">Recuperação de senha</TabsTrigger>
         </TabsList>
 
         <TabsContent value="usuarios" className="mt-4 space-y-4">
@@ -489,6 +491,10 @@ export function SuperAdminPage() {
               </div>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="recuperacao-senha" className="mt-4 space-y-4">
+          <RecuperacaoSenhaPainel />
         </TabsContent>
 
         <TabsContent value="clinicas" className="mt-4 space-y-4">
@@ -783,6 +789,7 @@ export function SuperAdminPage() {
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             Definindo nova senha para <span className="font-medium text-foreground">{resetTarget?.nome}</span> ({resetTarget?.email}).
+            Ela é provisória: a pessoa troca no próximo acesso e as sessões abertas caem. Para quem perdeu o 2FA, use o botão de redefinir 2FA.
           </p>
           <form
             onSubmit={resetForm.handleSubmit((v) => {

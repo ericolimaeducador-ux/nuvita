@@ -8,6 +8,7 @@ import { MATRIZ_API, PapelSigla, SIGLA_PAPEL } from './authorization-matrix.expe
 import { AgendamentosController } from '../../modules/agendamentos/presentation/agendamentos.controller';
 import { AnalyticsController } from '../../modules/analytics/presentation/analytics.controller';
 import { AuthController } from '../../modules/auth/presentation/auth.controller';
+import { PasswordResetController } from '../../modules/auth/presentation/password-reset.controller';
 import { ClinicasController } from '../../modules/clinicas/presentation/clinicas.controller';
 import { DocumentosController } from '../../modules/documentos/presentation/documentos.controller';
 import { FinanceiroController } from '../../modules/financeiro/presentation/financeiro.controller';
@@ -35,7 +36,7 @@ import { TicketsController } from '../../modules/tickets/presentation/tickets.co
  * Rotas sem RolesGuard só são aceitas se a matriz as marcar explicitamente (PUBLICO / LOGADO / ...).
  */
 const CONTROLLERS = [
-  AgendamentosController, AnalyticsController, AuthController, ClinicasController, DocumentosController,
+  AgendamentosController, AnalyticsController, AuthController, PasswordResetController, ClinicasController, DocumentosController,
   FinanceiroController, PsicologiaFinanceiroController, HealthController, IaClinicaController,
   InscricoesTesteController, LembretesAgendamentoController, NotificacoesController,
   ObservacoesPacienteController, PacientesController, ProntuariosController, SuperAdminController,

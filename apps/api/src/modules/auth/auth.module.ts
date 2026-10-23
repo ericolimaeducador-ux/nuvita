@@ -6,6 +6,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
 import { AUDIT_LOG_REPOSITORY, REDIS_CLIENT, USER_REPOSITORY } from './auth.constants';
 import { AuthService } from './application/auth.service';
+import { PasswordResetService, PASSWORD_RESET_LIMITER, PASSWORD_RESET_MAILER } from './application/password-reset.service';
+import { EmailSender } from '../notificacoes/infrastructure/senders/email.sender';
+import { PasswordResetEmailMailer } from './infrastructure/password-reset.mailer';
+import { PasswordResetLimiterService } from './infrastructure/redis/password-reset-limiter.service';
 import { AuditLogMongoRepository } from './infrastructure/mongo/audit-log-mongo.repository';
 import { AuditLogMongo, AuditLogSchema } from './infrastructure/mongo/audit-log.schema';
 import { UserMongoRepository } from './infrastructure/mongo/user-mongo.repository';
@@ -14,6 +18,7 @@ import { LoginRateLimiterService } from './infrastructure/redis/login-rate-limit
 import { redisProvider } from './infrastructure/redis/redis.provider';
 import { TokenRevocationService } from './infrastructure/redis/token-revocation.service';
 import { AuthController } from './presentation/auth.controller';
+import { PasswordResetController } from './presentation/password-reset.controller';
 import { AuthGatesGuard } from './presentation/guards/auth-gates.guard';
 import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard';
 import { JwtStrategy } from './presentation/guards/jwt.strategy';
@@ -30,9 +35,13 @@ import { SuperAdminGuard } from './presentation/guards/super-admin.guard';
       { name: AuditLogMongo.name, schema: AuditLogSchema },
     ]),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, PasswordResetController],
   providers: [
     AuthService,
+    PasswordResetService,
+    EmailSender,
+    { provide: PASSWORD_RESET_MAILER, useClass: PasswordResetEmailMailer },
+    { provide: PASSWORD_RESET_LIMITER, useClass: PasswordResetLimiterService },
     LoginRateLimiterService,
     TokenRevocationService,
     JwtStrategy,
@@ -48,6 +57,7 @@ import { SuperAdminGuard } from './presentation/guards/super-admin.guard';
   // autenticação usa (ver modules/health/redis.health.ts).
   exports: [
     AuthService,
+    PasswordResetService,
     JwtAuthGuard,
     AuthGatesGuard,
     RolesGuard,

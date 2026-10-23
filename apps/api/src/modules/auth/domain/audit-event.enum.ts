@@ -79,4 +79,10 @@ export enum AuditEvent {
   // CLINIC_CREATED (acima).
   TERMS_ACCEPTED = 'TERMS_ACCEPTED', // feature-terms-of-service-acceptance
   FORCED_PASSWORD_CHANGED = 'FORCED_PASSWORD_CHANGED', // feature-forced-password-change
+  // Recuperação de senha: pedido e conclusão por autoatendimento (e-mail) ou pelo super-admin.
+  PASSWORD_RESET_REQUESTED = 'PASSWORD_RESET_REQUESTED',
+  PASSWORD_RESET_COMPLETED = 'PASSWORD_RESET_COMPLETED',
+  PASSWORD_RESET_FAILED = 'PASSWORD_RESET_FAILED',
+  PASSWORD_RESET_BY_ADMIN = 'PASSWORD_RESET_BY_ADMIN',
+  TWO_FACTOR_RESET_BY_ADMIN = 'TWO_FACTOR_RESET_BY_ADMIN',
 }

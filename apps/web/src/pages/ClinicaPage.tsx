@@ -54,7 +54,7 @@ export function ClinicaPage() {
     mutationFn: (payload: { nome: string; email: string; password: string; papel: Papel }) =>
       clinicasApi.criarUsuario(user?.clinicaId ?? '', payload),
     onSuccess: (res, payload) => {
-      toast.success('Usuário criado com sucesso.');
+      // O diálogo "Acesso criado" é a confirmação: sem toast de sucesso por cima (ficava duplicado).
       setAcessoCriado({
         nome: res.user.nome,
         email: res.user.email,
@@ -90,8 +90,8 @@ export function ClinicaPage() {
         <div>
           <p className="text-sm font-medium text-foreground">Novo usuário da clínica</p>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Crie psicólogos ou secretaria. Psicólogos recebem 2FA obrigatório
-            no primeiro acesso. Disponível apenas para ADMIN.
+            Crie psicólogos ou secretaria. Todos trocam a senha provisória no primeiro acesso;
+            psicólogos também recebem 2FA obrigatório. Disponível apenas para ADMIN.
           </p>
         </div>
       </div>
@@ -141,7 +141,7 @@ export function ClinicaPage() {
           </DialogHeader>
           <div className="space-y-3 text-sm">
             <p className="text-muted-foreground">
-              Para entrar, use este e-mail e a senha provisória. A troca de senha é pedida no primeiro acesso.
+              Para entrar, use este e-mail e a senha provisória. A troca de senha é obrigatória no primeiro acesso.
             </p>
             <div className="rounded-md border border-border bg-secondary p-3 space-y-1">
               <p><span className="text-muted-foreground">E-mail:</span> <span className="font-mono">{acessoCriado?.email}</span></p>
@@ -156,10 +156,12 @@ export function ClinicaPage() {
                 />
               </>
             )}
-            <p className="text-xs text-destructive">
-              O segundo fator não será exibido de novo. Cadastre-o agora no aplicativo autenticador
-              (ou repasse a quem vai usar este acesso) antes de fechar.
-            </p>
+            {acessoCriado?.twoFactorSetup && (
+              <p className="text-xs text-destructive">
+                O segundo fator não será exibido de novo. Cadastre-o agora no aplicativo autenticador
+                (ou repasse a quem vai usar este acesso) antes de fechar.
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button type="button" onClick={() => setAcessoCriado(null)}>Já cadastrei, fechar</Button>

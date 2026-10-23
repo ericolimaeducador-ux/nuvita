@@ -45,6 +45,8 @@ export const MATRIZ_API: Record<string, string> = {
   'POST /auth/login': 'PUBLICO',
   'POST /auth/refresh': 'PUBLICO',
   'POST /auth/register': 'PUBLICO',
+  'POST /auth/esqueci-senha': 'PUBLICO',
+  'POST /auth/redefinir-senha': 'PUBLICO',
   'POST /auth/logout': 'LOGADO',
   'PATCH /auth/me': 'LOGADO',
   'POST /auth/aceitar-termos': 'LOGADO',
@@ -123,6 +125,7 @@ export const MATRIZ_API: Record<string, string> = {
 
   // super-admin (SuperAdminGuard)
   'GET /super-admin/clinicas': 'SUPER_ADMIN',
+  'GET /super-admin/recuperacao-senha': 'SUPER_ADMIN',
   'POST /super-admin/clinicas': 'SUPER_ADMIN',
   'PATCH /super-admin/clinicas/:id': 'SUPER_ADMIN',
   'GET /super-admin/usuarios': 'SUPER_ADMIN',

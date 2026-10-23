@@ -111,21 +111,25 @@ export class AuthService {
 
     const user = await this.users.findByEmailWithSecrets(email);
     if (!user || !user.ativo) {
+      // Conta inexistente também paga o custo do bcrypt: sem atalho que revele, pelo tempo, que a conta não existe.
+      await bcrypt.compare(dto.password, await this.hashFicticio());
       await this.recordLoginFailure(email, context, 'INVALID_CREDENTIALS');
-      throw new UnauthorizedException('Credenciais invalidas.');
+      throw this.credenciaisInvalidas();
     }
 
     const passwordMatches = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordMatches) {
       await this.recordLoginFailure(email, context, 'INVALID_CREDENTIALS', user.id);
-      throw new UnauthorizedException('Credenciais invalidas.');
+      throw this.credenciaisInvalidas();
     }
 
     try {
       this.assertTwoFactorIfRequired(user, dto.totpCode);
-    } catch (error) {
+    } catch {
+      // Sem oráculo de senha: "senha certa sem/com código errado" é igual a "senha errada" para quem chama.
+      // A causa real fica só na auditoria.
       await this.recordLoginFailure(email, context, 'INVALID_2FA', user.id);
-      throw error;
+      throw this.credenciaisInvalidas();
     }
 
     // Zera só o par (ip, conta) que logou: o histórico de falhas de OUTRAS contas
@@ -434,6 +438,18 @@ export class AuthService {
       });
       throw new UnauthorizedException('Token invalido.');
     }
+  }
+
+  private credenciaisInvalidas(): UnauthorizedException {
+    return new UnauthorizedException('Credenciais invalidas.');
+  }
+
+  private hashFicticioPromise?: Promise<string>;
+
+  /** Hash bcrypt descartável (mesmo custo das contas reais) para equalizar o tempo da conta inexistente. */
+  private hashFicticio(): Promise<string> {
+    this.hashFicticioPromise ??= bcrypt.hash(randomUUID(), this.configService.getConfig().bcryptRounds);
+    return this.hashFicticioPromise;
   }
 
   private assertTwoFactorIfRequired(user: User, token?: string): void {

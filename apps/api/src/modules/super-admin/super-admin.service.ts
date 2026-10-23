@@ -234,7 +234,7 @@ export class SuperAdminService {
       // regra do ClinicasService.createUsuario() — PSICOLOGO criado aqui
       // (endpoint genérico do super-admin, qualquer clínica) também nasce
       // com troca obrigatória de senha.
-      deveTrocarSenha: dto.papel === Papel.PSICOLOGO,
+      deveTrocarSenha: true,
     });
 
     return { ...toPublicUser(user), twoFactorSetup };
@@ -345,7 +345,12 @@ export class SuperAdminService {
   async resetPassword(id: string, novaSenha: string) {
     const { bcryptRounds } = this.configService.getConfig();
     const passwordHash = await bcrypt.hash(novaSenha, bcryptRounds);
-    const updated = await this.users.update(id, { passwordHash });
+    // Senha definida pelo super-admin é PROVISÓRIA: a pessoa troca no próximo acesso e as sessões antigas caem.
+    const updated = await this.users.update(id, {
+      passwordHash,
+      deveTrocarSenha: true,
+      tokensValidosApartirDe: new Date(),
+    });
     if (!updated) throw new NotFoundException('Usuário não encontrado.');
     return { ok: true };
   }

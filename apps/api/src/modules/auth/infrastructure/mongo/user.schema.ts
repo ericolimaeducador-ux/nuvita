@@ -79,7 +79,12 @@ export class UserMongo {
   // jamais invalidou sessões deste usuário — NUNCA tratar ausência como rejeição.
   @Prop({ type: Date })
   tokensValidosApartirDe?: Date;
+
+  // Redefinição de senha por e-mail: só o hash do token. Apagado em qualquer troca de senha.
+  @Prop({ type: { tokenHash: String, expiraEm: Date }, _id: false, select: false })
+  resetSenha?: { tokenHash: string; expiraEm: Date };
 }
 
 export const UserSchema = SchemaFactory.createForClass(UserMongo);
+UserSchema.index({ 'resetSenha.tokenHash': 1 }, { sparse: true });
 UserSchema.index({ clinicaId: 1, _id: 1 });

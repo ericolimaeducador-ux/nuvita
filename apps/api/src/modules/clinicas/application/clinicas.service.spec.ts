@@ -245,7 +245,7 @@ describe('ClinicasService.createUsuario — deveTrocarSenha para PSICOLOGO (amen
     expect(users.create).toHaveBeenCalledWith(expect.objectContaining({ deveTrocarSenha: true }));
   });
 
-  it('papel SECRETARIA → users.create() NÃO recebe deveTrocarSenha: true (fora do escopo)', async () => {
+  it('papel SECRETARIA → users.create() recebe deveTrocarSenha: true (troca obrigatória para todos os papéis)', async () => {
     const { service, users } = makeService({
       clinicas: { findById: jest.fn().mockResolvedValue({ id: 'cli-1', ativo: true }) },
     });
@@ -256,9 +256,7 @@ describe('ClinicasService.createUsuario — deveTrocarSenha para PSICOLOGO (amen
       adminContext,
     );
 
-    expect(users.create).toHaveBeenCalledWith(
-      expect.not.objectContaining({ deveTrocarSenha: true }),
-    );
+    expect(users.create).toHaveBeenCalledWith(expect.objectContaining({ deveTrocarSenha: true }));
   });
 });
 

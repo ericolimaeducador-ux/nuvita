@@ -59,3 +59,19 @@ two rows, which come from this session's own work).
 | `fix/totp-secret-cifrado` | **Not before the beta**; stays untouched (no merge, no rebase). Revisit at G2 or later | Needs a new required secret `TOTP_ENCRYPTION_KEY` in every environment; merging without it breaks API boot, and losing the key locks out 2FA for SUPER_ADMIN/ADMIN/PSICOLOGO. Runbook in that branch must be followed in order |
 | `fix/deploy-web-observa-docs-legal` | **Discarded**; do not try to resolve the conflict | `main` already has both path triggers, and `deploy-web.yml` carries the `firebase-tools` pin (not worth the risk) |
 | `fix/achados-capturas` | Nothing to do | Already contained in `main` (PR #11) |
+
+## G2 decisions (2026-10-22, by Erico) — do not reopen
+
+The backup of all secrets was made by Erico (the 4 category-A keys in their own entries, the rest in one note, in the owner's password manager). Inventory: `docs/seguranca/INVENTARIO-SEGREDOS.md`.
+
+| Item | Decision | Reason |
+|------|----------|--------|
+| Key rotation | **Out of the beta scope** | Category A keys (patient data, AI usage, prontuário signature, CPF hash) make existing data unreadable or unverifiable if swapped; rotating them needs a migration plan |
+| Fixed IP for Atlas | **Out of the beta scope**; revisit with the definitive hosting migration | `0.0.0.0/0` stays during the beta, mitigated by strong credentials and TLS |
+| BUG-018 (fixed TOTP secret in git history) | **Closed, no rotation** | No real patient or psychologist exists in production, so the secret never protected a real account |
+
+## Post-beta debt: secrets and infrastructure
+
+- Secret Manager and KMS are disabled in the GCP project; the code path `CONFIG_SOURCE=gcp` is unused in production.
+- The active Cloud Run revision is the only readable source of the secret values (the `CLOUDRUN_ENV_YAML` GitHub secret is write-only).
+- The `infra/` docs describe Secret Manager and KMS as the official setup, but production does not use them.

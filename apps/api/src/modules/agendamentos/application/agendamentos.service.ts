@@ -187,6 +187,17 @@ export class AgendamentosService {
   }
 
   /**
+   * Leitura SILENCIOSA (sem auditar "visualizou") para o servidor montar documentos: 404 se não é da
+   * clínica; 403 se o psicólogo não é o profissional do atendimento.
+   */
+  async obterParaEmissao(clinicaId: string, id: string, user: AuthTokenPayload): Promise<Agendamento> {
+    const agendamento = await this.agendamentos.findById(clinicaId, id);
+    if (!agendamento) throw new NotFoundException('Agendamento nao encontrado.');
+    this.assertPosse(agendamento, user);
+    return agendamento;
+  }
+
+  /**
    * Os ids do payload de criação precisam pertencer à clínica do token (D4). Para o psicólogo, o
    * agendamento referenciado também precisa ser dele. Chamado pelos controllers antes de criar.
    */

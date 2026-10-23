@@ -32,6 +32,7 @@ import type {
   TipoAtendimento,
   TipoDocumento,
   UsuarioAdmin,
+  DocumentoEmitido,
 } from '@/types';
 
 // ---------- Auth ----------
@@ -62,6 +63,14 @@ export const authApi = {
     api
       .post<GateResolvidoResponse>('/auth/trocar-senha-obrigatoria', { novaSenha })
       .then((r) => r.data),
+};
+
+// ---------- Documentos emitidos pelo servidor ----------
+export const documentosEmitidosApi = {
+  declaracaoComparecimento: (payload: { pacienteId: string; agendamentoId: string }) =>
+    api.post<DocumentoEmitido>('/documentos-emitidos/declaracao-comparecimento', payload).then((r) => r.data),
+  atestadoComparecimento: (payload: { pacienteId: string; agendamentoId: string }) =>
+    api.post<DocumentoEmitido>('/documentos-emitidos/atestado-comparecimento', payload).then((r) => r.data),
 };
 
 // ---------- Clínicas ----------

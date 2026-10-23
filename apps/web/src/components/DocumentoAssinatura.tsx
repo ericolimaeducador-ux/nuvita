@@ -9,9 +9,15 @@ export function useEmissor() {
   return { nome, crp, identificacao: [nome, crp && `CRP ${crp}`].filter(Boolean).join(' — ') };
 }
 
-/** Bloco de assinatura dos documentos clínicos: "<nome> — CRP <crp>". */
-export function DocumentoAssinatura() {
-  const { identificacao } = useEmissor();
+/**
+ * Bloco de assinatura dos documentos clínicos: "<nome> — CRP <crp>". Com `emissor` (documento emitido pelo
+ * servidor), usa os dados que vieram dele; sem, usa a conta logada.
+ */
+export function DocumentoAssinatura({ emissor }: { emissor?: { nome: string; crp?: string } }) {
+  const logado = useEmissor();
+  const identificacao = emissor
+    ? [emissor.nome, emissor.crp && `CRP ${emissor.crp}`].filter(Boolean).join(' — ')
+    : logado.identificacao;
   return (
     <div className="mt-16 flex flex-col items-center gap-1 text-sm" data-testid="assinatura">
       <p>_____________________________________</p>

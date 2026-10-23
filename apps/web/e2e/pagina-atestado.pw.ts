@@ -21,8 +21,26 @@ async function abrirAtestado(page: Page, clinica: Record<string, unknown>) {
   }, PSICOLOGO);
   await page.route('**/clinicas/minha', (route) => route.fulfill({ json: clinica }));
   await page.route('**/pacientes/p1', (route) => route.fulfill({ json: { id: 'p1', nome: 'Paciente Fictício' } }));
-  await page.route('**/prontuarios**', (route) => route.fulfill({ json: [] }));
+  // Data/hora vêm da AGENDA (atendimento concluído) e o texto vem do SERVIDOR; a página só renderiza.
+  await page.route('**/agendamentos**', (route) =>
+    route.fulfill({
+      json: [{ id: 'a1', status: 'concluido', pacienteId: 'p1', medicoId: 'u1', clinicaId: 'c1',
+        dataHoraInicio: '2026-10-20T17:00:00.000Z', dataHoraFim: '2026-10-20T18:00:00.000Z' }],
+    }),
+  );
+  await page.route('**/documentos-emitidos/atestado-comparecimento', (route) =>
+    route.fulfill({
+      json: {
+        id: 'doc-1', protocolo: 'NV-ABC12345', tipo: 'ATESTADO_COMPARECIMENTO', titulo: 'Atestado de Comparecimento',
+        corpo: 'Atesto para os devidos fins que Paciente Fictício compareceu a atendimento psicológico em 20/10/2026, às 14:00.',
+        atendimento: { data: '20/10/2026', horaInicio: '14:00', horaFim: '15:00' },
+        emissor: { nome: 'Dra. Ana Souza', crp: '06/12345' }, clinica: { nome: 'Clínica Mente Sã' },
+        emitidoEm: '2026-10-23T12:00:00.000Z',
+      },
+    }),
+  );
   await page.goto('/pagina.html');
+  await page.getByRole('radio').first().check();
   await page.getByRole('button', { name: /gerar atestado/i }).click();
 }
 

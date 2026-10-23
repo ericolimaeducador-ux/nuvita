@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   pacienteGet: vi.fn(),
   prontuariosList: vi.fn(),
   prontuariosGet: vi.fn(),
+  agendaList: vi.fn(),
 }));
 
 vi.mock('@/auth/AuthContext', () => ({
@@ -24,6 +25,7 @@ vi.mock('@/api/resources', async (importOriginal) => {
     ...original,
     pacientesApi: { ...original.pacientesApi, get: mocks.pacienteGet },
     prontuariosApi: { ...original.prontuariosApi, list: mocks.prontuariosList, get: mocks.prontuariosGet },
+    agendaApi: { ...original.agendaApi, list: mocks.agendaList },
   };
 });
 
@@ -67,7 +69,6 @@ const sessao = {
 
 // Páginas que emitem documento a partir do histórico de sessões do paciente.
 const PAGINAS_COM_SESSOES: Array<[string, () => ReactElement, RegExp]> = [
-  ['Atestado de comparecimento', () => <AtestadoComparecimentoPage />, /gerar atestado/i],
   ['Encaminhamento', () => <EncaminhamentoPage />, /gerar encaminhamento/i],
   ['Laudo psicoterápico', () => <LaudoPsicoterapicoPage />, /gerar laudo/i],
 ];
@@ -108,6 +109,60 @@ describe.each(PAGINAS_COM_SESSOES)('%s — falha explícita', (_nome, pagina, bo
     const alerta = await screen.findByRole('alert');
     await userEvent.click(within(alerta).getByRole('button', { name: /tentar novamente/i }));
     expect(await screen.findByRole('button', { name: botaoGerar })).toBeInTheDocument();
+  });
+});
+
+// O atestado não usa mais o histórico de prontuários: data/hora vêm dos atendimentos CONCLUÍDOS da agenda.
+describe('Atestado de comparecimento — falha explícita (agenda)', () => {
+  const concluido = {
+    id: 'a1', status: 'concluido', pacienteId: 'p1', medicoId: 'u1', clinicaId: 'c1',
+    dataHoraInicio: '2026-09-01T17:00:00.000Z', dataHoraFim: '2026-09-01T18:00:00.000Z',
+  };
+  const botao = /gerar atestado/i;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.pacienteGet.mockResolvedValue(paciente);
+    mocks.agendaList.mockResolvedValue([concluido]);
+  });
+
+  it('com os dados carregados, o botão de gerar existe', async () => {
+    renderizar(<AtestadoComparecimentoPage />);
+    expect(await screen.findByRole('button', { name: botao })).toBeInTheDocument();
+    expect(screen.queryByTestId('erro-consulta')).not.toBeInTheDocument();
+  });
+
+  it('403 no paciente: alerta, SEM botão de gerar e sem "Carregando…" eterno', async () => {
+    mocks.pacienteGet.mockRejectedValue(erroHttp(403));
+    renderizar(<AtestadoComparecimentoPage />);
+    const alerta = await screen.findByRole('alert');
+    expect(alerta).toHaveTextContent('Seu perfil não tem acesso a esta informação');
+    expect(screen.queryByRole('button', { name: botao })).not.toBeInTheDocument();
+    expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
+  });
+
+  it('500 na agenda: alerta com nova tentativa e SEM botão de gerar', async () => {
+    mocks.agendaList.mockRejectedValue(erroHttp(500));
+    renderizar(<AtestadoComparecimentoPage />);
+    const alerta = await screen.findByRole('alert');
+    expect(within(alerta).getByRole('button', { name: /tentar novamente/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: botao })).not.toBeInTheDocument();
+  });
+
+  it('depois de "Tentar novamente" com sucesso, o botão de gerar aparece', async () => {
+    mocks.agendaList.mockRejectedValueOnce(erroHttp(500)).mockResolvedValue([concluido]);
+    renderizar(<AtestadoComparecimentoPage />);
+    const alerta = await screen.findByRole('alert');
+    await userEvent.click(within(alerta).getByRole('button', { name: /tentar novamente/i }));
+    expect(await screen.findByRole('button', { name: botao })).toBeInTheDocument();
+  });
+
+  it('sem atendimento concluído: recusa emitir (sem botão) — não há data livre', async () => {
+    mocks.agendaList.mockResolvedValue([]);
+    renderizar(<AtestadoComparecimentoPage />);
+    expect(await screen.findByText(/nenhum atendimento conclu[ií]do/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: botao })).not.toBeInTheDocument();
+    expect(document.querySelector('input[type="datetime-local"]')).toBeNull();
   });
 });
 

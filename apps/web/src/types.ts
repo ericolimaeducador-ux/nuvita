@@ -309,6 +309,19 @@ export interface PageResult<T> {
   total?: number;
 }
 
+/** Documento de comparecimento emitido pelo servidor: texto e dados de assinatura vêm prontos. */
+export interface DocumentoEmitido {
+  id: string;
+  protocolo: string;
+  tipo: 'DECLARACAO_COMPARECIMENTO' | 'ATESTADO_COMPARECIMENTO';
+  titulo: string;
+  corpo: string;
+  atendimento: { data: string; horaInicio: string; horaFim: string };
+  emissor: { nome: string; crp?: string };
+  clinica: { nome: string };
+  emitidoEm: string;
+}
+
 export interface Agendamento {
   id: string;
   clinicaId: string;

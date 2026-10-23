@@ -11,6 +11,7 @@ import { AuthController } from '../../modules/auth/presentation/auth.controller'
 import { PasswordResetController } from '../../modules/auth/presentation/password-reset.controller';
 import { ClinicasController } from '../../modules/clinicas/presentation/clinicas.controller';
 import { DocumentosController } from '../../modules/documentos/presentation/documentos.controller';
+import { DocumentosEmitidosController } from '../../modules/documentos-emitidos/presentation/documentos-emitidos.controller';
 import { FinanceiroController } from '../../modules/financeiro/presentation/financeiro.controller';
 import { PsicologiaFinanceiroController } from '../../modules/financeiro/presentation/psicologia-financeiro.controller';
 import { HealthController } from '../../modules/health/health.controller';
@@ -37,6 +38,7 @@ import { TicketsController } from '../../modules/tickets/presentation/tickets.co
  */
 const CONTROLLERS = [
   AgendamentosController, AnalyticsController, AuthController, PasswordResetController, ClinicasController, DocumentosController,
+  DocumentosEmitidosController,
   FinanceiroController, PsicologiaFinanceiroController, HealthController, IaClinicaController,
   InscricoesTesteController, LembretesAgendamentoController, NotificacoesController,
   ObservacoesPacienteController, PacientesController, ProntuariosController, SuperAdminController,

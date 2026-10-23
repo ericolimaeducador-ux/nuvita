@@ -223,6 +223,13 @@ export class ClinicasService {
    * Dados do timbre dos documentos clínicos da clínica do PRÓPRIO usuário (feature-timbre-clinico-dinamico).
    * O tenant vem só do token. Só os campos do timbre; ausentes ficam undefined (nunca string vazia).
    */
+  /** Nome e fuso da clínica: o servidor formata data/hora dos documentos no fuso dela. */
+  async contextoDeEmissao(clinicaId: string): Promise<{ nome: string; fusoHorario: string }> {
+    const clinica = await this.clinicas.findById(clinicaId);
+    if (!clinica) throw new NotFoundException('Clinica nao encontrada.');
+    return { nome: clinica.nome, fusoHorario: clinica.configuracoes.fusoHorario || 'America/Sao_Paulo' };
+  }
+
   async obterMinha(user: AuthTokenPayload): Promise<MinhaClinica> {
     if (!user.clinicaId) {
       throw new ForbiddenException('Usuario sem clinica no token.');

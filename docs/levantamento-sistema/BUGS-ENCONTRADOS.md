@@ -117,6 +117,21 @@ Severity: **blocks beta** / **gets in the way** / **cosmetic**. "Evidence" point
   that user), not just deleted from the file.
 - **Status: CLOSED (2026-10-22, by Erico), resolved without rotation.** There is no real patient or psychologist in production, so that secret never protected a real account.
 
+### BUG-020 — Prontuário `dataAtendimento` is free and `agendamentoId` is optional (severity: HIGH)
+- `CreateProntuarioDto.dataAtendimento` is any ISO date typed by the psychologist and `agendamentoId` is optional, so
+  the primary clinical record can assert any date with no check against the agenda. Everything derived from it
+  (psychotherapy report "in follow-up since X, N sessions", session counts) inherits that.
+- Same class as the free-date attendance certificate (BUG-021), through another door. The report cannot be fixed
+  without fixing the record: both go together.
+- **Out of scope of front 4; needs its own front.**
+
+### BUG-021 — Protection in the wrong layer: attendance rule enforced only in the browser (severity: HIGH)
+- The rule "only with an attendance concluded in the agenda" for the attendance declaration and the clinical
+  attendance certificate lived only in the web pages (date was a free `datetime-local` or composed client-side).
+- **Status: CLOSED for these two documents by front 4.** The server (`documentos-emitidos`) now takes only ids,
+  reads the agenda, refuses anything not concluded (422) or not owned (403/404), builds the text, and records each
+  issuance (protocol, who, when, patient, appointment) with an audit event. The report and the record are BUG-020.
+
 ## Cosmetic
 - CPF shown unformatted in Atendimento Psicológico and on the printed record; formatted elsewhere.
 - Signature line "CRP CRP 00/00000" when the stored value already contains the prefix (test-data artifact; no normalisation).

@@ -14,6 +14,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { ClinicasModule } from './modules/clinicas/clinicas.module';
 import { DocumentosModule } from './modules/documentos/documentos.module';
+import { DocumentosEmitidosModule } from './modules/documentos-emitidos/documentos-emitidos.module';
 import { FinanceiroModule } from './modules/financeiro/financeiro.module';
 import { NotificacoesModule } from './modules/notificacoes/notificacoes.module';
 import { PacientesModule } from './modules/pacientes/pacientes.module';
@@ -64,6 +65,7 @@ import { InscricoesTesteModule } from './modules/inscricoes-teste/inscricoes-tes
     TicketsModule,
     ProntuariosModule,
     DocumentosModule,
+    DocumentosEmitidosModule,
     NotificacoesModule,
     AgendamentosModule,
     LembretesAgendamentoModule,

@@ -35,6 +35,8 @@ export enum AuditEvent {
   DOCUMENT_VIEW_URL_CREATED = 'DOCUMENT_VIEW_URL_CREATED',
   DOCUMENT_LISTED = 'DOCUMENT_LISTED',
   DOCUMENT_SOFT_DELETED = 'DOCUMENT_SOFT_DELETED',
+  // Documento de comparecimento montado e registrado pelo servidor (declaração / atestado), com protocolo.
+  DOCUMENT_ISSUED = 'DOCUMENT_ISSUED',
   CLINIC_CREATED = 'CLINIC_CREATED',
   // feature-timbre-clinico-dinamico: CRP do profissional (preenchido 1x; correção só pelo super-admin) e contato da clínica
   USER_CRP_SET = 'USER_CRP_SET',

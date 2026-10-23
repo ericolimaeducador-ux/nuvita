@@ -59,6 +59,10 @@ export const MATRIZ_API: Record<string, string> = {
   'DELETE /clinicas/:clinicaId/logo': 'A',
   'POST /clinicas/:clinicaId/usuarios': 'A',
 
+  // documentos emitidos pelo servidor (declaração: equipe; atestado clínico: só o psicólogo)
+  'POST /documentos-emitidos/declaracao-comparecimento': 'APS',
+  'POST /documentos-emitidos/atestado-comparecimento': 'P',
+
   // documentos (arquivos)
   'GET /documentos': 'APS',
   'POST /documentos/presign-upload': 'APS',

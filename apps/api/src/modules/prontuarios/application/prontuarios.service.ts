@@ -81,7 +81,9 @@ export class ProntuariosService {
     }
 
     const clinicaId = this.resolveClinicaId(context.user, query.clinicaId);
-    const prontuarios = await this.prontuarios.listByPaciente(clinicaId, query.pacienteId);
+    const todos = await this.prontuarios.listByPaciente(clinicaId, query.pacienteId);
+    // Sigilo profissional: o psicólogo só vê os prontuários que são dele, mesmo do mesmo paciente.
+    const prontuarios = todos.filter((p) => p.medicoId === context.user.sub);
 
     await this.audit(AuditEvent.MEDICAL_RECORD_LISTED, context, {
       clinicaId,
@@ -94,6 +96,7 @@ export class ProntuariosService {
 
   async findOne(prontuarioId: string, clinicaId: string | undefined, context: ProntuarioRequestContext) {
     const prontuario = await this.getProntuarioOrThrow(prontuarioId, clinicaId, context);
+    this.assertOwner(prontuario, context.user);
     const addendums = await this.prontuarios.listAddendums(prontuario.id);
 
     await this.audit(AuditEvent.MEDICAL_RECORD_VIEWED, context, {
@@ -176,6 +179,7 @@ export class ProntuariosService {
     context: ProntuarioRequestContext,
   ) {
     const prontuario = await this.getProntuarioOrThrow(prontuarioId, clinicaId, context);
+    this.assertOwner(prontuario, context.user);
     if (!prontuario.assinado) {
       throw new ConflictException('Addendum deve ser usado apenas apos assinatura. Edite o rascunho antes disso.');
     }
@@ -194,6 +198,7 @@ export class ProntuariosService {
 
   async listAddendums(prontuarioId: string, clinicaId: string | undefined, context: ProntuarioRequestContext) {
     const prontuario = await this.getProntuarioOrThrow(prontuarioId, clinicaId, context);
+    this.assertOwner(prontuario, context.user);
     const addendums = await this.prontuarios.listAddendums(prontuarioId);
 
     await this.audit(AuditEvent.MEDICAL_RECORD_VIEWED, context, {
@@ -242,7 +247,7 @@ export class ProntuariosService {
 
   private assertOwner(prontuario: Prontuario, user: AuthTokenPayload): void {
     if (prontuario.medicoId !== user.sub) {
-      throw new ForbiddenException('Somente o medico responsavel pode alterar ou assinar este prontuario.');
+      throw new ForbiddenException('Somente o profissional responsavel acessa este prontuario.');
     }
   }
 

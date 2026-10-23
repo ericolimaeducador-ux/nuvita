@@ -261,8 +261,8 @@ export function RegistroSessao({
       const prontuario = await prontuariosApi.create({
         clinicaId: user?.clinicaId,
         pacienteId: agendamento!.pacienteId,
+        // A data do prontuário é o horário AGENDADO e quem define é o servidor; a tela só informa o atendimento.
         agendamentoId: agendamento!.id,
-        dataAtendimento: new Date().toISOString(),
         tipo: TipoAtendimento.PSICOTERAPIA,
         registroPsicologico: limpar(reg as Record<string, unknown>),
       });

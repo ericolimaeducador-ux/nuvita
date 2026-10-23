@@ -97,6 +97,11 @@ Reason: the secretary scans referrals, exams and insurance cards that the psycho
 - `POST /auth/register` answers 409 "Email ja cadastrado.", which reveals registered e-mails. Does not apply today: public registration is disabled.
 - There is no e-mail confirmation flow, so there is no account-existence distinction to check there. Does not apply today.
 
+## Post-beta debt: transitional fields in the medical record (found in BUG-020, 2026-10-23)
+
+- Remove the optional, ignored `dataAtendimento` from `CreateProntuarioDto` (and the service-side destructuring of `dataAtendimento`/`agendamentoId` in `updateDraft`), and make sure the web no longer sends them, once the API and the web run the same version in production. Today the API accepts and ignores them only so an old screen does not break between the API and web deploys (`forbidNonWhitelisted`). An accepted-and-ignored field that stays forever is silent debt.
+- Note: `UpdateProntuarioDto` already omits both fields at the type level, and the current web does not send them on update; the web stopped sending `dataAtendimento` on create in this PR.
+
 ## Lesson: green CI is not a deployed API (2026-10-23)
 
 PR #49 merged with green CI and the Cloud Run revision `nuvita-psi-api-00040-9nv` failed to start (`failed to start and listen on PORT=8080`); production stayed on the previous revision. Cause: a constructor parameter (`options: PasswordResetOptions = {}`) that Nest cannot inject. Unit tests build services with `new`, and **CI never boots the application**, so nothing exercised the dependency-injection graph.

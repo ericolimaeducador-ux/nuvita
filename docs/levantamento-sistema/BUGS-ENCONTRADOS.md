@@ -123,7 +123,12 @@ Severity: **blocks beta** / **gets in the way** / **cosmetic**. "Evidence" point
   (psychotherapy report "in follow-up since X, N sessions", session counts) inherits that.
 - Same class as the free-date attendance certificate (BUG-021), through another door. The report cannot be fixed
   without fixing the record: both go together.
-- **Out of scope of front 4; needs its own front.**
+- **Status: CLOSED by the BUG-020 front.** `agendamentoId` is now required on create; the server derives
+  `dataAtendimento` from the SCHEDULED start of the appointment (the client date is ignored); the anchor is
+  immutable on draft edits; cancelled / no-show appointments are refused (422); another psychologist's or another
+  patient's appointment is refused (403/404). The report facts ("since X, N sessions") now come from
+  `GET /prontuarios/resumo-acompanhamento`, computed on anchored sessions of the caller only. No migration: legacy
+  records without `agendamentoId` stay as they are and are simply not counted.
 
 ### BUG-021 — Protection in the wrong layer: attendance rule enforced only in the browser (severity: HIGH)
 - The rule "only with an attendance concluded in the agenda" for the attendance declaration and the clinical
@@ -131,6 +136,12 @@ Severity: **blocks beta** / **gets in the way** / **cosmetic**. "Evidence" point
 - **Status: CLOSED for these two documents by front 4.** The server (`documentos-emitidos`) now takes only ids,
   reads the agenda, refuses anything not concluded (422) or not owned (403/404), builds the text, and records each
   issuance (protocol, who, when, patient, appointment) with an audit event. The report and the record are BUG-020.
+
+### BUG-022 — The same session could be recorded twice (severity: HIGH)
+- Nothing stopped two records for the same appointment, so the session count (billing cycle, session numbering and
+  the "N sessions" the psychotherapy report states to third parties) could be inflated by a double click or a retry.
+- **Status: CLOSED by the BUG-020 front.** Creating a record for an appointment that already has one answers
+  409; a non-unique index on (clinic, appointment) supports the check.
 
 ## Cosmetic
 - CPF shown unformatted in Atendimento Psicológico and on the printed record; formatted elsewhere.

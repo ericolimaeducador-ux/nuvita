@@ -69,6 +69,8 @@ export class ProntuarioMongo {
 export const ProntuarioSchema = SchemaFactory.createForClass(ProntuarioMongo);
 ProntuarioSchema.index({ clinicaId: 1, _id: 1 });
 ProntuarioSchema.index({ clinicaId: 1, pacienteId: 1, dataAtendimento: -1 });
+// Checagem de duplicidade por atendimento (não único: registros antigos podem repetir/faltar).
+ProntuarioSchema.index({ clinicaId: 1, agendamentoId: 1 }, { sparse: true });
 
 function rejectDelete(next: (error?: Error) => void): void {
   next(new Error('Medical records have mandatory 20-year retention and cannot be deleted.'));

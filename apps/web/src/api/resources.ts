@@ -33,6 +33,7 @@ import type {
   TipoDocumento,
   UsuarioAdmin,
   DocumentoEmitido,
+  ResumoAcompanhamento,
 } from '@/types';
 
 // ---------- Auth ----------
@@ -195,6 +196,10 @@ export const prontuariosApi = {
     api.get<Prontuario>(`/prontuarios/${id}`).then((r) => r.data),
   create: (payload: Record<string, unknown>) =>
     api.post<Prontuario>('/prontuarios', payload).then((r) => r.data),
+  resumoAcompanhamento: (pacienteId: string) =>
+    api
+      .get<ResumoAcompanhamento>('/prontuarios/resumo-acompanhamento', { params: { pacienteId } })
+      .then((r) => r.data),
   assinar: (id: string) =>
     api.post(`/prontuarios/${id}/assinar`).then((r) => r.data),
   cid10: (q: string) =>

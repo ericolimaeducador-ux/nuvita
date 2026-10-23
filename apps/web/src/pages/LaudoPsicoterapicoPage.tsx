@@ -15,7 +15,7 @@ import { pacientesApi, prontuariosApi } from '@/api/resources';
 import { toItems } from '@/utils';
 import { ErroConsulta } from '@/components/ErroConsulta';
 import { primeiraFalha } from '@/lib/consulta';
-import { TipoAtendimento, type Prontuario } from '@/types';
+import { TipoAtendimento, type Prontuario, type ResumoAcompanhamento } from '@/types';
 
 /** Último valor não-vazio de um campo, das sessões mais recentes para as mais antigas. */
 function ultimoValor(sessoes: Prontuario[], campo: keyof NonNullable<Prontuario['registroPsicologico']>): string | undefined {
@@ -26,8 +26,8 @@ function ultimoValor(sessoes: Prontuario[], campo: keyof NonNullable<Prontuario[
   return undefined;
 }
 
-function montarRascunho(sessoes: Prontuario[]): string {
-  if (sessoes.length === 0) return '';
+function montarRascunho(sessoes: Prontuario[], resumo: ResumoAcompanhamento): string {
+  if (sessoes.length === 0 || !resumo.desde) return '';
   const primeira = sessoes[0];
   const motivo = primeira.registroPsicologico?.motivoAtendimento;
   const diagnosticos = ultimoValor(sessoes, 'diagnosticosSaudeMental');
@@ -40,7 +40,8 @@ function montarRascunho(sessoes: Prontuario[]): string {
   const partes: string[] = [];
   if (motivo) partes.push(`Motivo do encaminhamento/atendimento: ${motivo}`);
   if (diagnosticos) partes.push(`Diagnósticos/hipóteses de saúde mental: ${diagnosticos}`);
-  partes.push(`O paciente está em acompanhamento psicoterápico desde ${dayjs(primeira.dataAtendimento).format('DD/MM/YYYY')}, totalizando ${sessoes.length} sessão(ões) registrada(s).`);
+  // "Desde" e o total vêm do servidor (sessões ancoradas na agenda): é o que o laudo afirma a terceiros.
+  partes.push(`O paciente está em acompanhamento psicoterápico desde ${dayjs(resumo.desde).format('DD/MM/YYYY')}, totalizando ${resumo.totalSessoes} sessão(ões) registrada(s).`);
   if (evolucoes.length) partes.push(`Evolução observada: ${evolucoes.join(' ')}`);
   if (objetivos) partes.push(`Objetivos do acompanhamento: ${objetivos}`);
 
@@ -64,22 +65,28 @@ export function LaudoPsicoterapicoPage() {
     queryFn: () => prontuariosApi.list({ pacienteId: pacienteId! }),
     enabled: !!pacienteId,
   });
+  const resumoQ = useQuery({
+    queryKey: ['resumo-acompanhamento', pacienteId],
+    queryFn: () => prontuariosApi.resumoAcompanhamento(pacienteId!),
+    enabled: !!pacienteId,
+  });
+  // Só sessões ancoradas na agenda alimentam o rascunho (registros antigos sem agendamento ficam de fora).
   const sessoes = toItems<Prontuario>(sessoesQ.data)
-    .filter((p) => p.tipo === TipoAtendimento.PSICOTERAPIA)
+    .filter((p) => p.tipo === TipoAtendimento.PSICOTERAPIA && !!p.agendamentoId)
     .sort((a, b) => dayjs(a.dataAtendimento).valueOf() - dayjs(b.dataAtendimento).valueOf());
 
   useEffect(() => {
     // Em erro o rascunho não pode ser "gasto" com histórico vazio: espera o retry dar certo.
-    if (rascunhoAplicado || sessoesQ.isLoading || sessoesQ.isError) return;
-    setTexto(montarRascunho(sessoes));
+    if (rascunhoAplicado || sessoesQ.isLoading || sessoesQ.isError || resumoQ.isLoading || resumoQ.isError || !resumoQ.data) return;
+    setTexto(montarRascunho(sessoes, resumoQ.data));
     setRascunhoAplicado(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessoesQ.isLoading, sessoesQ.isError]);
+  }, [sessoesQ.isLoading, sessoesQ.isError, resumoQ.isLoading, resumoQ.isError, resumoQ.data]);
 
   const paciente = pacienteQ.data;
-  const carregando = pacienteQ.isLoading || sessoesQ.isLoading;
+  const carregando = pacienteQ.isLoading || sessoesQ.isLoading || resumoQ.isLoading;
   // Sem paciente e histórico não se emite documento: nada de nome em branco nem de histórico vazio.
-  const falha = primeiraFalha(pacienteQ, sessoesQ);
+  const falha = primeiraFalha(pacienteQ, sessoesQ, resumoQ);
 
   if (modo === 'imprimir' && !falha) {
     return (

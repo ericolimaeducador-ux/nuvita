@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   prontuariosList: vi.fn(),
   prontuariosGet: vi.fn(),
   agendaList: vi.fn(),
+  resumo: vi.fn(),
 }));
 
 vi.mock('@/auth/AuthContext', () => ({
@@ -24,7 +25,10 @@ vi.mock('@/api/resources', async (importOriginal) => {
   return {
     ...original,
     pacientesApi: { ...original.pacientesApi, get: mocks.pacienteGet },
-    prontuariosApi: { ...original.prontuariosApi, list: mocks.prontuariosList, get: mocks.prontuariosGet },
+    prontuariosApi: {
+      ...original.prontuariosApi, list: mocks.prontuariosList, get: mocks.prontuariosGet,
+      resumoAcompanhamento: mocks.resumo,
+    },
     agendaApi: { ...original.agendaApi, list: mocks.agendaList },
   };
 });
@@ -58,11 +62,14 @@ function renderizar(pagina: ReactElement, rota = '/p/:id') {
   );
 }
 
+// Resumo calculado pelo servidor sobre sessões ancoradas na agenda (7 sessões desde 10/08/2026).
+const RESUMO = { desde: '2026-08-10T15:00:00.000Z', totalSessoes: 7 };
 const paciente = { id: 'p1', nome: 'Maria Demonstração', cpf: '12345678909', dataNascimento: '1990-01-01' };
 const sessao = {
   id: 's1',
   pacienteId: 'p1',
   tipo: 'psicoterapia',
+  agendamentoId: 'a1',
   dataAtendimento: '2026-09-01T14:00:00.000Z',
   registroPsicologico: { motivoAtendimento: 'Ansiedade generalizada' },
 };
@@ -78,6 +85,7 @@ describe.each(PAGINAS_COM_SESSOES)('%s — falha explícita', (_nome, pagina, bo
     vi.clearAllMocks();
     mocks.pacienteGet.mockResolvedValue(paciente);
     mocks.prontuariosList.mockResolvedValue([sessao]);
+    mocks.resumo.mockResolvedValue(RESUMO);
   });
 
   it('com os dados carregados, o botão de gerar existe', async () => {
@@ -170,6 +178,7 @@ describe('Laudo — rascunho depois de falha do histórico', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.pacienteGet.mockResolvedValue(paciente);
+    mocks.resumo.mockResolvedValue(RESUMO);
   });
 
   it('a falha não "gasta" o rascunho: depois do retry, o texto é gerado do histórico', async () => {
@@ -179,6 +188,24 @@ describe('Laudo — rascunho depois de falha do histórico', () => {
     await userEvent.click(within(alerta).getByRole('button', { name: /tentar novamente/i }));
     const texto = (await screen.findByLabelText('Texto do laudo')) as HTMLTextAreaElement;
     expect(texto.value).toContain('Ansiedade generalizada');
+  });
+
+  // BUG-020: os fatos que o laudo afirma a terceiros ("desde X, N sessões") vêm do SERVIDOR, calculados
+  // sobre sessões ancoradas na agenda; a tela não conta nem escolhe a data.
+  it('"desde" e o total do rascunho vêm do resumo do servidor, não da contagem da tela', async () => {
+    mocks.prontuariosList.mockResolvedValue([sessao]);
+    renderizar(<LaudoPsicoterapicoPage />);
+    const texto = (await screen.findByLabelText('Texto do laudo')) as HTMLTextAreaElement;
+    expect(texto.value).toContain('desde 10/08/2026, totalizando 7 sessão(ões)');
+  });
+
+  it('falha do resumo: alerta com nova tentativa e SEM rascunho com fato inventado', async () => {
+    mocks.prontuariosList.mockResolvedValue([sessao]);
+    mocks.resumo.mockRejectedValue(erroHttp(500));
+    renderizar(<LaudoPsicoterapicoPage />);
+    const alerta = await screen.findByRole('alert');
+    expect(within(alerta).getByRole('button', { name: /tentar novamente/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Texto do laudo')).not.toBeInTheDocument();
   });
 });
 

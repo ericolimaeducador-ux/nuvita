@@ -5,6 +5,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { AppConfigService } from '../../../common/security/config.service';
 import { createHmac } from 'crypto';
@@ -18,7 +19,8 @@ import { CreateProntuarioDto } from './dto/create-prontuario.dto';
 import { ListProntuariosQueryDto } from './dto/list-prontuarios-query.dto';
 import { UpdateProntuarioDto } from './dto/update-prontuario.dto';
 import { CID10_REPOSITORY, PRONTUARIO_REPOSITORY } from '../prontuarios.constants';
-import { Prontuario } from '../domain/prontuario.entity';
+import { StatusAgendamento } from '../../agendamentos/domain/agendamento.entity';
+import { Prontuario, TipoAtendimento } from '../domain/prontuario.entity';
 import { Cid10Repository, ProntuarioRepository } from './ports/prontuario.repository';
 
 export interface ProntuarioRequestContext {
@@ -40,12 +42,27 @@ export class ProntuariosService {
   async create(dto: CreateProntuarioDto, context: ProntuarioRequestContext): Promise<Prontuario> {
     this.assertMedico(context.user);
     const clinicaId = this.resolveClinicaId(context.user, dto.clinicaId);
+
+    // BUG-020: o prontuário é ancorado na agenda. A data é o horário AGENDADO do atendimento, nunca a do cliente.
+    if (!dto.agendamentoId) throw new NotFoundException('Agendamento nao encontrado.');
+    const agendamento = await this.agendamentosService.obterParaEmissao(clinicaId, dto.agendamentoId, context.user);
+    if (agendamento.pacienteId !== dto.pacienteId) {
+      throw new NotFoundException('Agendamento nao encontrado.');
+    }
+    if (agendamento.status === StatusAgendamento.CANCELADO || agendamento.status === StatusAgendamento.FALTA) {
+      throw new UnprocessableEntityException('Atendimento cancelado ou com falta nao gera prontuario.');
+    }
+    // A mesma sessão não pode ser registrada duas vezes: a contagem de sessões (e o laudo) a afirmariam em dobro.
+    if (await this.prontuarios.findByAgendamento(clinicaId, dto.agendamentoId)) {
+      throw new ConflictException('Ja existe prontuario registrado para este atendimento.');
+    }
+
     const prontuario = await this.prontuarios.create({
       clinicaId,
       pacienteId: dto.pacienteId,
       medicoId: context.user.sub,
       agendamentoId: dto.agendamentoId,
-      dataAtendimento: new Date(dto.dataAtendimento),
+      dataAtendimento: agendamento.dataHoraInicio,
       tipo: dto.tipo,
       subjetivo: dto.subjetivo ?? {},
       objetivo: dto.objetivo ?? {},
@@ -94,6 +111,33 @@ export class ProntuariosService {
     return prontuarios;
   }
 
+  /**
+   * Fatos que o laudo afirma a terceiros ("desde X, N sessões"), calculados aqui, só sobre sessões de
+   * psicoterapia do próprio psicólogo ANCORADAS na agenda (registros legados sem agendamento não contam).
+   */
+  async resumoAcompanhamento(
+    pacienteId: string,
+    clinicaIdSolicitada: string | undefined,
+    context: ProntuarioRequestContext,
+  ): Promise<{ desde: Date | null; totalSessoes: number }> {
+    this.assertMedico(context.user);
+    const clinicaId = this.resolveClinicaId(context.user, clinicaIdSolicitada);
+    const sessoes = (await this.prontuarios.listByPaciente(clinicaId, pacienteId)).filter(
+      (p) => p.tipo === TipoAtendimento.PSICOTERAPIA && p.medicoId === context.user.sub && !!p.agendamentoId,
+    );
+    const desde = sessoes.length
+      ? new Date(Math.min(...sessoes.map((p) => new Date(p.dataAtendimento).getTime())))
+      : null;
+
+    await this.audit(AuditEvent.MEDICAL_RECORD_LISTED, context, {
+      clinicaId,
+      pacienteId,
+      quantidade: sessoes.length,
+      recurso: 'resumo-acompanhamento',
+    });
+    return { desde, totalSessoes: sessoes.length };
+  }
+
   async findOne(prontuarioId: string, clinicaId: string | undefined, context: ProntuarioRequestContext) {
     const prontuario = await this.getProntuarioOrThrow(prontuarioId, clinicaId, context);
     this.assertOwner(prontuario, context.user);
@@ -121,10 +165,9 @@ export class ProntuariosService {
       throw new ConflictException('Prontuario assinado e imutavel. Use addendum.');
     }
 
-    const updated = await this.prontuarios.updateDraft(current.clinicaId, prontuarioId, {
-      ...dto,
-      dataAtendimento: dto.dataAtendimento ? new Date(dto.dataAtendimento) : undefined,
-    });
+    // A âncora (agendamento e data) é imutável: ignora o que vier no corpo.
+    const { dataAtendimento: _data, agendamentoId: _agendamento, ...edicao } = dto as UpdateProntuarioDto & { dataAtendimento?: string; agendamentoId?: string };
+    const updated = await this.prontuarios.updateDraft(current.clinicaId, prontuarioId, edicao);
 
     if (!updated) {
       throw new ConflictException('Prontuario nao pode ser alterado.');

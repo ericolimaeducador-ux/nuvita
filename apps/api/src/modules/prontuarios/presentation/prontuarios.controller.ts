@@ -50,6 +50,17 @@ export class ProntuariosController {
     return this.prontuariosService.create(dto, ctx);
   }
 
+  // Fatos do laudo calculados no servidor. Declarada ANTES de ':id' para não ser capturada como id.
+  @Get('resumo-acompanhamento')
+  resumoAcompanhamento(
+    @Query('pacienteId') pacienteId: string,
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.prontuariosService.resumoAcompanhamento(pacienteId, clinicaId, this.contextFromRequest(request, user));
+  }
+
   @Get()
   listByPaciente(
     @Query() query: ListProntuariosQueryDto,

@@ -49,6 +49,11 @@ export class ProntuarioMongoRepository implements ProntuarioRepository {
     return document ? this.toProntuario(document) : null;
   }
 
+  async findByAgendamento(clinicaId: string, agendamentoId: string): Promise<Prontuario | null> {
+    const document = await this.prontuarioModel.findOne({ clinicaId, agendamentoId }).exec();
+    return document ? this.toProntuario(document) : null;
+  }
+
   async listByPaciente(clinicaId: string, pacienteId: string): Promise<Prontuario[]> {
     const documents = await this.prontuarioModel
       .find({ clinicaId, pacienteId })

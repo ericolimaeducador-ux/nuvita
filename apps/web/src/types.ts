@@ -489,10 +489,18 @@ export const REGISTRO_PSICOLOGICO_CAMPOS: Array<[keyof RegistroPsicologico, stri
   ['junguianaProcessoIndividuacao', 'Processo de individuação observado'],
 ];
 
+/** Fatos do laudo calculados pelo servidor sobre sessões ancoradas na agenda. */
+export interface ResumoAcompanhamento {
+  desde: string | null;
+  totalSessoes: number;
+}
+
 export interface Prontuario {
   id: string;
   clinicaId: string;
   pacienteId: string;
+  /** Atendimento da agenda a que o prontuário está ancorado (ausente só em registros antigos). */
+  agendamentoId?: string;
   dataAtendimento: string;
   tipo: TipoAtendimento;
   assinado?: AssinaturaProntuario;

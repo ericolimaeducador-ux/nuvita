@@ -28,6 +28,8 @@ export interface ProntuarioRepository {
   create(input: CreateProntuarioInput): Promise<Prontuario>;
   findById(clinicaId: string, prontuarioId: string): Promise<Prontuario | null>;
   listByPaciente(clinicaId: string, pacienteId: string): Promise<Prontuario[]>;
+  /** Prontuário já registrado para o atendimento da agenda (no máximo um). */
+  findByAgendamento(clinicaId: string, agendamentoId: string): Promise<Prontuario | null>;
   /** Agrega as sessões por paciente (base da numeração de sessão e do ciclo de cobrança). */
   resumoSessoesPorPaciente(
     clinicaId: string,

@@ -120,6 +120,7 @@ export const MATRIZ_API: Record<string, string> = {
   // prontuários: dado clínico, só o psicólogo
   'POST /prontuarios': 'P',
   'GET /prontuarios': 'P',
+  'GET /prontuarios/resumo-acompanhamento': 'P',
   'GET /prontuarios/cid10/autocomplete': 'P',
   'GET /prontuarios/:id': 'P',
   'PATCH /prontuarios/:id': 'P',

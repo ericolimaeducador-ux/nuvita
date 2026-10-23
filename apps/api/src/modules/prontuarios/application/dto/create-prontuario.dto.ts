@@ -21,12 +21,14 @@ export class CreateProntuarioDto {
   @IsMongoId()
   pacienteId!: string;
 
-  @IsOptional()
+  /** Obrigatório: o prontuário nasce de um atendimento da agenda. */
   @IsMongoId()
-  agendamentoId?: string;
+  agendamentoId!: string;
 
+  /** Obsoleto e IGNORADO: a data é o horário agendado. Aceito só para não quebrar uma tela antiga durante o deploy. */
+  @IsOptional()
   @IsISO8601()
-  dataAtendimento!: string;
+  dataAtendimento?: string;
 
   @IsEnum(TipoAtendimento)
   tipo!: TipoAtendimento;

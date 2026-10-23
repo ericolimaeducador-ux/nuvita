@@ -115,7 +115,7 @@ Severity: **blocks beta** / **gets in the way** / **cosmetic**. "Evidence" point
   removes it from HEAD and requires `TOTP_SECRET` from the environment. **Removal from HEAD does not remove it
   from history.** If that secret was ever used by a real account, it must be **ROTATED** (regenerate the 2FA key for
   that user), not just deleted from the file.
-- **Status:** pending confirmation by Erico on whether the secret ever belonged to a real account.
+- **Status: CLOSED (2026-10-22, by Erico), resolved without rotation.** There is no real patient or psychologist in production, so that secret never protected a real account.
 
 ## Cosmetic
 - CPF shown unformatted in Atendimento Psicológico and on the printed record; formatted elsewhere.

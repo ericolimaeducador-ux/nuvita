@@ -2,6 +2,25 @@
 
 Checkpoint as of 2026-10-22. Lessons: `docs/licoes-aprendidas/2026-10-22-dialogs-deploy.md`.
 
+## STATE AT END OF DAY 2026-10-23 (resume here)
+
+Merged today and in production: #47 (D1 medical-record ownership), #48 (D2+D4 ownership in appointment/document/telemedicine + id validation + lint no longer decorative), #49 (password oracle closed, e-mail reset, mandatory password change), #50 (server is the source of the attendance declaration/certificate), #51 (DI hotfix that unblocked the #49 deploy), #52 (BUG-020 and BUG-022, medical record anchored to the appointment). #41 (survey) and #45 (secrets inventory) are also on main.
+
+Item 1 of the queue is DONE: after the #52 merge the "Deploy API to Cloud Run" run was green, revision `nuvita-psi-api-00043-rkz` serves 100% of traffic, and the smoke (invented e-mail) passed: `/health` 200, login 401 "Credenciais invalidas.", esqueci-senha 201 identical message, `GET /prontuarios/resumo-acompanhamento` without token 401.
+
+PENDING, in this order (next session):
+1. **Front 3.3 — audit of user creation** (branch `feat/auditoria-criacao-usuario`, worktree `C:\Users\erico\nuvita-psi-audit33`, started from origin/main after #52). Findings so far:
+   - Clinic-admin creation (`ClinicasService.createUsuario`) already audits `USER_CREATED_BY_ADMIN` (actor id/e-mail via `userId`/`email`, created user id/e-mail/role in metadata, `timestamp` is the "when"). Missing: top-level `clinicaId`, the actor's role, and the created user's CRP.
+   - Super-admin creation (`SuperAdminService.createUsuario`, `POST /super-admin/usuarios`) has NO audit at all, so the screen sentence "Todas as ações são registradas no audit log" (`SuperAdminPage.tsx`) is false for it. Plan: new event `USER_CREATED_BY_SUPER_ADMIN`, optional `context` param on the service (audit only when present, so existing tests stay green), controller passes `@CurrentUser` + request ip/userAgent, via `clinicasService.registrarAuditoriaAdministrativa`.
+   - CRP: neither creation DTO accepts a CRP (the psychologist fills it once later, `USER_CRP_SET`), so the audit records `createdUserCrp: user.crp ?? null`. Product question to confirm with Erico: should the admin forms accept a CRP at creation? (Not done: would be a behavior change.)
+   - RED tests written but UNCOMMITTED in the worktree: `apps/api/src/modules/clinicas/application/criacao-usuario.auditoria.spec.ts` (not yet run; `npm ci` was still finishing). Next: run it to see RED, then implement, full suite, portão, draft PR. Fallback if it does not fit: remove the sentence from the screen in the same PR.
+   - The `www.psi.nuvita.app.br` pre-beta item (below, in Pending) was added in this worktree's docs.
+2. **IA front** — resolve the report contradiction (is the human decision mandatory or not, with evidence from the code) and verify/fix `clinicaId` in `decisoes_uso_ia`. STOP and report before changing any AI behavior.
+
+AFTER BOTH, if time remains before 10-28: `PRIMEIROS-15-MINUTOS.md` in PT-BR, derived from the survey, with the corrected screens. It is the piece that goes to the 7 psychologists on 10-29.
+
+RULES THAT STAY: one PR per front, RED before GREEN, full suite, portão with a verdict per line, PR in draft, Erico merges. After every merge touching the API: check the deploy run AND that the new revision receives traffic (green CI is not a live API). No manual `gcloud run deploy --env-vars-file`. Do not touch the `feature/inscricoes-teste-beta` worktree.
+
 ## Done and in production
 
 | PR | What |
@@ -28,6 +47,7 @@ two rows, which come from this session's own work).
 | Privacy page | Public page |
 | Firebase CLI bump | Only after granting `roles/serviceusage.serviceUsageViewer` to `github-hosting-deployer@` |
 | Select-only changes not "dirty" | Dialogs using react-hook-form with `setValue` on selects |
+| `www.psi.nuvita.app.br` (pre-beta, by Erico 2026-10-23) | The address answers only on `psi.nuvita.app.br`; with `www.` it errors, and on the 29th someone of the 7 will type it by reflex and think the system is down. Either register `www.psi.nuvita.app.br` in Firebase Hosting pointing to the same destination, or confirm the welcome e-mail carries a clickable link (no typing) |
 
 ## Backlog / known issues
 

@@ -70,6 +70,15 @@ The backup of all secrets was made by Erico (the 4 category-A keys in their own 
 | Fixed IP for Atlas | **Out of the beta scope**; revisit with the definitive hosting migration | `0.0.0.0/0` stays during the beta, mitigated by strong credentials and TLS |
 | BUG-018 (fixed TOTP secret in git history) | **Closed, no rotation** | No real patient or psychologist exists in production, so the secret never protected a real account |
 
+## Ownership-per-resource decisions (2026-10-23, by Erico) — do not reopen
+
+| Item | Decision | Reason |
+|------|----------|--------|
+| D1 Prontuário and addendum | Only the authoring psychologist reads, lists addenda and adds addenda | A psychologist reading a colleague's record breaks professional secrecy |
+| D2 Appointment, document, telemedicine | Psychologist operates only on own resources; admin and secretary stay clinic-wide | Matches the appointment list, which already filters by own `medicoId` |
+| D3 Patient | **Product decision:** the patient belongs to the clinic, not to a psychologist | Registration data is administrative and the secretary needs it; clinical data is protected by D1 and D2. Not a technical limitation |
+| D4 IDs in create payloads | Validate that `pacienteId`, `medicoId` and `agendamentoId` belong to the clinic | Cheap hardening; reads already filter by clinic |
+
 ## Post-beta debt: secrets and infrastructure
 
 - Secret Manager and KMS are disabled in the GCP project; the code path `CONFIG_SOURCE=gcp` is unused in production.

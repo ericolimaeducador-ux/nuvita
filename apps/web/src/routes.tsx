@@ -18,6 +18,7 @@ import { AtendimentoTelemedicinaPage } from '@/pages/AtendimentoTelemedicinaPage
 import { ClinicaPage } from '@/pages/ClinicaPage';
 import { ProntuarioImpressaoPage } from '@/pages/ProntuarioImpressaoPage';
 import { AtestadoComparecimentoPage } from '@/pages/AtestadoComparecimentoPage';
+import { DeclaracaoComparecimentoPage } from '@/pages/DeclaracaoComparecimentoPage';
 import { LaudoPsicoterapicoPage } from '@/pages/LaudoPsicoterapicoPage';
 import { EncaminhamentoPage } from '@/pages/EncaminhamentoPage';
 import { PrescricaoCuidadosPage } from '@/pages/PrescricaoCuidadosPage';
@@ -53,6 +54,10 @@ export function AppRoutes() {
             <Route path="/pacientes/:id/documentos/laudo" element={<LaudoPsicoterapicoPage />} />
             <Route path="/pacientes/:id/documentos/encaminhamento" element={<EncaminhamentoPage />} />
             <Route path="/pacientes/:id/documentos/prescricao" element={<PrescricaoCuidadosPage />} />
+          </Route>
+          {/* Declaração de comparecimento: documento ADMINISTRATIVO (só presença), emitido pela secretária; data/hora vêm da agenda. */}
+          <Route element={<ProtectedRoute roles={[Papel.SECRETARIA, Papel.ADMIN, Papel.PSICOLOGO]} modulo={Modulo.PACIENTES} />}>
+            <Route path="/pacientes/:id/documentos/declaracao-comparecimento" element={<DeclaracaoComparecimentoPage />} />
           </Route>
           <Route element={<AppLayout />}>
             {/* /dashboard fica sem gate: é o destino dos redirects e todo papel o tem por padrão. */}

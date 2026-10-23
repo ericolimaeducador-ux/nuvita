@@ -96,3 +96,13 @@ Reason: the secretary scans referrals, exams and insurance cards that the psycho
 - **HIGH priority, right after the beta:** login has no per-account limit across IPs. The lockout is per (IP, account) pair and the `@Throttle` is per IP, so a distributed brute force against one account is not blocked. Accepted for the beta: the password oracle is closed (a guess no longer reveals whether the password was right), which makes distributed guessing much more expensive, and only 7 known users exist.
 - `POST /auth/register` answers 409 "Email ja cadastrado.", which reveals registered e-mails. Does not apply today: public registration is disabled.
 - There is no e-mail confirmation flow, so there is no account-existence distinction to check there. Does not apply today.
+
+## Lesson: green CI is not a deployed API (2026-10-23)
+
+PR #49 merged with green CI and the Cloud Run revision `nuvita-psi-api-00040-9nv` failed to start (`failed to start and listen on PORT=8080`); production stayed on the previous revision. Cause: a constructor parameter (`options: PasswordResetOptions = {}`) that Nest cannot inject. Unit tests build services with `new`, and **CI never boots the application**, so nothing exercised the dependency-injection graph.
+
+Rules from now on:
+1. Any NEW boot-required configuration (env var, secret) goes into `CLOUDRUN_ENV_YAML` in the SAME PR that introduces it; otherwise CI passes and the deploy breaks. Never fix a deploy with a manual `gcloud run deploy --env-vars-file` (it replaces every variable).
+2. Every provider/controller constructor parameter must be injectable (class, `@Inject(token)` or `@Optional()`). `di-parametros-injetaveis.spec.ts` scans all modules and fails the build otherwise.
+3. A change counts as deployed only when the new Cloud Run revision is serving traffic, not when CI is green. Check the "Deploy API to Cloud Run" run after every merge that touches the API.
+4. Residual risk: the scan does not catch a provider missing from a module's context; only a real boot does. A boot smoke step in CI is a post-beta item.

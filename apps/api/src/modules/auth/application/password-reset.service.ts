@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
 import { AppConfigService } from '../../../common/security/config.service';
@@ -10,6 +10,7 @@ import { RequestContext } from './auth.service';
 
 export const PASSWORD_RESET_MAILER = 'PASSWORD_RESET_MAILER';
 export const PASSWORD_RESET_LIMITER = 'PASSWORD_RESET_LIMITER';
+export const PASSWORD_RESET_OPTIONS = 'PASSWORD_RESET_OPTIONS';
 
 export interface PasswordResetMailer {
   enviarLinkRedefinicao(input: { email: string; nome: string; link: string; validadeMinutos: number }): Promise<void>;
@@ -50,7 +51,8 @@ export class PasswordResetService {
     @Inject(PASSWORD_RESET_MAILER) private readonly mailer: PasswordResetMailer,
     @Inject(PASSWORD_RESET_LIMITER) private readonly limiter: PasswordResetLimiter,
     private readonly configService: AppConfigService,
-    private readonly options: PasswordResetOptions = {},
+    // Opcional: o Nest não injeta um objeto de opções sem token (sem isto, o container não sobe).
+    @Optional() @Inject(PASSWORD_RESET_OPTIONS) private readonly options: PasswordResetOptions = {},
   ) {}
 
   async solicitar(emailInformado: string, context: RequestContext): Promise<{ ok: true; mensagem: string }> {

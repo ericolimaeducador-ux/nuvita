@@ -9,7 +9,7 @@ Merged today and in production: #47 (D1 medical-record ownership), #48 (D2+D4 ow
 Item 1 of the queue is DONE: after the #52 merge the "Deploy API to Cloud Run" run was green, revision `nuvita-psi-api-00043-rkz` serves 100% of traffic, and the smoke (invented e-mail) passed: `/health` 200, login 401 "Credenciais invalidas.", esqueci-senha 201 identical message, `GET /prontuarios/resumo-acompanhamento` without token 401.
 
 PENDING, in this order (next session):
-1. **Front 3.3 — audit of user creation** (branch `feat/auditoria-criacao-usuario`, worktree `C:\Users\erico\nuvita-psi-audit33`, started from origin/main after #52). Findings so far:
+1. **DONE 2026-10-24 (#54 merged; deploy green, revision `nuvita-psi-api-00044-xqn` at 100%, smoke OK).** **Front 3.3 — audit of user creation** (branch `feat/auditoria-criacao-usuario`, worktree `C:\Users\erico\nuvita-psi-audit33`, started from origin/main after #52). Findings so far:
    - Clinic-admin creation (`ClinicasService.createUsuario`) already audits `USER_CREATED_BY_ADMIN` (actor id/e-mail via `userId`/`email`, created user id/e-mail/role in metadata, `timestamp` is the "when"). Missing: top-level `clinicaId`, the actor's role, and the created user's CRP.
    - Super-admin creation (`SuperAdminService.createUsuario`, `POST /super-admin/usuarios`) has NO audit at all, so the screen sentence "Todas as ações são registradas no audit log" (`SuperAdminPage.tsx`) is false for it. Plan: new event `USER_CREATED_BY_SUPER_ADMIN`, optional `context` param on the service (audit only when present, so existing tests stay green), controller passes `@CurrentUser` + request ip/userAgent, via `clinicasService.registrarAuditoriaAdministrativa`.
    - CRP: neither creation DTO accepts a CRP (the psychologist fills it once later, `USER_CRP_SET`), so the audit records `createdUserCrp: user.crp ?? null`. Product question to confirm with Erico: should the admin forms accept a CRP at creation? (Not done: would be a behavior change.)
@@ -47,7 +47,28 @@ two rows, which come from this session's own work).
 | Privacy page | Public page |
 | Firebase CLI bump | Only after granting `roles/serviceusage.serviceUsageViewer` to `github-hosting-deployer@` |
 | Select-only changes not "dirty" | Dialogs using react-hook-form with `setValue` on selects |
-| `www.psi.nuvita.app.br` (pre-beta, by Erico 2026-10-23) | The address answers only on `psi.nuvita.app.br`; with `www.` it errors, and on the 29th someone of the 7 will type it by reflex and think the system is down. Either register `www.psi.nuvita.app.br` in Firebase Hosting pointing to the same destination, or confirm the welcome e-mail carries a clickable link (no typing) |
+| `www.psi.nuvita.app.br` (pre-beta, by Erico 2026-10-23) | DECIDED 2026-10-24: register it in Firebase Hosting. Erico executes; exact steps in the section "Runbook: www.psi.nuvita.app.br" below |
+| Ask for the CRP at psychologist creation (post-beta) | Add a CRP field with format validation to the psychologist creation forms (clinic admin and super-admin). Deliberately NOT done now: the CRP is already required where it matters (#50 refuses certificate issuance without CRP, 422 on the server) and requiring it at creation adds friction while Erico creates the 8 accounts by hand. Until then the CRP audited at creation is `null` |
+| `updateUsuario` audit (post-beta) | See BUG-023. When fixed, the sentence on the Super Admin screen can go back to being broad |
+
+## Runbook: www.psi.nuvita.app.br (Erico executes)
+
+Goal: `www.psi.nuvita.app.br` must land on `psi.nuvita.app.br` instead of erroring. We register it as a redirect to the existing domain (one canonical address). Firebase project `nuvita-499800`, Hosting site `nuvita-psi-web` (target `web` in `.firebaserc`).
+
+1. Open https://console.firebase.google.com/ → project **nuvita-499800** → left menu **Build → Hosting** (or **Hosting** directly).
+2. In the Hosting page, make sure the site selector at the top shows **nuvita-psi-web** (NOT `nuvita-psi-api`; that one serves `api-psi`).
+3. In the "Domains" card click **Add custom domain**.
+4. Type `www.psi.nuvita.app.br`. Open **Advanced / "Redirect to an existing website"** when offered and pick `psi.nuvita.app.br` as the destination. (If the redirect option does not appear, add it as a normal domain; it then serves the same site. Either way it works.) Click **Continue**.
+5. The next screen lists the DNS records to add. Do NOT guess the values: copy them exactly from this screen. Expect:
+   - a **TXT** record for ownership verification (host `www.psi` or `_acme-challenge...` / a value starting with `hosting-site=`), and
+   - either two **A** records (Firebase's IPs, `199.36.158.100`-type) or a **CNAME** (`www.psi` → `nuvita-psi-web.web.app.`).
+   The console shows which one applies to a subdomain.
+6. At the DNS provider of `nuvita.app.br`, create exactly those records. The host field is usually the subdomain part only (`www.psi`), not the full name. If the provider proxies traffic (orange cloud), turn the proxy OFF for these records until Firebase finishes.
+7. Back in the console click **Verify**. Status goes "Needs setup" → "Pending" → "Connected". The SSL certificate is issued automatically; it can take from minutes up to a few hours.
+8. Check: open `https://www.psi.nuvita.app.br` in a private window; it must land on `https://psi.nuvita.app.br`. Also `curl -sI https://www.psi.nuvita.app.br` should show a 301 with `location: https://psi.nuvita.app.br/`.
+9. Do NOT touch the existing `psi` and `api-psi` records. If anything in `psi` stops answering, remove only the new `www.psi` records and report.
+
+Fallback (do in any case before 2026-10-29): make sure the welcome e-mail carries a clickable link, so nobody has to type the address.
 
 ## Backlog / known issues
 

@@ -143,6 +143,15 @@ Severity: **blocks beta** / **gets in the way** / **cosmetic**. "Evidence" point
 - **Status: CLOSED by the BUG-020 front.** Creating a record for an appointment that already has one answers
   409; a non-unique index on (clinic, appointment) supports the check.
 
+### BUG-023 — `updateUsuario` does not audit role change, account (de)activation or clinic link (severity: MEDIUM)
+- `SuperAdminService.updateUsuario` records only the CRP correction (`USER_CRP_CORRECTED`). Changing a user's role,
+  activating/deactivating an account and linking a user to a clinic leave no trace. Promoting a secretary to admin
+  leaves no record.
+- Same family as BUG-005, which #54 closed for user creation (`USER_CREATED_BY_SUPER_ADMIN`). Because of this gap the
+  Super Admin screen no longer says "Todas as ações são registradas" and lists only what is recorded.
+- **Fix (post-beta):** audit event(s) with actor, target, before/after of `papel`/`ativo`/`clinicaId`, top-level
+  `clinicaId`. When done, the screen sentence can go back to being broad.
+
 ## Cosmetic
 - CPF shown unformatted in Atendimento Psicológico and on the printed record; formatted elsewhere.
 - Signature line "CRP CRP 00/00000" when the stored value already contains the prefix (test-data artifact; no normalisation).

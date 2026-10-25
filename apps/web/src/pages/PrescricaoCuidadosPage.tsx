@@ -158,7 +158,8 @@ export function PrescricaoCuidadosPage() {
                 <Label htmlFor="textoLivre">Orientações adicionais</Label>
                 <Button
                   type="button" size="sm" variant="outline"
-                  onClick={() => gerarIaMut.mutate()} disabled={gerarIaMut.isPending}
+                  onClick={() => gerarIaMut.mutate()} disabled={gerarIaMut.isPending || !!sugestaoIa}
+                  title={sugestaoIa ? 'Decida sobre a sugestão atual antes de gerar outra.' : undefined}
                 >
                   {gerarIaMut.isPending ? (
                     <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
@@ -205,7 +206,10 @@ export function PrescricaoCuidadosPage() {
               </div>
             )}
 
-            <Button onClick={() => setModo('imprimir')} disabled={checklist.length === 0 && !textoLivre.trim()}>
+            {sugestaoIa && (
+              <p className="text-xs text-amber-600">Decida sobre a sugestão da IA (usar ou descartar) para continuar.</p>
+            )}
+            <Button onClick={() => setModo('imprimir')} disabled={(checklist.length === 0 && !textoLivre.trim()) || !!sugestaoIa}>
               <FileText className="mr-2 h-4 w-4" /> Gerar prescrição
             </Button>
           </CardContent>

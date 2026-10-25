@@ -186,6 +186,7 @@ describe('IaClinicaService — registro de decisão de uso de IA', () => {
     expect(decisoes.create).toHaveBeenCalledWith({
       registroUsoIaId: 'registro-1',
       usuarioId: 'psi-1',
+      clinicaId: 'clinica-1',
       decisao: DecisaoUsoIA.ACEITA,
     });
     expect(auditLogs.create).toHaveBeenCalledWith(

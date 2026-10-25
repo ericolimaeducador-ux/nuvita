@@ -11,7 +11,7 @@ export class DecisaoUsoIaMongoRepository implements DecisaoUsoIaRepository {
     @InjectModel(DecisaoUsoIaMongo.name) private readonly model: Model<DecisaoUsoIaDocument>,
   ) {}
 
-  async create(data: Omit<DecisaoUsoIa, 'id' | 'decididoEm'>): Promise<DecisaoUsoIa> {
+  async create(data: Omit<DecisaoUsoIa, 'id' | 'decididoEm' | 'clinicaId'> & { clinicaId: string }): Promise<DecisaoUsoIa> {
     const doc = await this.model.create(data);
     return this.toEntity(doc.toObject() as unknown as Record<string, unknown>);
   }

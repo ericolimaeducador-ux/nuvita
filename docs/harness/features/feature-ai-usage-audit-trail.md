@@ -183,3 +183,45 @@ Not proposing Strategy for the two suggestion types: they aren't
 interchangeable implementations of one interface selected at runtime,
 they're two distinct use cases with different prompts and DTOs — forcing
 Strategy here would be pattern-shopping, not a real fit.
+
+### Amendment (2026-10-25) — the human decision is recorded when it exists, not required by the server
+
+The user's answers above (kept verbatim) say the psychologist is made to decide
+"before the suggestion leaves the screen" and that a suggestion "never becomes
+part of the medical record without a decision". That is a stronger guarantee
+than what the code delivers. This amendment states what is actually true; the
+design doc must not claim a guarantee the system does not give.
+
+What the system does today:
+
+- The decision (`ACEITA` / `DESCARTADA`) is **recorded when the psychologist
+  makes it**: one immutable `decisoes_uso_ia` document per usage record, plus an
+  `AI_SUGGESTION_DECISION_RECORDED` audit entry. Only the generating user can
+  decide, and only once.
+- The **server does not require** a decision. A suggestion can stay undecided
+  forever; generation and saving a session never check for a pending decision.
+  An undecided suggestion simply has no decision document ("open" in the trail).
+- **Front-end enforcement (2026-10-25):** while a suggestion is pending
+  decision, both screens disable the actions that would move past it:
+  Prescrição de Cuidados disables "Gerar com IA" and "Gerar prescrição"
+  (print); Atendimento Psicológico disables "Gerar novamente". This is a UI
+  guard only: a direct API call or a closed browser tab still leaves a
+  suggestion undecided.
+- In Prescrição, the AI text enters the printable document only after "use"
+  (`ACEITA`). In Atendimento, the suggestion is never copied into the medical
+  record by the system; "use" only records the decision.
+
+Post-beta (needs design, not scheduled): **server-side enforcement**. It must
+cover the psychologist who closes the browser mid-way: either an expiry of the
+pending state or an implicit decision by abandonment. Until that is designed,
+no text of the product may promise that every suggestion is decided.
+
+`decisoes_uso_ia` now stores `clinicaId` (additive, immutable, filled from the
+tenant already resolved by the request). Decisions created before this change
+have no `clinicaId`; that absence is known and accepted (only demo data existed,
+no backfill). The clinic of an old decision is still derivable from its usage
+record.
+
+Configuration error: when `ANTHROPIC_API_KEY` is missing the AI endpoints answer
+HTTP 503 (service unavailable), not 500, so a configuration problem is not
+confused with a server failure.

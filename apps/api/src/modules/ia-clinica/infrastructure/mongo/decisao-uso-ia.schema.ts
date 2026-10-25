@@ -17,6 +17,10 @@ export class DecisaoUsoIaMongo {
   @Prop({ required: true, immutable: true })
   usuarioId!: string;
 
+  // Escopo de tenant na própria decisão. Decisões antigas (só demonstração) não têm o campo: conhecido e aceito.
+  @Prop({ required: true, immutable: true, index: true })
+  clinicaId!: string;
+
   @Prop({ type: String, required: true, enum: Object.values(DecisaoUsoIA), immutable: true })
   decisao!: DecisaoUsoIA;
 

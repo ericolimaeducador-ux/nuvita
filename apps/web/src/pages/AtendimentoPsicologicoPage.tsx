@@ -255,6 +255,8 @@ export function RegistroSessao({
   });
 
   const sugestaoIaVisivel = !!sugerirIaMut.data && decisaoIa !== DecisaoUsoIA.DESCARTADA;
+  // Sugestão exibida e ainda sem decisão: bloqueia gerar outra (guarda de UI; o servidor não exige — ver feature doc).
+  const sugestaoIaPendente = !!sugerirIaMut.data && decisaoIa === null;
 
   const salvarM = useMutation({
     mutationFn: async (assinar: boolean) => {
@@ -353,7 +355,9 @@ export function RegistroSessao({
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
               <Sparkles className="h-3.5 w-3.5" /> Sugestão de abordagem (IA)
             </p>
-            <Button variant="outline" size="sm" onClick={() => sugerirIaMut.mutate()} disabled={sugerirIaMut.isPending}>
+            <Button variant="outline" size="sm" onClick={() => sugerirIaMut.mutate()}
+              disabled={sugerirIaMut.isPending || sugestaoIaPendente}
+              title={sugestaoIaPendente ? 'Decida sobre a sugestão atual antes de gerar outra.' : undefined}>
               {sugerirIaMut.isPending ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-2" />}
               {sugestaoIaVisivel ? 'Gerar novamente' : 'Sugerir abordagem'}
             </Button>

@@ -9,6 +9,8 @@ export interface DecisaoUsoIa {
   id: string;
   registroUsoIaId: string;
   usuarioId: string;
+  /** Ausente nas decisões anteriores à adição do campo (sem backfill); a clínica sai do registro de origem. */
+  clinicaId?: string;
   decisao: DecisaoUsoIA;
   decididoEm: Date;
 }

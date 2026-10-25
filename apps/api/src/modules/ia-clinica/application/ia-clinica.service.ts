@@ -129,6 +129,7 @@ export class IaClinicaService {
       decisaoRegistrada = await this.decisoes.create({
         registroUsoIaId,
         usuarioId: context.user.sub,
+        clinicaId,
         decisao,
       });
     } catch (erro) {

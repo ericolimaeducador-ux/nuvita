@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { AppConfigService } from '../../../common/security/config.service';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
@@ -19,7 +19,8 @@ export class AnthropicClient {
     const config = this.configService.getConfig();
     const apiKey = config.anthropicApiKey;
     if (!apiKey) {
-      throw new InternalServerErrorException(
+      // Erro de configuração, não falha do servidor: 503.
+      throw new ServiceUnavailableException(
         'Assistente de IA não configurado (ANTHROPIC_API_KEY ausente). Peça ao administrador para configurar.',
       );
     }

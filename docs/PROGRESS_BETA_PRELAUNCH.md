@@ -17,7 +17,7 @@ PENDING, in this order (next session):
    - The `www.psi.nuvita.app.br` pre-beta item (below, in Pending) was added in this worktree's docs.
 2. **IA front** — resolve the report contradiction (is the human decision mandatory or not, with evidence from the code) and verify/fix `clinicaId` in `decisoes_uso_ia`. STOP and report before changing any AI behavior.
 
-AFTER BOTH, if time remains before 10-28: `PRIMEIROS-15-MINUTOS.md` in PT-BR, derived from the survey, with the corrected screens. It is the piece that goes to the 7 psychologists on 10-29.
+AFTER BOTH, if time remains before 10-28: `PRIMEIROS-15-MINUTOS.md` in PT-BR, derived from the survey, with the corrected screens. It is the piece that goes to the 8 psychologists on 10-29 (two more sign-ups arrived on Friday).
 
 RULES THAT STAY: one PR per front, RED before GREEN, full suite, portão with a verdict per line, PR in draft, Erico merges. After every merge touching the API: check the deploy run AND that the new revision receives traffic (green CI is not a live API). No manual `gcloud run deploy --env-vars-file`. Do not touch the `feature/inscricoes-teste-beta` worktree.
 
@@ -47,6 +47,8 @@ two rows, which come from this session's own work).
 | Privacy page | Public page |
 | Firebase CLI bump | Only after granting `roles/serviceusage.serviceUsageViewer` to `github-hosting-deployer@` |
 | Select-only changes not "dirty" | Dialogs using react-hook-form with `setValue` on selects |
+| AI decision enforced on the server (post-beta) | Today the decision is recorded when it exists and enforced only in the UI (Prescrição and Atendimento block regenerate/print while a suggestion is pending). Server enforcement needs a design for the psychologist who closes the browser mid-way: expiry of the pending state or implicit decision by abandonment. See the 2026-10-25 amendment in `feature-ai-usage-audit-trail.md` |
+| `decisoes_uso_ia` without `clinicaId` in old docs (known, accepted) | New decisions store `clinicaId`; older ones (demo data only) do not, no backfill by decision of Erico 2026-10-25. The clinic is still derivable from the usage record |
 | `www.psi.nuvita.app.br` (pre-beta, by Erico 2026-10-23) | DECIDED 2026-10-24: register it in Firebase Hosting. Erico executes; exact steps in the section "Runbook: www.psi.nuvita.app.br" below |
 | Ask for the CRP at psychologist creation (post-beta) | Add a CRP field with format validation to the psychologist creation forms (clinic admin and super-admin). Deliberately NOT done now: the CRP is already required where it matters (#50 refuses certificate issuance without CRP, 422 on the server) and requiring it at creation adds friction while Erico creates the 8 accounts by hand. Until then the CRP audited at creation is `null` |
 | `updateUsuario` audit (post-beta) | See BUG-023. When fixed, the sentence on the Super Admin screen can go back to being broad |

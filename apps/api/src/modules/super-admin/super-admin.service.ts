@@ -210,7 +210,7 @@ export class SuperAdminService {
     return toPublicUser(user);
   }
 
-  async createUsuario(dto: CreateAdminUserDto) {
+  async createUsuario(dto: CreateAdminUserDto, context?: CriarClinicaContext) {
     const email = dto.email.toLowerCase();
     const existing = await this.users.findByEmail(email);
     if (existing) throw new ConflictException('E-mail já cadastrado.');
@@ -236,6 +236,23 @@ export class SuperAdminService {
       // com troca obrigatória de senha.
       deveTrocarSenha: true,
     });
+
+    // Quem criou, quando (timestamp do audit log), qual papel, qual CRP. Nunca senha nem segredo do 2FA.
+    if (context) {
+      await this.clinicasService.registrarAuditoriaAdministrativa({
+        event: AuditEvent.USER_CREATED_BY_SUPER_ADMIN,
+        userId: context.userId,
+        ...(user.clinicaId ? { clinicaId: user.clinicaId } : {}),
+        ip: context.ip,
+        userAgent: context.userAgent,
+        metadata: {
+          createdUserId: user.id,
+          createdUserEmail: user.email,
+          createdUserPapel: user.papel,
+          createdUserCrp: user.crp ?? null,
+        },
+      });
+    }
 
     return { ...toPublicUser(user), twoFactorSetup };
   }

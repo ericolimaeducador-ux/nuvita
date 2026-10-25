@@ -3,6 +3,8 @@ import { AuditEvent } from '../../domain/audit-event.enum';
 export interface CreateAuditLogInput {
   event: AuditEvent;
   userId?: string;
+  /** Tenant do evento. Ausente: o repositório recorre a metadata.clinicaId (eventos antigos). */
+  clinicaId?: string;
   email?: string;
   ip: string;
   userAgent: string;

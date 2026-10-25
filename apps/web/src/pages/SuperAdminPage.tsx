@@ -347,7 +347,9 @@ export function SuperAdminPage() {
           <p className="text-sm font-medium text-foreground">Acesso irrestrito</p>
           <p className="text-sm text-muted-foreground mt-0.5">
             Aqui você cria usuários com qualquer papel, ativa/desativa contas, redefine senhas
-            e vincula usuários a clínicas. Todas as ações são registradas no audit log.
+            e vincula usuários a clínicas. Ficam registradas no audit log: criação de usuário e de
+            clínica, redefinição de senha e de 2FA, correção de CRP e edição dos dados fiscais e de
+            contato da clínica.
           </p>
         </div>
       </div>

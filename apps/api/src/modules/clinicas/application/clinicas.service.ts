@@ -202,14 +202,18 @@ export class ClinicasService {
     await this.auditLogs.create({
       event: AuditEvent.USER_CREATED_BY_ADMIN,
       userId: context.user.sub,
+      clinicaId: adminClinicaId,
       email: context.user.email,
       ip: context.ip,
       userAgent: context.userAgent,
       metadata: {
         clinicaId: adminClinicaId,
+        criadorPapel: context.user.papel,
         createdUserId: user.id,
         createdUserEmail: user.email,
         createdUserPapel: user.papel,
+        // O CRP costuma nascer vazio (o psicólogo o preenche depois): null explícito, não chave ausente.
+        createdUserCrp: user.crp ?? null,
       },
     });
 

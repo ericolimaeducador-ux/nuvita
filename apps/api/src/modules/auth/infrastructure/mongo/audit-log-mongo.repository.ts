@@ -13,7 +13,7 @@ export class AuditLogMongoRepository implements AuditLogRepository {
     await this.auditLogModel.create({
       event: input.event,
       userId: input.userId,
-      clinicaId: typeof input.metadata?.clinicaId === 'string' ? input.metadata.clinicaId : undefined,
+      clinicaId: input.clinicaId ?? (typeof input.metadata?.clinicaId === 'string' ? input.metadata.clinicaId : undefined),
       email: input.email?.toLowerCase(),
       ip: input.ip,
       userAgent: input.userAgent,

@@ -63,8 +63,8 @@ export class SuperAdminController {
   }
 
   @Post('usuarios')
-  createUsuario(@Body() dto: CreateAdminUserDto) {
-    return this.service.createUsuario(dto);
+  createUsuario(@Body() dto: CreateAdminUserDto, @CurrentUser() user: AuthTokenPayload, @Req() request: Request) {
+    return this.service.createUsuario(dto, { ...extractRequestMeta(request), userId: user.sub });
   }
 
   @Patch('usuarios/:id')

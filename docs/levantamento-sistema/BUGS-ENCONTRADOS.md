@@ -198,6 +198,16 @@ Severity: **blocks beta** / **gets in the way** / **cosmetic**. "Evidence" point
 - **B3:** the system accepts any council number, in any format, in a clinical record: a COREN, a CRM, or text.
 - **Not fixed.** Design presented to the user.
 
+### BUG-028 — The agenda accepts overlapping appointments for the same professional (severity: HIGH)
+- **Report (confirmed by the user):** two appointments of the same professional, for the same patient, at 14:00.
+- **Cause:** `AgendamentosService.create` and `update` never look for another appointment of the professional in the
+  interval; there is no overlap query in the repository and no index that could express it. #52 (BUG-022) only prevents two
+  records for the SAME appointment (`findByAgendamento`), not two overlapping appointments.
+- **Consequences:** billing cycle counted twice, two records for the same hour, a declaration/certificate issued twice.
+- **Related gap found in the same code:** `dataHoraFim` is not required to be after `dataHoraInicio` (DTOs only check the
+  ISO format).
+- **Not fixed.** Design presented to the user; starting decision: block with 409 on the server, not only warn on screen.
+
 ## Cosmetic
 - CPF shown unformatted in Atendimento Psicológico and on the printed record; formatted elsewhere.
 - Signature line "CRP CRP 00/00000" when the stored value already contains the prefix (test-data artifact; no normalisation).
@@ -213,3 +223,5 @@ for confirmation. **No divergence.** "Aplicar teste" opens with the section coll
 File upload/download/delete, clinic logo, real e-mail/WhatsApp, real AI output, real camera/NAT/TURN, clinic
 creation, ticket attend/refuse, payment receipt, password/2FA reset by super-admin, record addenda, agenda blocks,
 isolation between two psychologists, responsive layouts.
+- The browser print dialog ("Imprimir / Salvar PDF") of the record print page was NOT opened when #62 was verified locally
+  (2026-10-27); only the text of the print page was checked.

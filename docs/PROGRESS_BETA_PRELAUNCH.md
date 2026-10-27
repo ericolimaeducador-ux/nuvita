@@ -105,6 +105,15 @@ Fallback (do in any case before 2026-10-29): make sure the welcome e-mail carrie
   never enters the clinical record). Accounts created before this change that have no `crp` must fill it (the session form
   has a one-time field) before the first signature; new psychologist accounts need the CRP at creation.
 
+- **Signature hash and `formulario` (#62, 2026-10-27):** records signed before #62 have no `formulario`, and the signature hash
+  payload now includes `formulario ?? null`. The local simulation of an old record did NOT test hash verification. If a
+  signature-integrity check is ever added, it must handle records without that field (and, in general, hash the payload
+  version that was in force at signing). Today only test records exist.
+- **Seed on `main` is broken (2026-10-27):** `scripts/seed-manual-psicologos.mjs` still sends `crp` in the record body and no
+  `agendamentoId`, so it fails creating the sample record. The fix is in #57 (not merged yet).
+- **Not verified (2026-10-27):** the browser print dialog of the record print page was not opened when #62 was verified.
+- **BUG-028 (agenda overlap, HIGH):** registered in `docs/levantamento-sistema/BUGS-ENCONTRADOS.md`; design pending.
+
 ## Documentation language policy
 
 - Engineering docs (lessons learned, PROGRESS, ADRs): English, per `enforces-english`.

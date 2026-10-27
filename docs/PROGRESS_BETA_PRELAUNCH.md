@@ -40,11 +40,10 @@ two rows, which come from this session's own work).
 | Item | Notes |
 |------|-------|
 | Styled confirm modal | Replace the native `window.confirm` in `saida-protegida.ts` (pre-launch) |
-| Navigation rehearsal for the manual | Walk the app screen by screen, to feed the user manual |
-| Recruiting 5 → 25 | Beta starts **2026-10-29** |
-| G2 infra | Fixed IP for Atlas + rotate keys |
-| LGPD draft — Captação | Terms/consent for the signup flow |
-| Privacy page | Public page |
+| Recruiting | **8 real participants** for the beta that starts **2026-10-29**; 25 is the November target (updated 2026-10-27, by Erico) |
+| G2 infra | Key rotation DONE by Erico, with the backup in the password manager. The fixed IP for Atlas is left for the hosting migration and is NOT a gate for the beta (updated 2026-10-27, by Erico) |
+| LGPD draft — Captação | Terms/consent for the signup flow. Remains pending, with the lawyer (2026-10-27) |
+| Privacy page | Public page. Remains pending, with the lawyer (2026-10-27) |
 | Firebase CLI bump | Only after granting `roles/serviceusage.serviceUsageViewer` to `github-hosting-deployer@` |
 | Select-only changes not "dirty" | Dialogs using react-hook-form with `setValue` on selects |
 | AI decision enforced on the server (post-beta) | Today the decision is recorded when it exists and enforced only in the UI (Prescrição and Atendimento block regenerate/print while a suggestion is pending). Server enforcement needs a design for the psychologist who closes the browser mid-way: expiry of the pending state or implicit decision by abandonment. See the 2026-10-25 amendment in `feature-ai-usage-audit-trail.md` |
@@ -52,6 +51,9 @@ two rows, which come from this session's own work).
 | `www.psi.nuvita.app.br` (pre-beta, by Erico 2026-10-23) | DECIDED 2026-10-24: register it in Firebase Hosting. Erico executes; exact steps in the section "Runbook: www.psi.nuvita.app.br" below |
 | Ask for the CRP at psychologist creation (post-beta) | Add a CRP field with format validation to the psychologist creation forms (clinic admin and super-admin). Deliberately NOT done now: the CRP is already required where it matters (#50 refuses certificate issuance without CRP, 422 on the server) and requiring it at creation adds friction while Erico creates the 8 accounts by hand. Until then the CRP audited at creation is `null` |
 | `updateUsuario` audit (post-beta) | See BUG-023. When fixed, the sentence on the Super Admin screen can go back to being broad |
+
+Superseded (2026-10-27): the "navigation rehearsal for the manual" item was replaced by the system survey (#41) and by the guide
+(#57, #70); it is no longer a pre-2026-10-29 item.
 
 ## Runbook: www.psi.nuvita.app.br (Erico executes)
 
@@ -136,6 +138,25 @@ Fallback (do in any case before 2026-10-29): make sure the welcome e-mail carrie
   (`bloqueios`) do not take part in the overlap check; (2) concurrency: two simultaneous requests can both pass the check
   before either is inserted (needs a per-professional lock or a different data model); (3) existing overlaps are not
   corrected; (4) no "encaixe" (squeeze-in) exists.
+
+- **BEFORE SENDING THE ACCESSES (raised from post-beta, 2026-10-27, by Erico): Redis behaviour when unreachable.** Second
+  `ioredis` `ETIMEDOUT` in 24h, both on a freshly deployed revision (00053-z2z at 19:57 and 00056-rbj at 21:22, about 1m45
+  after creation), with no 5xx on either revision. Still to answer with evidence from the running service, not only from
+  the code: does the first request of a new revision fail or hang while the connection is being made? What the code says
+  (read 2026-10-27, no production touched):
+  - Used by: login rate limiter, password-reset limiter, token revocation (sessions), the notification queue (BullMQ) and
+    the health check.
+  - **Login and reset fail OPEN:** both limiters catch the Redis error and let the request through (a warning is logged).
+  - **Token revocation fails CLOSED, as a 500:** `TokenRevocationService.isRevoked` has no try/catch and runs on every
+    authenticated request, so with Redis down every logged-in request ends as a generic 500 (not a 401); logout and
+    refresh also fail (`revoke` has no catch). `/health` answers 503 on a 2 s PING timeout (infra doc, section 4).
+  - **Connection:** `new Redis(url, { lazyConnect: false, maxRetriesPerRequest: 2 })`. No `connectTimeout`,
+    `retryStrategy`, `commandTimeout` or offline-queue setting, so ioredis defaults apply (10 s connect timeout,
+    backoff capped at 2 s, offline queue on). The client is created in a provider factory and is NOT awaited: the API
+    starts listening before Redis is connected, and Cloud Run's default startup probe only checks the port, so a new
+    revision can get traffic first. Inferred, not observed: early requests may wait on the offline queue or fail.
+  - Whether production uses the Memorystore described in `infra/PRODUCTION-BACKEND.md` section 8, and whether the liveness
+    probe of section 4 is applied, is NOT in the code and was not checked.
 
 ## Documentation language policy
 

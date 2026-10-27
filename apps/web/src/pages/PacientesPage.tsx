@@ -23,6 +23,7 @@ import { apiErrorMessage } from '@/api/client';
 import { toItems, formatCpf, formatData, idade } from '@/utils';
 import { ErroConsulta } from '@/components/ErroConsulta';
 import { classificarIdadePorString } from '@/paciente-idade';
+import { cpfValido } from '@/lib/documento-fiscal';
 import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import {
@@ -32,14 +33,22 @@ import {
 
 const CPF_REGEX = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/;
 
-const pacienteSchema = z
+// Espelho do servidor (IsDataNaoFutura): compara por dia de calendário.
+function nascimentoFuturo(iso: string): boolean {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return false;
+  const agora = new Date();
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) > Date.UTC(agora.getFullYear(), agora.getMonth(), agora.getDate());
+}
+
+export const pacienteSchema = z
   .object({
     nome: z.string().min(1, 'Informe o nome.'),
-    cpf: z.string().regex(CPF_REGEX, 'CPF inválido.').optional().or(z.literal('')),
+    cpf: z.string().regex(CPF_REGEX, 'CPF inválido.').refine((v) => cpfValido(v), 'CPF inválido.').optional().or(z.literal('')),
     // Obrigatória no cadastro (Fase 2: sem ela não dá para saber se o paciente é
     // menor de idade e exigir responsável legal). Na edição continua opcional —
     // ver editPacienteSchema, em PacienteDetailPage.tsx.
-    dataNascimento: z.string().min(1, 'Informe a data de nascimento.'),
+    dataNascimento: z.string().min(1, 'Informe a data de nascimento.').refine((v) => !nascimentoFuturo(v), 'A data de nascimento não pode ser futura.'),
     sexo: z.nativeEnum(Sexo, { error: 'Selecione.' }).optional(),
     projeto: z.nativeEnum(ProjetoPaciente, { error: 'Selecione.' }).optional(),
     linhaTerapeutica: z.nativeEnum(LinhaTerapeutica, { error: 'Selecione.' }).optional(),

@@ -48,5 +48,8 @@ export function isMenorDeIdade(
   agora: Date = new Date(),
 ): ClassificacaoIdade {
   if (!dataNascimento) return 'indeterminado';
-  return calcularIdadeAnos(dataNascimento, agora) < IDADE_MAIORIDADE_ANOS ? 'menor' : 'maior';
+  const idade = calcularIdadeAnos(dataNascimento, agora);
+  // Nascimento no futuro é dado inválido, não "menor de idade".
+  if (idade < 0) return 'indeterminado';
+  return idade < IDADE_MAIORIDADE_ANOS ? 'menor' : 'maior';
 }

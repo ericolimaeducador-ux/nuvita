@@ -14,6 +14,7 @@ import { LinhaTerapeutica, ProjetoPaciente, Sexo } from '../../domain/paciente.e
 import { ConsentimentoLGpdDto } from './consentimento-lgpd.dto';
 import { ConvenioDto } from './convenio.dto';
 import { EnderecoDto } from './endereco.dto';
+import { IsCpfValido, IsDataNaoFutura } from './paciente-campos.validator';
 import { AutorizacaoResponsavelDto, ResponsavelLegalDto } from './responsavel-legal.dto';
 
 export class CreatePacienteDto {
@@ -26,6 +27,7 @@ export class CreatePacienteDto {
 
   @IsOptional()
   @Matches(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/)
+  @IsCpfValido()
   cpf?: string;
 
   // Obrigatória SÓ no cadastro (aqui): sem ela não dá para saber se o paciente é
@@ -33,6 +35,7 @@ export class CreatePacienteDto {
   // Em UpdatePacienteDto (PartialType deste DTO) ela volta a ser opcional, para
   // não travar a edição de pacientes já cadastrados sem essa data.
   @IsISO8601()
+  @IsDataNaoFutura()
   dataNascimento!: string;
 
   @IsOptional()

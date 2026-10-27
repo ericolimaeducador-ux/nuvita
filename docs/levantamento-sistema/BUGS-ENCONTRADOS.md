@@ -152,6 +152,52 @@ Severity: **blocks beta** / **gets in the way** / **cosmetic**. "Evidence" point
 - **Fix (post-beta):** audit event(s) with actor, target, before/after of `papel`/`ativo`/`clinicaId`, top-level
   `clinicaId`. When done, the screen sentence can go back to being broad.
 
+### BUG-026 — Session record: which form opens is inferred, never stored; reported "clinical content missing on reopen" NOT reproduced (severity: HIGH until the user confirms)
+- **Report (production test account, fictional patient, 2026-10-26):** follow-up form with the TCC fields, AI suggestion
+  generated, saved and signed; reopening the record and the PDF showed only "Anotações livres" and "CRP".
+- **Investigation (local, fictional data, `npm run dev`):** a follow-up for a TCC patient with ALL fields filled (the four
+  TCC fields + notes) was signed. Evidence, three layers: the XHR payload of `POST /prontuarios` carried all six keys
+  (`crp`, the four `tcc*` fields, `anotacoesLivres`); the Mongo document stored all six; the print page rendered all six.
+  The detail dialog renders them by reading the code (`CAMPOS_LINHA_TODAS`), not seen on screen.
+- **Mechanical check of the whole form:** 37 keys set by the session form (plus the per-line fields) vs the server DTO
+  (37), the print page (37) and the reading dialog (37): none is refused, dropped or left unrendered. The initial-assessment
+  ("complete") form uses the same 37 keys and the same code path, so the same result applies; it was checked statically, not
+  by filling it on screen.
+- **So the three hypotheses:** (i) fields not stored — no; (ii) stored but not rendered — no; (iii) the form sends only what
+  was typed (`limpar()` drops empty fields) — yes, by design. The production record (only notes + CRP) is exactly what
+  `limpar()` produces when the four fields were left empty, and the notes text was a test phrase. NOT confirmed with the
+  user; production data was not read. Open question: did the four fields get filled?
+- **Real defects found on the way:**
+  1. **The form is chosen by deduction, not by decision.** `completo = !ehSeguimento || forcarCompleto`, with
+     `ehSeguimento = sessoes.length > 0` (`AtendimentoPsicologicoPage.tsx`). Any earlier psychotherapy record, signed or
+     not, turns the form into the short follow-up (the draft case is fixed by #59). The record stores only
+     `tipo = psicoterapia`: nothing says which form was used. The appointment's `tipo` (`avaliacao_psicologica` /
+     `sessao_psicoterapia`) is NOT part of the decision (only shown as a label), and the "Novo agendamento" dialog of
+     Atendimento defaults it to `avaliacao_psicologica`.
+  2. **Different labels for the same field.** The form calls `tccPensamentosAutomaticos` "Registro de Pensamentos
+     Disfuncionais (RPD)", the print/reading screen "Pensamentos automáticos identificados"; `tccRegistroComportamental` is
+     "Técnica aplicada na sessão e evolução" in the form and "Registro de comportamento-alvo / frequência" in the print. A
+     psychologist reading the printout cannot map it to what was typed.
+  3. The print lists fields in a fixed order (generic fields first, then the line-specific ones), not in the order of the form.
+- **#59:** open as a draft, NOT in production. It changes the decision (`ehSeguimento` counts only signed records).
+- **Not fixed.** Design presented to the user.
+
+### BUG-027 — The CRP in the body of a signed record is a free, editable field, and can contradict the signature (severity: HIGH)
+- **Report:** the body of the signed record showed "CRP: 0152482" and the signature block "Erico Lima — CRP 5287723".
+  0152482 is the author's COREN (nursing council), not a CRP.
+- **Where each value comes from (code, reproduced locally with different values):**
+  - Body: `RegistroPsicologico.crp`, a TEXT INPUT of the form ("CRP do psicólogo responsável"), pre-filled by the browser
+    from `user.registroProfissional` (`AtendimentoPsicologicoPage.tsx`), the free-text professional-register field that the
+    super-admin fills at account creation (label depends on the role, no format check) and editable afterwards.
+  - Signature: `user.crp` (`DocumentoAssinatura`), the CRP the psychologist fills in their own profile ("comes from the
+    logged account, never from a typeable field", per its own comment).
+  - Two different profile fields, so the same document can carry two numbers.
+- **Server:** `ProntuariosService` has no reference to CRP at all: it stores whatever the body sends, and `sign` does not
+  compare or stamp it. #50 fixed this for ISSUED documents (the server stamps the CRP from the profile and answers 422
+  without one); the medical record escaped that rule.
+- **B3:** the system accepts any council number, in any format, in a clinical record: a COREN, a CRM, or text.
+- **Not fixed.** Design presented to the user.
+
 ## Cosmetic
 - CPF shown unformatted in Atendimento Psicológico and on the printed record; formatted elsewhere.
 - Signature line "CRP CRP 00/00000" when the stored value already contains the prefix (test-data artifact; no normalisation).

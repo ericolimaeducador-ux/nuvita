@@ -225,3 +225,19 @@ record.
 Configuration error: when `ANTHROPIC_API_KEY` is missing the AI endpoints answer
 HTTP 503 (service unavailable), not 500, so a configuration problem is not
 confused with a server failure.
+
+### Amendment (2026-10-27) — the Atendimento screen says, next to the buttons, that the suggestion is not part of the record
+
+No behaviour change. The code already never copies the suggestion into the medical record (see the 2026-10-25
+amendment above); this amendment only makes that visible to the psychologist. Next to "Usar esta sugestão" /
+"Descartar" in Atendimento Psicológico, as on-screen text (not a tooltip), the screen now says, in Portuguese:
+
+> Sugestão da IA: não entra no prontuário. Ao clicar em Usar ou Descartar, sua decisão fica registrada na auditoria.
+> Para adotar o conteúdo, copie para as anotações e revise antes de assinar.
+
+The three facts: (a) the suggestion does not enter the record; (b) "use" and "discard" record the decision in the audit
+trail; (c) to adopt the content, copy it into the notes and review it before signing. The notice stays visible while the
+suggestion is on screen, before and after the decision. Prescrição de Cuidados is not changed: there "use" does insert the
+text into the prescription being written, so this wording would be false there.
+
+The text was proposed by the user and approved to be amended into this doc instead of a new `feature-*.md`.

@@ -445,6 +445,10 @@ export function RegistroSessao({
                 )}
               </div>
               <p className="whitespace-pre-wrap text-foreground">{sugerirIaMut.data!.sugestao}</p>
+              <p className="text-xs text-muted-foreground">
+                Sugestão da IA: não entra no prontuário. Ao clicar em Usar ou Descartar, sua decisão fica registrada na
+                auditoria. Para adotar o conteúdo, copie para as anotações e revise antes de assinar.
+              </p>
               {decisaoIa === null && (
                 <div className="flex flex-wrap gap-2 pt-1">
                   <Button

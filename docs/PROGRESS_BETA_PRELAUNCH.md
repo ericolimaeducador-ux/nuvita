@@ -113,6 +113,15 @@ Fallback (do in any case before 2026-10-29): make sure the welcome e-mail carrie
   `agendamentoId`, so it fails creating the sample record. The fix is in #57 (not merged yet).
 - **Not verified (2026-10-27):** the browser print dialog of the record print page was not opened when #62 was verified.
 - **BUG-028 (agenda overlap, HIGH):** registered in `docs/levantamento-sistema/BUGS-ENCONTRADOS.md`; design pending.
+## Local environment (screenshots and manual rehearsal)
+
+- Start the web with `npm run dev` (in `apps/web`), NEVER `vite` directly. `predev` runs `copy:legal`, which copies
+  `termos-de-uso.md` and `termo-de-teste.md` into `apps/web/src/legal/` (gitignored). Running `vite` directly skips it and
+  the login screen breaks with `Failed to resolve import "./termos-de-uso.md?raw"`. This happened twice (2026-10-25).
+- Mongo local: `docker compose up -d mongodb` (Docker Desktop must be running). The API needs its secrets in the process
+  environment (never create `.env`).
+- Demo data: `MONGODB_URI=mongodb://127.0.0.1:27017/nuvita-psi-manual node scripts/seed-manual-psicologos.mjs`
+  (local-only host guard, idempotent; fixed on 2026-10-25 to send the `agendamentoId` required since #52).
 
 ## Documentation language policy
 

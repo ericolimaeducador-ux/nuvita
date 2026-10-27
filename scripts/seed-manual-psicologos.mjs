@@ -197,20 +197,42 @@ async function main() {
     console.log('= agendamento já existe');
   }
 
-  // 6) Evolução de psicoterapia (rascunho) do paciente 2
+  // 6) Evolução de psicoterapia (rascunho) do paciente 2. O prontuário é ancorado num agendamento do
+  // MESMO paciente (obrigatório desde o #52; a data da evolução é a do agendamento), então o seed cria
+  // um agendamento passado (ontem 10h) para o paciente 2.
   const pronts = itens(await req('GET', `/prontuarios?pacienteId=${p2.id}`));
   if (pronts.length === 0) {
+    const agsP2 = itens(await req('GET', `/agendamentos?pacienteId=${p2.id}`));
+    let ag2 = agsP2[0];
+    if (!ag2) {
+      const ini2 = new Date();
+      ini2.setDate(ini2.getDate() - 1);
+      ini2.setHours(10, 0, 0, 0);
+      ag2 = await req('POST', '/agendamentos', {
+        clinicaId,
+        pacienteId: p2.id,
+        medicoId: psiId,
+        modalidade: 'psicologia',
+        dataHoraInicio: ini2.toISOString(),
+        dataHoraFim: new Date(ini2.getTime() + 50 * 60000).toISOString(),
+        tipo: 'sessao_psicoterapia',
+        observacoes: 'Sessão de exemplo (já realizada) para o manual.',
+      });
+      console.log('✓ agendamento passado do paciente 2 criado');
+    }
     await req('POST', '/prontuarios', {
       clinicaId,
       pacienteId: p2.id,
+      agendamentoId: ag2.id,
       dataAtendimento: agora.toISOString(),
       tipo: 'psicoterapia',
+      // Desde o #62 o registro grava qual formulário foi usado; o CRP não vai no corpo (o servidor carimba o do perfil, #61).
+      formulario: 'completo',
       registroPsicologico: {
         motivoAtendimento: 'Paciente fictício, criado para o manual. Relata cansaço e dificuldade para dormir.',
         objetivosTrabalho: 'Exemplo: organizar a rotina de sono.',
         evolucao: 'Exemplo de evolução: primeira sessão de acolhimento, vínculo inicial estabelecido.',
         anotacoesLivres: 'Texto de exemplo. Nenhum dado real.',
-        crp: 'CRP 00/00000',
       },
     });
     console.log('✓ evolução (rascunho) criada');

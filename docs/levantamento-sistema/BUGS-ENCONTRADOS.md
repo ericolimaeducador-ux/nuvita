@@ -208,10 +208,45 @@ Severity: **blocks beta** / **gets in the way** / **cosmetic**. "Evidence" point
   ISO format).
 - **Not fixed.** Design presented to the user; starting decision: block with 409 on the server, not only warn on screen.
 
+### BUG-024 — "ID do profissional responsável" in /agenda → Novo agendamento exposes a raw internal id (severity: MEDIUM)
+- **Observed on screen (local, 2026-10-25):** the field is an editable text input showing the raw Mongo id (for example
+  `6addf106…`), with the placeholder "ID do médico ou enfermeiro" in a psychology system.
+- **Psychologist:** it comes pre-filled with their own id (does not block). **Secretary:** it stays EMPTY, so she would
+  have to know an id by heart.
+- **Should be:** a selector of the clinic's professionals, not an id field. #48 limits the damage on the server (ownership
+  per resource), but the field should not be on the screen.
+- **Post-beta.** In the first-steps guide: "não mexa nesse campo, ele já vem preenchido".
+
+### BUG-025 — Dashboard says "fechou o ciclo de 4 sessões" next to "Ciclo 1 · 1/4 sessões"; and a DRAFT counts as a session (severity: MEDIUM)
+- **Observed on screen (local, 2026-10-25), Dashboard:** "Um paciente fechou o ciclo de 4 sessões — hora de renovar o
+  pagamento." above a row "Bruno … · 2ª sessão · Ciclo 1 · 1/4 sessões · Cobrar ciclo". One of four is not a closed cycle.
+  The cycle becomes a charge, so this matters.
+- **Investigation (code, not yet fixed — report first):** there are TWO distinct defects, neither of them "the alert
+  condition" nor "the counter" alone.
+  1. **Wrong wording, not wrong condition.** The alert counts patients whose `statusCiclo === A_COBRAR`
+     (`psicologia-financeiro.service.ts`, `montarLinha`). That status means only "no charge exists for the CURRENT cycle"
+     (the model is pre-paid: charge first, then the 4 sessions; `StatusCiclo.A_COBRAR` docs: "Não existe cobrança para o
+     ciclo atual"). It is true for a patient in cycle 1 who was never charged, and for a patient who just rolled into
+     cycle N+1. The text "fechou o ciclo … renovar" (`DashboardPage.tsx:111`; same wording in
+     `FinanceiroPsicologiaPage.tsx:438`) is only true in the second case. For a first cycle never charged it is false
+     ("renovar" is wrong, nothing was closed).
+  2. **The counter counts drafts.** `ProntuarioMongoRepository.resumoSessoesPorPaciente` is
+     `$match {clinicaId, tipo[, medicoId]}` then `$group` by patient with `$sum: 1`: it counts EVERY psychotherapy
+     record, signed or not (no filter on `assinado`). In the ensaio the "1/4" came from Bruno's seed record, an UNSIGNED
+     draft (`assinado` absent in the database). A draft counted as "session 1", so the cycle advanced without a signed
+     session. The Dashboard card "Atendimentos realizados: 0" (counts today's agenda) contradicts it on the same screen.
+- **Why it matters:** the cycle number and "1/4" drive what the psychologist charges. Counting drafts can advance a cycle
+  early; the "renovar" wording can send a charge conversation for a patient who never had a first cycle charged.
+- **Not fixed.** Decision needed from Erico: (a) which records count as a session (signed only? also unsigned but
+  anchored to a concluded appointment?), (b) wording for "current cycle not charged yet" vs "cycle closed, renew".
+  Any change to the counter touches billing: needs a feature doc (gate) and RED tests first.
+
 ## Cosmetic
 - CPF shown unformatted in Atendimento Psicológico and on the printed record; formatted elsewhere.
 - Signature line "CRP CRP 00/00000" when the stored value already contains the prefix (test-data artifact; no normalisation).
 - Silent redirect to `/dashboard` for forbidden and unknown routes (no "access denied" message).
+- The Termo de Teste screen shows the Markdown heading marker literally (`# Termo de participação no teste…`), observed 2026-10-25.
+- After the forced password change the app returns to `/login` with no message (observed again 2026-10-25; the first-steps guide warns about it).
 - Confirmation dialogs use the native `window.confirm` (known; styled modal is a pre-launch item).
 
 ## Regression #36/#38 — result

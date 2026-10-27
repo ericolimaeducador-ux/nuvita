@@ -1000,8 +1000,10 @@ export function AtendimentoPsicologicoPage() {
 
   const agendamentos = useMemo(() => {
     const itens = toItems<Agendamento>(agendamentosQ.data);
+    // O servidor recusa registrar atendimento que ainda não começou (422); a tela não oferece o que seria recusado.
+    const agora = dayjs();
     const filtrados = status === 'ativos'
-      ? itens.filter((a) => a.status === StatusAgendamento.AGENDADO || a.status === StatusAgendamento.CONFIRMADO)
+      ? itens.filter((a) => (a.status === StatusAgendamento.AGENDADO || a.status === StatusAgendamento.CONFIRMADO) && !dayjs(a.dataHoraInicio).isAfter(agora))
       : itens.filter((a) => a.status === status);
     return [...filtrados].sort((a, b) => dayjs(a.dataHoraInicio).valueOf() - dayjs(b.dataHoraInicio).valueOf());
   }, [agendamentosQ.data, status]);

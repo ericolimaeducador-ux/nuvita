@@ -4,7 +4,8 @@ import { AgendamentosService } from './agendamentos.service';
 
 // Posse por recurso (D2) + pertencimento à clínica dos ids do payload (D4).
 const agDoColega = { id: 'ag-A', clinicaId: 'cli-1', pacienteId: 'pac-1', medicoId: 'psi-A' };
-const agMeu = { id: 'ag-B', clinicaId: 'cli-1', pacienteId: 'pac-1', medicoId: 'psi-B' };
+// Fixture ajustada (autorizado, 2026-10-27): conclude() agora exige que o atendimento tenha começado, então o agendamento tem horário passado.
+const agMeu = { id: 'ag-B', clinicaId: 'cli-1', pacienteId: 'pac-1', medicoId: 'psi-B', dataHoraInicio: new Date('2026-10-20T17:00:00.000Z'), dataHoraFim: new Date('2026-10-20T18:00:00.000Z') };
 
 const ctxDe = (sub: string, papel: Papel) => ({
   ip: '127.0.0.1',

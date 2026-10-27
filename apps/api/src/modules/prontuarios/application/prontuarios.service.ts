@@ -21,6 +21,7 @@ import { ListProntuariosQueryDto } from './dto/list-prontuarios-query.dto';
 import { UpdateProntuarioDto } from './dto/update-prontuario.dto';
 import { CID10_REPOSITORY, PRONTUARIO_REPOSITORY } from '../prontuarios.constants';
 import { StatusAgendamento } from '../../agendamentos/domain/agendamento.entity';
+import { assertAtendimentoComecou } from '../../agendamentos/domain/atendimento-horario';
 import { Prontuario, TipoAtendimento } from '../domain/prontuario.entity';
 import { Cid10Repository, ProntuarioRepository } from './ports/prontuario.repository';
 
@@ -54,6 +55,7 @@ export class ProntuariosService {
     if (agendamento.status === StatusAgendamento.CANCELADO || agendamento.status === StatusAgendamento.FALTA) {
       throw new UnprocessableEntityException('Atendimento cancelado ou com falta nao gera prontuario.');
     }
+    assertAtendimentoComecou(agendamento.dataHoraInicio);
     // A mesma sessão não pode ser registrada duas vezes: a contagem de sessões (e o laudo) a afirmariam em dobro.
     if (await this.prontuarios.findByAgendamento(clinicaId, dto.agendamentoId)) {
       throw new ConflictException('Ja existe prontuario registrado para este atendimento.');

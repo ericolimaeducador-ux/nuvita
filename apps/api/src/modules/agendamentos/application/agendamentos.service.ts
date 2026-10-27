@@ -11,6 +11,7 @@ import { CanalNotificacao, TipoNotificacao } from '../../notificacoes/domain/not
 import { PacientesService } from '../../pacientes/application/pacientes.service';
 import { AGENDAMENTO_REPOSITORY } from '../agendamentos.constants';
 import { Agendamento, ModalidadeAtendimento, StatusAgendamento } from '../domain/agendamento.entity';
+import { assertAtendimentoComecou } from '../domain/atendimento-horario';
 import { CancelAgendamentoDto } from './dto/cancel-agendamento.dto';
 import { CreateAgendamentoDto } from './dto/create-agendamento.dto';
 import { CreateBloqueioDto } from './dto/create-bloqueio.dto';
@@ -95,6 +96,8 @@ export class AgendamentosService {
       throw new ForbiddenException('Psicologo nao pode passar o agendamento para outro profissional.');
     }
 
+    const anterior = await this.agendamentos.findById(resolvedClinicaId, id);
+
     const agendamento = await this.agendamentos.update(resolvedClinicaId, id, {
       medicoId: dto.medicoId,
       modalidade: dto.modalidade,
@@ -107,6 +110,22 @@ export class AgendamentosService {
     if (!agendamento) throw new NotFoundException('Agendamento nao encontrado.');
 
     await this.audit(AuditEvent.APPOINTMENT_UPDATED, context, { clinicaId: resolvedClinicaId, agendamentoId: id });
+
+    // Editar o horário contornaria a regra "atendimento no futuro": a troca fica na trilha (quem/quando = o próprio log).
+    if (anterior && (dto.dataHoraInicio || dto.dataHoraFim)) {
+      const inicioNovo = dto.dataHoraInicio ? new Date(dto.dataHoraInicio) : anterior.dataHoraInicio;
+      const fimNovo = dto.dataHoraFim ? new Date(dto.dataHoraFim) : anterior.dataHoraFim;
+      if (inicioNovo.getTime() !== anterior.dataHoraInicio.getTime() || fimNovo.getTime() !== anterior.dataHoraFim.getTime()) {
+        await this.audit(AuditEvent.APPOINTMENT_TIME_CHANGED, context, {
+          clinicaId: resolvedClinicaId,
+          agendamentoId: id,
+          inicioAnterior: anterior.dataHoraInicio.toISOString(),
+          inicioNovo: inicioNovo.toISOString(),
+          fimAnterior: anterior.dataHoraFim.toISOString(),
+          fimNovo: fimNovo.toISOString(),
+        });
+      }
+    }
     return agendamento;
   }
 
@@ -135,6 +154,10 @@ export class AgendamentosService {
   async conclude(id: string, clinicaId: string | undefined, context: RequestAuditContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
     await this.assertPosseSePsicologo(resolvedClinicaId, id, context.user);
+
+    const atual = await this.agendamentos.findById(resolvedClinicaId, id);
+    if (!atual) throw new NotFoundException('Agendamento nao encontrado.');
+    assertAtendimentoComecou(atual.dataHoraInicio);
 
     const agendamento = await this.agendamentos.updateStatus(
       resolvedClinicaId,

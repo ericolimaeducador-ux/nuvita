@@ -14,6 +14,7 @@ import { UserRepository } from '../../auth/application/ports/user.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
 import { AgendamentosService } from '../../agendamentos/application/agendamentos.service';
 import { StatusAgendamento } from '../../agendamentos/domain/agendamento.entity';
+import { assertAtendimentoComecou, assertAtendimentoTerminou } from '../../agendamentos/domain/atendimento-horario';
 import { ClinicasService } from '../../clinicas/application/clinicas.service';
 import { PacientesService } from '../../pacientes/application/pacientes.service';
 import { DOCUMENTO_EMITIDO_REPOSITORY } from '../documentos-emitidos.constants';
@@ -48,6 +49,7 @@ export class DocumentosEmitidosService {
   /** Administrativa: afirma só a PRESENÇA na clínica, sem dizer que houve atendimento psicológico. */
   emitirDeclaracao(dto: EmitirDocumentoDto, context: EmissaoContext): Promise<DocumentoEmitidoView> {
     return this.emitir(TipoDocumentoEmitido.DECLARACAO_COMPARECIMENTO, 'Declaração de Comparecimento', dto, context, {
+      exige: 'fim',
       corpo: (nome, a) =>
         `Declaro, para os devidos fins, que ${nome} esteve nesta clínica em ${a.data}, das ${a.horaInicio} às ${a.horaFim}.`,
     });
@@ -64,6 +66,7 @@ export class DocumentosEmitidosService {
     }
     return this.emitir(TipoDocumentoEmitido.ATESTADO_COMPARECIMENTO, 'Atestado de Comparecimento', dto, context, {
       crp: profissional.crp,
+      exige: 'inicio',
       corpo: (nome, a) =>
         `Atesto para os devidos fins que ${nome} compareceu a atendimento psicológico em ${a.data}, às ${a.horaInicio}.`,
     });
@@ -74,7 +77,7 @@ export class DocumentosEmitidosService {
     titulo: string,
     dto: EmitirDocumentoDto,
     context: EmissaoContext,
-    modelo: { crp?: string; corpo: (nome: string, atendimento: DocumentoEmitidoView['atendimento']) => string },
+    modelo: { crp?: string; exige: 'inicio' | 'fim'; corpo: (nome: string, atendimento: DocumentoEmitidoView['atendimento']) => string },
   ): Promise<DocumentoEmitidoView> {
     const clinicaId = resolveTenantClinicaId(context.user, undefined);
 
@@ -90,6 +93,9 @@ export class DocumentosEmitidosService {
     if (agendamento.status !== StatusAgendamento.CONCLUIDO) {
       throw new UnprocessableEntityException('Só é possível emitir para atendimento concluído na agenda.');
     }
+    // O atestado afirma o atendimento (início <= agora); a declaração afirma o intervalo inteiro (fim <= agora).
+    if (modelo.exige === 'fim') assertAtendimentoTerminou(agendamento.dataHoraFim);
+    else assertAtendimentoComecou(agendamento.dataHoraInicio);
 
     const clinica = await this.clinicas.contextoDeEmissao(clinicaId);
     const atendimento = this.formatarAtendimento(agendamento.dataHoraInicio, agendamento.dataHoraFim, clinica.fusoHorario);

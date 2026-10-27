@@ -123,6 +123,14 @@ Fallback (do in any case before 2026-10-29): make sure the welcome e-mail carrie
 - Demo data: `MONGODB_URI=mongodb://127.0.0.1:27017/nuvita-psi-manual node scripts/seed-manual-psicologos.mjs`
   (local-only host guard, idempotent; fixed on 2026-10-25 to send the `agendamentoId` required since #52).
 
+- **Post-beta: e-mail sending leaves no log of the provider result (2026-10-27).** The password-reset e-mail worked in
+  production (confirmed by Erico: it arrived), but the code logs neither the provider status nor an error of the send, and
+  the request itself did not show in the Cloud Run request log search, so the outcome could not be checked from our side
+  (only in the provider dashboard). Add a structured log of the send result (status, no address, no token).
+- **Attendance in the future (2026-10-27):** the server now refuses to record, conclude or issue a certificate for an
+  appointment that has not started, and a declaration before it ended (422); changing an appointment's start or end is
+  audited (`APPOINTMENT_TIME_CHANGED`). See `docs/harness/features/feature-attendance-not-in-the-future.md`.
+
 ## Documentation language policy
 
 - Engineering docs (lessons learned, PROGRESS, ADRs): English, per `enforces-english`.

@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/Logo';
+import { contatoSuporte } from '@/lib/contatoSuporte';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Informe o e-mail.').email('E-mail inválido.'),
@@ -162,8 +163,8 @@ export function LoginPage() {
             <div className="mt-5 space-y-2 text-sm">
               <Link to="/esqueci-senha" className="underline">Esqueci minha senha</Link>
               <p className="text-xs text-muted-foreground">
-                Perdeu o acesso ao código de verificação (2FA)? Ele não é recuperado automaticamente: escreva para{' '}
-                <a className="underline" href="mailto:contato@nuvita.app.br">contato@nuvita.app.br</a>.
+                Perdeu o acesso ao código de verificação (2FA)? Ele não é recuperado automaticamente: fale com o suporte {contatoSuporte.canal}:{' '}
+                <a className="underline" href={contatoSuporte.href} target="_blank" rel="noopener noreferrer">{contatoSuporte.rotulo}</a>.
               </p>
             </div>
           </div>

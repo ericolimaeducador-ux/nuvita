@@ -34,7 +34,8 @@ describe('LoginPage – recuperação e textos', () => {
   it('orienta quem perdeu o 2FA a falar com o suporte (reset de 2FA não é automático)', () => {
     renderizar();
     expect(screen.getByText(/perdeu o acesso ao c[óo]digo/i)).toBeInTheDocument();
-    expect(screen.getByText(/contato@nuvita\.app\.br/i)).toBeInTheDocument();
+    // Autorizado pelo usuário (2026-10-27): o contato de suporte passou a ser o WhatsApp.
+    expect(screen.getByText(/\(11\) 94739-1805/)).toBeInTheDocument();
   });
 
   it('o campo do código 2FA já está na tela: a resposta do servidor não precisa revelá-lo', () => {

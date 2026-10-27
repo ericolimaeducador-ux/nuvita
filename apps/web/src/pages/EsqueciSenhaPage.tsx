@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/Logo';
+import { contatoSuporte } from '@/lib/contatoSuporte';
 
 const CONFIRMACAO =
   'Se este e-mail estiver cadastrado, enviamos um link para redefinir a senha. Ele vale por 45 minutos. Confira também a caixa de spam.';
@@ -67,8 +68,8 @@ export function EsqueciSenhaPage() {
         )}
 
         <p className="text-xs text-muted-foreground">
-          Perdeu o acesso ao código de verificação (2FA)? Ele não é recuperado por aqui: escreva para{' '}
-          <a className="underline" href="mailto:contato@nuvita.app.br">contato@nuvita.app.br</a>.
+          Perdeu o acesso ao código de verificação (2FA)? Ele não é recuperado por aqui: fale com o suporte {contatoSuporte.canal}:{' '}
+          <a className="underline" href={contatoSuporte.href} target="_blank" rel="noopener noreferrer">{contatoSuporte.rotulo}</a>.
         </p>
         <Link to="/login" className="text-sm underline">Voltar ao login</Link>
       </div>

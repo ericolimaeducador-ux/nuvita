@@ -52,7 +52,8 @@ describe('Esqueci minha senha', () => {
 
   it('explica que o 2FA perdido não se recupera aqui', () => {
     renderizar('/esqueci-senha');
-    expect(screen.getByText(/contato@nuvita\.app\.br/i)).toBeInTheDocument();
+    // Autorizado pelo usuário (2026-10-27): o contato de suporte passou a ser o WhatsApp.
+    expect(screen.getByText(/\(11\) 94739-1805/)).toBeInTheDocument();
   });
 });
 

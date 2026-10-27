@@ -24,7 +24,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { agendaApi, authApi, iaClinicaApi, pacientesApi, prontuariosApi, psicoFinanceiroApi, telemedicinaApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { ErroConsulta } from '@/components/ErroConsulta';
-import { formatData, formatEndereco, linkDaSala, toItems } from '@/utils';
+import { formatCpf, formatData, formatEndereco, linkDaSala, toItems } from '@/utils';
 import { CAMPOS_POR_LINHA } from '@/lib/linhaTerapeutica';
 import {
   Agendamento, DecisaoUsoIA, ModalidadeAtendimento, Paciente, Papel, Prontuario, RegistroPsicologico,
@@ -409,7 +409,7 @@ export function RegistroSessao({
             )}
             <p className="font-medium text-base">{paciente?.nome ?? agendamento?.pacienteNome ?? '—'}</p>
             <p className="text-muted-foreground">
-              CPF: {paciente?.cpf ?? agendamento?.pacienteCpf ?? '—'} · Nascimento: {formatData(paciente?.dataNascimento)} · Sexo: {paciente?.sexo ?? '—'}
+              CPF: {formatCpf(paciente?.cpf ?? agendamento?.pacienteCpf)} · Nascimento: {formatData(paciente?.dataNascimento)} · Sexo: {paciente?.sexo ?? '—'}
             </p>
             <p className="text-muted-foreground">
               Telefone: {paciente?.telefone ?? '—'}{paciente?.endereco ? ` · ${formatEndereco(paciente.endereco)}` : ''}
@@ -870,7 +870,7 @@ function NovoAgendamentoDialog({ open, onClose }: { open: boolean; onClose: () =
               <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
               <SelectContent>
                 {pacientes.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.nome}{p.cpf ? ` — ${p.cpf}` : ''}</SelectItem>
+                  <SelectItem key={p.id} value={p.id}>{p.nome}{p.cpf ? ` — ${formatCpf(p.cpf)}` : ''}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -1008,6 +1008,14 @@ export function AtendimentoPsicologicoPage() {
     return [...filtrados].sort((a, b) => dayjs(a.dataHoraInicio).valueOf() - dayjs(b.dataHoraInicio).valueOf());
   }, [agendamentosQ.data, status]);
 
+  // Agendados/confirmados que ainda não começaram: o estado vazio explica por que não estão na lista.
+  const aindaNaoComecaram = useMemo(() => {
+    const agora = dayjs();
+    return toItems<Agendamento>(agendamentosQ.data).filter(
+      (a) => (a.status === StatusAgendamento.AGENDADO || a.status === StatusAgendamento.CONFIRMADO) && dayjs(a.dataHoraInicio).isAfter(agora),
+    ).length;
+  }, [agendamentosQ.data]);
+
   if (sessao) {
     return (
       <SessaoAtendimento
@@ -1026,7 +1034,7 @@ export function AtendimentoPsicologicoPage() {
             <Brain className="h-6 w-6" /> Atendimento Psicológico
           </h1>
           <p className="text-sm text-muted-foreground">
-            Pacientes agendados para avaliação psicológica e psicoterapia — fora do fluxo clínico.
+            Agendamentos de avaliação psicológica e psicoterapia. Os agendados e confirmados aparecem aqui a partir do horário de início.
           </p>
         </div>
         <Button onClick={() => setNovoAberto(true)}>
@@ -1063,7 +1071,14 @@ export function AtendimentoPsicologicoPage() {
         <ErroConsulta erro={agendamentosQ.error} refetch={agendamentosQ.refetch} recurso="os agendamentos" />
       ) : agendamentos.length === 0 ? (
         <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
-          Nenhum paciente agendado para o psicólogo neste filtro.
+          {status === 'ativos' && aindaNaoComecaram > 0 ? (
+            <>
+              Nenhum atendimento para registrar agora. {aindaNaoComecaram === 1 ? '1 agendamento ainda não começou' : `${aindaNaoComecaram} agendamentos ainda não começaram`}:
+              aparecem aqui a partir do horário de início. Veja na <Link to="/agenda" className="underline">Agenda</Link>.
+            </>
+          ) : (
+            'Nenhum paciente agendado para o psicólogo neste filtro.'
+          )}
         </div>
       ) : (
         <div className="space-y-2">
@@ -1082,7 +1097,7 @@ export function AtendimentoPsicologicoPage() {
                   {a.pacienteNome ?? a.pacienteId}
                 </Link>
                 <p className="text-sm text-muted-foreground">
-                  {a.pacienteCpf ? `CPF ${a.pacienteCpf} · ` : ''}{TIPO_AGENDAMENTO_LABEL[a.tipo]}
+                  {a.pacienteCpf ? `CPF ${formatCpf(a.pacienteCpf)} · ` : ''}{TIPO_AGENDAMENTO_LABEL[a.tipo]}
                 </p>
               </div>
               <div className="text-sm">

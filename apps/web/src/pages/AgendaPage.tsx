@@ -155,7 +155,7 @@ export function AgendaPage() {
     <div className="p-6">
       <PageHeader
         title="Agenda"
-        subtitle="Agendamentos das três modalidades: médica, enfermagem e jurídica"
+        subtitle="Agendamentos de atendimento psicológico"
         extra={
           <div className="flex items-center gap-2">
             <div className="flex rounded-md border border-border p-0.5">

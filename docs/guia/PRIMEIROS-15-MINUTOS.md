@@ -81,7 +81,7 @@ Depois de entrar você cai no **Dashboard**. O menu à esquerda tem: Dashboard, 
 
 ## 8. Atenda e registre a sessão
 
-1. Clique em **Atend. Psicológico**. Ali aparecem os seus agendamentos **que já começaram**, com a indicação "1ª consulta" quando for o caso. **Só dá para registrar a sessão depois do horário de início.** Se o atendimento começou antes do horário marcado, ajuste o horário do agendamento na **Agenda** (a alteração fica registrada) e então registre.
+1. Clique em **Atend. Psicológico**. Ali aparecem os seus agendamentos **que já começaram**, com a indicação "1ª consulta" quando for o caso. **O atendimento aparece nesta lista quando chega o horário de início; antes disso, veja na Agenda.** Se a lista estiver vazia, a tela diz quantos agendamentos ainda não começaram. **Só dá para registrar a sessão depois do horário de início.** Se o atendimento começou antes do horário marcado, ajuste o horário do agendamento na **Agenda** (a alteração fica registrada) e então registre.
 
    ![Atendimento psicológico](img/10-atendimento-painel.jpg)
 

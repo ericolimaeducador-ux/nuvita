@@ -91,7 +91,7 @@ export function EmissaoComparecimento({ titulo, rotuloBotao, corpoTestId, emitir
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
             Nenhum atendimento concluído na agenda deste paciente. O documento só é emitido para um atendimento
-            concluído; conclua o atendimento na agenda e volte aqui.
+            concluído. Registre a sessão em Atendimento Psicológico para que o atendimento fique concluído e volte aqui.
           </CardContent>
         </Card>
       ) : (

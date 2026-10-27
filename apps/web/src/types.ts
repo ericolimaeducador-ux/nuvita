@@ -511,6 +511,8 @@ export interface Prontuario {
   avaliacao?: ProntuarioAvaliacao;
   plano?: ProntuarioPlano;
   registroPsicologico?: RegistroPsicologico;
+  /** Formulário usado no registro de psicoterapia (gravado pelo servidor). Ausente nos registros antigos. */
+  formulario?: 'completo' | 'seguimento';
 }
 
 export enum TipoDocumento {

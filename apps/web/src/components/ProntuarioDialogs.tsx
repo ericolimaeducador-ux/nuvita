@@ -12,7 +12,7 @@ import { ErroConsulta } from '@/components/ErroConsulta';
 import { RespostaInvalidaError } from '@/lib/consulta';
 import { apiErrorMessage } from '@/api/client';
 import { toast } from '@/components/ui/use-toast';
-import { camposDoFormulario, formularioUsado, linhaDoRegistro, rotuloDoCampo } from '@/lib/registroPsicologico';
+import { camposDoFormulario, formularioDoRegistro, linhaDoRegistro, rotuloDoCampo, ROTULO_FORMULARIO } from '@/lib/registroPsicologico';
 import {
   TipoAtendimento, TIPO_ATENDIMENTO_LABEL, REGISTRO_PSICOLOGICO_CAMPOS,
   type Prontuario, type ExameSegmentar, type RegistroPsicologico,
@@ -41,12 +41,13 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
 
 /** Só renderiza o Campo se houver valor — evita poluir a visualização. */
 /** Mesmos rótulos e mesma ordem do formulário e do PDF; o que ficou vazio no formulário usado aparece como "Não preenchido". */
-function RegistroPsicologicoLeitura({ registro }: { registro: RegistroPsicologico }) {
-  const lista = camposDoFormulario(formularioUsado(registro), linhaDoRegistro(registro));
+function RegistroPsicologicoLeitura({ registro, formulario }: { registro: RegistroPsicologico; formulario: 'completo' | 'seguimento' }) {
+  const lista = camposDoFormulario(formulario, linhaDoRegistro(registro));
   const listados = new Set<string>(lista.map((c) => c.key));
   const texto = (v: unknown) => (v === undefined || v === null || String(v).trim() === '' ? undefined : String(v));
   return (
     <>
+      <p className="text-xs text-muted-foreground">Formulário: {ROTULO_FORMULARIO[formulario]}</p>
       {lista.map(({ key, label }) => (
         <Campo key={key} label={label}>{texto(registro[key]) ?? 'Não preenchido'}</Campo>
       ))}
@@ -151,7 +152,7 @@ export function ProntuarioDetailDialog({
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Registro de atendimento psicológico
                 </p>
-                <RegistroPsicologicoLeitura registro={pr.registroPsicologico} />
+                <RegistroPsicologicoLeitura registro={pr.registroPsicologico} formulario={formularioDoRegistro(pr)} />
               </div>
             )}
 

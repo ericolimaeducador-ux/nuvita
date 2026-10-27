@@ -71,6 +71,7 @@ export class ProntuariosService {
       avaliacao: dto.avaliacao ?? {},
       plano: dto.plano ?? {},
       registroPsicologico: dto.registroPsicologico,
+      formulario: dto.tipo === TipoAtendimento.PSICOTERAPIA ? dto.formulario : undefined,
       arquivos: dto.arquivos ?? [],
     });
 
@@ -331,6 +332,7 @@ export class ProntuariosService {
         avaliacao: prontuario.avaliacao,
         plano: prontuario.plano,
         registroPsicologico: prontuario.registroPsicologico ?? null,
+        formulario: prontuario.formulario ?? null,
         arquivos: prontuario.arquivos,
       },
       medicoId,

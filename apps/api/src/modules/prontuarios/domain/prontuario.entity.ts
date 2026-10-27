@@ -150,6 +150,10 @@ export interface ArquivoProntuario {
   tamanho: number;
 }
 
+/** Qual formulário do registro de atendimento psicológico foi usado: avaliação inicial (completo) ou seguimento. */
+export const FORMULARIOS_PRONTUARIO = ['completo', 'seguimento'] as const;
+export type FormularioProntuario = (typeof FORMULARIOS_PRONTUARIO)[number];
+
 export interface AssinaturaProntuario {
   medicoId: string;
   dataAssinatura: Date;
@@ -171,6 +175,8 @@ export interface Prontuario {
   avaliacao: Avaliacao;
   plano: Plano;
   registroPsicologico?: RegistroPsicologico;
+  /** Formulário usado (psicoterapia). Ausente nos registros anteriores: a tela e o PDF o deduzem. */
+  formulario?: FormularioProntuario;
   arquivos: ArquivoProntuario[];
   assinado?: AssinaturaProntuario;
   criadoEm: Date;

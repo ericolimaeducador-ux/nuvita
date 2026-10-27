@@ -71,7 +71,7 @@ describe('ProntuariosService.sign — CRP carimbado pelo servidor', () => {
 describe('Contrato do corpo do registro — sem CRP digitável', () => {
   const dto = (registroPsicologico: Record<string, unknown>) =>
     plainToInstance(CreateProntuarioDto, {
-      clinicaId: '6addf106f1ed2961f5111e68', pacienteId: '6addf5f398eae6c5fd7e9d4f', agendamentoId: '6addf7a498eae6c5fd7e9dda', tipo: TipoAtendimento.PSICOTERAPIA, registroPsicologico,
+      clinicaId: '6addf106f1ed2961f5111e68', pacienteId: '6addf5f398eae6c5fd7e9d4f', agendamentoId: '6addf7a498eae6c5fd7e9dda', tipo: TipoAtendimento.PSICOTERAPIA, formulario: 'seguimento', registroPsicologico,
     });
 
   it('"crp" no corpo é RECUSADO pelo servidor (a tela não o envia mais)', async () => {

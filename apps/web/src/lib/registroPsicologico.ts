@@ -52,6 +52,13 @@ export function formularioUsado(registro?: RegistroPsicologico | null): Formular
   return [...CHAVES_SO_DO_COMPLETO].some((k) => preenchido(registro[k])) ? 'completo' : 'seguimento';
 }
 
+/** O formulário do registro: o GRAVADO quando existe; nos registros antigos, o inferido. */
+export function formularioDoRegistro(pr?: { formulario?: FormularioRegistro; registroPsicologico?: RegistroPsicologico | null } | null): FormularioRegistro {
+  return pr?.formulario ?? formularioUsado(pr?.registroPsicologico);
+}
+
+export const ROTULO_FORMULARIO: Record<FormularioRegistro, string> = { completo: 'Avaliação inicial', seguimento: 'Seguimento' };
+
 /** Os campos do formulário usado, na ordem em que aparecem nele (campos da linha terapêutica antes das anotações). */
 export function camposDoFormulario(
   formulario: FormularioRegistro,

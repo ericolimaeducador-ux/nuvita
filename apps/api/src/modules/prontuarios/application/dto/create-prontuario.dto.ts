@@ -1,4 +1,4 @@
-import { IsEnum, IsISO8601, IsMongoId, IsOptional, ValidateIf, ValidateNested } from 'class-validator';
+import { IsEnum, IsIn, IsISO8601, IsMongoId, IsOptional, ValidateIf, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TipoAtendimento } from '../../domain/prontuario.entity';
 import {
@@ -32,6 +32,11 @@ export class CreateProntuarioDto {
 
   @IsEnum(TipoAtendimento)
   tipo!: TipoAtendimento;
+
+  /** Formulário usado no registro de psicoterapia (avaliação inicial × seguimento): obrigatório e validado aqui. */
+  @ValidateIf((o: CreateProntuarioDto) => o.tipo === TipoAtendimento.PSICOTERAPIA)
+  @IsIn(['completo', 'seguimento'], { message: 'formulario deve ser completo ou seguimento' })
+  formulario?: 'completo' | 'seguimento';
 
   @ValidateIf(ehAtendimentoSoap)
   @ValidateNested()

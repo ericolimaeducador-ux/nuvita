@@ -12,7 +12,7 @@ import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
 import { GateCrpEmissao } from '@/components/GateCrpEmissao';
 import { useEmissor } from '@/components/DocumentoAssinatura';
 import { TipoAtendimento, TIPO_ATENDIMENTO_LABEL, REGISTRO_PSICOLOGICO_CAMPOS, type ExameSegmentar } from '@/types';
-import { camposDoFormulario, formularioUsado, linhaDoRegistro, rotuloDoCampo } from '@/lib/registroPsicologico';
+import { camposDoFormulario, formularioDoRegistro, linhaDoRegistro, rotuloDoCampo, ROTULO_FORMULARIO } from '@/lib/registroPsicologico';
 
 const EXAME_SEGMENTAR_CAMPOS: { key: keyof ExameSegmentar; label: string }[] = [
   { key: 'cabecaPescoco', label: 'Cabeça e pescoço' },
@@ -83,8 +83,10 @@ export function ProntuarioImpressaoPage() {
   }
 
   const isPsicoterapia = pr?.tipo === TipoAtendimento.PSICOTERAPIA;
+  // O formulário GRAVADO no registro decide o que se lista; registro antigo (sem o campo) segue por inferência.
+  const formulario = formularioDoRegistro(pr);
   const camposDoRegistro = isPsicoterapia
-    ? camposDoFormulario(formularioUsado(pr?.registroPsicologico), paciente?.linhaTerapeutica ?? linhaDoRegistro(pr?.registroPsicologico))
+    ? camposDoFormulario(formulario, paciente?.linhaTerapeutica ?? linhaDoRegistro(pr?.registroPsicologico))
     : [];
   const jaListados = new Set<string>(camposDoRegistro.map((c) => c.key));
   const camposExtras = isPsicoterapia
@@ -160,7 +162,7 @@ export function ProntuarioImpressaoPage() {
 
         {isPsicoterapia ? (
           <section className="mb-5">
-            <h2 className="text-xs font-bold uppercase text-gray-500 mb-2 border-b border-gray-300 pb-1">Registro de Atendimento Psicológico</h2>
+            <h2 className="text-xs font-bold uppercase text-gray-500 mb-2 border-b border-gray-300 pb-1">Registro de Atendimento Psicológico — {ROTULO_FORMULARIO[formulario]}</h2>
             <div className="space-y-1.5">
               {/* Rótulos e ordem do FORMULÁRIO usado; o que ficou vazio aparece como "Não preenchido". */}
               {camposDoRegistro.map(({ key, label }) => (

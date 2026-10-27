@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
 import { Brain, CalendarPlus, Check, ClipboardList, Copy, History, Loader2, PenLine, Sparkles, User, Video, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { temCrp } from '@/lib/timbre';
-import { ROTULO, ROTULO_ANOTACOES } from '@/lib/registroPsicologico';
+import { ROTULO, ROTULO_ANOTACOES, ROTULO_FORMULARIO, type FormularioRegistro } from '@/lib/registroPsicologico';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -39,8 +39,8 @@ import {
  * inteira enquanto escreve, sem rolagem interna num campo pequeno.
  */
 function AutoTextarea({
-  value, onChange, placeholder, minRows = 3, id,
-}: { value?: string; onChange: (v: string) => void; placeholder?: string; minRows?: number; id?: string }) {
+  value, onChange, placeholder, minRows = 3, id, ariaLabel,
+}: { value?: string; onChange: (v: string) => void; placeholder?: string; minRows?: number; id?: string; ariaLabel?: string }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     const el = ref.current;
@@ -51,6 +51,7 @@ function AutoTextarea({
   return (
     <textarea
       id={id}
+      aria-label={ariaLabel}
       ref={ref}
       rows={minRows}
       value={value ?? ''}
@@ -200,7 +201,8 @@ export function RegistroSessao({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [reg, setReg] = useState<RegistroPsicologico>({});
-  const [forcarCompleto, setForcarCompleto] = useState(false);
+  // Formulário escolhido no seletor do topo; null = ainda vale o padrão definido pelo agendamento.
+  const [formularioEscolhido, setFormularioEscolhido] = useState<FormularioRegistro | null>(null);
   const [editandoContexto, setEditandoContexto] = useState(false);
   // Decisão registrada sobre a sugestão da IA atual (null = ainda pendente).
   const [decisaoIa, setDecisaoIa] = useState<DecisaoUsoIA | null>(null);
@@ -209,7 +211,7 @@ export function RegistroSessao({
   useEffect(() => {
     if (!open) return;
     setReg({});
-    setForcarCompleto(false);
+    setFormularioEscolhido(null);
     setEditandoContexto(false);
     setDecisaoIa(null);
   }, [open]);
@@ -242,7 +244,14 @@ export function RegistroSessao({
   const historicoErro = sessoesQ.isError;
   const carregando = !historicoErro && (sessoesQ.isLoading || (open && !sessoesQ.data));
   const ehSeguimento = sessoes.length > 0;
-  const completo = !ehSeguimento || forcarCompleto;
+  // O padrão vem do TIPO DO AGENDAMENTO (avaliação → completo; sessão → seguimento). Só um agendamento sem tipo
+  // (dado antigo) cai na regra do histórico ASSINADO. O seletor do topo corrige antes de salvar.
+  const formularioPadrao: FormularioRegistro =
+    agendamento?.tipo === TipoAgendamento.AVALIACAO_PSICOLOGICA ? 'completo'
+      : agendamento?.tipo === TipoAgendamento.SESSAO_PSICOTERAPIA ? 'seguimento'
+        : ehSeguimento ? 'seguimento' : 'completo';
+  const formulario = formularioEscolhido ?? formularioPadrao;
+  const completo = formulario === 'completo';
 
   // Queixa vem da PRIMEIRA consulta (é a demanda que trouxe o paciente);
   // medicamentos e diagnósticos, do registro mais recente que os informou.
@@ -313,6 +322,7 @@ export function RegistroSessao({
         // A data do prontuário é o horário AGENDADO e quem define é o servidor; a tela só informa o atendimento.
         agendamentoId: agendamento!.id,
         tipo: TipoAtendimento.PSICOTERAPIA,
+        formulario,
         registroPsicologico: limpar(reg as Record<string, unknown>),
       });
       if (assinar) await prontuariosApi.assinar(prontuario.id);
@@ -366,6 +376,19 @@ export function RegistroSessao({
             ? `${ehSeguimento ? 'Prontuário completo' : 'Primeira consulta'} — anamnese psicológica. Registro documental conforme a Resolução CFP nº 006/2019: após assinado, fica imutável (correções só por adendo).`
             : `Consulta de seguimento — ${sessoes.length + 1}ª sessão. Contexto da primeira consulta e anotações livres da psicoterapia.`}
       </p>
+
+      {!carregando && !historicoErro && (
+        <fieldset className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm" disabled={salvarM.isPending}>
+          <legend className="sr-only">Formulário do registro</legend>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Formulário</span>
+          {(['completo', 'seguimento'] as const).map((f) => (
+            <label key={f} className="flex cursor-pointer items-center gap-2">
+              <input type="radio" name="formulario-registro" checked={formulario === f} onChange={() => setFormularioEscolhido(f)} />
+              {ROTULO_FORMULARIO[f]}
+            </label>
+          ))}
+        </fieldset>
+      )}
 
       {/* Dados do paciente */}
       <div className="rounded-xl border p-4 space-y-1 text-sm">
@@ -475,8 +498,9 @@ export function RegistroSessao({
                 )}
               </div>
 
+              {/* O seguimento pode abrir sem sessão anterior (o agendamento é quem decide): então não há "1ª consulta" a citar. */}
               <BlocoContexto
-                label={`Queixa principal (1ª consulta — ${dayjs(primeiraSessao.dataAtendimento).format('DD/MM/YYYY')})`}
+                label={primeiraSessao ? `Queixa principal (1ª consulta — ${dayjs(primeiraSessao.dataAtendimento).format('DD/MM/YYYY')})` : 'Queixa principal'}
                 valor={queixaPrimaria}
               />
 
@@ -514,6 +538,7 @@ export function RegistroSessao({
 
             <SecaoTitulo>{ROTULO_ANOTACOES.seguimento}</SecaoTitulo>
             <AutoTextarea
+              ariaLabel={ROTULO_ANOTACOES.seguimento}
               value={reg.anotacoesLivres}
               onChange={(v) => set({ anotacoesLivres: v })}
               placeholder="Registro livre da sessão — o campo cresce conforme você escreve."
@@ -522,9 +547,6 @@ export function RegistroSessao({
 
             <div className="flex flex-wrap items-end justify-between gap-4">
               <CrpDoPerfil crp={user?.crp} />
-              <Button variant="ghost" size="sm" onClick={() => setForcarCompleto(true)}>
-                <ClipboardList className="h-4 w-4 mr-2" /> Abrir prontuário completo
-              </Button>
             </div>
           </div>
         ) : (
@@ -574,6 +596,7 @@ export function RegistroSessao({
 
             <SecaoTitulo>{ROTULO_ANOTACOES.completo}</SecaoTitulo>
             <AutoTextarea
+              ariaLabel={ROTULO_ANOTACOES.completo}
               value={reg.anotacoesLivres}
               onChange={(v) => set({ anotacoesLivres: v })}
               placeholder="Anotações livres — o campo cresce conforme você escreve."
@@ -760,6 +783,8 @@ function NovoAgendamentoDialog({ open, onClose }: { open: boolean; onClose: () =
   const [pacienteId, setPacienteId] = useState('');
   const [profissionalId, setProfissionalId] = useState('');
   const [tipo, setTipo] = useState<TipoAgendamento>(TipoAgendamento.AVALIACAO_PSICOLOGICA);
+  // Se o psicólogo mexeu no tipo, o padrão calculado não o sobrescreve.
+  const [tipoManual, setTipoManual] = useState(false);
   const [inicio, setInicio] = useState('');
   const [duracaoMin, setDuracaoMin] = useState('50');
   const [observacoes, setObservacoes] = useState('');
@@ -768,11 +793,26 @@ function NovoAgendamentoDialog({ open, onClose }: { open: boolean; onClose: () =
     if (open) {
       setBusca(''); setPacienteId(''); setObservacoes('');
       setTipo(TipoAgendamento.AVALIACAO_PSICOLOGICA);
+      setTipoManual(false);
       setInicio(dayjs().add(1, 'hour').startOf('hour').format('YYYY-MM-DDTHH:mm'));
       setDuracaoMin('50');
       setProfissionalId(ehPsicologo ? (user?.id ?? '') : '');
     }
   }, [open, ehPsicologo, user?.id]);
+
+  // Padrão CALCULADO do tipo: paciente sem nenhuma sessão ASSINADA → avaliação; com → sessão de psicoterapia.
+  // O tipo do agendamento é o que define qual formulário abre depois (rascunho não conta como sessão).
+  const historicoDoPacienteQ = useQuery({
+    queryKey: ['sessoes-psicologia', pacienteId],
+    queryFn: () => prontuariosApi.list({ pacienteId }),
+    enabled: open && !!pacienteId,
+  });
+  useEffect(() => {
+    if (tipoManual || !historicoDoPacienteQ.data) return;
+    const temAssinada = toItems<Prontuario>(historicoDoPacienteQ.data)
+      .some((p) => p.tipo === TipoAtendimento.PSICOTERAPIA && !!p.assinado);
+    setTipo(temAssinada ? TipoAgendamento.SESSAO_PSICOTERAPIA : TipoAgendamento.AVALIACAO_PSICOLOGICA);
+  }, [historicoDoPacienteQ.data, tipoManual]);
 
   const pacientesQ = useQuery({
     queryKey: ['pacientes-busca-psico', busca],
@@ -839,7 +879,7 @@ function NovoAgendamentoDialog({ open, onClose }: { open: boolean; onClose: () =
           )}
           <div className="space-y-2">
             <Label>Tipo</Label>
-            <Select value={tipo} onValueChange={(v) => setTipo(v as TipoAgendamento)}>
+            <Select value={tipo} onValueChange={(v) => { setTipoManual(true); setTipo(v as TipoAgendamento); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {TIPOS_POR_MODALIDADE[ModalidadeAtendimento.PSICOLOGIA].map((t) => (

@@ -77,9 +77,11 @@ Depois de entrar você cai no **Dashboard**. O menu à esquerda tem: Dashboard, 
 
 > **Não mexa no campo "ID do profissional responsável".** Ele já vem preenchido com o seu código interno (aquela sequência de letras e números). É assim mesmo.
 
+> **A agenda não aceita dois atendimentos no mesmo horário.** Se você já tem um atendimento que se sobrepõe ao novo, o sistema recusa e avisa: "Você já tem atendimento neste horário". Atendimentos cancelados ou com falta liberam o horário, e um atendimento que termina às 14:50 não impede outro que começa às 14:50.
+
 ## 8. Atenda e registre a sessão
 
-1. Clique em **Atend. Psicológico**. Ali aparecem seus agendamentos, com a indicação "1ª consulta" quando for o caso.
+1. Clique em **Atend. Psicológico**. Ali aparecem os seus agendamentos **que já começaram**, com a indicação "1ª consulta" quando for o caso. **Só dá para registrar a sessão depois do horário de início.** Se o atendimento começou antes do horário marcado, ajuste o horário do agendamento na **Agenda** (a alteração fica registrada) e então registre.
 
    ![Atendimento psicológico](img/10-atendimento-painel.jpg)
 

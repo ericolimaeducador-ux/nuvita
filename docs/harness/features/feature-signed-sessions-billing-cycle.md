@@ -103,3 +103,12 @@ Answer to mandatory question 4 — *"Qual exemplo ou contexto concreto temos do 
 > No ambiente de ensaio, o paciente Bruno aparecia com "Ciclo 1 · 1/4 sessões" e, na mesma tela, o alerta "Um paciente
 > fechou o ciclo de 4 sessões — hora de renovar o pagamento", enquanto "Atendimentos realizados" mostrava 0. A sessão
 > contada era um rascunho sem assinatura.
+
+### Amendment (2026-10-27) — the laudo's "since X, N sessions" counts only signed records too
+
+The "Out of scope, reported" item above is now done, by the same decision (only a SIGNED record counts as a session).
+`ProntuariosService.resumoAcompanhamento` — the facts the laudo states to third parties — counts only psychotherapy
+records of the psychologist that are anchored on the agenda AND signed. A draft counts neither in the total nor in the
+"since" date; with only drafts the answer is `{ desde: null, totalSessoes: 0 }`. No new feature doc: it is the same
+decision, applied to the remaining place that still counted drafts. The existing fixtures in `prontuarios.ancora.spec.ts`
+(unsigned records) were updated, with the user's explicit authorization, to be signed.

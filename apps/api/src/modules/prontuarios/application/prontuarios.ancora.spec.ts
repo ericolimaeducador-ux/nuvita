@@ -101,7 +101,10 @@ describe('ProntuariosService.updateDraft – âncora imutável', () => {
 describe('ProntuariosService.resumoAcompanhamento – fatos do laudo calculados no servidor', () => {
   const sessao = (id: string, data: string, over: Record<string, unknown> = {}) => ({
     id, pacienteId: 'pac-1', medicoId: 'psi-1', tipo: TipoAtendimento.PSICOTERAPIA, agendamentoId: `ag-${id}`,
-    dataAtendimento: new Date(data), ...over,
+    dataAtendimento: new Date(data),
+    // Fixture ajustada (autorizado, 2026-10-27): o laudo só conta sessão ASSINADA, então as sessões do teste são assinadas.
+    assinado: { medicoId: 'psi-1', dataAssinatura: new Date('2026-10-26T12:00:00Z'), hash: 'h' },
+    ...over,
   });
 
   it('"desde" e total contam só sessões ANCORADAS de psicoterapia do próprio psicólogo', async () => {

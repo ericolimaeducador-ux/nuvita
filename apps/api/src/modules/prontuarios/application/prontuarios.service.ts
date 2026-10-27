@@ -118,7 +118,8 @@ export class ProntuariosService {
 
   /**
    * Fatos que o laudo afirma a terceiros ("desde X, N sessões"), calculados aqui, só sobre sessões de
-   * psicoterapia do próprio psicólogo ANCORADAS na agenda (registros legados sem agendamento não contam).
+   * psicoterapia do próprio psicólogo ANCORADAS na agenda (registros legados sem agendamento não contam) e ASSINADAS
+   * (rascunho não conta: o laudo não pode afirmar sessão que ainda não foi fechada).
    */
   async resumoAcompanhamento(
     pacienteId: string,
@@ -128,7 +129,7 @@ export class ProntuariosService {
     this.assertMedico(context.user);
     const clinicaId = this.resolveClinicaId(context.user, clinicaIdSolicitada);
     const sessoes = (await this.prontuarios.listByPaciente(clinicaId, pacienteId)).filter(
-      (p) => p.tipo === TipoAtendimento.PSICOTERAPIA && p.medicoId === context.user.sub && !!p.agendamentoId,
+      (p) => p.tipo === TipoAtendimento.PSICOTERAPIA && p.medicoId === context.user.sub && !!p.agendamentoId && !!p.assinado,
     );
     const desde = sessoes.length
       ? new Date(Math.min(...sessoes.map((p) => new Date(p.dataAtendimento).getTime())))

@@ -73,7 +73,7 @@ Legenda de CATEGORIA: **A** catastrófico, **B** grave (derruba o serviço, nada
 |------|-----------|----------------|------|------|------------|
 | `RESEND_API_KEY` | Cloud Run + YAML | Envio de e-mail (provedor ativo: resend) | Não | B | Sem ela, e-mails (inclusive senhas provisórias) não saem |
 | `EVOLUTION_API_KEY` | idem | WhatsApp (provedor ativo: evolution) | Não | B | Recriável no provedor |
-| `ANTHROPIC_API_KEY` | idem | IA clínica | Não | B | Sem ela a IA responde erro 500 (ver ACHADOS/BUG-011) |
+| `ANTHROPIC_API_KEY` | idem | IA clínica | Não | B | Sem ela (ausente ou vazia) a IA responde 503 (desde o #56; antes era 500). Chave presente mas recusada pela Anthropic (revogada/rotacionada) responde 500, com `401 invalid x-api-key` no log. Rotação: `infra/PRODUCTION-BACKEND.md` §2 |
 | `TWILIO_AUTH_TOKEN` | idem | SMS | Não | B | Recriável |
 | `TWILIO_ACCOUNT_SID` | idem | Identificador da conta Twilio | Não | — | Identificador (não é a parte secreta) |
 | `TURN_CREDENTIAL` | **não está no Cloud Run** | Credencial de relay da telemedicina | Não | B | Opcional; hoje a telemedicina funciona sem TURN |

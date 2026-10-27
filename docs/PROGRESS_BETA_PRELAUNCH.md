@@ -87,6 +87,17 @@ Fallback (do in any case before 2026-10-29): make sure the welcome e-mail carrie
   Versioned graph stays code-only: deterministic, reviewable diffs. Revisit only when there is an actual
   consumer for the semantic graph. Decision by Erico.
 
+- Production values that look like placeholders (found 2026-10-25 while validating the env file; names only, never values):
+  `EVOLUTION_API_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`. They are identical on revision 00045, so they are what is
+  deployed today. WhatsApp (Evolution) and SMS (Twilio) probably do NOT operate in the beta. Do not promise either channel
+  to the participants; the provisional password is handed over by hand (WhatsApp from Erico's own phone, not from the system).
+  Confirm whether the system sends WhatsApp at all in production before 2026-10-29; if it should, the real values must
+  replace these in `CLOUDRUN_ENV_YAML` and be redeployed.
+- Production env file (`CLOUDRUN_ENV_YAML`) must be `NAME: "value"`, one per line, 42 lines, LF, no blank lines (see
+  `infra/PRODUCTION-BACKEND.md` §2). A Cloud Run console export (`- name:` / `value:` list) crashes `gcloud run deploy
+  --env-vars-file` (seen 2026-10-25, run 40200434429). `npm run check:cloudrun-env` does NOT catch a malformed shape, so a
+  strict line-format check should be added to the script.
+
 ## Documentation language policy
 
 - Engineering docs (lessons learned, PROGRESS, ADRs): English, per `enforces-english`.

@@ -104,12 +104,20 @@ export function DashboardPage() {
             </Link>
           </CardHeader>
           <CardContent>
-            {painelPsiQ.data.ciclosACobrar > 0 && (
+            {(painelPsiQ.data.ciclosFechadosARenovar ?? 0) > 0 && (
               <p className="mb-3 flex items-center gap-2 text-sm text-amber-700">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
-                {painelPsiQ.data.ciclosACobrar === 1
+                {painelPsiQ.data.ciclosFechadosARenovar === 1
                   ? 'Um paciente fechou o ciclo de 4 sessões — hora de renovar o pagamento.'
-                  : `${painelPsiQ.data.ciclosACobrar} pacientes fecharam o ciclo de 4 sessões — hora de renovar o pagamento.`}
+                  : `${painelPsiQ.data.ciclosFechadosARenovar} pacientes fecharam o ciclo de 4 sessões — hora de renovar o pagamento.`}
+              </p>
+            )}
+            {(painelPsiQ.data.ciclosSemCobranca ?? 0) > 0 && (
+              <p className="mb-3 flex items-center gap-2 text-sm text-amber-700">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                {painelPsiQ.data.ciclosSemCobranca === 1
+                  ? 'Um paciente está sem cobrança no ciclo atual.'
+                  : `${painelPsiQ.data.ciclosSemCobranca} pacientes estão sem cobrança no ciclo atual.`}
               </p>
             )}
             <Table>

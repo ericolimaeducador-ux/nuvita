@@ -429,17 +429,32 @@ export function FinanceiroPsicologiaPage() {
       </div>
 
       {/* Alertas */}
-      {(painel?.ciclosACobrar ?? 0) > 0 && (
+      {(painel?.ciclosFechadosARenovar ?? 0) > 0 && (
         <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
           <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="text-sm">
             <p className="font-medium text-amber-700">
-              {painel!.ciclosACobrar === 1
+              {painel!.ciclosFechadosARenovar === 1
                 ? 'Um paciente fechou o ciclo e ainda não foi cobrado.'
-                : `${painel!.ciclosACobrar} pacientes fecharam o ciclo e ainda não foram cobrados.`}
+                : `${painel!.ciclosFechadosARenovar} pacientes fecharam o ciclo e ainda não foram cobrados.`}
             </p>
             <p className="text-muted-foreground">
               A cobrança é do próximo pacote de {painel?.sessoesPorCiclo} sessões — combine com o paciente antes do próximo atendimento.
+            </p>
+          </div>
+        </div>
+      )}
+      {(painel?.ciclosSemCobranca ?? 0) > 0 && (
+        <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium text-amber-700">
+              {painel!.ciclosSemCobranca === 1
+                ? 'Um paciente está atendendo sem cobrança no ciclo atual.'
+                : `${painel!.ciclosSemCobranca} pacientes estão atendendo sem cobrança no ciclo atual.`}
+            </p>
+            <p className="text-muted-foreground">
+              O ciclo é pré-pago: emita a cobrança do pacote de {painel?.sessoesPorCiclo} sessões em andamento.
             </p>
           </div>
         </div>

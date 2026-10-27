@@ -48,7 +48,7 @@ export interface CobrancaCiclo {
 export interface PacientePsicologia {
   pacienteId: string;
   pacienteNome?: string;
-  /** Sessões já registradas em prontuário. */
+  /** Sessões ASSINADAS (rascunho não conta). */
   sessoesRealizadas: number;
   /** Número da sessão que acontecerá no próximo atendimento. */
   proximaSessao: number;
@@ -73,7 +73,11 @@ export interface PainelPsicologia {
   recebidoNoMes: number;
   /** Total pendente de recebimento (todas as cobranças em aberto). */
   aReceber: number;
-  /** Pacientes cujo ciclo atual ainda não foi cobrado. */
+  /** Pacientes cujo ciclo atual ainda não foi cobrado (soma das duas situações abaixo). */
   ciclosACobrar: number;
+  /** Fechou um ciclo (múltiplo de 4 sessões ASSINADAS) e o ciclo novo ainda não tem cobrança: hora de renovar. */
+  ciclosFechadosARenovar: number;
+  /** Ciclo atual sem cobrança, mas sem ter fechado um ciclo (em andamento, ou só com rascunho aberto). */
+  ciclosSemCobranca: number;
   pacientes: PacientePsicologia[];
 }

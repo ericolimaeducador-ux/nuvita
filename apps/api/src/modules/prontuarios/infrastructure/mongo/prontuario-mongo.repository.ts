@@ -63,7 +63,7 @@ export class ProntuarioMongoRepository implements ProntuarioRepository {
     return documents.map((document) => this.toProntuario(document));
   }
 
-  async resumoSessoesPorPaciente(
+  async resumoSessoesAssinadasPorPaciente(
     clinicaId: string,
     tipo: TipoAtendimento,
     medicoId?: string,
@@ -71,25 +71,27 @@ export class ProntuarioMongoRepository implements ProntuarioRepository {
     const match: Record<string, unknown> = { clinicaId, tipo };
     if (medicoId) match.medicoId = medicoId;
 
+    // Assinado = tem `assinado.dataAssinatura`. O $match NÃO filtra por isso: quem só tem rascunho precisa sair, com total 0.
+    const assinado = { $ne: [{ $type: '$assinado.dataAssinatura' }, 'missing'] };
     const linhas = await this.prontuarioModel
       .aggregate([
         { $match: match },
         {
           $group: {
             _id: '$pacienteId',
-            total: { $sum: 1 },
-            primeiraEm: { $min: '$dataAtendimento' },
-            ultimaEm: { $max: '$dataAtendimento' },
+            total: { $sum: { $cond: [assinado, 1, 0] } },
+            primeiraEm: { $min: { $cond: [assinado, '$dataAtendimento', null] } },
+            ultimaEm: { $max: { $cond: [assinado, '$dataAtendimento', null] } },
           },
         },
       ])
-      .exec() as Array<{ _id: string; total: number; primeiraEm: Date; ultimaEm: Date }>;
+      .exec() as Array<{ _id: string; total: number; primeiraEm: Date | null; ultimaEm: Date | null }>;
 
     return linhas.map((l) => ({
       pacienteId: l._id,
       total: l.total,
-      primeiraEm: l.primeiraEm,
-      ultimaEm: l.ultimaEm,
+      primeiraEm: l.primeiraEm ?? undefined,
+      ultimaEm: l.ultimaEm ?? undefined,
     }));
   }
 

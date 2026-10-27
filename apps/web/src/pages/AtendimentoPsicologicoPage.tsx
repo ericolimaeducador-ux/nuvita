@@ -184,7 +184,8 @@ export function RegistroSessao({
   });
   const sessoes = useMemo(
     () => toItems<Prontuario>(sessoesQ.data)
-      .filter((p) => p.tipo === TipoAtendimento.PSICOTERAPIA)
+      // Só prontuário ASSINADO conta como sessão anterior; rascunho é trabalho em andamento (mesmo critério do ciclo de cobrança).
+      .filter((p) => p.tipo === TipoAtendimento.PSICOTERAPIA && !!p.assinado)
       .sort((a, b) => dayjs(a.dataAtendimento).valueOf() - dayjs(b.dataAtendimento).valueOf()),
     [sessoesQ.data],
   );

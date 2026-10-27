@@ -674,6 +674,10 @@ export interface PainelPsicologia {
   recebidoNoMes: number;
   aReceber: number;
   ciclosACobrar: number;
+  /** Fechou um ciclo e o novo ainda não tem cobrança: hora de renovar. */
+  ciclosFechadosARenovar: number;
+  /** Ciclo atual sem cobrança, sem ter fechado um ciclo. */
+  ciclosSemCobranca: number;
   pacientes: PacientePsicologia[];
 }
 

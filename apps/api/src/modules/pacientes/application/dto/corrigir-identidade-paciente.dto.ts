@@ -1,4 +1,5 @@
 import { IsISO8601, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsCpfValido } from './paciente-campos.validator';
 
 /**
  * Correção de nome/CPF/data de nascimento por SUPER_ADMIN
@@ -13,6 +14,7 @@ export class CorrigirIdentidadePacienteDto {
 
   @IsOptional()
   @Matches(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/)
+  @IsCpfValido()
   cpf?: string;
 
   @IsOptional()

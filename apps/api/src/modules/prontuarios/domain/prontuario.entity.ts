@@ -154,6 +154,8 @@ export interface AssinaturaProntuario {
   medicoId: string;
   dataAssinatura: Date;
   hash: string;
+  /** CRP do perfil do psicólogo, carimbado pelo servidor ao assinar. Ausente nos registros anteriores a essa regra. */
+  crp?: string;
 }
 
 export interface Prontuario {

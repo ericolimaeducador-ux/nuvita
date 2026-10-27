@@ -229,6 +229,8 @@ export class SuperAdminService {
       clinicaId: dto.clinicaId ?? null,
       twoFactorSecret: twoFactorSetup?.base32,
       registroProfissional: dto.registroProfissional,
+      // O CRP informado na criação do PSICÓLOGO é o do perfil (fonte única do carimbo no prontuário).
+      ...(dto.papel === Papel.PSICOLOGO && dto.crp?.trim() ? { crp: dto.crp.trim() } : {}),
       faseTeste: await this.faseTesteDaClinica(dto.clinicaId),
       // Amendment (2026-09-11) em feature-forced-password-change.md: mesma
       // regra do ClinicasService.createUsuario() — PSICOLOGO criado aqui

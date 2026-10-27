@@ -31,6 +31,8 @@ function criar(over: { ag?: unknown | null; existente?: unknown; sessoes?: unkno
   const service = new ProntuariosService(
     prontuarios as never, { autocomplete: jest.fn() } as never, { create: jest.fn() } as never,
     { getConfig: () => ({ prontuarioSignatureSecret: 's' }) } as never, agendamentos as never,
+    // Autorizado pelo usuário (2026-10-27): o serviço agora recebe o repositório de usuários (CRP do perfil ao assinar).
+    { findById: jest.fn() } as never,
   );
   return { service, prontuarios, agendamentos };
 }

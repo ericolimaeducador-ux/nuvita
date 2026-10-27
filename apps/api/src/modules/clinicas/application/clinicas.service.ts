@@ -193,6 +193,8 @@ export class ClinicasService {
       papel: dto.papel,
       clinicaId: adminClinicaId,
       twoFactorSecret: twoFactorSetup?.base32,
+      // O CRP informado na criação do PSICÓLOGO é o do perfil (fonte única do carimbo no prontuário).
+      ...(dto.papel === Papel.PSICOLOGO && dto.crp?.trim() ? { crp: dto.crp.trim() } : {}),
       // A senha é gerada e repassada por fora (WhatsApp): TODO papel nasce com troca obrigatória.
       deveTrocarSenha: true,
       // Usuário de clínica em teste beta aceita o Termo de Teste, como o ADMIN dela.

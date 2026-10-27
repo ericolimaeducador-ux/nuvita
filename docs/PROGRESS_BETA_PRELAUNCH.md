@@ -97,6 +97,13 @@ Fallback (do in any case before 2026-10-29): make sure the welcome e-mail carrie
   `infra/PRODUCTION-BACKEND.md` §2). A Cloud Run console export (`- name:` / `value:` list) crashes `gcloud run deploy
   --env-vars-file` (seen 2026-10-25, run 40200434429). `npm run check:cloudrun-env` does NOT catch a malformed shape, so a
   strict line-format check should be added to the script.
+- **CRP format validation: PENDING, to be verified against an official CFP source.** The CRP is required to be non-empty only
+  (account creation, `user.crp`, signing). The format of a council number must not be written from memory. Until verified,
+  the system accepts any non-empty text as a CRP (it could stamp a number that is not a CRP).
+- **CRP at signing (2026-10-26):** the server stamps `user.crp` into `assinado.crp` when a clinical record is signed and
+  answers 422 without it. `registroProfissional` stays as registration data only (council number typed by the super-admin;
+  never enters the clinical record). Accounts created before this change that have no `crp` must fill it (the session form
+  has a one-time field) before the first signature; new psychologist accounts need the CRP at creation.
 
 ## Documentation language policy
 

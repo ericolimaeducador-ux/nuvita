@@ -32,6 +32,8 @@ async function criarUsuarioNaTela() {
   await userEvent.type(screen.getByLabelText(/nome completo/i), 'Fulana de Tal');
   await userEvent.type(screen.getByLabelText(/^e-mail/i), 'fulana@clinica.com');
   await userEvent.type(screen.getByLabelText(/senha provis/i), 'provisoria-123');
+  // Autorizado pelo usuário (2026-10-27): o perfil padrão é PSICÓLOGO e a criação agora exige o CRP.
+  await userEvent.type(screen.getByLabelText(/^CRP/i), 'CRP 06/123456');
   await userEvent.click(screen.getByRole('button', { name: /criar usu/i }));
 }
 

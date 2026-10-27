@@ -1,10 +1,12 @@
-import { MutableRefObject, useEffect, useMemo, useRef, useState } from 'react';
+import { MutableRefObject, useEffect, useMemo, useRef, useState, useId } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { Brain, CalendarPlus, Check, ClipboardList, Copy, History, Loader2, PenLine, Sparkles, User, Video, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { temCrp } from '@/lib/timbre';
+import { ROTULO, ROTULO_ANOTACOES } from '@/lib/registroPsicologico';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +21,7 @@ import {
 import { toast } from '@/components/ui/use-toast';
 import { SalaVideo } from '@/components/SalaVideo';
 import { useAuth } from '@/auth/AuthContext';
-import { agendaApi, iaClinicaApi, pacientesApi, prontuariosApi, psicoFinanceiroApi, telemedicinaApi } from '@/api/resources';
+import { agendaApi, authApi, iaClinicaApi, pacientesApi, prontuariosApi, psicoFinanceiroApi, telemedicinaApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { ErroConsulta } from '@/components/ErroConsulta';
 import { formatData, formatEndereco, linkDaSala, toItems } from '@/utils';
@@ -37,8 +39,8 @@ import {
  * inteira enquanto escreve, sem rolagem interna num campo pequeno.
  */
 function AutoTextarea({
-  value, onChange, placeholder, minRows = 3,
-}: { value?: string; onChange: (v: string) => void; placeholder?: string; minRows?: number }) {
+  value, onChange, placeholder, minRows = 3, id,
+}: { value?: string; onChange: (v: string) => void; placeholder?: string; minRows?: number; id?: string }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     const el = ref.current;
@@ -48,6 +50,7 @@ function AutoTextarea({
   }, [value]);
   return (
     <textarea
+      id={id}
       ref={ref}
       rows={minRows}
       value={value ?? ''}
@@ -61,10 +64,11 @@ function AutoTextarea({
 function CampoTexto({
   label, value, onChange, placeholder, minRows,
 }: { label: string; value?: string; onChange: (v: string) => void; placeholder?: string; minRows?: number }) {
+  const id = useId();
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
-      <AutoTextarea value={value} onChange={onChange} placeholder={placeholder} minRows={minRows} />
+      <Label htmlFor={id}>{label}</Label>
+      <AutoTextarea id={id} value={value} onChange={onChange} placeholder={placeholder} minRows={minRows} />
     </div>
   );
 }
@@ -126,6 +130,48 @@ function CamposLinhaTerapeutica({
   );
 }
 
+/**
+ * O CRP é o do PERFIL (o servidor o carimba ao assinar): com CRP, só se mostra; sem CRP, informa-se uma vez
+ * (mesmo endpoint do portão dos documentos) e o botão de assinar libera. Só "não vazio": o formato fica pendente de
+ * fonte oficial do CFP.
+ */
+function CrpDoPerfil({ crp }: { crp?: string }) {
+  const { user, atualizarUsuario } = useAuth();
+  const [novo, setNovo] = useState('');
+  const [salvando, setSalvando] = useState(false);
+  const tem = temCrp(crp);
+
+  async function salvar() {
+    if (!user || !temCrp(novo)) return;
+    setSalvando(true);
+    try {
+      const res = await authApi.salvarMeuCrp(novo.trim());
+      atualizarUsuario({ ...user, ...res.user });
+    } catch (e) {
+      toast({ title: 'Não foi possível salvar o CRP', description: apiErrorMessage(e), variant: 'destructive' });
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="crpPerfil">CRP do psicólogo responsável</Label>
+      {tem ? (
+        <Input id="crpPerfil" readOnly value={crp!} className="max-w-xs" />
+      ) : (
+        <>
+          <div className="flex max-w-md gap-2">
+            <Input id="crpPerfil" value={novo} onChange={(e) => setNovo(e.target.value)} placeholder="CRP 00/00000" />
+            <Button type="button" variant="secondary" onClick={salvar} disabled={salvando || !temCrp(novo)}>Salvar CRP</Button>
+          </div>
+          <p className="text-xs text-destructive">Informe o CRP no seu perfil para assinar o prontuário.</p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function BlocoContexto({ label, valor }: { label: string; valor?: string }) {
   return (
     <div>
@@ -162,11 +208,11 @@ export function RegistroSessao({
 
   useEffect(() => {
     if (!open) return;
-    setReg({ crp: user?.registroProfissional });
+    setReg({});
     setForcarCompleto(false);
     setEditandoContexto(false);
     setDecisaoIa(null);
-  }, [open, user?.registroProfissional]);
+  }, [open]);
 
   const pacienteQ = useQuery({
     queryKey: ['paciente', agendamento?.pacienteId],
@@ -300,7 +346,7 @@ export function RegistroSessao({
   };
 
   /** Um formulário aberto durante a consulta não pode fechar por um clique fora ou um ESC distraído. */
-  const temConteudo = Object.entries(reg).some(([k, v]) => k !== 'crp' && v !== undefined && v !== '');
+  const temConteudo = Object.entries(reg).some(([, v]) => v !== undefined && v !== '');
   function fechar() {
     if (salvarM.isPending) return;
     if (temConteudo && !window.confirm('As anotações desta sessão ainda não foram salvas. Fechar mesmo assim?')) return;
@@ -436,8 +482,8 @@ export function RegistroSessao({
 
               {editandoContexto ? (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <CampoTexto label="Diagnósticos de saúde mental" value={reg.diagnosticosSaudeMental} onChange={(v) => set({ diagnosticosSaudeMental: v })} minRows={2} />
-                  <CampoTexto label="Medicamentos em uso" value={reg.medicamentosEmUso} onChange={(v) => set({ medicamentosEmUso: v })} minRows={2} />
+                  <CampoTexto label={ROTULO.diagnosticosSaudeMental} value={reg.diagnosticosSaudeMental} onChange={(v) => set({ diagnosticosSaudeMental: v })} minRows={2} />
+                  <CampoTexto label={ROTULO.medicamentosEmUso} value={reg.medicamentosEmUso} onChange={(v) => set({ medicamentosEmUso: v })} minRows={2} />
                 </div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -466,7 +512,7 @@ export function RegistroSessao({
 
             <CamposLinhaTerapeutica paciente={paciente} reg={reg} set={set} />
 
-            <SecaoTitulo>Anotações da psicoterapia</SecaoTitulo>
+            <SecaoTitulo>{ROTULO_ANOTACOES.seguimento}</SecaoTitulo>
             <AutoTextarea
               value={reg.anotacoesLivres}
               onChange={(v) => set({ anotacoesLivres: v })}
@@ -475,10 +521,7 @@ export function RegistroSessao({
             />
 
             <div className="flex flex-wrap items-end justify-between gap-4">
-              <div className="space-y-2">
-                <Label>CRP do psicólogo responsável</Label>
-                <Input value={reg.crp ?? ''} onChange={(e) => set({ crp: e.target.value })} placeholder="CRP 00/00000" />
-              </div>
+              <CrpDoPerfil crp={user?.crp} />
               <Button variant="ghost" size="sm" onClick={() => setForcarCompleto(true)}>
                 <ClipboardList className="h-4 w-4 mr-2" /> Abrir prontuário completo
               </Button>
@@ -488,48 +531,48 @@ export function RegistroSessao({
           /* ---------------- Primeira consulta / prontuário completo ---------------- */
           <div className="space-y-4">
             <SecaoTitulo>Demanda</SecaoTitulo>
-            <CampoTexto label="Motivo do atendimento / queixa principal" value={reg.motivoAtendimento} onChange={(v) => set({ motivoAtendimento: v })} />
-            <CampoTexto label="Avaliação de demanda" value={reg.avaliacaoDemanda} onChange={(v) => set({ avaliacaoDemanda: v })} minRows={2} />
+            <CampoTexto label={ROTULO.motivoAtendimento} value={reg.motivoAtendimento} onChange={(v) => set({ motivoAtendimento: v })} />
+            <CampoTexto label={ROTULO.avaliacaoDemanda} value={reg.avaliacaoDemanda} onChange={(v) => set({ avaliacaoDemanda: v })} minRows={2} />
 
             <SecaoTitulo>Histórico de saúde</SecaoTitulo>
-            <CampoTexto label="Doenças prévias / condições de saúde" value={reg.doencasPrevias} onChange={(v) => set({ doencasPrevias: v })} minRows={2} />
-            <CampoTexto label="Diagnósticos de saúde mental (prévios ou atuais)" value={reg.diagnosticosSaudeMental} onChange={(v) => set({ diagnosticosSaudeMental: v })} minRows={2} />
+            <CampoTexto label={ROTULO.doencasPrevias} value={reg.doencasPrevias} onChange={(v) => set({ doencasPrevias: v })} minRows={2} />
+            <CampoTexto label={ROTULO.diagnosticosSaudeMental} value={reg.diagnosticosSaudeMental} onChange={(v) => set({ diagnosticosSaudeMental: v })} minRows={2} />
             <div className="grid gap-4 sm:grid-cols-2">
-              <CampoTexto label="Medicamentos em uso" value={reg.medicamentosEmUso} onChange={(v) => set({ medicamentosEmUso: v })} minRows={2} />
-              <CampoTexto label="Histórico familiar de saúde mental" value={reg.historicoFamiliarSaudeMental} onChange={(v) => set({ historicoFamiliarSaudeMental: v })} minRows={2} />
+              <CampoTexto label={ROTULO.medicamentosEmUso} value={reg.medicamentosEmUso} onChange={(v) => set({ medicamentosEmUso: v })} minRows={2} />
+              <CampoTexto label={ROTULO.historicoFamiliarSaudeMental} value={reg.historicoFamiliarSaudeMental} onChange={(v) => set({ historicoFamiliarSaudeMental: v })} minRows={2} />
             </div>
 
             <SecaoTitulo>Hábitos de vida</SecaoTitulo>
             <div className="grid gap-4 sm:grid-cols-2">
-              <CampoTexto label="Qualidade do sono" value={reg.qualidadeSono} onChange={(v) => set({ qualidadeSono: v })} minRows={2} />
-              <CampoTexto label="Apetite / alimentação" value={reg.apetiteAlimentacao} onChange={(v) => set({ apetiteAlimentacao: v })} minRows={2} />
-              <CampoTexto label="Atividade física" value={reg.atividadeFisica} onChange={(v) => set({ atividadeFisica: v })} minRows={2} />
-              <CampoTexto label="Uso de álcool, tabaco e outras substâncias" value={reg.usoSubstancias} onChange={(v) => set({ usoSubstancias: v })} minRows={2} />
+              <CampoTexto label={ROTULO.qualidadeSono} value={reg.qualidadeSono} onChange={(v) => set({ qualidadeSono: v })} minRows={2} />
+              <CampoTexto label={ROTULO.apetiteAlimentacao} value={reg.apetiteAlimentacao} onChange={(v) => set({ apetiteAlimentacao: v })} minRows={2} />
+              <CampoTexto label={ROTULO.atividadeFisica} value={reg.atividadeFisica} onChange={(v) => set({ atividadeFisica: v })} minRows={2} />
+              <CampoTexto label={ROTULO.usoSubstancias} value={reg.usoSubstancias} onChange={(v) => set({ usoSubstancias: v })} minRows={2} />
             </div>
 
             <SecaoTitulo>Estado na sessão</SecaoTitulo>
-            <CampoTexto label="Estado emocional / sentimentos relatados e afeto observado" value={reg.estadoEmocional} onChange={(v) => set({ estadoEmocional: v })} />
+            <CampoTexto label={ROTULO.estadoEmocional} value={reg.estadoEmocional} onChange={(v) => set({ estadoEmocional: v })} />
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Dor (0 a 10)</Label>
+                <Label>{ROTULO.escalaDor}</Label>
                 <Input
                   type="number" min={0} max={10} value={reg.escalaDor ?? ''}
                   onChange={(e) => set({ escalaDor: e.target.value === '' ? undefined : Math.max(0, Math.min(10, Number(e.target.value))) })}
                 />
               </div>
-              <CampoTexto label="Rede de apoio familiar / social" value={reg.redeApoio} onChange={(v) => set({ redeApoio: v })} minRows={2} />
+              <CampoTexto label={ROTULO.redeApoio} value={reg.redeApoio} onChange={(v) => set({ redeApoio: v })} minRows={2} />
             </div>
-            <CampoTexto label="Avaliação de risco (ideação suicida, autolesão, risco a terceiros)" value={reg.avaliacaoRisco} onChange={(v) => set({ avaliacaoRisco: v })} minRows={2} />
+            <CampoTexto label={ROTULO.avaliacaoRisco} value={reg.avaliacaoRisco} onChange={(v) => set({ avaliacaoRisco: v })} minRows={2} />
 
             <SecaoTitulo>Sessão</SecaoTitulo>
-            <CampoTexto label="Objetivos do acompanhamento" value={reg.objetivosTrabalho} onChange={(v) => set({ objetivosTrabalho: v })} minRows={2} />
-            <CampoTexto label="Procedimento / técnica utilizada" value={reg.procedimentoTecnica} onChange={(v) => set({ procedimentoTecnica: v })} minRows={2} />
-            <CampoTexto label="Evolução" value={reg.evolucao} onChange={(v) => set({ evolucao: v })} />
-            <CampoTexto label="Encaminhamentos" value={reg.encaminhamentos} onChange={(v) => set({ encaminhamentos: v })} minRows={2} />
+            <CampoTexto label={ROTULO.objetivosTrabalho} value={reg.objetivosTrabalho} onChange={(v) => set({ objetivosTrabalho: v })} minRows={2} />
+            <CampoTexto label={ROTULO.procedimentoTecnica} value={reg.procedimentoTecnica} onChange={(v) => set({ procedimentoTecnica: v })} minRows={2} />
+            <CampoTexto label={ROTULO.evolucao} value={reg.evolucao} onChange={(v) => set({ evolucao: v })} />
+            <CampoTexto label={ROTULO.encaminhamentos} value={reg.encaminhamentos} onChange={(v) => set({ encaminhamentos: v })} minRows={2} />
 
             <CamposLinhaTerapeutica paciente={paciente} reg={reg} set={set} />
 
-            <SecaoTitulo>Anotações livres da sessão</SecaoTitulo>
+            <SecaoTitulo>{ROTULO_ANOTACOES.completo}</SecaoTitulo>
             <AutoTextarea
               value={reg.anotacoesLivres}
               onChange={(v) => set({ anotacoesLivres: v })}
@@ -537,12 +580,7 @@ export function RegistroSessao({
               minRows={8}
             />
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>CRP do psicólogo responsável</Label>
-                <Input value={reg.crp ?? ''} onChange={(e) => set({ crp: e.target.value })} placeholder="CRP 00/00000" />
-              </div>
-            </div>
+            <CrpDoPerfil crp={user?.crp} />
           </div>
         )}
 
@@ -556,7 +594,7 @@ export function RegistroSessao({
         <Button variant="secondary" onClick={() => salvar(false)} disabled={salvarM.isPending || carregando || historicoErro}>
           {salvarM.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Salvar rascunho
         </Button>
-        <Button onClick={() => salvar(true)} disabled={salvarM.isPending || carregando || historicoErro}>
+        <Button onClick={() => salvar(true)} disabled={salvarM.isPending || carregando || historicoErro || !temCrp(user?.crp)}>
           {salvarM.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PenLine className="h-4 w-4 mr-2" />}
           Salvar e assinar
         </Button>

@@ -10,7 +10,8 @@ import {
 import { AppConfigService } from '../../../common/security/config.service';
 import { createHmac } from 'crypto';
 import { AuthTokenPayload, ehProfissional } from '../../../../../../packages/shared/src/auth';
-import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
+import { AUDIT_LOG_REPOSITORY, USER_REPOSITORY } from '../../auth/auth.constants';
+import { UserRepository } from '../../auth/application/ports/user.repository';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
 import { AgendamentosService } from '../../agendamentos/application/agendamentos.service';
@@ -37,6 +38,7 @@ export class ProntuariosService {
     @Inject(AUDIT_LOG_REPOSITORY) private readonly auditLogs: AuditLogRepository,
     private readonly configService: AppConfigService,
     private readonly agendamentosService: AgendamentosService,
+    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
   ) {}
 
   async create(dto: CreateProntuarioDto, context: ProntuarioRequestContext): Promise<Prontuario> {
@@ -195,11 +197,19 @@ export class ProntuariosService {
       throw new ConflictException('Prontuario ja assinado.');
     }
 
+    // Fonte única do CRP: o perfil do usuário (user.crp). O corpo do registro não carrega CRP.
+    const profissional = await this.users.findById(context.user.sub);
+    const crp = profissional?.crp?.trim();
+    if (!crp) {
+      throw new UnprocessableEntityException('Informe o CRP no seu perfil para assinar o prontuario.');
+    }
+
     const dataAssinatura = new Date();
     const signed = await this.prontuarios.sign(current.clinicaId, prontuarioId, {
       medicoId: context.user.sub,
       dataAssinatura,
-      hash: this.signatureHash(current, context.user.sub, dataAssinatura),
+      crp,
+      hash: this.signatureHash(current, context.user.sub, dataAssinatura, crp),
     });
 
     if (!signed) {
@@ -306,7 +316,7 @@ export class ProntuariosService {
     throw new BadRequestException('clinicaId e obrigatorio para esta operacao.');
   }
 
-  private signatureHash(prontuario: Prontuario, medicoId: string, dataAssinatura: Date): string {
+  private signatureHash(prontuario: Prontuario, medicoId: string, dataAssinatura: Date, crp: string): string {
     const secret = this.configService.getConfig().prontuarioSignatureSecret;
     const payload = {
       prontuario: {
@@ -324,6 +334,8 @@ export class ProntuariosService {
         arquivos: prontuario.arquivos,
       },
       medicoId,
+      // CRP carimbado: parte do que a assinatura atesta.
+      crp,
       dataAssinatura: dataAssinatura.toISOString(),
     };
 

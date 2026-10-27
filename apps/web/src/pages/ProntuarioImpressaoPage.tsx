@@ -12,6 +12,7 @@ import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
 import { GateCrpEmissao } from '@/components/GateCrpEmissao';
 import { useEmissor } from '@/components/DocumentoAssinatura';
 import { TipoAtendimento, TIPO_ATENDIMENTO_LABEL, REGISTRO_PSICOLOGICO_CAMPOS, type ExameSegmentar } from '@/types';
+import { camposDoFormulario, formularioUsado, linhaDoRegistro, rotuloDoCampo } from '@/lib/registroPsicologico';
 
 const EXAME_SEGMENTAR_CAMPOS: { key: keyof ExameSegmentar; label: string }[] = [
   { key: 'cabecaPescoco', label: 'Cabeça e pescoço' },
@@ -23,6 +24,13 @@ const EXAME_SEGMENTAR_CAMPOS: { key: keyof ExameSegmentar; label: string }[] = [
   { key: 'extremidades', label: 'Extremidades' },
   { key: 'pele', label: 'Pele e mucosas' },
 ];
+
+/** Valor do campo como texto, ou undefined se estiver vazio. */
+function textoCampo(v: unknown): string | undefined {
+  if (v === undefined || v === null) return undefined;
+  const t = String(v).trim();
+  return t === '' ? undefined : t;
+}
 
 function Campo({ label, children }: { label: string; children?: React.ReactNode }) {
   if (children === undefined || children === null || children === '' ||
@@ -75,6 +83,20 @@ export function ProntuarioImpressaoPage() {
   }
 
   const isPsicoterapia = pr?.tipo === TipoAtendimento.PSICOTERAPIA;
+  const camposDoRegistro = isPsicoterapia
+    ? camposDoFormulario(formularioUsado(pr?.registroPsicologico), paciente?.linhaTerapeutica ?? linhaDoRegistro(pr?.registroPsicologico))
+    : [];
+  const jaListados = new Set<string>(camposDoRegistro.map((c) => c.key));
+  const camposExtras = isPsicoterapia
+    ? REGISTRO_PSICOLOGICO_CAMPOS
+        .filter(([key]) => !jaListados.has(key) && textoCampo(pr?.registroPsicologico?.[key]) !== undefined)
+        .map(([key]) => ({ key, label: rotuloDoCampo(key) }))
+    : [];
+  // CRP da assinatura: o CARIMBADO no registro pelo servidor. Registro antigo (sem carimbo): o de quem está logado, como antes.
+  const crpCarimbado = pr?.assinado?.crp?.trim();
+  const identificacaoAssinatura = crpCarimbado
+    ? [emissor.nome, /^crp/i.test(crpCarimbado) ? crpCarimbado : `CRP ${crpCarimbado}`].filter(Boolean).join(' — ')
+    : emissor.identificacao;
   const sv = pr?.objetivo?.sinaisVitais;
   const sinais = sv
     ? [
@@ -140,8 +162,13 @@ export function ProntuarioImpressaoPage() {
           <section className="mb-5">
             <h2 className="text-xs font-bold uppercase text-gray-500 mb-2 border-b border-gray-300 pb-1">Registro de Atendimento Psicológico</h2>
             <div className="space-y-1.5">
-              {REGISTRO_PSICOLOGICO_CAMPOS.map(([key, label]) => (
-                <Campo key={key} label={label}>{pr?.registroPsicologico?.[key]}</Campo>
+              {/* Rótulos e ordem do FORMULÁRIO usado; o que ficou vazio aparece como "Não preenchido". */}
+              {camposDoRegistro.map(({ key, label }) => (
+                <Campo key={key} label={label}>{textoCampo(pr?.registroPsicologico?.[key]) ?? 'Não preenchido'}</Campo>
+              ))}
+              {/* Nunca esconder conteúdo gravado que não está no formulário usado (ex.: CRP digitado em registro antigo). */}
+              {camposExtras.map(({ key, label }) => (
+                <Campo key={key} label={label}>{textoCampo(pr?.registroPsicologico?.[key])}</Campo>
               ))}
             </div>
           </section>
@@ -211,7 +238,7 @@ export function ProntuarioImpressaoPage() {
               </div>
             )}
             <div className="border-t-2 border-gray-800 pt-1">
-              <p className="text-sm font-semibold">{emissor.identificacao || 'Profissional Responsável'}</p>
+              <p className="text-sm font-semibold">{identificacaoAssinatura || 'Profissional Responsável'}</p>
             </div>
           </div>
           <div className="text-sm text-gray-500 text-right">

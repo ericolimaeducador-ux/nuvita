@@ -54,6 +54,12 @@ const createSchema = z.object({
   papel: z.nativeEnum(Papel, { message: 'Selecione um perfil.' }),
   clinicaId: z.string().optional(),
   registroProfissional: z.string().optional(),
+  crp: z.string().optional(),
+}).superRefine((v, ctx) => {
+  // O psicólogo precisa de CRP no perfil para assinar. Só "não vazio": o formato depende de fonte oficial do CFP.
+  if (v.papel === Papel.PSICOLOGO && !v.crp?.trim()) {
+    ctx.addIssue({ code: 'custom', path: ['crp'], message: 'Informe o CRP do psicólogo.' });
+  }
 });
 type CreateForm = z.infer<typeof createSchema>;
 
@@ -580,7 +586,7 @@ export function SuperAdminPage() {
           </DialogHeader>
           <form
             onSubmit={createForm.handleSubmit((v) =>
-              createMut.mutate({ nome: v.nome, email: v.email, password: v.password, papel: v.papel, clinicaId: v.clinicaId || undefined, registroProfissional: papelTemRegistro(v.papel) ? (v.registroProfissional || undefined) : undefined })
+              createMut.mutate({ nome: v.nome, email: v.email, password: v.password, papel: v.papel, clinicaId: v.clinicaId || undefined, registroProfissional: papelTemRegistro(v.papel) ? (v.registroProfissional || undefined) : undefined, crp: v.papel === Papel.PSICOLOGO ? v.crp?.trim() : undefined })
             )}
             className="space-y-4 py-2"
           >
@@ -631,7 +637,16 @@ export function SuperAdminPage() {
                   </SelectContent>
                 </Select>
               </div>
-              {papelTemRegistro(createForm.watch('papel')) && (
+              {createForm.watch('papel') === Papel.PSICOLOGO && (
+                <div className="col-span-2 space-y-1.5">
+                  <Label>CRP do psicólogo <span className="text-muted-foreground">(obrigatório: é o carimbo da assinatura do prontuário)</span></Label>
+                  <Input placeholder="CRP 00/00000" {...createForm.register('crp')} />
+                  {createForm.formState.errors.crp && (
+                    <p className="text-xs text-destructive">{createForm.formState.errors.crp.message}</p>
+                  )}
+                </div>
+              )}
+              {papelTemRegistro(createForm.watch('papel')) && createForm.watch('papel') !== Papel.PSICOLOGO && (
                 <div className="col-span-2 space-y-1.5">
                   <Label>{registroLabel(createForm.watch('papel'))} <span className="text-muted-foreground">(opcional — preenche documentos automaticamente)</span></Label>
                   <Input placeholder={`Nº do ${registroLabel(createForm.watch('papel'))}`} {...createForm.register('registroProfissional')} />

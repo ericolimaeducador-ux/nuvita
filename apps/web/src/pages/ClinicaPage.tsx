@@ -28,6 +28,12 @@ const usuarioSchema = z.object({
   papel: z.nativeEnum(Papel, { error: 'Selecione o perfil.' }),
   email: z.string().min(1, 'Informe o e-mail.').email('E-mail inválido.'),
   password: z.string().min(10, 'Mínimo de 10 caracteres.'),
+  crp: z.string().optional(),
+}).superRefine((v, ctx) => {
+  // O psicólogo precisa de CRP no perfil para assinar. Só "não vazio": o formato depende de fonte oficial do CFP.
+  if (v.papel === Papel.PSICOLOGO && !v.crp?.trim()) {
+    ctx.addIssue({ code: 'custom', path: ['crp'], message: 'Informe o CRP do psicólogo.' });
+  }
 });
 type UsuarioForm = z.infer<typeof usuarioSchema>;
 
@@ -36,7 +42,7 @@ export function ClinicaPage() {
   const qc = useQueryClient();
   const { data: clinica } = useClinicaMinha();
 
-  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<UsuarioForm>({
+  const { register, handleSubmit, setValue, reset, watch, formState: { errors } } = useForm<UsuarioForm>({
     resolver: zodResolver(usuarioSchema),
     defaultValues: { papel: Papel.PSICOLOGO },
   });
@@ -51,7 +57,7 @@ export function ClinicaPage() {
   } | null>(null);
 
   const mut = useMutation({
-    mutationFn: (payload: { nome: string; email: string; password: string; papel: Papel }) =>
+    mutationFn: (payload: { nome: string; email: string; password: string; papel: Papel; crp?: string }) =>
       clinicasApi.criarUsuario(user?.clinicaId ?? '', payload),
     onSuccess: (res, payload) => {
       // O diálogo "Acesso criado" é a confirmação: sem toast de sucesso por cima (ficava duplicado).
@@ -67,7 +73,7 @@ export function ClinicaPage() {
   });
 
   function onSubmit(v: UsuarioForm) {
-    mut.mutate({ nome: v.nome, email: v.email, password: v.password, papel: v.papel });
+    mut.mutate({ nome: v.nome, email: v.email, password: v.password, papel: v.papel, ...(v.papel === Papel.PSICOLOGO ? { crp: v.crp?.trim() } : {}) });
   }
 
   return (
@@ -125,6 +131,13 @@ export function ClinicaPage() {
                 <PasswordInput id="password" placeholder="mínimo 10 caracteres" {...register('password')} />
                 {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
               </div>
+              {watch('papel') === Papel.PSICOLOGO && (
+                <div className="space-y-2">
+                  <Label htmlFor="crp">CRP do psicólogo</Label>
+                  <Input id="crp" placeholder="CRP 00/00000" {...register('crp')} />
+                  {errors.crp && <p className="text-sm text-destructive">{errors.crp.message}</p>}
+                </div>
+              )}
             </div>
 
             <Button type="submit" size="lg" disabled={mut.isPending} className="mt-2">

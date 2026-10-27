@@ -48,6 +48,8 @@ describe('ProntuariosService – posse por recurso', () => {
       { create: jest.fn() } as unknown as AuditLogRepository,
       { getConfig: () => ({ prontuarioSignatureSecret: 's' }) } as unknown as AppConfigService,
       { conclude: jest.fn() } as unknown as AgendamentosService,
+      // Autorizado pelo usuário (2026-10-27): o serviço agora recebe o repositório de usuários (CRP do perfil ao assinar).
+      { findById: jest.fn() } as never,
     );
     return { service, repo };
   }

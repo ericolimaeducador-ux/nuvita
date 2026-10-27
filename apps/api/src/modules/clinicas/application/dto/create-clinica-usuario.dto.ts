@@ -1,4 +1,5 @@
-import { IsEmail, IsIn, IsString, MinLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsEmail, IsIn, IsNotEmpty, IsString, MinLength, ValidateIf } from 'class-validator';
 import { Papel } from '../../../../../../../packages/shared/src/auth';
 
 export class CreateClinicaUsuarioDto {
@@ -14,4 +15,11 @@ export class CreateClinicaUsuarioDto {
 
   @IsIn([Papel.PSICOLOGO, Papel.SECRETARIA])
   papel!: Papel.PSICOLOGO | Papel.SECRETARIA;
+
+  /** Obrigatório para PSICÓLOGO (não vazio; o formato do CRP ainda depende de fonte oficial do CFP). */
+  @ValidateIf((o: { papel?: Papel }) => o.papel === Papel.PSICOLOGO)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty({ message: 'Informe o CRP do psicólogo.' })
+  crp?: string;
 }

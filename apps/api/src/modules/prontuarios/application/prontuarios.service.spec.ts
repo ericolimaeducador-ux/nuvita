@@ -47,6 +47,8 @@ describe('ProntuariosService', () => {
       { create: jest.fn() } as unknown as AuditLogRepository,
       { getConfig: () => ({ prontuarioSignatureSecret: 'signature-secret' }) } as unknown as AppConfigService,
       agendamentosServiceStub,
+      // Autorizado pelo usuário (2026-10-27): o serviço agora recebe o repositório de usuários.
+      { findById: jest.fn() } as never,
     );
   }
 
@@ -79,6 +81,8 @@ describe('ProntuariosService', () => {
       auditLogs as unknown as AuditLogRepository,
       { getConfig: () => ({ prontuarioSignatureSecret: 'signature-secret' }) } as unknown as AppConfigService,
       agendamentosServiceStub,
+      // Autorizado pelo usuário (2026-10-26): assinar agora confere o CRP do perfil.
+      { findById: jest.fn().mockResolvedValue({ id: 'medico-1', crp: 'CRP 06/12345' }) } as never,
     );
 
     await service.sign('prontuario-1', undefined, context);
@@ -88,6 +92,7 @@ describe('ProntuariosService', () => {
       'prontuario-1',
       expect.objectContaining({
         medicoId: 'medico-1',
+        crp: 'CRP 06/12345',
         hash: expect.stringMatching(/^[a-f0-9]{64}$/),
       }),
     );

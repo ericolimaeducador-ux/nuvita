@@ -400,6 +400,8 @@ export interface AssinaturaProntuario {
   medicoId: string;
   dataAssinatura: string;
   hash?: string;
+  /** CRP do perfil carimbado pelo servidor ao assinar. Ausente nos registros anteriores. */
+  crp?: string;
 }
 
 /** Registro de atendimento psicológico / psicoterapia (Res. CFP 006/2019). */

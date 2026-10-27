@@ -18,6 +18,7 @@ export class UserMongoRepository implements UserRepository {
       clinicaId: input.clinicaId,
       '2faSecret': input.twoFactorSecret,
       registroProfissional: input.registroProfissional,
+      crp: input.crp,
       deveTrocarSenha: input.deveTrocarSenha,
       faseTeste: input.faseTeste ?? false,
       ativo: true,

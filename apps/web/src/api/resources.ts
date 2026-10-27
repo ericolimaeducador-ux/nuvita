@@ -80,6 +80,8 @@ export interface CriarUsuarioPayload {
   email: string;
   password: string;
   papel: Papel;
+  /** Obrigatório para PSICÓLOGO. */
+  crp?: string;
 }
 export interface CriarUsuarioResponse {
   user: { id: string; nome: string; email: string; papel: Papel };
@@ -407,6 +409,8 @@ export interface CreateAdminUserPayload {
   papel: Papel;
   clinicaId?: string;
   registroProfissional?: string;
+  /** Obrigatório para PSICÓLOGO. */
+  crp?: string;
 }
 
 export interface TwoFactorSetup {

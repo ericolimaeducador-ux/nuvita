@@ -12,16 +12,12 @@ import { ErroConsulta } from '@/components/ErroConsulta';
 import { RespostaInvalidaError } from '@/lib/consulta';
 import { apiErrorMessage } from '@/api/client';
 import { toast } from '@/components/ui/use-toast';
-import { CAMPOS_POR_LINHA } from '@/lib/linhaTerapeutica';
+import { camposDoFormulario, formularioUsado, linhaDoRegistro, rotuloDoCampo } from '@/lib/registroPsicologico';
 import {
-  TipoAtendimento, TIPO_ATENDIMENTO_LABEL, LinhaTerapeutica,
-  type Prontuario, type ExameSegmentar,
+  TipoAtendimento, TIPO_ATENDIMENTO_LABEL, REGISTRO_PSICOLOGICO_CAMPOS,
+  type Prontuario, type ExameSegmentar, type RegistroPsicologico,
 } from '@/types';
 
-// Achatado de todas as linhas terapêuticas — a leitura mostra qualquer campo
-// preenchido no registro, independente da linha atual do paciente (evita
-// esconder dado histórico caso a classificação mude depois).
-const CAMPOS_LINHA_TODAS = Object.values(LinhaTerapeutica).flatMap((lt) => CAMPOS_POR_LINHA[lt]);
 
 const EXAME_SEGMENTAR_CAMPOS: { key: keyof ExameSegmentar; label: string }[] = [
   { key: 'cabecaPescoco', label: 'Cabeça e pescoço' },
@@ -44,6 +40,24 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
 }
 
 /** Só renderiza o Campo se houver valor — evita poluir a visualização. */
+/** Mesmos rótulos e mesma ordem do formulário e do PDF; o que ficou vazio no formulário usado aparece como "Não preenchido". */
+function RegistroPsicologicoLeitura({ registro }: { registro: RegistroPsicologico }) {
+  const lista = camposDoFormulario(formularioUsado(registro), linhaDoRegistro(registro));
+  const listados = new Set<string>(lista.map((c) => c.key));
+  const texto = (v: unknown) => (v === undefined || v === null || String(v).trim() === '' ? undefined : String(v));
+  return (
+    <>
+      {lista.map(({ key, label }) => (
+        <Campo key={key} label={label}>{texto(registro[key]) ?? 'Não preenchido'}</Campo>
+      ))}
+      {/* Conteúdo gravado fora do formulário usado (ex.: CRP digitado em registro antigo) nunca é escondido. */}
+      {REGISTRO_PSICOLOGICO_CAMPOS.filter(([key]) => !listados.has(key) && texto(registro[key]) !== undefined).map(([key]) => (
+        <Campo key={key} label={rotuloDoCampo(key)}>{texto(registro[key])}</Campo>
+      ))}
+    </>
+  );
+}
+
 function CampoSe({ label, children }: { label: string; children?: React.ReactNode }) {
   if (children === undefined || children === null || children === '' ||
       (Array.isArray(children) && children.length === 0)) return null;
@@ -137,29 +151,7 @@ export function ProntuarioDetailDialog({
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Registro de atendimento psicológico
                 </p>
-                <CampoSe label="Motivo do atendimento">{pr.registroPsicologico.motivoAtendimento}</CampoSe>
-                <CampoSe label="Avaliação de demanda">{pr.registroPsicologico.avaliacaoDemanda}</CampoSe>
-                <CampoSe label="Doenças prévias">{pr.registroPsicologico.doencasPrevias}</CampoSe>
-                <CampoSe label="Diagnósticos de saúde mental">{pr.registroPsicologico.diagnosticosSaudeMental}</CampoSe>
-                <CampoSe label="Medicamentos em uso">{pr.registroPsicologico.medicamentosEmUso}</CampoSe>
-                <CampoSe label="Histórico familiar de saúde mental">{pr.registroPsicologico.historicoFamiliarSaudeMental}</CampoSe>
-                <CampoSe label="Qualidade do sono">{pr.registroPsicologico.qualidadeSono}</CampoSe>
-                <CampoSe label="Apetite / alimentação">{pr.registroPsicologico.apetiteAlimentacao}</CampoSe>
-                <CampoSe label="Atividade física">{pr.registroPsicologico.atividadeFisica}</CampoSe>
-                <CampoSe label="Uso de substâncias">{pr.registroPsicologico.usoSubstancias}</CampoSe>
-                <CampoSe label="Estado emocional">{pr.registroPsicologico.estadoEmocional}</CampoSe>
-                <CampoSe label="Dor (0-10)">{pr.registroPsicologico.escalaDor !== undefined ? String(pr.registroPsicologico.escalaDor) : undefined}</CampoSe>
-                <CampoSe label="Avaliação de risco">{pr.registroPsicologico.avaliacaoRisco}</CampoSe>
-                <CampoSe label="Rede de apoio">{pr.registroPsicologico.redeApoio}</CampoSe>
-                <CampoSe label="Objetivos do acompanhamento">{pr.registroPsicologico.objetivosTrabalho}</CampoSe>
-                <CampoSe label="Procedimento / técnica">{pr.registroPsicologico.procedimentoTecnica}</CampoSe>
-                <CampoSe label="Evolução">{pr.registroPsicologico.evolucao}</CampoSe>
-                <CampoSe label="Encaminhamentos">{pr.registroPsicologico.encaminhamentos}</CampoSe>
-                <CampoSe label="Anotações livres">{pr.registroPsicologico.anotacoesLivres}</CampoSe>
-                <CampoSe label="CRP">{pr.registroPsicologico.crp}</CampoSe>
-                {CAMPOS_LINHA_TODAS.map(({ key, label }) => (
-                  <CampoSe key={key} label={label}>{pr.registroPsicologico?.[key] as string | undefined}</CampoSe>
-                ))}
+                <RegistroPsicologicoLeitura registro={pr.registroPsicologico} />
               </div>
             )}
 

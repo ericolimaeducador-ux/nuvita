@@ -45,6 +45,8 @@ export interface AgendamentoRepository {
   create(input: CreateAgendamentoInput): Promise<Agendamento>;
   findById(clinicaId: string, id: string): Promise<Agendamento | null>;
   list(input: ListAgendamentosInput): Promise<Agendamento[]>;
+  /** BUG-028: atendimento ATIVO (agendado, confirmado ou concluído) do profissional que se sobrepõe a [inicio, fim). Intervalos que encostam não contam. */
+  findAtivoSobreposto(clinicaId: string, medicoId: string, inicio: Date, fim: Date, excluirId?: string): Promise<Agendamento | null>;
   update(clinicaId: string, id: string, input: UpdateAgendamentoInput): Promise<Agendamento | null>;
   updateStatus(clinicaId: string, id: string, status: StatusAgendamento, motivoCancelamento?: string): Promise<Agendamento | null>;
   createBloqueio(input: CreateBloqueioInput): Promise<BloqueioAgenda>;

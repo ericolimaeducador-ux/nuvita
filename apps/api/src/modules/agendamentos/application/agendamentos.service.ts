@@ -1,4 +1,4 @@
-import { ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
 import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
 import { AUDIT_LOG_REPOSITORY, USER_REPOSITORY } from '../../auth/auth.constants';
@@ -40,6 +40,10 @@ export class AgendamentosService {
 
   async create(dto: CreateAgendamentoDto, context: RequestAuditContext) {
     const clinicaId = this.resolveClinicaId(context.user, dto.clinicaId);
+
+    // BUG-028: fim depois do início e nenhum atendimento ativo do mesmo profissional sobreposto.
+    this.assertIntervaloValido(new Date(dto.dataHoraInicio), new Date(dto.dataHoraFim));
+    await this.assertSemSobreposicao(clinicaId, dto.medicoId, new Date(dto.dataHoraInicio), new Date(dto.dataHoraFim));
 
     const agendamento = await this.agendamentos.create({
       clinicaId,
@@ -97,6 +101,14 @@ export class AgendamentosService {
     }
 
     const anterior = await this.agendamentos.findById(resolvedClinicaId, id);
+
+    if (anterior && (dto.medicoId || dto.dataHoraInicio || dto.dataHoraFim)) {
+      const inicio = dto.dataHoraInicio ? new Date(dto.dataHoraInicio) : anterior.dataHoraInicio;
+      const fim = dto.dataHoraFim ? new Date(dto.dataHoraFim) : anterior.dataHoraFim;
+      this.assertIntervaloValido(inicio, fim);
+      const ativo = [StatusAgendamento.AGENDADO, StatusAgendamento.CONFIRMADO, StatusAgendamento.CONCLUIDO].includes(anterior.status);
+      if (ativo) await this.assertSemSobreposicao(resolvedClinicaId, dto.medicoId ?? anterior.medicoId, inicio, fim, id);
+    }
 
     const agendamento = await this.agendamentos.update(resolvedClinicaId, id, {
       medicoId: dto.medicoId,
@@ -293,6 +305,17 @@ export class AgendamentosService {
       pacienteNome: resumo.get(a.pacienteId)?.nome,
       pacienteCpf: resumo.get(a.pacienteId)?.cpf,
     }));
+  }
+
+  private assertIntervaloValido(inicio: Date, fim: Date): void {
+    if (fim.getTime() <= inicio.getTime()) {
+      throw new BadRequestException('O fim do atendimento precisa ser depois do início.');
+    }
+  }
+
+  private async assertSemSobreposicao(clinicaId: string, medicoId: string, inicio: Date, fim: Date, excluirId?: string): Promise<void> {
+    const conflito = await this.agendamentos.findAtivoSobreposto(clinicaId, medicoId, inicio, fim, excluirId);
+    if (conflito) throw new ConflictException('Você já tem atendimento neste horário');
   }
 
   private async audit(event: AuditEvent, context: RequestAuditContext, metadata: Record<string, unknown>) {

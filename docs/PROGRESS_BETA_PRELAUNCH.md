@@ -131,6 +131,12 @@ Fallback (do in any case before 2026-10-29): make sure the welcome e-mail carrie
   appointment that has not started, and a declaration before it ended (422); changing an appointment's start or end is
   audited (`APPOINTMENT_TIME_CHANGED`). See `docs/harness/features/feature-attendance-not-in-the-future.md`.
 
+- **BUG-028 fixed (2026-10-27):** the server refuses overlapping appointments of the same professional (409) and `fim <= inicio`
+  (400). See `docs/harness/features/feature-agenda-no-overlap.md`. **Post-beta, deliberately left out:** (1) agenda blocks
+  (`bloqueios`) do not take part in the overlap check; (2) concurrency: two simultaneous requests can both pass the check
+  before either is inserted (needs a per-professional lock or a different data model); (3) existing overlaps are not
+  corrected; (4) no "encaixe" (squeeze-in) exists.
+
 ## Documentation language policy
 
 - Engineering docs (lessons learned, PROGRESS, ADRs): English, per `enforces-english`.

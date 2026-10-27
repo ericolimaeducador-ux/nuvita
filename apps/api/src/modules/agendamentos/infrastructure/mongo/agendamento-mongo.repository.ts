@@ -63,6 +63,20 @@ export class AgendamentoMongoRepository implements AgendamentoRepository {
     return docs.map((d) => this.toEntity(d));
   }
 
+  async findAtivoSobreposto(clinicaId: string, medicoId: string, inicio: Date, fim: Date, excluirId?: string): Promise<Agendamento | null> {
+    const query: Record<string, unknown> = {
+      clinicaId,
+      medicoId,
+      status: { $in: [StatusAgendamento.AGENDADO, StatusAgendamento.CONFIRMADO, StatusAgendamento.CONCLUIDO] },
+      // Sobreposição estrita: inicioA < fimB && inicioB < fimA (intervalos que encostam não colidem).
+      dataHoraInicio: { $lt: fim },
+      dataHoraFim: { $gt: inicio },
+    };
+    if (excluirId) query._id = { $ne: new Types.ObjectId(excluirId) };
+    const doc = await this.model.findOne(query).exec();
+    return doc ? this.toEntity(doc) : null;
+  }
+
   async update(clinicaId: string, id: string, input: UpdateAgendamentoInput): Promise<Agendamento | null> {
     const set: Record<string, unknown> = {};
 

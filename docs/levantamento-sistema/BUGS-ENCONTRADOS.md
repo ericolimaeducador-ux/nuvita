@@ -206,7 +206,8 @@ Severity: **blocks beta** / **gets in the way** / **cosmetic**. "Evidence" point
 - **Consequences:** billing cycle counted twice, two records for the same hour, a declaration/certificate issued twice.
 - **Related gap found in the same code:** `dataHoraFim` is not required to be after `dataHoraInicio` (DTOs only check the
   ISO format).
-- **Not fixed.** Design presented to the user; starting decision: block with 409 on the server, not only warn on screen.
+- **Fixed (2026-10-27):** 409 on create/update when an active appointment (scheduled, confirmed, concluded) of the same
+  professional overlaps; `fim <= inicio` answers 400. Agenda blocks and concurrency are post-beta (see PROGRESS).
 
 ### BUG-024 — "ID do profissional responsável" in /agenda → Novo agendamento exposes a raw internal id (severity: MEDIUM)
 - **Observed on screen (local, 2026-10-25):** the field is an editable text input showing the raw Mongo id (for example

@@ -54,6 +54,8 @@ function makeService(overrides: {
   users?: Record<string, jest.Mock>;
 } = {}) {
   const agendamentos = {
+    // Setup ajustado (autorizado, BUG-028): create() agora consulta sobreposição; aqui nunca há conflito.
+    findAtivoSobreposto: jest.fn().mockResolvedValue(null),
     create: jest.fn().mockResolvedValue(agendamentoCriado),
     ...overrides.agendamentos,
   };

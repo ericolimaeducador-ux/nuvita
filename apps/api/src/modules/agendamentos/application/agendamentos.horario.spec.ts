@@ -15,6 +15,7 @@ function criar(inicio: Date, fim: Date) {
   const atual = { id: 'ag-1', clinicaId: 'cli-1', pacienteId: 'pac-1', medicoId: 'psi-A', status: StatusAgendamento.AGENDADO, dataHoraInicio: inicio, dataHoraFim: fim };
   const agendamentos = {
     findById: jest.fn().mockResolvedValue(atual),
+    findAtivoSobreposto: jest.fn().mockResolvedValue(null), // BUG-028: update() com horário consulta sobreposição (setup ajustado)
     updateStatus: jest.fn().mockResolvedValue({ ...atual, status: StatusAgendamento.CONCLUIDO }),
     update: jest.fn().mockImplementation(async (_c: string, _i: string, d: Record<string, unknown>) => ({ ...atual, ...d })),
   };

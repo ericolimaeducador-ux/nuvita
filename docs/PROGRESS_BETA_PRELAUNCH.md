@@ -158,6 +158,13 @@ Fallback (do in any case before 2026-10-29): make sure the welcome e-mail carrie
   - Whether production uses the Memorystore described in `infra/PRODUCTION-BACKEND.md` section 8, and whether the liveness
     probe of section 4 is applied, is NOT in the code and was not checked.
 
+- **Redis hardening (PR `fix/redis-indisponivel-503`, 2026-10-27; applies once merged and deployed):** token revocation still
+  fails closed but answers 503 "Serviço temporariamente indisponível, tente novamente" (also logout and refresh);
+  `connectTimeout` 5 s, `commandTimeout` 2 s, `retryStrategy` capped at 1 s and never giving up; `main.ts` waits for the Redis
+  `ready` event (15 s) before `listen`, so a revision that cannot reach Redis fails to start instead of receiving traffic.
+  Still NOT answered: the Redis provider (Erico informs), whether the section-4 liveness probe is applied, and what the first
+  requests of a revision saw in the two ETIMEDOUT cases.
+
 ## Documentation language policy
 
 - Engineering docs (lessons learned, PROGRESS, ADRs): English, per `enforces-english`.

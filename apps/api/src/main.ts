@@ -1,4 +1,5 @@
 import { ValidationPipe } from '@nestjs/common';
+import Redis from 'ioredis';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
@@ -6,6 +7,8 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { InvalidObjectIdFilter } from './common/http/invalid-object-id.filter';
 import { AppConfigService } from './common/security/config.service';
+import { REDIS_CLIENT } from './modules/auth/auth.constants';
+import { aguardarRedisPronto } from './modules/auth/infrastructure/redis/redis-boot';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -69,6 +72,10 @@ async function bootstrap() {
   }
 
   const port = config.port;
+  // A revogação de token (Redis, fail-closed) roda em toda requisição autenticada: só atende depois de o Redis conectar.
+  // Sem conectar em 15 s o boot falha e a revisão nunca fica pronta (o Cloud Run não manda tráfego a ela).
+  await aguardarRedisPronto(app.get<Redis>(REDIS_CLIENT), 15_000);
+
   await app.listen(port);
   console.log(`API rodando na porta ${port} (NODE_ENV=${config.nodeEnv})`);
   if (exposeDocs) {

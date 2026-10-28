@@ -81,6 +81,9 @@ export class DocumentosEmitidosService {
   ): Promise<DocumentoEmitidoView> {
     const clinicaId = resolveTenantClinicaId(context.user, undefined);
 
+    // O documento do consultório sai no cabeçalho: sem ele não há emissão (422).
+    await this.clinicas.assertDocumentoInformado(clinicaId);
+
     // Posse e existência: 404 para o que não é da clínica; 403 para o psicólogo que não é dono do atendimento.
     const agendamento = await this.agendamentos.obterParaEmissao(clinicaId, dto.agendamentoId, context.user);
     if (agendamento.pacienteId !== dto.pacienteId) {

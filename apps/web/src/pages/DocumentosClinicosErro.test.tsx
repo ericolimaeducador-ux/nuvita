@@ -20,6 +20,8 @@ vi.mock('@/auth/AuthContext', () => ({
   }),
 }));
 
+// Setup: consultório com CPF/CNPJ informado (sem isso a psicóloga cai no gate do documento do consultório).
+vi.mock('@/lib/useClinicaMinha', () => ({ useClinicaMinha: () => ({ isLoading: false, isError: false, data: { nome: 'Clínica', documento: '52998224725', tipoDocumento: 'CPF' } }) }));
 vi.mock('@/api/resources', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/api/resources')>();
   return {

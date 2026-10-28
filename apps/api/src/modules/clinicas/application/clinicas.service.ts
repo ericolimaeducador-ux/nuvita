@@ -1,10 +1,12 @@
 import {
   ConflictException,
+  BadRequestException,
   ForbiddenException,
   Inject,
   Injectable,
   Logger,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import * as speakeasy from 'speakeasy';
@@ -18,7 +20,8 @@ import { PublicUser, toPublicUser } from '../../auth/domain/user.entity';
 import { DocumentStorage } from '../../documentos/application/ports/document-storage';
 import { CLINICA_REPOSITORY, LOGO_READ_URL_TTL_SECONDS } from '../clinicas.constants';
 import { Clinica, EnderecoClinica, LIMITES_POR_PLANO } from '../domain/clinica.entity';
-import { TipoDocumentoFiscal } from '../../../../../../packages/shared/src/documentos';
+import { mascararDocumentoFiscal, TipoDocumentoFiscal } from '../../../../../../packages/shared/src/documentos';
+import { PreencherDocumentoDto } from './dto/preencher-documento.dto';
 import { CreateClinicaUsuarioDto } from './dto/create-clinica-usuario.dto';
 import { CreateClinicaDto } from './dto/create-clinica.dto';
 import { ClinicaRepository } from './ports/clinica.repository';
@@ -33,6 +36,14 @@ export interface MinhaClinica {
   emailContato?: string;
   logoUrl?: string;
 }
+
+const MSG_DOCUMENTO_NAO_SALVO = 'Não foi possível salvar. Confirme o número ou fale com o suporte.';
+
+/** Criação de clínica (onboard): o documento é opcional só aqui; o DTO do ADMIN/CLI (CreateClinicaDto) continua exigindo. */
+export type OnboardClinicaInput = Omit<CreateClinicaDto, 'documento' | 'tipoDocumento'> & {
+  documento?: string;
+  tipoDocumento?: TipoDocumentoFiscal;
+};
 
 export interface OnboardingContext {
   ip: string;
@@ -64,7 +75,7 @@ export class ClinicasService {
   ) {}
 
   async onboard(
-    dto: CreateClinicaDto,
+    dto: OnboardClinicaInput,
     context: OnboardingContext,
     options?: OnboardingOptions,
   ): Promise<{
@@ -73,7 +84,8 @@ export class ClinicasService {
     limites: (typeof LIMITES_POR_PLANO)[Clinica['plano']];
     twoFactorSetup?: { required: true; otpauthUrl: string; base32: string };
   }> {
-    const existingClinic = await this.clinicas.findByDocumento(dto.documento);
+    // O documento é opcional na criação (feature-clinic-fiscal-document-first-use): sem ele não há o que checar.
+    const existingClinic = dto.documento ? await this.clinicas.findByDocumento(dto.documento) : null;
     if (existingClinic) {
       throw new ConflictException(`${dto.tipoDocumento} já cadastrado.`);
     }
@@ -234,6 +246,59 @@ export class ClinicasService {
     const clinica = await this.clinicas.findById(clinicaId);
     if (!clinica) throw new NotFoundException('Clinica nao encontrada.');
     return { nome: clinica.nome, fusoHorario: clinica.configuracoes.fusoHorario || 'America/Sao_Paulo' };
+  }
+
+  /** Declaração e atestado saem com o documento do consultório no cabeçalho: sem ele o servidor não emite. */
+  async assertDocumentoInformado(clinicaId: string): Promise<void> {
+    const clinica = await this.clinicas.findById(clinicaId);
+    if (!clinica) throw new NotFoundException('Clinica nao encontrada.');
+    if (!clinica.documento) throw new UnprocessableEntityException('Informe o CPF/CNPJ do consultório');
+  }
+
+  /**
+   * Primeiro uso: a psicóloga informa o documento do PRÓPRIO consultório, uma única vez. O tenant vem só do token.
+   * A trava é o filtro do update (atômico); depois só o super-admin corrige. A auditoria leva só o valor mascarado.
+   */
+  async preencherDocumento(dto: PreencherDocumentoDto, context: ClinicAdminContext): Promise<MinhaClinica> {
+    const clinicaId = context.user.clinicaId;
+    if (!clinicaId) throw new ForbiddenException('Usuario sem clinica no token.');
+
+    // Documento que já é de OUTRA clínica: resposta genérica (400), igual à de um número recusado. O cliente nunca
+    // descobre que o valor existe em outra clínica; o log leva só o clinicaId, nunca o documento.
+    const outra = await this.clinicas.findByDocumento(dto.documento);
+    if (outra && outra.id !== clinicaId) {
+      this.logger.warn(JSON.stringify({ event: 'clinic_document_collision', clinicaId }));
+      throw new BadRequestException(MSG_DOCUMENTO_NAO_SALVO);
+    }
+
+    let atualizada: Clinica | null;
+    try {
+      atualizada = await this.clinicas.preencherDocumentoSeVazio(clinicaId, dto.documento, dto.tipoDocumento);
+    } catch (error) {
+      // Corrida: o índice único recusou depois da checagem (E11000). Mesma resposta genérica, sem a mensagem do Mongo.
+      if ((error as { code?: number })?.code === 11000) {
+        this.logger.warn(JSON.stringify({ event: 'clinic_document_collision', clinicaId, origem: 'indice_unico' }));
+        throw new BadRequestException(MSG_DOCUMENTO_NAO_SALVO);
+      }
+      throw error;
+    }
+    if (!atualizada) {
+      throw new ConflictException('O CPF/CNPJ do consultório já foi informado. Para corrigir, fale com o suporte.');
+    }
+
+    await this.auditLogs.create({
+      event: AuditEvent.CLINIC_FISCAL_DOCUMENT_FILLED,
+      userId: context.user.sub,
+      email: context.user.email,
+      ip: context.ip,
+      userAgent: context.userAgent,
+      metadata: {
+        clinicaId,
+        tipoDocumento: dto.tipoDocumento,
+        documentoMascarado: mascararDocumentoFiscal(dto.tipoDocumento, dto.documento),
+      },
+    });
+    return this.obterMinha(context.user);
   }
 
   async obterMinha(user: AuthTokenPayload): Promise<MinhaClinica> {

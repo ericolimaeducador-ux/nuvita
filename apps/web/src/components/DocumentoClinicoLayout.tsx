@@ -4,6 +4,7 @@ import { ArrowLeft, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
 import { GateCrpEmissao } from '@/components/GateCrpEmissao';
+import { GateDocumentoConsultorio } from '@/components/GateDocumentoConsultorio';
 
 /**
  * Moldura de impressão compartilhada pelos documentos clínicos gerados
@@ -16,6 +17,7 @@ export function DocumentoClinicoLayout({
 }: { rotulo: string; onVoltar: () => void; children: ReactNode }) {
   const navigate = useNavigate();
   return (
+    <GateDocumentoConsultorio>
     <GateCrpEmissao>
       <div className="print:hidden flex items-center gap-3 p-4 border-b border-border">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -50,5 +52,6 @@ export function DocumentoClinicoLayout({
         }
       `}</style>
     </GateCrpEmissao>
+    </GateDocumentoConsultorio>
   );
 }

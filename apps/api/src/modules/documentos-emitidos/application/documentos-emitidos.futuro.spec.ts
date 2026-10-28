@@ -18,7 +18,7 @@ function criar(inicio: Date, fim: Date) {
     documentos as never, { create: jest.fn().mockResolvedValue(undefined) } as never,
     { obterParaEmissao: jest.fn().mockResolvedValue(ag) } as never,
     { resumoPorIds: jest.fn().mockResolvedValue(new Map([['pac-1', { nome: 'Paciente Fictício' }]])) } as never,
-    { contextoDeEmissao: jest.fn().mockResolvedValue({ nome: 'Clínica', fusoHorario: 'America/Sao_Paulo' }) } as never,
+    { contextoDeEmissao: jest.fn().mockResolvedValue({ nome: 'Clínica', fusoHorario: 'America/Sao_Paulo' }), assertDocumentoInformado: jest.fn().mockResolvedValue(undefined) } as never,
     { findById: jest.fn().mockResolvedValue({ id: 'psi-1', crp: '06/12345' }) } as never,
   );
   return { service, documentos };

@@ -86,8 +86,8 @@ describe('CriarClinicaDto — validação do documento conforme o tipo', () => {
     expect((await erros({ documento: '52998224725' })).length).toBeGreaterThan(0);
   });
 
-  it('campo antigo "cnpj" não é mais aceito no lugar de documento', async () => {
-    expect((await erros({ cnpj: '11222333000181' })).length).toBeGreaterThan(0);
+  it('sem documento nem tipo: aceito (a psicóloga informa o documento do consultório no primeiro uso)', async () => {
+    expect(await erros({})).toEqual([]);
   });
 });
 

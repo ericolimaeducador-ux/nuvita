@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { randomUUID } from 'crypto';
+import { Model, Types } from 'mongoose';
 import {
   CreateClinicaInput,
   ClinicaRepository,
@@ -13,6 +14,12 @@ import {
 import { Clinica } from '../../domain/clinica.entity';
 import { ClinicaDocument, ClinicaMongo } from './clinica.schema';
 
+/**
+ * O índice único de `cnpj` (produção) não é esparso: duas clínicas sem documento colidiriam. Sem documento, a clínica guarda
+ * um valor único com este prefixo (sem migração de índice no beta); o repositório o devolve como documento vazio.
+ */
+const PREFIXO_SEM_DOCUMENTO = 'SEM-DOCUMENTO-';
+
 @Injectable()
 export class ClinicaMongoRepository implements ClinicaRepository {
   constructor(@InjectModel(ClinicaMongo.name) private readonly model: Model<ClinicaDocument>) {}
@@ -21,7 +28,7 @@ export class ClinicaMongoRepository implements ClinicaRepository {
     const { documento, ...resto } = input;
     const created = await this.model.create({
       ...resto,
-      cnpj: normalizarDocumentoFiscal(documento),
+      cnpj: documento ? normalizarDocumentoFiscal(documento) : `${PREFIXO_SEM_DOCUMENTO}${randomUUID()}`,
       tipoDocumento: input.tipoDocumento,
       faseTeste: input.faseTeste ?? false,
       ativo: true,
@@ -56,7 +63,12 @@ export class ClinicaMongoRepository implements ClinicaRepository {
     if (input.plano !== undefined) update.plano = input.plano;
     if (input.ativo !== undefined) update.ativo = input.ativo;
     if (input.faseTeste !== undefined) update.faseTeste = input.faseTeste;
-    if (input.documento !== undefined) update.cnpj = normalizarDocumentoFiscal(input.documento);
+    if (input.documento !== undefined) {
+      // Documento vazio = voltar a "sem documento" (compensação de uma edição): novo sentinela, nunca string vazia
+      // (duas clínicas com '' colidiriam no índice único e a gravação única não casaria mais).
+      const normalizado = normalizarDocumentoFiscal(input.documento);
+      update.cnpj = normalizado || `${PREFIXO_SEM_DOCUMENTO}${randomUUID()}`;
+    }
     if (input.tipoDocumento !== undefined) update.tipoDocumento = input.tipoDocumento;
     if (input.telefone !== undefined) update['configuracoes.telefone'] = input.telefone;
     if (input.emailContato !== undefined) update['configuracoes.emailContato'] = input.emailContato;
@@ -71,12 +83,23 @@ export class ClinicaMongoRepository implements ClinicaRepository {
     return document ? this.toEntity(document) : null;
   }
 
+  async preencherDocumentoSeVazio(id: string, documento: string, tipoDocumento: TipoDocumentoFiscal): Promise<Clinica | null> {
+    const document = await this.model
+      .findOneAndUpdate(
+        { _id: new Types.ObjectId(id), cnpj: { $regex: `^${PREFIXO_SEM_DOCUMENTO}` } },
+        { $set: { cnpj: normalizarDocumentoFiscal(documento), tipoDocumento } },
+        { new: true },
+      )
+      .exec();
+    return document ? this.toEntity(document) : null;
+  }
+
   private toEntity(document: ClinicaDocument): Clinica {
     const object = document.toObject({ getters: false });
     return {
       id: object._id.toString(),
       nome: object.nome,
-      documento: object.cnpj,
+      documento: object.cnpj?.startsWith(PREFIXO_SEM_DOCUMENTO) ? '' : object.cnpj,
       tipoDocumento: object.tipoDocumento ?? TipoDocumentoFiscal.CNPJ,
       endereco: object.endereco as unknown as Clinica['endereco'],
       plano: object.plano,

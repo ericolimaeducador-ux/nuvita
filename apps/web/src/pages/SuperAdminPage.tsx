@@ -32,6 +32,7 @@ import {
   resolvePermissoes, Papel, PAPEL_LABEL, registroLabel, papelTemRegistro,
 } from '@/types';
 import type { UsuarioAdmin } from '@/types';
+import { rotuloDocumentoClinica } from '@/lib/documentoClinica';
 import { documentoFiscalValido, formatarDocumentoFiscal, normalizarDocumentoFiscal, TipoDocumentoFiscal } from '@/lib/documento-fiscal';
 import { SegredoDoisFatores } from '@/components/SegredoDoisFatores';
 
@@ -87,7 +88,8 @@ const clinicaSchema = z.object({
   faseTeste: z.boolean(),
   // Identidade fiscal: corrigível só aqui (super-admin). O servidor é o gate; o cliente só avisa cedo.
   tipoDocumento: z.nativeEnum(TipoDocumentoFiscal),
-  documento: z.string().min(1, 'Informe o documento.'),
+  // Vazio = clínica ainda sem documento (a psicóloga informa no primeiro uso); só valida se for trocado.
+  documento: z.string(),
 });
 type ClinicaForm = z.infer<typeof clinicaSchema>;
 
@@ -98,7 +100,8 @@ const novaClinicaSchema = z
   nome: z.string().min(1, 'Informe o nome.'),
   // CPF: profissional que atende como pessoa física. CNPJ: empresa (aceita o alfanumérico).
   tipoDocumento: z.nativeEnum(TipoDocumentoFiscal),
-  documento: z.string().min(1, 'Informe o documento.'),
+  // Opcional: a psicóloga informa o CPF/CNPJ do consultório no primeiro uso.
+  documento: z.string(),
   plano: z.enum(['basico', 'profissional', 'enterprise']),
   fusoHorario: z.string().min(1, 'Informe o fuso horário.'),
   duracaoConsultaPadrao: z
@@ -111,7 +114,7 @@ const novaClinicaSchema = z
   faseTeste: z.boolean({ message: 'Escolha se é clínica do teste beta.' }),
   })
   .superRefine((v, ctx) => {
-    if (!documentoFiscalValido(v.tipoDocumento, v.documento)) {
+    if (v.documento.trim() && !documentoFiscalValido(v.tipoDocumento, v.documento)) {
       ctx.addIssue({ code: 'custom', path: ['documento'], message: `${v.tipoDocumento} inválido. Confira os números.` });
     }
   });
@@ -286,8 +289,7 @@ export function SuperAdminPage() {
       superAdminApi.criarClinica({
         clinica: {
           nome: v.nome,
-          tipoDocumento: v.tipoDocumento,
-          documento: v.documento,
+          ...(v.documento.trim() ? { tipoDocumento: v.tipoDocumento, documento: v.documento } : {}),
           plano: v.plano,
           fusoHorario: v.fusoHorario,
           duracaoConsultaPadrao: Number(v.duracaoConsultaPadrao),
@@ -549,8 +551,8 @@ export function SuperAdminPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        <span className="text-xs mr-1.5">{c.tipoDocumento}</span>
-                        <span className="font-mono">{formatarDocumentoFiscal(c.tipoDocumento as TipoDocumentoFiscal, c.documento)}</span>
+                        {c.documento && <span className="text-xs mr-1.5">{c.tipoDocumento}</span>}
+                        <span className="font-mono">{rotuloDocumentoClinica(c.tipoDocumento, c.documento)}</span>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{PLANO_LABEL[c.plano]}</Badge>

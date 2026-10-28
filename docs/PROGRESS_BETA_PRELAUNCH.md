@@ -232,3 +232,8 @@ Rules from now on:
 2. Every provider/controller constructor parameter must be injectable (class, `@Inject(token)` or `@Optional()`). `di-parametros-injetaveis.spec.ts` scans all modules and fails the build otherwise.
 3. A change counts as deployed only when the new Cloud Run revision is serving traffic, not when CI is green. Check the "Deploy API to Cloud Run" run after every merge that touches the API.
 4. Residual risk: the scan does not catch a provider missing from a module's context; only a real boot does. A boot smoke step in CI is a post-beta item.
+
+## Post-beta debt: clinic fiscal document on first use (2026-10-28, by Erico)
+- A clinic can be created without CPF/CNPJ; the psychologist fills it ONCE (`PATCH /clinicas/minha/documento`) and only the super-admin corrects it afterwards. Feature doc: `docs/harness/features/feature-clinic-fiscal-document-first-use.md`.
+- The server refuses declaração and atestado without the document (422). Laudo, encaminhamento, prescrição and the prontuário print are blocked on the SCREEN only (`GateDocumentoConsultorio`): same class of debt as BUG-019 (the server does not refuse them).
+- A clinic without a document stores a unique placeholder `SEM-DOCUMENTO-<id>` in `cnpj` (the unique index in production is not sparse). Clean fix, post-beta: partial unique index.

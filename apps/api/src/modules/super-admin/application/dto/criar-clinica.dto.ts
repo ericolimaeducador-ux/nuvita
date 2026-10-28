@@ -1,5 +1,5 @@
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsDefined, IsEmail, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min, Validate, ValidateNested } from 'class-validator';
+import { IsBoolean, IsDefined, IsEmail, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min, Validate, ValidateIf, ValidateNested } from 'class-validator';
 import { TipoDocumentoFiscal } from '../../../../../../../packages/shared/src/documentos';
 import { DocumentoFiscalConstraint } from '../../../clinicas/application/dto/documento-fiscal.validator';
 import { PlanoClinica } from '../../../clinicas/domain/clinica.entity';
@@ -11,14 +11,19 @@ class ClinicaInputDto {
   @IsNotEmpty()
   nome!: string;
 
-  /** CPF para profissional que atende como pessoa física; CNPJ para empresa. */
+  /**
+   * CPF para profissional que atende como pessoa física; CNPJ para empresa. OPCIONAL na criação: a psicóloga informa
+   * o documento do consultório no primeiro uso. Os dois campos andam juntos.
+   */
+  @ValidateIf((o: ClinicaInputDto) => o.documento !== undefined || o.tipoDocumento !== undefined)
   @IsEnum(TipoDocumentoFiscal)
-  tipoDocumento!: TipoDocumentoFiscal;
+  tipoDocumento?: TipoDocumentoFiscal;
 
+  @ValidateIf((o: ClinicaInputDto) => o.documento !== undefined || o.tipoDocumento !== undefined)
   @IsString()
   @IsNotEmpty()
   @Validate(DocumentoFiscalConstraint)
-  documento!: string;
+  documento?: string;
 
   @IsEnum(PlanoClinica)
   plano!: PlanoClinica;

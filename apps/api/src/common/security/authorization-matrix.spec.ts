@@ -9,6 +9,7 @@ import { AgendamentosController } from '../../modules/agendamentos/presentation/
 import { AnalyticsController } from '../../modules/analytics/presentation/analytics.controller';
 import { AuthController } from '../../modules/auth/presentation/auth.controller';
 import { PasswordResetController } from '../../modules/auth/presentation/password-reset.controller';
+import { ClinicaDocumentoController } from '../../modules/clinicas/presentation/clinica-documento.controller';
 import { ClinicasController } from '../../modules/clinicas/presentation/clinicas.controller';
 import { DocumentosController } from '../../modules/documentos/presentation/documentos.controller';
 import { DocumentosEmitidosController } from '../../modules/documentos-emitidos/presentation/documentos-emitidos.controller';
@@ -37,7 +38,7 @@ import { TicketsController } from '../../modules/tickets/presentation/tickets.co
  * Rotas sem RolesGuard só são aceitas se a matriz as marcar explicitamente (PUBLICO / LOGADO / ...).
  */
 const CONTROLLERS = [
-  AgendamentosController, AnalyticsController, AuthController, PasswordResetController, ClinicasController, DocumentosController,
+  AgendamentosController, AnalyticsController, AuthController, PasswordResetController, ClinicasController, ClinicaDocumentoController, DocumentosController,
   DocumentosEmitidosController,
   FinanceiroController, PsicologiaFinanceiroController, HealthController, IaClinicaController,
   InscricoesTesteController, LembretesAgendamentoController, NotificacoesController,

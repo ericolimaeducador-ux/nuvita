@@ -55,6 +55,13 @@ export function documentoFiscalValido(tipo: TipoDocumentoFiscal, valor: string):
   return tipo === TipoDocumentoFiscal.CPF ? cpfValido(valor) : cnpjValido(valor);
 }
 
+// Só os 2 últimos dígitos aparecem (a auditoria nunca guarda o documento inteiro).
+export function mascararDocumentoFiscal(tipo: TipoDocumentoFiscal, valor: string): string {
+  const d = normalizarDocumentoFiscal(valor);
+  const fim = d.slice(-2);
+  return tipo === TipoDocumentoFiscal.CPF ? `***.***.***-${fim}` : `**.***.***/****-${fim}`;
+}
+
 /** 000.000.000-00 ou 00.000.000/0000-00 (aceita letras no CNPJ). Valor inválido volta normalizado. */
 export function formatarDocumentoFiscal(tipo: TipoDocumentoFiscal, valor: string): string {
   const d = normalizarDocumentoFiscal(valor);

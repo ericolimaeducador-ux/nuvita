@@ -1,10 +1,11 @@
-import { BadRequestException, ConflictException, ExecutionContext, ForbiddenException, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, ConflictException, ExecutionContext, ForbiddenException, RequestMethod, ValidationPipe } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { Papel } from '../../../../../packages/shared/src/auth';
 import { TipoDocumentoFiscal } from '../../../../../packages/shared/src/documentos';
 import { AuditEvent } from '../auth/domain/audit-event.enum';
 import { SuperAdminGuard } from '../auth/presentation/guards/super-admin.guard';
+import { ClinicasService } from '../clinicas/application/clinicas.service';
 import { PlanoClinica } from '../clinicas/domain/clinica.entity';
 import { ClinicaMongoRepository } from '../clinicas/infrastructure/mongo/clinica-mongo.repository';
 import { UpdateClinicaDto } from './application/dto/update-clinica.dto';
@@ -226,8 +227,45 @@ describe('(c) só SUPER_ADMIN alcança esse caminho', () => {
     expect(guards).toContain(SuperAdminGuard);
   });
 
-  it('ClinicasController (rota do ADMIN) não expõe nenhum endpoint que grave documento/tipoDocumento', () => {
+  // Invariante reescrita (feature-clinic-fiscal-document-first-use; antes: "só o SUPER_ADMIN grava o documento").
+  // Agora: (i) o documento da clínica só é gravável pelo SUPER_ADMIN (qualquer valor) ou por PATCH /clinicas/minha/documento;
+  // (ii) esse endpoint só grava quando o valor atual é o sentinela SEM-DOCUMENTO-; (iii) só na PRÓPRIA clínica do token.
+  it('(i) ClinicasController (rota do ADMIN) continua sem endpoint que grave documento/tipoDocumento', () => {
     const fonte = readFileSync(join(__dirname, '../clinicas/presentation/clinicas.controller.ts'), 'utf8');
     expect(fonte).not.toMatch(/@(Patch|Put)[^]*?(documento|tipoDocumento)/);
+  });
+
+  it('(i) a única outra rota que grava o documento é PATCH /clinicas/minha/documento, só para PSICOLOGO', () => {
+    const { ClinicaDocumentoController } = jest.requireActual('../clinicas/presentation/clinica-documento.controller');
+    expect(Reflect.getMetadata('path', ClinicaDocumentoController)).toBe('clinicas/minha');
+    const rota = ClinicaDocumentoController.prototype.preencherDocumento;
+    expect(Reflect.getMetadata('path', rota)).toBe('documento');
+    expect(Reflect.getMetadata('method', rota)).toBe(RequestMethod.PATCH);
+    expect(Reflect.getMetadata('roles', rota)).toEqual([Papel.PSICOLOGO]);
+    const fonte = readFileSync(join(__dirname, '../clinicas/presentation/clinica-documento.controller.ts'), 'utf8');
+    expect((fonte.match(/@(Patch|Put|Post|Delete)\(/g) ?? []).length).toBe(1);
+  });
+
+  it('(ii) o endpoint só grava quando o documento atual é o sentinela (o filtro do update exige o prefixo)', async () => {
+    const findOneAndUpdate = jest.fn().mockReturnValue({ exec: async () => null });
+    const repo = new ClinicaMongoRepository({ findOneAndUpdate } as never);
+    await repo.preencherDocumentoSeVazio('6addf7a498eae6c5fd7e9dda', '529.982.247-25', TipoDocumentoFiscal.CPF);
+    expect(findOneAndUpdate.mock.calls[0][0].cnpj).toEqual({ $regex: '^SEM-DOCUMENTO-' });
+  });
+
+  it('(iii) só grava na PRÓPRIA clínica do token: a rota não recebe id de clínica e o service usa o clinicaId do token', async () => {
+    const { ClinicaDocumentoController } = jest.requireActual('../clinicas/presentation/clinica-documento.controller');
+    const fonte = readFileSync(join(__dirname, '../clinicas/presentation/clinica-documento.controller.ts'), 'utf8');
+    expect(fonte).not.toMatch(/@(Param|Query)\(/);
+    expect(ClinicaDocumentoController).toBeDefined();
+    const preencher = jest.fn().mockResolvedValue({ id: 'cli-do-token', documento: '52998224725', tipoDocumento: 'CPF' });
+    const clinicas = {
+      findByDocumento: jest.fn().mockResolvedValue(null), findById: jest.fn().mockResolvedValue({ id: 'cli-do-token', nome: 'C', documento: '52998224725', configuracoes: {} }),
+      preencherDocumentoSeVazio: preencher,
+    };
+    const service = new ClinicasService(clinicas as never, {} as never, { create: jest.fn() } as never, { getConfig: jest.fn().mockReturnValue({}) } as never, { getSignedReadUrl: jest.fn() } as never);
+    const usuario = { sub: 'psi-1', email: 'p@x.test', papel: Papel.PSICOLOGO, clinicaId: 'cli-do-token', jti: 'j', typ: 'access' as const };
+    await service.preencherDocumento({ tipoDocumento: TipoDocumentoFiscal.CPF, documento: '529.982.247-25' }, { ip: '1', userAgent: 'j', user: usuario });
+    expect(preencher.mock.calls[0][0]).toBe('cli-do-token');
   });
 });

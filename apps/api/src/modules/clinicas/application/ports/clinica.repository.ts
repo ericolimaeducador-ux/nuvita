@@ -2,7 +2,11 @@ import { TipoDocumentoFiscal } from '../../../../../../../packages/shared/src/do
 import { Clinica } from '../../domain/clinica.entity';
 import { CreateClinicaDto } from '../dto/create-clinica.dto';
 
-export type CreateClinicaInput = Omit<CreateClinicaDto, 'primeiroAdmin'>;
+/** Documento opcional: a clínica criada pelo super-admin pode nascer sem ele (feature-clinic-fiscal-document-first-use). */
+export type CreateClinicaInput = Omit<CreateClinicaDto, 'primeiroAdmin' | 'documento' | 'tipoDocumento'> & {
+  documento?: string;
+  tipoDocumento?: TipoDocumentoFiscal;
+};
 
 export interface UpdateClinicaInput {
   nome?: string;
@@ -26,6 +30,11 @@ export interface ClinicaRepository {
   findByDocumento(documento: string): Promise<Clinica | null>;
   findAll(): Promise<Clinica[]>;
   update(id: string, input: UpdateClinicaInput): Promise<Clinica | null>;
+  /**
+   * Primeiro uso: grava documento + tipo SÓ se a clínica ainda não tem documento (o filtro do update é a trava, atômica).
+   * Devolve null quando já estava preenchido (ou a clínica não existe).
+   */
+  preencherDocumentoSeVazio(id: string, documento: string, tipoDocumento: TipoDocumentoFiscal): Promise<Clinica | null>;
   /** Usado só para compensar onboarding parcial (admin não criado). Não é operação de produto. */
   delete(id: string): Promise<void>;
 }

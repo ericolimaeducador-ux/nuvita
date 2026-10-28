@@ -92,7 +92,7 @@ export class CreateClinicaDto {
   @IsEnum(TipoDocumentoFiscal)
   tipoDocumento!: TipoDocumentoFiscal;
 
-  /** CPF ou CNPJ conforme `tipoDocumento`; aceita com ou sem pontuação. */
+  /** CPF ou CNPJ conforme `tipoDocumento`; aceita com ou sem pontuação. OBRIGATÓRIO aqui (só a criação pelo super-admin o dispensa). */
   @IsString()
   @Validate(DocumentoFiscalConstraint)
   documento!: string;

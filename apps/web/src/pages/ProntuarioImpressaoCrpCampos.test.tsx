@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({ pacienteGet: vi.fn(), prontuariosGet: vi.fn() 
 vi.mock('@/auth/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'u1', clinicaId: 'c1', papel: 'PSICOLOGO', nome: 'Psi Logada', crp: 'CRP 11/11111' } }),
 }));
+// Setup: consultório com CPF/CNPJ informado (sem isso a psicóloga cai no gate do documento do consultório).
+vi.mock('@/lib/useClinicaMinha', () => ({ useClinicaMinha: () => ({ isLoading: false, isError: false, data: { nome: 'Clínica', documento: '52998224725', tipoDocumento: 'CPF' } }) }));
 vi.mock('@/api/resources', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/api/resources')>();
   return {

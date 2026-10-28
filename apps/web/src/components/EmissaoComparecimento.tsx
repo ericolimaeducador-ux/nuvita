@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/PageHeader';
 import { DocumentoClinicoLayout } from '@/components/DocumentoClinicoLayout';
+import { GateDocumentoConsultorio } from '@/components/GateDocumentoConsultorio';
 import { ErroConsulta } from '@/components/ErroConsulta';
 import { agendaApi, pacientesApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
@@ -29,7 +30,15 @@ interface Props {
  * servidor; o texto, a data/hora e os dados de assinatura vêm prontos de lá, e a tela só renderiza.
  * Sem atendimento concluído, não há o que emitir.
  */
-export function EmissaoComparecimento({ titulo, rotuloBotao, corpoTestId, emitir, renderAssinatura }: Props) {
+export function EmissaoComparecimento(props: Props) {
+  return (
+    <GateDocumentoConsultorio>
+      <EmissaoComparecimentoInterna {...props} />
+    </GateDocumentoConsultorio>
+  );
+}
+
+function EmissaoComparecimentoInterna({ titulo, rotuloBotao, corpoTestId, emitir, renderAssinatura }: Props) {
   const { id: pacienteId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [escolhido, setEscolhido] = useState<string>();

@@ -10,6 +10,7 @@ import { ErroConsulta } from '@/components/ErroConsulta';
 import { primeiraFalha } from '@/lib/consulta';
 import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
 import { GateCrpEmissao } from '@/components/GateCrpEmissao';
+import { GateDocumentoConsultorio } from '@/components/GateDocumentoConsultorio';
 import { useEmissor } from '@/components/DocumentoAssinatura';
 import { TipoAtendimento, TIPO_ATENDIMENTO_LABEL, REGISTRO_PSICOLOGICO_CAMPOS, type ExameSegmentar } from '@/types';
 import { camposDoFormulario, formularioDoRegistro, linhaDoRegistro, rotuloDoCampo, ROTULO_FORMULARIO } from '@/lib/registroPsicologico';
@@ -115,6 +116,7 @@ export function ProntuarioImpressaoPage() {
   const seg = pr?.objetivo?.exameSegmentar;
 
   return (
+    <GateDocumentoConsultorio>
     <GateCrpEmissao>
       {/* Botões só na tela, não imprimem */}
       <div className="print:hidden flex items-center gap-3 p-4 border-b border-border">
@@ -266,5 +268,6 @@ export function ProntuarioImpressaoPage() {
         }
       `}</style>
     </GateCrpEmissao>
+    </GateDocumentoConsultorio>
   );
 }

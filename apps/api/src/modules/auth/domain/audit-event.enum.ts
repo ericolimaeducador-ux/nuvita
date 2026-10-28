@@ -45,6 +45,8 @@ export enum AuditEvent {
   CLINIC_CONTACT_UPDATED = 'CLINIC_CONTACT_UPDATED',
   // identidade fiscal da clínica (documento + tipoDocumento): correção só pelo super-admin, com antes/depois
   CLINIC_FISCAL_DOCUMENT_UPDATED = 'CLINIC_FISCAL_DOCUMENT_UPDATED',
+  // feature-clinic-fiscal-document-first-use: a psicóloga informa o documento do consultório UMA vez (metadata: valor mascarado)
+  CLINIC_FISCAL_DOCUMENT_FILLED = 'CLINIC_FISCAL_DOCUMENT_FILLED',
   // feature-logo-clinica: definir/trocar e remover a logo (só a clínica no metadata; nunca chave nem URL)
   CLINIC_LOGO_UPDATED = 'CLINIC_LOGO_UPDATED',
   CLINIC_LOGO_REMOVED = 'CLINIC_LOGO_REMOVED',

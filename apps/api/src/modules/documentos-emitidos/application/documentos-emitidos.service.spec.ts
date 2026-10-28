@@ -32,7 +32,7 @@ function criar(over: { ag?: unknown; paciente?: boolean; crp?: string | undefine
   const pacientes = {
     resumoPorIds: jest.fn().mockResolvedValue(over.paciente === false ? new Map() : new Map([['pac-1', { nome: 'Paciente Fictício' }]])),
   };
-  const clinicas = { contextoDeEmissao: jest.fn().mockResolvedValue({ nome: 'Clínica Mente Sã', fusoHorario: 'America/Sao_Paulo' }) };
+  const clinicas = { contextoDeEmissao: jest.fn().mockResolvedValue({ nome: 'Clínica Mente Sã', fusoHorario: 'America/Sao_Paulo' }), assertDocumentoInformado: jest.fn().mockResolvedValue(undefined) };
   const users = { findById: jest.fn().mockResolvedValue({ id: 'psi-1', crp: 'crp' in over ? over.crp : '06/12345' }) };
   const service = new DocumentosEmitidosService(
     documentos as never, auditLogs as never, agendamentos as never, pacientes as never, clinicas as never, users as never,

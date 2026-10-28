@@ -102,6 +102,9 @@ export interface MinhaClinica {
 
 export const clinicasApi = {
   minha: () => api.get<MinhaClinica>('/clinicas/minha').then((r) => r.data),
+  // Primeiro uso: a psicóloga informa o CPF/CNPJ do consultório UMA vez (depois só o super-admin corrige).
+  preencherDocumento: (payload: { tipoDocumento: 'CPF' | 'CNPJ'; documento: string }) =>
+    api.patch<MinhaClinica>('/clinicas/minha/documento', payload).then((r) => r.data),
   // Cria um usuário (profissional ou secretaria) dentro da clínica do ADMIN.
   criarUsuario: (clinicaId: string, payload: CriarUsuarioPayload) =>
     api.post<CriarUsuarioResponse>(`/clinicas/${clinicaId}/usuarios`, payload).then((r) => r.data),
@@ -447,8 +450,9 @@ export interface UpdateClinicaPayload {
 export interface CriarClinicaPayload {
   clinica: {
     nome: string;
-    tipoDocumento: TipoDocumentoClinica;
-    documento: string;
+    /** Opcional: a psicóloga informa o CPF/CNPJ do consultório no primeiro uso (os dois andam juntos). */
+    tipoDocumento?: TipoDocumentoClinica;
+    documento?: string;
     plano: ClinicaAdmin['plano'];
     fusoHorario: string;
     duracaoConsultaPadrao: number;

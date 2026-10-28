@@ -54,6 +54,7 @@ export const MATRIZ_API: Record<string, string> = {
 
   // clínica
   'GET /clinicas/minha': 'APS',
+  'PATCH /clinicas/minha/documento': 'P',
   'POST /clinicas/:clinicaId/logo/upload-url': 'A',
   'POST /clinicas/:clinicaId/logo/confirmar': 'A',
   'DELETE /clinicas/:clinicaId/logo': 'A',

@@ -15,6 +15,7 @@ import { ClinicasService } from './application/clinicas.service';
 import { CLINICA_REPOSITORY } from './clinicas.constants';
 import { ClinicaMongoRepository } from './infrastructure/mongo/clinica-mongo.repository';
 import { ClinicaMongo, ClinicaSchema } from './infrastructure/mongo/clinica.schema';
+import { ClinicaDocumentoController } from './presentation/clinica-documento.controller';
 import { ClinicasController } from './presentation/clinicas.controller';
 
 @Module({
@@ -27,7 +28,7 @@ import { ClinicasController } from './presentation/clinicas.controller';
       { name: AuditLogMongo.name, schema: AuditLogSchema },
     ]),
   ],
-  controllers: [ClinicasController],
+  controllers: [ClinicasController, ClinicaDocumentoController],
   providers: [
     ClinicasService,
     ClinicaLogoService,

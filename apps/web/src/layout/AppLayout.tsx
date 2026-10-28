@@ -191,14 +191,16 @@ export function AppLayout() {
               </Select>
             </div>
           )}
-          <button
-            onClick={() => navigate('/notificacoes')}
-            className="relative p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-            aria-label="Notificações"
-          >
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-accent-gold" />
-          </button>
+          {permissoes.includes(Modulo.NOTIFICACOES) && (
+            <button
+              onClick={() => navigate('/notificacoes')}
+              className="relative p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              aria-label="Notificações"
+            >
+              <Bell className="h-5 w-5" />
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-accent-gold" />
+            </button>
+          )}
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-semibold text-foreground leading-tight">{user?.nome ?? 'Usuário'}</p>

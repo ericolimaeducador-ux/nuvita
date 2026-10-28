@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { agendaApi } from '@/api/resources';
-import { apiErrorMessage } from '@/api/client';
+import { avisarErroDeAcao } from '@/api/client';
 import { toast } from '@/components/ui/use-toast';
 import { toItems, formatCpf } from '@/utils';
 import { ErroConsulta } from '@/components/ErroConsulta';
@@ -63,7 +63,7 @@ export function AgendaCalendario({
       setSelecionado(null);
       void qc.invalidateQueries({ queryKey: ['agenda'] });
     },
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+    onError: avisarErroDeAcao,
   });
 
   const reagendarMut = useMutation({
@@ -72,7 +72,7 @@ export function AgendaCalendario({
       toast.success('Agendamento reagendado.');
       void qc.invalidateQueries({ queryKey: ['agenda'] });
     },
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+    onError: avisarErroDeAcao,
   });
 
   const agendamentos = toItems<Agendamento>(listQ.data as never);

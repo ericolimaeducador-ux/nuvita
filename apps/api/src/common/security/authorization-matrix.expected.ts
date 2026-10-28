@@ -26,7 +26,7 @@ export const MATRIZ_API: Record<string, string> = {
   'POST /agendamentos': 'APS',
   'PATCH /agendamentos/:id': 'APS',
   'PATCH /agendamentos/:id/concluir': 'APS',
-  'PATCH /agendamentos/:id/cancelar': 'AS',
+  'PATCH /agendamentos/:id/cancelar': 'APS',
   'GET /agendamentos/bloqueios': 'APS',
   'POST /agendamentos/bloqueios': 'AP',
   'DELETE /agendamentos/bloqueios/:id': 'AP',

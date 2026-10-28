@@ -143,7 +143,10 @@ export class AgendamentosService {
 
   async cancel(id: string, dto: CancelAgendamentoDto, clinicaId: string | undefined, context: RequestAuditContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
-    await this.assertPosseSePsicologo(resolvedClinicaId, id, context.user);
+    // Lê antes de cancelar: a posse do psicólogo e o status anterior (vai para a auditoria).
+    const anterior = await this.agendamentos.findById(resolvedClinicaId, id);
+    if (!anterior) throw new NotFoundException('Agendamento nao encontrado.');
+    this.assertPosse(anterior, context.user);
 
     const agendamento = await this.agendamentos.updateStatus(
       resolvedClinicaId,
@@ -157,6 +160,7 @@ export class AgendamentosService {
     await this.audit(AuditEvent.APPOINTMENT_CANCELLED, context, {
       clinicaId: resolvedClinicaId,
       agendamentoId: id,
+      statusAnterior: anterior.status,
       motivo: dto.motivoCancelamento,
     });
 

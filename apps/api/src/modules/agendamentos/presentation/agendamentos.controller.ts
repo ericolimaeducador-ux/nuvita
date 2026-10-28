@@ -90,7 +90,7 @@ export class AgendamentosController {
   }
 
   @Patch(':id/cancelar')
-  @Roles(Papel.SECRETARIA, Papel.ADMIN)
+  @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
   cancel(
     @Param('id') id: string,
     @Body() dto: CancelAgendamentoDto,

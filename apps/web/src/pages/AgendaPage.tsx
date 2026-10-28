@@ -18,7 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { agendaApi, pacientesApi } from '@/api/resources';
-import { apiErrorMessage } from '@/api/client';
+import { apiErrorMessage, avisarErroDeAcao } from '@/api/client';
 import { toItems, formatCpf } from '@/utils';
 import { ErroConsulta } from '@/components/ErroConsulta';
 import { useAuth } from '@/auth/AuthContext';
@@ -103,7 +103,7 @@ export function AgendaPage() {
       setAgParaCancelar(null);
       void qc.invalidateQueries({ queryKey: ['agenda'] });
     },
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+    onError: avisarErroDeAcao,
   });
 
   const agendamentos = toItems<Agendamento>(listQ.data as never);

@@ -122,6 +122,13 @@ api.interceptors.response.use(
   },
 );
 
+/** onError de uma ação (cancelar, concluir, reagendar): o 403 já ganhou o toast "Acesso negado" do interceptor,
+ * com a mensagem do servidor; somar outro "Erro" duplicaria o aviso. */
+export function avisarErroDeAcao(err: unknown): void {
+  if ((err as AxiosError)?.response?.status === 403) return;
+  toast.error('Erro', apiErrorMessage(err));
+}
+
 export function apiErrorMessage(err: unknown, fallback = 'Ocorreu um erro.'): string {
   const e = err as AxiosError<{ message?: string | string[] }>;
   const msg = e?.response?.data?.message;

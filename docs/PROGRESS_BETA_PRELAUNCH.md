@@ -35,6 +35,7 @@ Checkpoint as of 2026-10-22. Lessons: `docs/licoes-aprendidas/2026-10-22-dialogs
 - Audit read screen for the super-admin; UX findings (draft leaves the Atend. Psicológico list, Agenda list does not refresh): sections of 2026-10-28 below.
 - Added 2026-10-28 (observed or reported, not fixed): the CRP is typed freely when a user is created (format validation only with an official CFP source; see also the row "Ask for the CRP at psychologist creation"); the browser session is shared between tabs (a login in one tab changes the role in the others); the 409 and 422 of the clinic document have unit tests only (never seen in a browser); the 403s listed above.
 - Atlas M0 without backup: "ACCEPTED RISK" section below.
+- Post-beta idea (2026-10-29, discarded for now): a psychologist with administrator powers inside the clinic (create users, logo) so a clinic created without an admin does not depend on the super-admin. It would change roles and the authorization matrix, so it needs its own design and feature file. Today the super-admin covers it (see `docs/harness/features/feature-clinica-sem-admin.md`).
 
 ## STATE AT END OF DAY 2026-10-23 (history; the current state is the section "State at night of 2026-10-28" above)
 

@@ -107,8 +107,9 @@ const novaClinicaSchema = z
   duracaoConsultaPadrao: z
     .string()
     .refine((s) => Number.isInteger(Number(s)) && Number(s) >= 5, 'Mínimo de 5 minutos.'),
-  adminNome: z.string().min(1, 'Informe o nome do admin.'),
-  adminEmail: z.string().email('E-mail inválido.'),
+  // Primeiro admin opcional (feature-clinica-sem-admin): os dois campos juntos, ou nenhum dos dois.
+  adminNome: z.string(),
+  adminEmail: z.string(),
   // Sem valor padrão: o super-admin precisa escolher Sim ou Não (esquecer a marcação no lançamento
   // colocaria o Termo de Teste na frente de clientes reais).
   faseTeste: z.boolean({ message: 'Escolha se é clínica do teste beta.' }),
@@ -116,6 +117,15 @@ const novaClinicaSchema = z
   .superRefine((v, ctx) => {
     if (v.documento.trim() && !documentoFiscalValido(v.tipoDocumento, v.documento)) {
       ctx.addIssue({ code: 'custom', path: ['documento'], message: `${v.tipoDocumento} inválido. Confira os números.` });
+    }
+    const nome = v.adminNome.trim();
+    const email = v.adminEmail.trim();
+    if (nome || email) {
+      if (!nome) ctx.addIssue({ code: 'custom', path: ['adminNome'], message: 'Informe o nome do admin.' });
+      if (!email) ctx.addIssue({ code: 'custom', path: ['adminEmail'], message: 'Informe o e-mail do admin.' });
+      else if (!z.string().email().safeParse(email).success) {
+        ctx.addIssue({ code: 'custom', path: ['adminEmail'], message: 'E-mail inválido.' });
+      }
     }
   });
 type NovaClinicaForm = z.infer<typeof novaClinicaSchema>;
@@ -295,18 +305,27 @@ export function SuperAdminPage() {
           duracaoConsultaPadrao: Number(v.duracaoConsultaPadrao),
           faseTeste: v.faseTeste,
         },
-        primeiroAdmin: { nome: v.adminNome, email: v.adminEmail },
+        ...(v.adminNome.trim() && v.adminEmail.trim()
+          ? { primeiroAdmin: { nome: v.adminNome.trim(), email: v.adminEmail.trim() } }
+          : {}),
       }),
     onSuccess: (res) => {
       setNovaClinicaOpen(false);
       novaClinicaForm.reset();
-      setSegredosClinica({
-        clinicaNome: res.clinica.nome,
-        adminEmail: res.admin.email,
-        senhaTemporaria: res.senhaTemporaria,
-        base32: res.twoFactorSetup?.base32 ?? null,
-        otpauthUrl: res.twoFactorSetup?.otpauthUrl ?? null,
-      });
+      if (res.admin && res.senhaTemporaria) {
+        setSegredosClinica({
+          clinicaNome: res.clinica.nome,
+          adminEmail: res.admin.email,
+          senhaTemporaria: res.senhaTemporaria,
+          base32: res.twoFactorSetup?.base32 ?? null,
+          otpauthUrl: res.twoFactorSetup?.otpauthUrl ?? null,
+        });
+      } else {
+        toast.success(
+          'Clínica criada SEM administrador.',
+          'Crie o psicólogo em "Novo usuário", escolhendo esta clínica.',
+        );
+      }
       void qc.invalidateQueries({ queryKey: ['super-admin', 'clinicas'] });
     },
     onError: (e) => toast.error('Erro ao criar clínica', apiErrorMessage(e)),
@@ -1102,7 +1121,9 @@ export function SuperAdminPage() {
               <div className="col-span-2 border-t border-border pt-3 space-y-1">
                 <p className="text-sm font-medium">Primeiro administrador da clínica</p>
                 <p className="text-xs text-muted-foreground">
-                  A senha é gerada automaticamente e exibida uma única vez após a criação.
+                  Opcional: se preencher um, preencha os dois. Sem administrador, a clínica é criada só com o
+                  psicólogo, que você cria depois em "Novo usuário". Com administrador, a senha é gerada
+                  automaticamente e exibida uma única vez após a criação.
                 </p>
               </div>
               <div className="space-y-1.5">

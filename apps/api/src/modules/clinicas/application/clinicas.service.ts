@@ -40,10 +40,21 @@ export interface MinhaClinica {
 const MSG_DOCUMENTO_NAO_SALVO = 'Não foi possível salvar. Confirme o número ou fale com o suporte.';
 
 /** Criação de clínica (onboard): o documento é opcional só aqui; o DTO do ADMIN/CLI (CreateClinicaDto) continua exigindo. */
-export type OnboardClinicaInput = Omit<CreateClinicaDto, 'documento' | 'tipoDocumento'> & {
+export type OnboardClinicaInput = Omit<CreateClinicaDto, 'documento' | 'tipoDocumento' | 'primeiroAdmin'> & {
   documento?: string;
   tipoDocumento?: TipoDocumentoFiscal;
+  /** Opcional só aqui (feature-clinica-sem-admin): sem ele a clínica nasce sozinha; o DTO da CLI continua exigindo. */
+  primeiroAdmin?: CreateClinicaDto['primeiroAdmin'];
 };
+
+type OnboardAdmin = { id: string; nome: string; email: string; papel: Papel; clinicaId?: string | null };
+
+interface OnboardResultado {
+  clinica: Clinica;
+  admin?: OnboardAdmin;
+  limites: (typeof LIMITES_POR_PLANO)[Clinica['plano']];
+  twoFactorSetup?: { required: true; otpauthUrl: string; base32: string };
+}
 
 export interface OnboardingContext {
   ip: string;
@@ -74,25 +85,26 @@ export class ClinicasService {
     @Inject('DOCUMENT_STORAGE') private readonly storage: DocumentStorage,
   ) {}
 
+  // Com primeiroAdmin o resultado sempre traz o admin; sem ele, não.
   async onboard(
-    dto: OnboardClinicaInput,
+    dto: OnboardClinicaInput & { primeiroAdmin: CreateClinicaDto['primeiroAdmin'] },
     context: OnboardingContext,
     options?: OnboardingOptions,
-  ): Promise<{
-    clinica: Clinica;
-    admin: { id: string; nome: string; email: string; papel: Papel; clinicaId?: string | null };
-    limites: (typeof LIMITES_POR_PLANO)[Clinica['plano']];
-    twoFactorSetup?: { required: true; otpauthUrl: string; base32: string };
-  }> {
+  ): Promise<OnboardResultado & { admin: OnboardAdmin }>;
+  async onboard(dto: OnboardClinicaInput, context: OnboardingContext, options?: OnboardingOptions): Promise<OnboardResultado>;
+  async onboard(dto: OnboardClinicaInput, context: OnboardingContext, options?: OnboardingOptions): Promise<OnboardResultado> {
     // O documento é opcional na criação (feature-clinic-fiscal-document-first-use): sem ele não há o que checar.
     const existingClinic = dto.documento ? await this.clinicas.findByDocumento(dto.documento) : null;
     if (existingClinic) {
       throw new ConflictException(`${dto.tipoDocumento} já cadastrado.`);
     }
 
-    const existingUser = await this.users.findByEmail(dto.primeiroAdmin.email.toLowerCase());
-    if (existingUser) {
-      throw new ConflictException('Email do primeiro admin ja cadastrado.');
+    const primeiroAdmin = dto.primeiroAdmin;
+    if (primeiroAdmin) {
+      const existingUser = await this.users.findByEmail(primeiroAdmin.email.toLowerCase());
+      if (existingUser) {
+        throw new ConflictException('Email do primeiro admin ja cadastrado.');
+      }
     }
 
     const clinica = await this.clinicas.create({
@@ -105,65 +117,65 @@ export class ClinicasService {
       configuracoes: dto.configuracoes,
     });
 
-    const adminEmail = dto.primeiroAdmin.email.toLowerCase();
-    const twoFactorSetup = this.buildTwoFactorSetup(Papel.ADMIN, adminEmail);
-
+    // Sem primeiroAdmin (feature-clinica-sem-admin) a clínica nasce sozinha: não há usuário a criar nem a compensar.
     let admin;
-    try {
-      admin = await this.users.create({
-        nome: dto.primeiroAdmin.nome,
-        email: adminEmail,
-        passwordHash: await this.hashPassword(dto.primeiroAdmin.password),
-        papel: Papel.ADMIN,
-        clinicaId: clinica.id,
-        twoFactorSecret: twoFactorSetup?.base32,
-        deveTrocarSenha: options?.deveTrocarSenha,
-        faseTeste: clinica.faseTeste,
-      });
-    } catch (error) {
-      // Clínica sem admin é lixo — compensa para não deixar órfã. Se a
-      // compensação também falhar, sobra limpeza manual.
-      this.logEventoObservabilidade('error', {
-        msg: 'Onboarding de clinica falhou ao criar o primeiro admin; compensando a clinica criada.',
-        event: 'onboarding_partial_failure',
-        stage: 'create_admin',
-        clinicaId: clinica.id,
-        userId: options?.atorUserId ?? null,
-      });
-      await this.clinicas.delete(clinica.id).catch((cleanupError) => {
+    let twoFactorSetup: ReturnType<ClinicasService['buildTwoFactorSetup']>;
+    if (primeiroAdmin) {
+      const adminEmail = primeiroAdmin.email.toLowerCase();
+      twoFactorSetup = this.buildTwoFactorSetup(Papel.ADMIN, adminEmail);
+      try {
+        admin = await this.users.create({
+          nome: primeiroAdmin.nome,
+          email: adminEmail,
+          passwordHash: await this.hashPassword(primeiroAdmin.password),
+          papel: Papel.ADMIN,
+          clinicaId: clinica.id,
+          twoFactorSecret: twoFactorSetup?.base32,
+          deveTrocarSenha: options?.deveTrocarSenha,
+          faseTeste: clinica.faseTeste,
+        });
+      } catch (error) {
+        // Clínica sem admin por falha é lixo — compensa para não deixar órfã. Se a
+        // compensação também falhar, sobra limpeza manual.
         this.logEventoObservabilidade('error', {
-          msg: `Compensacao da clinica orfa falhou; limpeza manual necessaria. ${cleanupError}`,
+          msg: 'Onboarding de clinica falhou ao criar o primeiro admin; compensando a clinica criada.',
           event: 'onboarding_partial_failure',
-          stage: 'compensate_clinic',
+          stage: 'create_admin',
           clinicaId: clinica.id,
           userId: options?.atorUserId ?? null,
         });
-      });
-      throw error;
+        await this.clinicas.delete(clinica.id).catch((cleanupError) => {
+          this.logEventoObservabilidade('error', {
+            msg: `Compensacao da clinica orfa falhou; limpeza manual necessaria. ${cleanupError}`,
+            event: 'onboarding_partial_failure',
+            stage: 'compensate_clinic',
+            clinicaId: clinica.id,
+            userId: options?.atorUserId ?? null,
+          });
+        });
+        throw error;
+      }
     }
 
     await this.auditLogs.create({
       event: AuditEvent.CLINIC_CREATED,
-      userId: options?.atorUserId ?? admin.id,
-      email: admin.email,
+      userId: options?.atorUserId ?? admin?.id,
+      // Sem admin não há e-mail a registrar: o campo fica vazio, nunca inventado.
+      ...(admin ? { email: admin.email } : {}),
       ip: context.ip,
       userAgent: context.userAgent,
       metadata: {
         clinicaId: clinica.id,
         plano: clinica.plano,
-        ...(options?.atorUserId ? { adminId: admin.id } : {}),
+        ...(options?.atorUserId && admin ? { adminId: admin.id } : {}),
       },
     });
 
     return {
       clinica,
-      admin: {
-        id: admin.id,
-        nome: admin.nome,
-        email: admin.email,
-        papel: admin.papel,
-        clinicaId: admin.clinicaId,
-      },
+      ...(admin
+        ? { admin: { id: admin.id, nome: admin.nome, email: admin.email, papel: admin.papel, clinicaId: admin.clinicaId } }
+        : {}),
       limites: LIMITES_POR_PLANO[clinica.plano],
       twoFactorSetup,
     };

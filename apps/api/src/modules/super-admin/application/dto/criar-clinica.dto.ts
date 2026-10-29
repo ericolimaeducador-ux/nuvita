@@ -59,25 +59,30 @@ class ClinicaInputDto {
   emailContato?: string;
 }
 
+/** Os dois campos andam juntos (feature-clinica-sem-admin): ou vêm nome e e-mail, ou nenhum dos dois. */
 class PrimeiroAdminInputDto {
+  @ValidateIf((o: PrimeiroAdminInputDto) => o.nome !== undefined || o.email !== undefined)
   @IsString()
   @IsNotEmpty()
-  nome!: string;
+  nome?: string;
 
+  @ValidateIf((o: PrimeiroAdminInputDto) => o.nome !== undefined || o.email !== undefined)
   @IsEmail()
-  email!: string;
+  email?: string;
 }
 
 /**
  * Corpo de POST /super-admin/clinicas. Campos mínimos — os mesmos que a CLI
  * bootstrap-admin já usa. A senha do admin NÃO vem aqui: é gerada no backend.
+ * O primeiro admin é OPCIONAL: sem ele a clínica nasce sozinha e o super-admin cria o psicólogo depois.
  */
 export class CriarClinicaDto {
   @ValidateNested()
   @Type(() => ClinicaInputDto)
   clinica!: ClinicaInputDto;
 
+  @IsOptional()
   @ValidateNested()
   @Type(() => PrimeiroAdminInputDto)
-  primeiroAdmin!: PrimeiroAdminInputDto;
+  primeiroAdmin?: PrimeiroAdminInputDto;
 }

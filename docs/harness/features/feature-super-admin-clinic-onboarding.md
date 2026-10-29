@@ -213,3 +213,10 @@ problema e da solução?"* — recorded verbatim (Portuguese) as given by the us
 O "sem QR code" deste arquivo foi revisto pelo Erico em 15/10/2026 (correção C1 do teste beta,
 ver feature-acesso-teste-beta): o diálogo de clínica criada mostra QR code e chave em texto, e
 `POST /super-admin/clinicas` devolve `twoFactorSetup: { base32, otpauthUrl }`.
+
+### Amendment (2026-10-29) — first administrator is optional
+
+The first administrator is no longer mandatory: `POST /super-admin/clinicas` accepts a clinic without
+`primeiroAdmin` (both `nome` and `email` together, or neither; only one of them is a 400). The text above
+is kept as it was written; where it says the admin is created with the clinic, that now holds only when
+`primeiroAdmin` is sent. See [[feature-clinica-sem-admin]].

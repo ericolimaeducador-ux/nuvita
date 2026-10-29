@@ -46,7 +46,9 @@ export class SuperAdminService {
    * cliente por fora (hoje: WhatsApp).
    */
   async criarClinica(dto: CriarClinicaDto, context: CriarClinicaContext) {
-    const senhaTemporaria = gerarSenhaTemporaria();
+    // Sem primeiroAdmin (feature-clinica-sem-admin) não há senha a gerar nem 2FA a devolver.
+    const admin = dto.primeiroAdmin;
+    const senhaTemporaria = admin ? gerarSenhaTemporaria() : undefined;
 
     const result = await this.clinicasService.onboard(
       {
@@ -61,11 +63,9 @@ export class SuperAdminService {
           telefone: dto.clinica.telefone,
           emailContato: dto.clinica.emailContato,
         },
-        primeiroAdmin: {
-          nome: dto.primeiroAdmin.nome,
-          email: dto.primeiroAdmin.email,
-          password: senhaTemporaria,
-        },
+        ...(admin && senhaTemporaria
+          ? { primeiroAdmin: { nome: admin.nome!, email: admin.email!, password: senhaTemporaria } }
+          : {}),
       },
       { ip: context.ip, userAgent: context.userAgent },
       { deveTrocarSenha: true, atorUserId: context.userId },

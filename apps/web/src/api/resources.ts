@@ -458,14 +458,16 @@ export interface CriarClinicaPayload {
     duracaoConsultaPadrao: number;
     faseTeste?: boolean;
   };
-  primeiroAdmin: { nome: string; email: string };
+  /** Opcional: sem ele a clínica nasce sem administrador (nome e e-mail andam juntos). */
+  primeiroAdmin?: { nome: string; email: string };
 }
 
 export interface CriarClinicaResponse {
   clinica: { id: string; nome: string; plano: ClinicaAdmin['plano'] };
-  admin: { id: string; nome: string; email: string; papel: Papel };
-  /** Devolvida UMA vez — repassar ao cliente por fora. */
-  senhaTemporaria: string;
+  /** Ausente quando a clínica foi criada sem administrador. */
+  admin?: { id: string; nome: string; email: string; papel: Papel };
+  /** Devolvida UMA vez — repassar ao cliente por fora. Ausente sem administrador. */
+  senhaTemporaria?: string;
   twoFactorSetup?: { base32: string; otpauthUrl?: string };
 }
 

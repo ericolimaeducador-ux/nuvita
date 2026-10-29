@@ -74,7 +74,7 @@ describe('SuperAdminService.criarClinica (Fase 7)', () => {
     const res = await service.criarClinica(dto, ctx);
 
     expect(res.clinica.id).toBe('cli-1');
-    expect(res.admin.id).toBe('adm-1');
+    expect(res.admin?.id).toBe('adm-1');
     expect(typeof res.senhaTemporaria).toBe('string');
     expect(res.twoFactorSetup).toEqual({ base32: 'BASE32SECRET', otpauthUrl: 'otpauth://x' });
   });

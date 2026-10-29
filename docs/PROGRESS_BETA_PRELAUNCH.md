@@ -2,7 +2,41 @@
 
 Checkpoint as of 2026-10-22. Lessons: `docs/licoes-aprendidas/2026-10-22-dialogs-deploy.md`.
 
-## STATE AT END OF DAY 2026-10-23 (resume here)
+## State at night of 2026-10-28 (Estado em 28/10 à noite) — resume here
+
+**Summary (10 lines)**
+1. Beta starts 2026-10-29 with 8 real psychologists (active CRP only). The production test of 28/10 was run and is closed.
+2. In production: API revision `nuvita-psi-api-00059-4qm` serves 100% (includes #78, clinic CPF/CNPJ filled once at first use) and the web has #77 (bell only with the Notificações module).
+3. Since the #78 merge (15:26Z) that revision logged 0 ERROR, 0 HTTP 5xx and 0 ETIMEDOUT (Redis). 4xx: 41x401, 44x403, 2x404, 1x400, 1x409 (the 409 is the overlapping-appointment test; the 400 is the CPF collision test).
+4. The 44 403s are on GET `/pacientes`, `/agendamentos`, `/financeiro/psicologia/painel` and `/clinicas/minha`; not investigated (hypothesis: dashboard calls by a role or session without the clinical permission). Post-beta check.
+5. Production test result: everything passed except what the interface cannot show (audit read screen, 409 on a second CPF attempt, 422 of the API); the audit was checked by Erico in Atlas.
+6. The second cleanup of the test data was done MANUALLY by Erico in Atlas on 2026-10-28 (about 18:08 to 18:22); the script was not used. Record: `docs/seguranca/EXCECAO-LIMPEZA-CLINICA-TESTE.md` (#79), counts still blank.
+7. Not deleted on purpose: `documentos` (15 rows and their files in R2), `audit_logs`, `inscricoes_teste`, the super-admin, the Gerenciadora.
+8. Open PRs, all draft, none merged: #79 (exception record), #80 (guide), #81 (Atlas M0 risk, runbooks, cleanup script, this section), #82 (label "opcional" in Nova clínica). Erico merges on 2026-10-29.
+9. Production database: Atlas M0 without backup (accepted risk), mitigated only by the manual copy.
+10. Next gate: create the participants' accounts by `docs/runbooks/criar-contas-participantes.md`; the first participant account is created and used by Erico himself before any access is sent.
+
+### In production
+- API revision `nuvita-psi-api-00059-4qm` (100%); web with #77. A clinic can be created without CPF/CNPJ ("Documento pendente"); the psychologist fills it once; declaração and atestado need it.
+- Not yet in production: #82 (label), docs PRs.
+
+### With Erico
+- Merge #79 to #82 (after CI) and, for #82, check Deploy Web green and `/login` 200.
+- Fill the blanks of #79 (counts before/after, export sizes, orphans) and clean the remaining `documentos`: 15 rows and the R2 files.
+- Confirm that the CRP pre-filled on the test psychologists is not a real person's (value not recorded here).
+- Manual copy of `inscricoes_teste`, `users`, `clinicas` and the restore proof (runbook `copia-manual-atlas-m0.md`); answer the 512 MB question (usage of the M0 database).
+- Create the accounts (runbook above); stop conditions in the runbook.
+
+### With the lawyer
+- Psychoanalysts: no professional council, so no verifiable registry; the beta is only for psychologists with an active CRP. Decision on admitting them later.
+- LGPD: revocation of consent has no flow; retention of 5 years in the Termo versus 20 years in the code; `audit_logs` keeps e-mail and CRP in clear (section "Legal item" below); Captação terms and the privacy page (already pending).
+
+### Post-beta debts and findings (no duplicates: each one lives in one place)
+- Audit read screen for the super-admin; UX findings (draft leaves the Atend. Psicológico list, Agenda list does not refresh): sections of 2026-10-28 below.
+- Added 2026-10-28 (observed or reported, not fixed): the CRP is typed freely when a user is created (format validation only with an official CFP source; see also the row "Ask for the CRP at psychologist creation"); the browser session is shared between tabs (a login in one tab changes the role in the others); the 409 and 422 of the clinic document have unit tests only (never seen in a browser); the 403s listed above.
+- Atlas M0 without backup: "ACCEPTED RISK" section below.
+
+## STATE AT END OF DAY 2026-10-23 (history; the current state is the section "State at night of 2026-10-28" above)
 
 Merged today and in production: #47 (D1 medical-record ownership), #48 (D2+D4 ownership in appointment/document/telemedicine + id validation + lint no longer decorative), #49 (password oracle closed, e-mail reset, mandatory password change), #50 (server is the source of the attendance declaration/certificate), #51 (DI hotfix that unblocked the #49 deploy), #52 (BUG-020 and BUG-022, medical record anchored to the appointment). #41 (survey) and #45 (secrets inventory) are also on main.
 
@@ -14,7 +48,6 @@ PENDING, in this order (next session):
    - Super-admin creation (`SuperAdminService.createUsuario`, `POST /super-admin/usuarios`) has NO audit at all, so the screen sentence "Todas as ações são registradas no audit log" (`SuperAdminPage.tsx`) is false for it. Plan: new event `USER_CREATED_BY_SUPER_ADMIN`, optional `context` param on the service (audit only when present, so existing tests stay green), controller passes `@CurrentUser` + request ip/userAgent, via `clinicasService.registrarAuditoriaAdministrativa`.
    - CRP: neither creation DTO accepts a CRP (the psychologist fills it once later, `USER_CRP_SET`), so the audit records `createdUserCrp: user.crp ?? null`. Product question to confirm with Erico: should the admin forms accept a CRP at creation? (Not done: would be a behavior change.)
    - DONE in branch (draft PR, awaiting Erico's merge): RED spec `criacao-usuario.auditoria.spec.ts` (failed to compile, then GREEN); `USER_CREATED_BY_SUPER_ADMIN` audited with top-level `clinicaId`; clinic-admin event now carries `clinicaId` top-level, `criadorPapel`, `createdUserCrp` (null when not yet filled). `CreateAuditLogInput.clinicaId` added (repo falls back to `metadata.clinicaId`). The screen sentence was NOT left as "Todas as ações": role changes, activate/deactivate and clinic linking via `updateUsuario` are still NOT audited, so the sentence now lists only what is recorded. Open: audit those remaining actions, then the sentence can be broadened.
-   - The `www.psi.nuvita.app.br` pre-beta item (below, in Pending) was added in this worktree's docs.
 2. **IA front** — resolve the report contradiction (is the human decision mandatory or not, with evidence from the code) and verify/fix `clinicaId` in `decisoes_uso_ia`. STOP and report before changing any AI behavior.
 
 AFTER BOTH, if time remains before 10-28: `PRIMEIROS-15-MINUTOS.md` in PT-BR, derived from the survey, with the corrected screens. It is the piece that goes to the 8 psychologists on 10-29 (two more sign-ups arrived on Friday).
@@ -48,31 +81,12 @@ two rows, which come from this session's own work).
 | Select-only changes not "dirty" | Dialogs using react-hook-form with `setValue` on selects |
 | AI decision enforced on the server (post-beta) | Today the decision is recorded when it exists and enforced only in the UI (Prescrição and Atendimento block regenerate/print while a suggestion is pending). Server enforcement needs a design for the psychologist who closes the browser mid-way: expiry of the pending state or implicit decision by abandonment. See the 2026-10-25 amendment in `feature-ai-usage-audit-trail.md` |
 | `decisoes_uso_ia` without `clinicaId` in old docs (known, accepted) | New decisions store `clinicaId`; older ones (demo data only) do not, no backfill by decision of Erico 2026-10-25. The clinic is still derivable from the usage record |
-| `www.psi.nuvita.app.br` (pre-beta, by Erico 2026-10-23) | DECIDED 2026-10-24: register it in Firebase Hosting. Erico executes; exact steps in the section "Runbook: www.psi.nuvita.app.br" below |
+| Address without www (decided 2026-10-28, by Erico) | `www.psi.nuvita.app.br` is NOT registered and will not be. The guide, the e-mail and the WhatsApp message give the address as `https://psi.nuvita.app.br`, without www, as a clickable link |
 | Ask for the CRP at psychologist creation (post-beta) | Add a CRP field with format validation to the psychologist creation forms (clinic admin and super-admin). Deliberately NOT done now: the CRP is already required where it matters (#50 refuses certificate issuance without CRP, 422 on the server) and requiring it at creation adds friction while Erico creates the 8 accounts by hand. Until then the CRP audited at creation is `null` |
 | `updateUsuario` audit (post-beta) | See BUG-023. When fixed, the sentence on the Super Admin screen can go back to being broad |
 
 Superseded (2026-10-27): the "navigation rehearsal for the manual" item was replaced by the system survey (#41) and by the guide
 (#57, #70); it is no longer a pre-2026-10-29 item.
-
-## Runbook: www.psi.nuvita.app.br (Erico executes)
-
-Goal: `www.psi.nuvita.app.br` must land on `psi.nuvita.app.br` instead of erroring. We register it as a redirect to the existing domain (one canonical address). Firebase project `nuvita-499800`, Hosting site `nuvita-psi-web` (target `web` in `.firebaserc`).
-
-1. Open https://console.firebase.google.com/ → project **nuvita-499800** → left menu **Build → Hosting** (or **Hosting** directly).
-2. In the Hosting page, make sure the site selector at the top shows **nuvita-psi-web** (NOT `nuvita-psi-api`; that one serves `api-psi`).
-3. In the "Domains" card click **Add custom domain**.
-4. Type `www.psi.nuvita.app.br`. Open **Advanced / "Redirect to an existing website"** when offered and pick `psi.nuvita.app.br` as the destination. (If the redirect option does not appear, add it as a normal domain; it then serves the same site. Either way it works.) Click **Continue**.
-5. The next screen lists the DNS records to add. Do NOT guess the values: copy them exactly from this screen. Expect:
-   - a **TXT** record for ownership verification (host `www.psi` or `_acme-challenge...` / a value starting with `hosting-site=`), and
-   - either two **A** records (Firebase's IPs, `199.36.158.100`-type) or a **CNAME** (`www.psi` → `nuvita-psi-web.web.app.`).
-   The console shows which one applies to a subdomain.
-6. At the DNS provider of `nuvita.app.br`, create exactly those records. The host field is usually the subdomain part only (`www.psi`), not the full name. If the provider proxies traffic (orange cloud), turn the proxy OFF for these records until Firebase finishes.
-7. Back in the console click **Verify**. Status goes "Needs setup" → "Pending" → "Connected". The SSL certificate is issued automatically; it can take from minutes up to a few hours.
-8. Check: open `https://www.psi.nuvita.app.br` in a private window; it must land on `https://psi.nuvita.app.br`. Also `curl -sI https://www.psi.nuvita.app.br` should show a 301 with `location: https://psi.nuvita.app.br/`.
-9. Do NOT touch the existing `psi` and `api-psi` records. If anything in `psi` stops answering, remove only the new `www.psi` records and report.
-
-Fallback (do in any case before 2026-10-29): make sure the welcome e-mail carries a clickable link, so nobody has to type the address.
 
 ## Backlog / known issues
 
@@ -206,6 +220,14 @@ The backup of all secrets was made by Erico (the 4 category-A keys in their own 
 - The active Cloud Run revision is the only readable source of the secret values (the `CLOUDRUN_ENV_YAML` GitHub secret is write-only).
 - The `infra/` docs describe Secret Manager and KMS as the official setup, but production does not use them.
 
+## ACCEPTED RISK, taken consciously: production database on Atlas M0 with no backup (2026-10-28, by Erico)
+- The production database stays on the free Atlas tier (M0) during the beta. **M0 has no backup.** Reason: cost. Erico will reassess after the beta.
+- Conditions: participants use fictitious cases only (the Termo de Teste); `inscricoes_teste`, `users` and `clinicas` are exported by hand, and the export is checked, BEFORE the second cleanup (see `docs/seguranca/EXCECAO-LIMPEZA-CLINICA-TESTE.md`).
+- **Gate for real data:** a backup (Flex or M10), an encrypted external copy to R2 and a documented restore test. Until all three exist, no real patient data goes in.
+- **Mitigation (NOT a substitute for a backup), by Erico, 2026-10-28:** a manual copy (Export Collection or `mongodump`) of `inscricoes_teste`, `users` and `clinicas`, kept in an encrypted folder OUTSIDE the repository. Routine: before the second cleanup, after the accounts are created, and once a week during the beta. **Never paste the connection URI in a chat or in a versioned command.** Pending, NOT done yet: import the copy into the local Mongo (port 27018) to prove it restores. Commands: `docs/runbooks/copia-manual-atlas-m0.md`.
+- A manual export is not a backup: do NOT write "backup confirmed" anywhere while this risk stands.
+- **Open question (Erico):** the M0 limit is 512 MB of storage. What is the current usage of the production database, and how fast does it grow with 8 participants? Answer from the Atlas dashboard; nothing was read by the agent.
+
 ## Documents belong to the patient (2026-10-23, by Erico) — do not reopen
 
 **Product decision:** a document belongs to the patient, not to whoever uploaded it. Any clinic role (psychologist, admin, secretary) opens and lists documents of any patient of the clinic. Only deletion is limited to the uploader (for the psychologist).
@@ -232,6 +254,22 @@ Rules from now on:
 2. Every provider/controller constructor parameter must be injectable (class, `@Inject(token)` or `@Optional()`). `di-parametros-injetaveis.spec.ts` scans all modules and fails the build otherwise.
 3. A change counts as deployed only when the new Cloud Run revision is serving traffic, not when CI is green. Check the "Deploy API to Cloud Run" run after every merge that touches the API.
 4. Residual risk: the scan does not catch a provider missing from a module's context; only a real boot does. A boot smoke step in CI is a post-beta item.
+
+## Post-beta debt: read screen for audit_logs for the super-admin (found in the production test, 2026-10-28)
+
+- The web has no screen or route to read `audit_logs`; the Super Admin page only states that actions "are recorded in the audit log". During the 28/10 production test, creation of clinics/users, document filling, cancellation and signing could not be checked through the interface; the owner checked them directly in Atlas.
+- Add a read-only audit screen for the super-admin (filters by clinic, user, action and period; fiscal document always masked, never in clear). Until then, audit checks in tests are manual (Atlas export/query), not part of the interface.
+
+## Post-beta debt: UX findings from the production test (found 2026-10-28, recorded without fixing)
+
+- A session saved as a draft disappears from the "Atend. Psicológico" list and can only be reopened from the patient record (patient page, medical record row). The list gives no way back to the draft.
+- After creating an appointment, the Agenda list does not refresh by itself; the new row only shows after a manual reload.
+
+## Legal item (for the lawyer): `audit_logs` keeps personal data in clear (found 2026-10-28)
+
+- Checked by the owner in Atlas during the production test: `USER_CREATED_BY_SUPER_ADMIN` records the **e-mail and the CRP, in clear**, of the user that was created; the clinic document is masked (`CLINIC_FISCAL_DOCUMENT_FILLED`).
+- `audit_logs` is append-only and is never removed by the cleanup scripts, so these personal data outlive the user and the clinic. Questions for the lawyer: lawful basis and retention period for these entries, and whether the e-mail and CRP must be masked or hashed in the audit metadata (a code change, post-beta, needs its own feature document).
+- Cleanup tooling prepared (not executed): `docs/runbooks/segunda-limpeza-clinicas-teste.md` and `scripts/limpeza-clinicas-teste.mjs`.
 
 ## Post-beta debt: clinic fiscal document on first use (2026-10-28, by Erico)
 - A clinic can be created without CPF/CNPJ; the psychologist fills it ONCE (`PATCH /clinicas/minha/documento`) and only the super-admin corrects it afterwards. Feature doc: `docs/harness/features/feature-clinic-fiscal-document-first-use.md`.

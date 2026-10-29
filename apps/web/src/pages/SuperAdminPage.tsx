@@ -1044,8 +1044,9 @@ export function SuperAdminPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>{novaClinicaForm.watch('tipoDocumento') === TipoDocumentoFiscal.CPF ? 'CPF' : 'CNPJ'}</Label>
+                <Label htmlFor="nova-clinica-documento">Documento do consultório (CPF ou CNPJ) — opcional; a psicóloga informa no primeiro uso</Label>
                 <Input
+                  id="nova-clinica-documento"
                   placeholder={novaClinicaForm.watch('tipoDocumento') === TipoDocumentoFiscal.CPF ? '000.000.000-00' : '00.000.000/0000-00'}
                   {...novaClinicaForm.register('documento')}
                 />

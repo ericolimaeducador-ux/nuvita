@@ -13,10 +13,9 @@ Source: `PRIMEIROS-15-MINUTOS.md` (PT-BR, end-user). PDF generator: `gerar-pdf.m
   nobody has exercised real generation in production. The blocking rule is covered by unit tests only
   (`RegistroSessaoIaPendente.test.tsx`, `PrescricaoIaPendente.test.tsx`), not seen in a browser.
 - **Password reset / lost 2FA (step 4):** described from the login screen text; neither flow was executed.
-- **"Salvar rascunho":** described by its label; not run. Only "Salvar e assinar" was run end to end.
-- **Address (step 0):** "digite sem www" depends on the Firebase Hosting `www.psi.nuvita.app.br` setup being done or not;
-  revise the sentence when it is.
-- **PDF layout:** generated and counted (9 pages) but not looked at page by page by the author.
+- **"Salvar rascunho":** run in production on 2026-10-28 (the session leaves the Atend. Psicológico list; reopened from the patient record). The Agenda list not refreshing after a new appointment was also seen then (reload). Both are in the guide as workarounds, not fixed.
+- **Address (step 0):** the guide says the address is without www (decision of Erico, 2026-10-28: `www` is not registered and will not be); do not add it back.
+- **PDF layout:** generated and counted (11 pages on 2026-10-28) but not looked at page by page by the author.
 - Screenshots come from a local environment with fictional data, taken on the `main` after #56. Any screen that changes
   afterwards needs a new capture; never reuse an old capture of a changed screen.
 

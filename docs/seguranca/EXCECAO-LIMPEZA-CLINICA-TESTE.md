@@ -57,7 +57,7 @@ An export is not a backup and must not be recorded as "backup confirmed".
 | Field | Value |
 |---|---|
 | Export of `inscricoes_teste`, `users`, `clinicas` taken and checked (counts and sizes) before the deletion? | Manual copy of `inscricoes_teste`, `users` and `clinicas` made by Erico before the production test of 2026-10-28; numbers checked. |
-| Copy redone before the deletion? | To be confirmed by Erico |
+| Copy redone before the deletion? | No. The copy made before the 28/10 production test was kept; it covers what remained (inscricoes_teste, super-admin, Gerenciadora). |
 | Count before: clinics / users / patients / appointments / medical records / issued documents / notifications | not recorded |
 | Count after, same collections | Confirmed by Erico on 2026-10-29: `users` 1, `clinicas` 1, `inscricoes_teste` 8, `audit_logs` 1428. Other collections: not recorded |
 | `documentos`: rows left, files left in R2 | _(Erico; expected 15 rows, plus the files)_ |

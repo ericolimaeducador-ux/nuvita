@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, integracao]
+    branches: [main, integracao, 'estomaterapia/**']
   pull_request:
-    branches: [main]
+    branches: [main, 'estomaterapia/integracao', 'estomaterapia/**']
 
 jobs:
   api:

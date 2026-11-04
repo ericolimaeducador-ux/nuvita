@@ -21,11 +21,20 @@ export interface EntregaAuditContext {
 
 // Mapeamento vive aqui (não em `produtos`) para não acoplar o domínio do catálogo a um conceito de relatório que ele não
 // precisa conhecer. TODO(conteudo): "sonda"/"coletor" são categorias de IU.
-const CATEGORIA_POR_TIPO_PRODUTO: Record<TipoProduto, CategoriaInsumo> = {
+const CATEGORIA_POR_TIPO_PRODUTO: Record<string, CategoriaInsumo> = {
   [TipoProduto.CATETER_VAPRO]: CategoriaInsumo.SONDA,
   [TipoProduto.CATETER_SAMTRONIC]: CategoriaInsumo.SONDA,
   [TipoProduto.COLETOR_ACTICOAT]: CategoriaInsumo.COLETOR,
 };
+
+// `tipo` do produto é texto livre: linha nova (ex.: cateter_cure_dextra) cai na categoria pelo prefixo; sem pista -> OUTRO.
+export function categoriaDoTipo(tipo: string): CategoriaInsumo {
+  const exata = CATEGORIA_POR_TIPO_PRODUTO[tipo];
+  if (exata) return exata;
+  if (/^(cateter|sonda)_/i.test(tipo)) return CategoriaInsumo.SONDA;
+  if (/^coletor_/i.test(tipo)) return CategoriaInsumo.COLETOR;
+  return CategoriaInsumo.OUTRO;
+}
 
 @Injectable()
 export class EntregasService {
@@ -79,7 +88,7 @@ export class EntregasService {
     return Promise.all(
       itens.map(async (item) => {
         const produto = await this.produtosService.buscarPorCodigo(item.codigo);
-        const categoria = produto ? CATEGORIA_POR_TIPO_PRODUTO[produto.tipo] : undefined;
+        const categoria = produto ? categoriaDoTipo(produto.tipo) : undefined;
         return { ...item, categoria };
       }),
     );

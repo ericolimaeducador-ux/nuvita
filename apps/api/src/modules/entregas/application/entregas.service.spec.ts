@@ -91,6 +91,14 @@ describe('EntregasService.create', () => {
     expect(entrega.itens[0].categoria).toBe('coletor');
   });
 
+  it('linha nova (tipo livre) é categorizada pelo prefixo; sem pista vira "outro"', async () => {
+    const { categoriaDoTipo } = await import('./entregas.service');
+    expect(categoriaDoTipo('cateter_cure_dextra')).toBe('sonda');
+    expect(categoriaDoTipo('coletor_nova')).toBe('coletor');
+    expect(categoriaDoTipo('bolsa_xyz')).toBe('outro');
+    expect(categoriaDoTipo(TipoProduto.CATETER_VAPRO)).toBe('sonda');
+  });
+
   it('não quebra e deixa sem categoria quando o código não corresponde a nenhum produto', async () => {
     const create = jest.fn().mockImplementation((data) => ({ id: 'e1', ...data }));
     const { service } = montar({ create }, jest.fn().mockResolvedValue(null));

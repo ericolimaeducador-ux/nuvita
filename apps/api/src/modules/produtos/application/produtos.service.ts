@@ -3,7 +3,7 @@ import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/a
 import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
-import { Produto, TipoProduto } from '../domain/produto.entity';
+import { Produto } from '../domain/produto.entity';
 import { PRODUTO_REPOSITORY } from '../produtos.constants';
 import { CreateProdutoDto } from './dto/create-produto.dto';
 import { UpdateProdutoDto } from './dto/update-produto.dto';
@@ -34,7 +34,7 @@ export class ProdutosService {
   ) {}
 
   /** Lista para a equipe: só produtos ativos. Só ADMIN/SUPER_ADMIN podem pedir os inativos junto. */
-  async listar(tipo: TipoProduto | undefined, incluirInativos: boolean | undefined, user: AuthTokenPayload): Promise<Produto[]> {
+  async listar(tipo: string | undefined, incluirInativos: boolean | undefined, user: AuthTokenPayload): Promise<Produto[]> {
     const podeVerInativos = user.papel === Papel.ADMIN || user.papel === Papel.SUPER_ADMIN;
     return this.produtos.findAll(tipo, incluirInativos && podeVerInativos ? undefined : true);
   }

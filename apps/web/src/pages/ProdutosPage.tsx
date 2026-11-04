@@ -34,7 +34,7 @@ interface FormProduto {
   codigo: string;
   codigoFabricante: string;
   nome: string;
-  tipo: TipoProduto | '';
+  tipo: string;
   sexo: SexoProduto | '';
   embalagem: EmbalagemProduto | '';
   projeto: ProjetoCatalogo | '';
@@ -66,7 +66,8 @@ function doProduto(p: Produto): FormProduto {
 function erroDoForm(f: FormProduto, edicao: boolean): string | null {
   if (!edicao && !/^\d+$/.test(f.codigo.trim())) return 'Informe o código (somente números).';
   if (!f.nome.trim()) return 'Informe o nome.';
-  if (!f.tipo || !f.sexo || !f.embalagem || !f.projeto) return 'Selecione tipo, sexo, embalagem e projeto.';
+  if (!f.tipo.trim()) return 'Informe o tipo/linha do produto.';
+  if (!f.sexo || !f.embalagem || !f.projeto) return 'Selecione sexo, embalagem e projeto.';
   if (!f.descricaoTecnica.trim()) return 'Informe a descrição técnica.';
   if (f.french && !/^\d+$/.test(f.french.trim())) return 'French deve ser um número inteiro.';
   if (f.comprimentoCm && Number.isNaN(Number(f.comprimentoCm.replace(',', '.')))) return 'Comprimento inválido.';
@@ -78,7 +79,7 @@ function paraPayload(f: FormProduto): ProdutoPayload {
     codigo: Number(f.codigo),
     codigoFabricante: f.codigoFabricante.trim() || undefined,
     nome: f.nome.trim(),
-    tipo: f.tipo,
+    tipo: f.tipo.trim(),
     sexo: f.sexo,
     embalagem: f.embalagem,
     projeto: f.projeto,
@@ -100,6 +101,8 @@ export function ProdutosPage() {
     queryFn: () => produtosApi.list({ incluirInativos }),
   });
   const produtos = toItems<Produto>(listQ.data as never);
+  // Sugestões do campo Tipo/linha: valores já conhecidos + os que já existem no catálogo (permite digitar um novo).
+  const tiposConhecidos = Array.from(new Set([...Object.values(TipoProduto) as string[], ...produtos.map((p) => p.tipo)]));
 
   const sujo = editando !== null && JSON.stringify(form) !== JSON.stringify(editando === 'novo' ? VAZIO : doProduto(editando));
   const fechar = () => { setEditando(null); setForm(VAZIO); };
@@ -230,13 +233,17 @@ export function ProdutosPage() {
               <Input id="prodNome" value={form.nome} onChange={(e) => set('nome', e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Tipo *</Label>
-              <Select value={form.tipo || undefined} onValueChange={(v) => set('tipo', v as TipoProduto)}>
-                <SelectTrigger aria-label="Tipo"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {Object.values(TipoProduto).map((v) => <SelectItem key={v} value={v}>{TIPO_PRODUTO_LABEL[v]}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="prodTipo">Tipo / linha *</Label>
+              <Input
+                id="prodTipo"
+                list="prodTiposConhecidos"
+                value={form.tipo}
+                onChange={(e) => set('tipo', e.target.value)}
+                placeholder="Escolha ou digite uma linha nova"
+              />
+              <datalist id="prodTiposConhecidos">
+                {tiposConhecidos.map((v) => <option key={v} value={v}>{TIPO_PRODUTO_LABEL[v] ?? v}</option>)}
+              </datalist>
             </div>
             <div className="space-y-2">
               <Label>Sexo *</Label>

@@ -923,7 +923,9 @@ export enum TipoProduto {
   COLETOR_ACTICOAT = 'coletor_acticoat',
   CATETER_SAMTRONIC = 'cateter_samtronic',
 }
-export const TIPO_PRODUTO_LABEL: Record<TipoProduto, string> = {
+// Valores já conhecidos. O tipo/linha de um produto é TEXTO LIVRE (linha nova não exige mudar código): para valor fora
+// daqui, a tela mostra o próprio texto.
+export const TIPO_PRODUTO_LABEL: Record<string, string> = {
   [TipoProduto.CATETER_VAPRO]: 'Cateter (VaPro)',
   [TipoProduto.COLETOR_ACTICOAT]: 'Coletor (Acticoat)',
   [TipoProduto.CATETER_SAMTRONIC]: 'Cateter (Samtronic)',
@@ -959,7 +961,7 @@ export interface Produto {
   codigo: number;
   codigoFabricante?: string;
   nome: string;
-  tipo: TipoProduto;
+  tipo: string;
   sexo: SexoProduto;
   embalagem: EmbalagemProduto;
   projeto: ProjetoCatalogo;

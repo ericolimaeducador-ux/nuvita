@@ -32,6 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/use-toast';
 import { ClassificacaoAreaSelector } from '@/components/ClassificacaoAreaSelector';
+import { EntregasSecao } from '@/components/EntregasSecao';
 import { useAuth } from '@/auth/AuthContext';
 import {
   pacientesApi, prontuariosApi, agendaApi, documentosApi,
@@ -313,6 +314,11 @@ export function PacienteDetailPage() {
       {/* Testes psicológicos — placeholder: sem catálogo de testes ainda,
           nome do teste é texto livre. Estrutura pronta pra receber conteúdo depois. */}
       {ehEnfermeiro && <TestesPsicologicosSecao pacienteId={id} />}
+
+      {/* Entregas de insumo: registrar (equipe) e confirmar (enfermeiro/admin). Confirmar pode concluir o fluxo clínico de IU. */}
+      <SectionErrorBoundary secao="Entregas">
+        <EntregasSecao pacienteId={id} podeConfirmar={user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN || user?.papel === Papel.SUPER_ADMIN} />
+      </SectionErrorBoundary>
 
       {/* Observações gerais — campo livre p/ qualquer profissional de atendimento (fora do escopo do enfermeiro) */}
       {!ehEnfermeiro && <ObservacoesSecao pacienteId={id} observacoesAtuais={p.observacoes} />}

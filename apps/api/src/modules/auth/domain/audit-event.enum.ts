@@ -77,6 +77,10 @@ export enum AuditEvent {
   LAUDO_MEDICO_SIGNED = 'LAUDO_MEDICO_SIGNED',
   ENTREGA_CREATED = 'ENTREGA_CREATED',
   ENTREGA_CONFIRMED = 'ENTREGA_CONFIRMED',
+  // Catálogo operacional de produtos (etapa 3): só ADMIN/SUPER_ADMIN alteram.
+  PRODUTO_CREATED = 'PRODUTO_CREATED',
+  PRODUTO_UPDATED = 'PRODUTO_UPDATED',
+  PRODUTO_DEACTIVATED = 'PRODUTO_DEACTIVATED',
   PIPELINE_STAGE_CHANGED = 'PIPELINE_STAGE_CHANGED',
 
   // Trilha de auditoria de uso de IA clínica (feature-ai-usage-audit-trail).

@@ -71,6 +71,19 @@ export const MATRIZ_API: Record<string, string> = {
   'GET /documentos/:id/access-url': 'AES',
   'PATCH /documentos/:id/excluir': 'AES',
 
+  // entregas de insumo (etapa 3): equipe da clínica; confirmar (pode concluir o fluxo clínico) só enfermeiro/admin
+  'POST /entregas': 'AES',
+  'GET /entregas': 'AES',
+  'GET /entregas/:id': 'AES',
+  'POST /entregas/:id/confirmar': 'AE',
+
+  // produtos: catálogo operacional global. Leitura da equipe; alteração só admin (SUPER_ADMIN sempre passa)
+  'GET /produtos': 'AES',
+  'GET /produtos/:codigo': 'AES',
+  'POST /produtos': 'A',
+  'PATCH /produtos/:codigo': 'A',
+  'PATCH /produtos/:codigo/desativar': 'A',
+
   // financeiro legado (sem tela): só a plataforma. O único financeiro do produto é o da psicologia
   'POST /financeiro/lancamentos': 'SUPER_ADMIN',
   'GET /financeiro/lancamentos': 'SUPER_ADMIN',

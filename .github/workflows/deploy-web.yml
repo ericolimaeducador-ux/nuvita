@@ -1,3 +1,4 @@
+# DESLIGADO na importação do psi em 2026-11-04. Reativar só na Fase 4, depois de ajustar serviço, projeto GCP, segredos e domínio para o Nuvita de Estomaterapia.
 name: Deploy Web to Firebase Hosting
 
 # Publica o frontend (apps/web) e o proxy da API (rewrite -> Cloud Run) no
@@ -25,14 +26,6 @@ name: Deploy Web to Firebase Hosting
 # TRIGGER: push em main (mesmos paths que o deploy-pages.yml tinha) +
 # workflow_dispatch pra disparo manual quando precisar.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/web/**'
-      - 'packages/shared/**'
-      - 'firebase.json'
-      - 'docs/legal/**'
-      - '.github/workflows/deploy-web.yml'
   workflow_dispatch:
 
 # Um deploy por vez; nao cancela um deploy em andamento.
@@ -49,6 +42,7 @@ jobs:
   deploy:
     name: Build & Deploy
     runs-on: ubuntu-latest
+    if: ${{ false }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

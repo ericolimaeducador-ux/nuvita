@@ -1,3 +1,4 @@
+# DESLIGADO na importação do psi em 2026-11-04. Reativar só na Fase 4, depois de ajustar serviço, projeto GCP, segredos e domínio para o Nuvita de Estomaterapia.
 name: Deploy API to Cloud Run
 
 # Build da imagem no runner (docker build a partir do Dockerfile da raiz) +
@@ -20,14 +21,6 @@ name: Deploy API to Cloud Run
 #   - CLOUDRUN_ENV_YAML  Conteúdo COMPLETO do cloudrun.env.yaml (segredos da API).
 #                        Gere com `node scripts/gen-cloudrun-env.cjs` e cole aqui.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/api/**'
-      - 'packages/shared/**'
-      - 'Dockerfile'
-      - '.dockerignore'
-      - '.github/workflows/deploy-api.yml'
   workflow_dispatch:
 
 # Um deploy por vez; não cancela um deploy em andamento.
@@ -51,6 +44,7 @@ jobs:
   deploy:
     name: Build & Deploy
     runs-on: ubuntu-latest
+    if: ${{ false }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

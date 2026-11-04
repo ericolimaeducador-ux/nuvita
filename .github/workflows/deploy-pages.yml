@@ -1,3 +1,4 @@
+# DESLIGADO na importação do psi em 2026-11-04. Reativar só na Fase 4, depois de ajustar serviço, projeto GCP, segredos e domínio para o Nuvita de Estomaterapia.
 name: Deploy Web to GitHub Pages
 
 # Publica o frontend (apps/web) no GitHub Pages.
@@ -25,6 +26,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    if: ${{ false }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -57,6 +59,7 @@ jobs:
     name: Deploy
     needs: build
     runs-on: ubuntu-latest
+    if: ${{ false }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

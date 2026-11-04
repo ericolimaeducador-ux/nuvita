@@ -9,6 +9,13 @@ import {
 } from '@nestjs/common';
 import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
 import { isMenorDeIdade } from '../../../../../../packages/shared/src/paciente';
+import { elegivelFluxoClinico, mesmasClassificacoes } from '../../../../../../packages/shared/src/paciente';
+import {
+  EtapaFluxoClinico,
+  PAPEIS_AVANCO_MANUAL,
+  PROXIMA_ETAPA_MANUAL,
+  podeAvancarPara,
+} from '../../../../../../packages/shared/src/fluxo-clinico';
 import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
 import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
@@ -84,6 +91,11 @@ export class PacientesService {
     const clinicaId = this.resolveClinicaId(context.user, dto.clinicaId);
     const dataNascimento = dto.dataNascimento ? new Date(dto.dataNascimento) : undefined;
 
+    // Classificação de área é obrigatória no cadastro (o DTO já exige; a checagem aqui cobre chamadas diretas ao serviço).
+    if (!dto.classificacoes || dto.classificacoes.length === 0) {
+      throw new BadRequestException('Informe ao menos uma classificação (IU, FA ou OT).');
+    }
+
     // dataNascimento é obrigatória no DTO de criação (ver CreatePacienteDto), mas o
     // teste unitário chama o serviço direto, sem passar pela ValidationPipe — por
     // isso a checagem aqui também aceita "indeterminado" sem quebrar (não exige
@@ -115,6 +127,11 @@ export class PacientesService {
       representante: dto.representante,
       responsavelLegal: dto.responsavelLegal,
       autorizacaoResponsavel,
+      classificacoes: dto.classificacoes,
+      // Fluxo clínico: só quem é classificado exclusivamente como IU nasce com etapa (as demais ficam sem etapa).
+      ...(elegivelFluxoClinico(dto.classificacoes)
+        ? { etapaFluxo: EtapaFluxoClinico.AGUARDANDO_ATENDIMENTO, etapaFluxoDesde: new Date() }
+        : {}),
     }));
 
     await this.audit(AuditEvent.PATIENT_CREATED, context, {
@@ -163,6 +180,8 @@ export class PacientesService {
           projeto,
           linhaTerapeutica: query.linhaTerapeutica,
           representante: query.representante,
+          etapaFluxo: query.etapaFluxo,
+          somenteFluxoClinico: query.fluxoClinico,
           dataNascimento: query.dataNascimento,
           sort: query.sort,
         })
@@ -174,6 +193,8 @@ export class PacientesService {
           projeto,
           linhaTerapeutica: query.linhaTerapeutica,
           representante: query.representante,
+          etapaFluxo: query.etapaFluxo,
+          somenteFluxoClinico: query.fluxoClinico,
           dataNascimento: query.dataNascimento,
           sort: query.sort,
         });
@@ -303,6 +324,19 @@ export class PacientesService {
       pacienteId,
       campos: Object.keys(dto),
     });
+    if (dto.classificacoes !== undefined && !mesmasClassificacoes(atual.classificacoes, dto.classificacoes)) {
+      await this.audit(AuditEvent.PACIENTE_CLASSIFICACAO_ALTERADA, context, {
+        clinicaId: resolvedClinicaId,
+        pacienteId,
+        valorAnterior: atual.classificacoes ?? [],
+        valorNovo: dto.classificacoes,
+      });
+      // Passou a ser elegível ao fluxo e ainda não tem etapa: entra na primeira. Se deixou de ser elegível,
+      // a etapa gravada é MANTIDA (só some da lista do fluxo, que filtra por elegibilidade).
+      if (elegivelFluxoClinico(dto.classificacoes) && !atual.etapaFluxo) {
+        await this.avancarEtapaFluxo(resolvedClinicaId, pacienteId, EtapaFluxoClinico.AGUARDANDO_ATENDIMENTO, context);
+      }
+    }
     if (dto.autorizacaoResponsavel !== undefined) {
       await this.audit(AuditEvent.PATIENT_GUARDIAN_AUTHORIZATION_SET, context, {
         clinicaId: resolvedClinicaId,
@@ -423,6 +457,95 @@ export class PacientesService {
     });
 
     return paciente;
+  }
+
+  /**
+   * ÚNICO ponto de mutação de etapaFluxo. Chamado pelos hooks dos módulos do fluxo (etapas 3 e 4) e, via
+   * aplicarEtapa(), pelo avanço manual. Só avança (por posição), só para paciente elegível ao fluxo clínico
+   * e NUNCA lança: erro vira log e a ação de negócio que o chamou segue normalmente.
+   */
+  async avancarEtapaFluxo(
+    clinicaId: string,
+    pacienteId: string,
+    novaEtapa: EtapaFluxoClinico,
+    context: RequestAuditContext,
+  ): Promise<void> {
+    try {
+      const atual = await this.pacientes.findById(clinicaId, pacienteId);
+      if (!atual) {
+        this.logger.warn(`avancarEtapaFluxo: paciente ${pacienteId} nao encontrado (clinica ${clinicaId}).`);
+        return;
+      }
+      if (!elegivelFluxoClinico(atual.classificacoes)) {
+        return;
+      }
+      if (!podeAvancarPara(atual.etapaFluxo, novaEtapa)) {
+        return;
+      }
+
+      await this.aplicarEtapa(clinicaId, atual, novaEtapa, context, false);
+    } catch (err) {
+      this.logger.error(
+        `avancarEtapaFluxo falhou para paciente ${pacienteId} -> ${novaEtapa}: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * Avanço MANUAL (botão "Avançar etapa"): é a ação primária do request, por isso lança exceção normalmente.
+   * Só vai para a ÚNICA próxima etapa de PROXIMA_ETAPA_MANUAL (nunca pula) e só para quem pode fechar aquela etapa
+   * (ADMIN e SUPER_ADMIN sempre; SECRETARIA e ENFERMEIRO conforme PAPEIS_AVANCO_MANUAL).
+   */
+  async avancarEtapaManual(
+    pacienteId: string,
+    clinicaId: string | undefined,
+    context: RequestAuditContext,
+  ): Promise<Paciente> {
+    const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+    const paciente = await this.assertPacienteVisivel(resolvedClinicaId, pacienteId, context.user.papel);
+
+    if (!elegivelFluxoClinico(paciente.classificacoes)) {
+      throw new BadRequestException('Paciente fora do fluxo clinico (classificacao diferente de somente IU).');
+    }
+
+    const proximaEtapa = paciente.etapaFluxo ? PROXIMA_ETAPA_MANUAL[paciente.etapaFluxo] : undefined;
+    if (!paciente.etapaFluxo || !proximaEtapa) {
+      throw new BadRequestException('Esta etapa nao pode ser avancada manualmente.');
+    }
+
+    const papeisPermitidos = PAPEIS_AVANCO_MANUAL[paciente.etapaFluxo] ?? [];
+    const papel = context.user.papel;
+    if (papel !== Papel.ADMIN && papel !== Papel.SUPER_ADMIN && !papeisPermitidos.includes(papel)) {
+      throw new ForbiddenException('Seu papel nao pode avancar esta etapa.');
+    }
+
+    await this.aplicarEtapa(resolvedClinicaId, paciente, proximaEtapa, context, true);
+
+    const atualizado = await this.pacientes.findById(resolvedClinicaId, pacienteId);
+    if (!atualizado) throw new NotFoundException('Paciente nao encontrado.');
+    return atualizado;
+  }
+
+  /** Grava etapa + data de início e audita. Só é chamado depois das regras (posição/elegibilidade/papel). */
+  private async aplicarEtapa(
+    clinicaId: string,
+    atual: Paciente,
+    novaEtapa: EtapaFluxoClinico,
+    context: RequestAuditContext,
+    manual: boolean,
+  ): Promise<void> {
+    await this.pacientes.update(clinicaId, atual.id, {
+      etapaFluxo: novaEtapa,
+      etapaFluxoDesde: new Date(),
+    });
+
+    await this.audit(AuditEvent.PIPELINE_STAGE_CHANGED, context, {
+      clinicaId,
+      pacienteId: atual.id,
+      etapaAnterior: atual.etapaFluxo ?? null,
+      etapaNova: novaEtapa,
+      ...(manual ? { manual: true } : {}),
+    });
   }
 
   async exportLgpd(pacienteId: string, clinicaId: string | undefined, context: RequestAuditContext) {

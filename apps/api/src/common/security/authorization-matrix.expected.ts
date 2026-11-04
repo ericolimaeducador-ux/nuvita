@@ -114,6 +114,7 @@ export const MATRIZ_API: Record<string, string> = {
   'GET /pacientes/:id': 'AES',
   'PATCH /pacientes/:id': 'AES',
   'PATCH /pacientes/:id/observacoes': 'AES',
+  'PATCH /pacientes/:id/fluxo/avancar': 'AES',
   'PATCH /pacientes/:id/desativar': 'AS',
   'GET /pacientes/:id/export': 'AE', // exportação LGPD: não é da secretária
   'PATCH /pacientes/:id/identidade': 'SUPER_ADMIN',

@@ -1,6 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { LinhaTerapeutica, ProjetoPaciente, Sexo } from '../../domain/paciente.entity';
+import {
+  ClassificacaoArea,
+  EtapaFluxoClinico,
+  LinhaTerapeutica,
+  ProjetoPaciente,
+  Sexo,
+} from '../../domain/paciente.entity';
 
 export type PacienteDocument = HydratedDocument<PacienteMongo>;
 
@@ -127,6 +133,18 @@ export class PacienteMongo {
   @Prop()
   observacoes?: string;
 
+  // Classificação de área (IU/FA/OT). Sem default: dado anterior à classificação fica sem o campo
+  // até o script de migração. A elegibilidade ao fluxo é derivada, não gravada.
+  @Prop({ type: [String], enum: Object.values(ClassificacaoArea), default: undefined, index: true })
+  classificacoes?: ClassificacaoArea[];
+
+  // Fluxo clínico: OPCIONAL e sem default forçado — só quem entra no fluxo (classificado só como IU) recebe etapa.
+  @Prop({ enum: Object.values(EtapaFluxoClinico) })
+  etapaFluxo?: EtapaFluxoClinico;
+
+  @Prop()
+  etapaFluxoDesde?: Date;
+
   // Histórico append-only das correções de identidade. select:false — fica fora de
   // qualquer leitura normal (lista, detalhe, export LGPD) e só sai por consulta
   // explícita; gravado exclusivamente por PacienteMongoRepository.corrigirIdentidade().
@@ -156,3 +174,4 @@ PacienteSchema.index(
 );
 PacienteSchema.index({ clinicaId: 1, ativo: 1, criadoEm: -1, _id: -1 });
 PacienteSchema.index({ clinicaId: 1, representante: 1 });
+PacienteSchema.index({ clinicaId: 1, etapaFluxo: 1, criadoEm: -1 });

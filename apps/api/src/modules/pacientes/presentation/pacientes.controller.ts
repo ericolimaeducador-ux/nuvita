@@ -127,6 +127,18 @@ export class PacientesController {
     return this.pacientesService.updateObservacoes(pacienteId, dto, clinicaId, this.contextFromRequest(request, user));
   }
 
+  // Avanço MANUAL de etapa do fluxo clínico (só a próxima etapa permitida; papel checado por etapa no serviço).
+  @Patch(':id/fluxo/avancar')
+  @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
+  avancarEtapaFluxo(
+    @Param('id') pacienteId: string,
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.pacientesService.avancarEtapaManual(pacienteId, clinicaId, this.contextFromRequest(request, user));
+  }
+
   @Patch(':id/desativar')
   @Roles(Papel.SECRETARIA, Papel.ADMIN)
   deactivate(

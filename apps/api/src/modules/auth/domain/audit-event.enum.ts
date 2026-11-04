@@ -40,6 +40,8 @@ export enum AuditEvent {
   DOCUMENT_ISSUED = 'DOCUMENT_ISSUED',
   CLINIC_CREATED = 'CLINIC_CREATED',
   // feature-timbre-clinico-dinamico: COREN do profissional (preenchido 1x; correção só pelo super-admin) e contato da clínica
+  // Classificação de área do paciente (etapa 2). PIPELINE_STAGE_CHANGED já existia.
+  PACIENTE_CLASSIFICACAO_ALTERADA = 'PACIENTE_CLASSIFICACAO_ALTERADA',
   USER_COREN_SET = 'USER_COREN_SET',
   USER_COREN_CORRECTED = 'USER_COREN_CORRECTED',
   CLINIC_CONTACT_UPDATED = 'CLINIC_CONTACT_UPDATED',

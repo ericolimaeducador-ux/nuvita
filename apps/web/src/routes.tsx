@@ -10,6 +10,7 @@ import { DefinirSenhaObrigatoriaPage } from '@/pages/DefinirSenhaObrigatoriaPage
 import { DashboardPage } from '@/pages/DashboardPage';
 import { PacientesPage } from '@/pages/PacientesPage';
 import { PacienteDetailPage } from '@/pages/PacienteDetailPage';
+import { FluxoClinicoPage } from '@/pages/FluxoClinicoPage';
 import { AgendaPage } from '@/pages/AgendaPage';
 import { ProntuariosPage } from '@/pages/ProntuariosPage';
 import { DocumentosPage } from '@/pages/DocumentosPage';
@@ -70,6 +71,8 @@ export function AppRoutes() {
             <Route element={<ProtectedRoute modulo={Modulo.PACIENTES} />}>
               <Route path="/pacientes" element={<PacientesPage />} />
               <Route path="/pacientes/:id" element={<PacienteDetailPage />} />
+              {/* Lista do fluxo clínico de IU: só pacientes elegíveis (classificados exatamente como IU). */}
+              <Route path="/fluxo-clinico" element={<FluxoClinicoPage />} />
             </Route>
             <Route element={<ProtectedRoute modulo={Modulo.AGENDA} />}>
               <Route path="/agenda" element={<AgendaPage />} />

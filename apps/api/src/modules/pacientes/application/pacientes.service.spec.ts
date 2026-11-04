@@ -40,7 +40,7 @@ describe('PacientesService', () => {
     const service = serviceWith({ create });
 
     await service.create(
-      { clinicaId: 'clinica-1', nome: 'Maria', representante: 'João Comercial' } as never,
+      { clinicaId: 'clinica-1', classificacoes: ['IU'], nome: 'Maria', representante: 'João Comercial' } as never,
       context,
     );
 
@@ -78,7 +78,7 @@ describe('PacientesService', () => {
       const create = jest.fn().mockRejectedValue(erroCpf);
       const service = serviceWith({ create });
 
-      const chamada = service.create({ clinicaId: 'clinica-1', nome: 'Maria', cpf: '52998224725' } as never, context);
+      const chamada = service.create({ clinicaId: 'clinica-1', classificacoes: ['IU'], nome: 'Maria', cpf: '52998224725' } as never, context);
 
       await expect(chamada).rejects.toBeInstanceOf(ConflictException);
       await expect(chamada).rejects.toThrow('Já existe um paciente com este CPF nesta clínica.');
@@ -88,8 +88,8 @@ describe('PacientesService', () => {
       const outroIndice = Object.assign(new Error('dup'), { code: 11000, keyPattern: { clinicaId: 1, outro: 1 } });
       const generico = new Error('conexão perdida');
 
-      await expect(serviceWith({ create: jest.fn().mockRejectedValue(outroIndice) }).create({ clinicaId: 'clinica-1', nome: 'M' } as never, context)).rejects.toBe(outroIndice);
-      await expect(serviceWith({ create: jest.fn().mockRejectedValue(generico) }).create({ clinicaId: 'clinica-1', nome: 'M' } as never, context)).rejects.toBe(generico);
+      await expect(serviceWith({ create: jest.fn().mockRejectedValue(outroIndice) }).create({ clinicaId: 'clinica-1', classificacoes: ['IU'], nome: 'M' } as never, context)).rejects.toBe(outroIndice);
+      await expect(serviceWith({ create: jest.fn().mockRejectedValue(generico) }).create({ clinicaId: 'clinica-1', classificacoes: ['IU'], nome: 'M' } as never, context)).rejects.toBe(generico);
     });
   });
 
@@ -105,7 +105,7 @@ describe('PacientesService', () => {
       const service = serviceWith({ create });
 
       const chamada = service.create(
-        { clinicaId: 'clinica-1', nome: 'Criança', dataNascimento: dataNascimentoMenor } as never,
+        { clinicaId: 'clinica-1', classificacoes: ['IU'], nome: 'Criança', dataNascimento: dataNascimentoMenor } as never,
         context,
       );
 
@@ -124,7 +124,7 @@ describe('PacientesService', () => {
 
       await service.create(
         {
-          clinicaId: 'clinica-1',
+          clinicaId: 'clinica-1', classificacoes: ['IU'],
           nome: 'Criança',
           dataNascimento: dataNascimentoMenor,
           responsavelLegal: { nome: 'Mãe da Criança', cpf: '52998224725', telefone: '11999998888' },
@@ -158,10 +158,10 @@ describe('PacientesService', () => {
       const service = serviceWith({ create });
 
       await expect(
-        service.create({ clinicaId: 'clinica-1', nome: 'Adulto', dataNascimento: dataNascimentoMaior } as never, context),
+        service.create({ clinicaId: 'clinica-1', classificacoes: ['IU'], nome: 'Adulto', dataNascimento: dataNascimentoMaior } as never, context),
       ).resolves.toBeDefined();
       await expect(
-        service.create({ clinicaId: 'clinica-1', nome: 'Sem data de nascimento' } as never, context),
+        service.create({ clinicaId: 'clinica-1', classificacoes: ['IU'], nome: 'Sem data de nascimento' } as never, context),
       ).resolves.toBeDefined();
       expect(create).toHaveBeenCalledTimes(2);
     });

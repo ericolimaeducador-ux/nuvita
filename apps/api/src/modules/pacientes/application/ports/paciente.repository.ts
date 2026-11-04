@@ -1,7 +1,16 @@
 import { CursorPaginationInput, CursorPaginationResult } from '../../domain/pagination';
-import { LinhaTerapeutica, Paciente, ProjetoPaciente } from '../../domain/paciente.entity';
+import {
+  ClassificacaoArea,
+  EtapaFluxoClinico,
+  LinhaTerapeutica,
+  Paciente,
+  ProjetoPaciente,
+} from '../../domain/paciente.entity';
 
-export type CreatePacienteInput = Omit<Paciente, 'id' | 'ativo' | 'criadoEm' | 'atualizadoEm'>;
+/** Cadastro exige ao menos uma classificação de área. */
+export type CreatePacienteInput = Omit<Paciente, 'id' | 'ativo' | 'criadoEm' | 'atualizadoEm' | 'classificacoes'> & {
+  classificacoes: ClassificacaoArea[];
+};
 
 export type UpdatePacienteInput = Partial<
   Omit<Paciente, 'id' | 'clinicaId' | 'ativo' | 'criadoEm' | 'atualizadoEm'>
@@ -42,6 +51,10 @@ export interface ListPacientesInput extends CursorPaginationInput {
   projeto?: ProjetoPaciente;
   linhaTerapeutica?: LinhaTerapeutica;
   representante?: string;
+  /** Só pacientes cuja etapa do fluxo clínico é esta. */
+  etapaFluxo?: EtapaFluxoClinico;
+  /** true = só pacientes ELEGÍVEIS ao fluxo clínico (classificacoes exatamente [IU]). */
+  somenteFluxoClinico?: boolean;
   /** Dia exato de nascimento no formato YYYY-MM-DD. */
   dataNascimento?: string;
   sort?: PacienteSort;

@@ -1,3 +1,8 @@
+import { ClassificacaoArea } from '../../../../../../packages/shared/src/paciente';
+import { EtapaFluxoClinico } from '../../../../../../packages/shared/src/fluxo-clinico';
+
+export { ClassificacaoArea, EtapaFluxoClinico };
+
 export enum Sexo {
   FEMININO = 'FEMININO',
   MASCULINO = 'MASCULINO',
@@ -87,6 +92,15 @@ export interface Paciente {
   responsavelLegal?: ResponsavelLegal;
   autorizacaoResponsavel?: AutorizacaoResponsavel;
   observacoes?: string;
+  /**
+   * Classificação de área (IU, FA, OT), uma ou mais. Ausente/vazia = dado anterior à classificação.
+   * A elegibilidade ao fluxo clínico é DERIVADA (ver elegivelFluxoClinico em packages/shared) — nunca gravada.
+   */
+  classificacoes?: ClassificacaoArea[];
+  /** Etapa atual do fluxo clínico. Ausente = fora do fluxo (paciente nunca foi elegível). Preservada se deixar de ser elegível. */
+  etapaFluxo?: EtapaFluxoClinico;
+  /** Quando a etapa atual começou. */
+  etapaFluxoDesde?: Date;
   ativo: boolean;
   criadoEm: Date;
   atualizadoEm: Date;

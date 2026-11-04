@@ -2,12 +2,12 @@ import { Injectable } from '@nestjs/common';
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
 import { AppConfigService } from '../../../../common/security/config.service';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import sharp from 'sharp';
 import { Readable } from 'stream';
 import { DOCUMENT_ACCESS_URL_TTL_SECONDS } from '../../documentos.constants';
 import { Documento } from '../../domain/documento.entity';
@@ -16,6 +16,12 @@ import {
   PresignedUploadInput,
   PresignedUploadOutput,
 } from '../../application/ports/document-storage';
+
+// sharp exporta a função direto (module.exports = Sharp), sem .default. Sem esModuleInterop, o import
+// default (import sharp from) compilava para sharp_1.default (undefined) e quebrava toda miniatura em runtime. Aceita as duas formas (função direta ou { default }).
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const sharpModule = require('sharp') as typeof import('sharp').default | { default: typeof import('sharp').default };
+const sharp: typeof import('sharp').default = typeof sharpModule === 'function' ? sharpModule : sharpModule.default;
 
 @Injectable()
 export class S3DocumentStorageService implements DocumentStorage {
@@ -53,17 +59,30 @@ export class S3DocumentStorageService implements DocumentStorage {
       },
     });
 
+    // Por padrão o presigner MOVE todo header x-amz-* para a query string e só assina content-length e
+    // host. Como o navegador envia x-amz-meta-sha256 e Content-Type como headers do PUT, ambos precisam
+    // ser headers ASSINADOS (e o x-amz-meta-sha256 não pode ser hoisted): senão o R2 responde 403
+    // SignatureDoesNotMatch por header x-amz-* não assinado.
+    const uploadUrl = await getSignedUrl(this.client, command, {
+      expiresIn: DOCUMENT_ACCESS_URL_TTL_SECONDS,
+      unhoistableHeaders: new Set(['x-amz-meta-sha256']),
+      signableHeaders: new Set(['content-type', 'x-amz-meta-sha256']),
+    });
+
     return {
-      uploadUrl: await getSignedUrl(this.client, command, { expiresIn: DOCUMENT_ACCESS_URL_TTL_SECONDS }),
+      uploadUrl,
       privateUrl: this.privateUrl(input.key),
       expiresInSeconds: DOCUMENT_ACCESS_URL_TTL_SECONDS,
     };
   }
 
-  async createReadUrl(privateUrl: string, expiresInSeconds: number): Promise<string> {
+  async createReadUrl(privateUrl: string, expiresInSeconds: number, downloadFilename?: string): Promise<string> {
     const command = new GetObjectCommand({
       Bucket: this.bucket,
       Key: this.keyFromPrivateUrl(privateUrl),
+      ResponseContentDisposition: downloadFilename
+        ? `inline; filename="${downloadFilename.replace(/[^A-Za-z0-9._-]/g, '_')}"`
+        : undefined,
     });
 
     return getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
@@ -92,6 +111,21 @@ export class S3DocumentStorageService implements DocumentStorage {
     return this.privateUrl(thumbnailKey);
   }
 
+  async headObject(privateUrl: string): Promise<{ tamanho: number; mimeType?: string } | undefined> {
+    try {
+      const head = await this.client.send(
+        new HeadObjectCommand({ Bucket: this.bucket, Key: this.keyFromPrivateUrl(privateUrl) }),
+      );
+      return { tamanho: head.ContentLength ?? 0, mimeType: head.ContentType };
+    } catch (error) {
+      const e = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+      if (e.name === 'NotFound' || e.name === 'NoSuchKey' || e.$metadata?.httpStatusCode === 404) {
+        return undefined;
+      }
+      throw error;
+    }
+  }
+
   async deleteObject(privateUrl: string): Promise<void> {
     const key = this.keyFromPrivateUrl(privateUrl);
     // Apaga o objeto principal e o thumbnail derivado (gerado em
@@ -101,6 +135,10 @@ export class S3DocumentStorageService implements DocumentStorage {
       this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key })),
       this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: `${key}.thumb.jpg` })),
     ]);
+  }
+
+  privateUrlForKey(key: string): string {
+    return this.privateUrl(key);
   }
 
   private privateUrl(key: string): string {

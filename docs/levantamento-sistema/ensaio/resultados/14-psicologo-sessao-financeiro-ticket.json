@@ -1,0 +1,19 @@
+[
+  {
+    "nome": "sessao-registrar-e-assinar",
+    "ok": true,
+    "toast": "",
+    "dialogoFechou": true,
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "sessao-aparece-na-ficha",
+    "ok": true,
+    "linhas": 0,
+    "dialogo": "",
+    "botoesDialogo": [],
+    "erros": [],
+    "confirms": []
+  }
+]

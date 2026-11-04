@@ -47,7 +47,7 @@ export class PsicologiaFinanceiroService {
     const profissionalId = this.profissionalDoPainel(context.user, profissionalIdSolicitado);
 
     const [sessoes, cobrancas, config] = await Promise.all([
-      this.prontuarios.resumoSessoesPorPaciente(clinicaId, TipoAtendimento.PSICOTERAPIA, profissionalId),
+      this.prontuarios.resumoSessoesAssinadasPorPaciente(clinicaId, TipoAtendimento.PSICOTERAPIA, profissionalId),
       this.lancamentos.list({
         clinicaId,
         origem: OrigemLancamento.PSICOLOGIA,
@@ -100,12 +100,18 @@ export class PsicologiaFinanceiroService {
 
     await this.audit(AuditEvent.FINANCIAL_DASHBOARD_VIEWED, context, { clinicaId, origem: OrigemLancamento.PSICOLOGIA });
 
+    // "Ciclo fechado, renovar" × "sem cobrança no ciclo atual": duas frases diferentes, decididas aqui e não na tela.
+    const aCobrar = pacientes.filter((p) => p.statusCiclo === StatusCiclo.A_COBRAR);
+    const fechadosARenovar = aCobrar.filter((p) => p.sessoesRealizadas > 0 && p.sessoesNoCiclo === 0).length;
+
     return {
       valorSessao: config?.valorSessao,
       sessoesPorCiclo: SESSOES_POR_CICLO,
       recebidoNoMes,
       aReceber: pacientes.reduce((total, p) => total + p.valorEmAberto, 0),
-      ciclosACobrar: pacientes.filter((p) => p.statusCiclo === StatusCiclo.A_COBRAR).length,
+      ciclosACobrar: aCobrar.length,
+      ciclosFechadosARenovar: fechadosARenovar,
+      ciclosSemCobranca: aCobrar.length - fechadosARenovar,
       pacientes,
     };
   }

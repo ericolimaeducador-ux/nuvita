@@ -24,6 +24,17 @@ export interface NotificacaoRequestContext {
   ip: string;
   userAgent: string;
   user: AuthTokenPayload;
+  /**
+   * feature-consultation-reminder-scheduler: true quando quem chamou não é
+   * uma pessoa logada, e sim um job automático (Cloud Scheduler). Papel
+   * enum não tem valor de "sistema" (ver infra/PENDENCIAS.md #15), então
+   * o job usa um `user` sintético (sub/email não-humanos) — esta flag é o
+   * jeito estrutural de uma consulta futura em audit_logs (SQL/Mongo
+   * direto, ou uma eventual tela de auditoria) saber que a linha não veio
+   * de uma pessoa, sem precisar inferir isso só pelo padrão da string do
+   * sub/email.
+   */
+  automatedActor?: boolean;
 }
 
 @Injectable()
@@ -48,12 +59,13 @@ export class NotificacoesService {
     const destino = this.resolveDestino(dto);
     const variaveis = {
       nome: dto.nome,
+      nomePaciente: dto.nomePaciente ?? dto.nome,
       hora: dto.hora ?? '',
       medico: dto.medico ?? '',
       link: dto.link ?? '',
       documento: dto.documento ?? '',
     };
-    const rendered = this.templates.render(dto.tipo, variaveis);
+    const rendered = this.templates.render(dto.tipo, variaveis, dto.paraResponsavel);
     const notificacao = await this.notificacoes.create({
       clinicaId,
       destinatarioId: dto.destinatarioId,
@@ -62,7 +74,7 @@ export class NotificacoesService {
       conteudo: {
         ...rendered,
         destino,
-        variaveis,
+        variaveis: this.variaveisPersistidas(dto.tipo, variaveis),
       },
     });
 
@@ -149,6 +161,13 @@ export class NotificacoesService {
     return preference;
   }
 
+  /** Aviso de documento não grava título nem nome do paciente (sigilo): só quem/quando/qual evento. */
+  private variaveisPersistidas(tipo: TipoNotificacao, variaveis: Record<string, string>): Record<string, string> {
+    if (tipo !== TipoNotificacao.RESULTADO_DISPONIVEL) return variaveis;
+    const { documento: _documento, nomePaciente: _nomePaciente, ...seguras } = variaveis;
+    return seguras;
+  }
+
   private resolveDestino(dto: CreateNotificacaoDto): string {
     if (dto.canal === CanalNotificacao.EMAIL && dto.email) return dto.email;
     if (dto.canal !== CanalNotificacao.EMAIL && dto.telefone) return dto.telefone;
@@ -171,7 +190,7 @@ export class NotificacoesService {
       email: context.user.email,
       ip: context.ip,
       userAgent: context.userAgent,
-      metadata,
+      metadata: context.automatedActor ? { ...metadata, automatedActor: true } : metadata,
     });
   }
 }

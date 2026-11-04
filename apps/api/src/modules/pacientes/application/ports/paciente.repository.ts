@@ -1,15 +1,30 @@
-import { EtapaFluxoClinico } from '../../../../../../../packages/shared/src/fluxo-clinico';
 import { CursorPaginationInput, CursorPaginationResult } from '../../domain/pagination';
-import { Paciente, ProjetoPaciente } from '../../domain/paciente.entity';
+import { LinhaTerapeutica, Paciente, ProjetoPaciente } from '../../domain/paciente.entity';
 
-export type CreatePacienteInput = Omit<
-  Paciente,
-  'id' | 'ativo' | 'criadoEm' | 'atualizadoEm' | 'etapaFluxo' | 'etapaFluxoDesde'
->;
+export type CreatePacienteInput = Omit<Paciente, 'id' | 'ativo' | 'criadoEm' | 'atualizadoEm'>;
 
 export type UpdatePacienteInput = Partial<
   Omit<Paciente, 'id' | 'clinicaId' | 'ativo' | 'criadoEm' | 'atualizadoEm'>
 >;
+
+/**
+ * Correção de identidade (feature-correcao-identidade-paciente). O repositório
+ * grava os novos valores E preserva o estado anterior na MESMA operação atômica —
+ * nunca há correção aplicada sem a versão anterior guardada.
+ */
+export interface CorrigirIdentidadeInput {
+  nome?: string;
+  cpf?: string;
+  dataNascimento?: Date;
+  justificativa: string;
+  /** Quem pediu a correção (id de usuário); o próprio executor quando não há outro solicitante. */
+  solicitadoPor: string;
+  ticketId?: string;
+  /** Sempre o SUPER_ADMIN autenticado. */
+  executadoPor: string;
+  /** Gerado no servidor. */
+  executadoEm: Date;
+}
 
 export const PACIENTE_SORTS = [
   'recentes',
@@ -24,12 +39,9 @@ export type PacienteSort = (typeof PACIENTE_SORTS)[number];
 export interface ListPacientesInput extends CursorPaginationInput {
   clinicaId: string;
   incluirInativos?: boolean;
-  programaIU?: boolean;
   projeto?: ProjetoPaciente;
-  /** Exclui um projeto do resultado (usado p/ esconder pacientes do Projeto PSI de quem não é psicólogo). Ignorado se `projeto` também for informado. */
-  projetoExcluir?: ProjetoPaciente;
+  linhaTerapeutica?: LinhaTerapeutica;
   representante?: string;
-  etapaFluxo?: EtapaFluxoClinico;
   /** Dia exato de nascimento no formato YYYY-MM-DD. */
   dataNascimento?: string;
   sort?: PacienteSort;
@@ -48,6 +60,8 @@ export interface PacienteRepository {
   /** Busca vários pacientes por id (inclui inativos) — usado p/ resolver nome/CPF em lote. */
   findManyByIds(clinicaId: string, pacienteIds: string[]): Promise<Paciente[]>;
   update(clinicaId: string, pacienteId: string, input: UpdatePacienteInput): Promise<Paciente | null>;
+  /** Aplica a correção e preserva a versão anterior atomicamente; null se o paciente ativo não existe no tenant. */
+  corrigirIdentidade(clinicaId: string, pacienteId: string, input: CorrigirIdentidadeInput): Promise<Paciente | null>;
   deactivate(clinicaId: string, pacienteId: string): Promise<Paciente | null>;
   /** Valores distintos de `representante` já usados na clínica, para autocomplete. */
   listarRepresentantesDistintos(clinicaId: string): Promise<string[]>;

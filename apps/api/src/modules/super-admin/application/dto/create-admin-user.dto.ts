@@ -1,4 +1,5 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength, ValidateIf } from 'class-validator';
 import { Papel } from '../../../../../../../packages/shared/src/auth';
 
 export class CreateAdminUserDto {
@@ -23,8 +24,10 @@ export class CreateAdminUserDto {
   @IsString()
   registroProfissional?: string;
 
-  /** Opcional — usado só pra recuperação de login via WhatsApp. */
-  @IsOptional()
+  /** Obrigatório para PSICÓLOGO (não vazio; o formato do CRP ainda depende de fonte oficial do CFP). */
+  @ValidateIf((o: { papel?: Papel }) => o.papel === Papel.PSICOLOGO)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
-  telefone?: string;
+  @IsNotEmpty({ message: 'Informe o CRP do psicólogo.' })
+  crp?: string;
 }

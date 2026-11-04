@@ -1,0 +1,14 @@
+{
+  "sugerirAbordagem": {
+    "status": 500,
+    "mensagem": "Assistente de IA não configurado (ANTHROPIC_API_KEY ausente). Peça ao administrador para configurar."
+  },
+  "gerarPrescricao": {
+    "status": 500,
+    "mensagem": "Assistente de IA não configurado (ANTHROPIC_API_KEY ausente). Peça ao administrador para configurar."
+  },
+  "decisaoRegistroInexistente": {
+    "status": 404,
+    "mensagem": "Registro de uso de IA nao encontrado."
+  }
+}

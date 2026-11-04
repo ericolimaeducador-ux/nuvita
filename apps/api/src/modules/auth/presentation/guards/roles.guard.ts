@@ -13,8 +13,10 @@ export class RolesGuard implements CanActivate {
       context.getClass(),
     ]);
 
+    // NEGAÇÃO POR PADRÃO: rota sem papel declarado (@Roles) é negada para todos, inclusive SUPER_ADMIN.
+    // Esquecer a declaração vira 403 (e teste vermelho em authorization-matrix.spec.ts), nunca acesso aberto.
     if (!requiredRoles?.length) {
-      return true;
+      throw new ForbiddenException('Acesso negado: rota sem papel declarado.');
     }
 
     const request = context.switchToHttp().getRequest<{ user?: AuthTokenPayload }>();

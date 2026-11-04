@@ -28,6 +28,8 @@ export interface Documento {
   hash: string;
   uploadPor: string;
   thumbnailUrl?: string;
+  /** null = upload ainda não confirmado (HeadObject); indefinido = legado, até o backfill. */
+  confirmadoEm?: Date | null;
   criadoEm: Date;
   excluidoEm?: Date;
   excluidoPor?: string;

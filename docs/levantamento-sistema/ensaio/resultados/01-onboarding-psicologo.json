@@ -1,0 +1,139 @@
+[
+  {
+    "nome": "login-vazio",
+    "url": "/login",
+    "titulos": [
+      "Gestão clínicaque cuida dequem cuida.",
+      "Acessar painel"
+    ],
+    "botoes": [
+      "Entrar"
+    ],
+    "links": [],
+    "campos": [
+      "voce@clinica.com.br",
+      "••••••••••"
+    ],
+    "dialogo": null,
+    "erros": []
+  },
+  {
+    "nome": "pede-2fa",
+    "url": "/login",
+    "titulos": [
+      "Gestão clínicaque cuida dequem cuida.",
+      "Acessar painel"
+    ],
+    "botoes": [
+      "Entrar"
+    ],
+    "links": [],
+    "campos": [
+      "voce@clinica.com.br",
+      "••••••••••",
+      "000000"
+    ],
+    "dialogo": null,
+    "erros": [
+      {
+        "status": 401,
+        "metodo": "POST",
+        "url": "/auth/login",
+        "corpo": "{\"message\":\"Codigo 2FA obrigatorio.\",\"error\":\"Unauthorized\",\"statusCode\":401}"
+      }
+    ]
+  },
+  {
+    "nome": "apos-2fa",
+    "url": "/aceitar-termos",
+    "titulos": [
+      "Termo de Teste — Nuvita Psi"
+    ],
+    "botoes": [
+      "Sair",
+      "Aceitar e continuar"
+    ],
+    "links": [],
+    "campos": [],
+    "dialogo": null,
+    "erros": []
+  },
+  {
+    "nome": "termo",
+    "url": "/aceitar-termos",
+    "titulos": [
+      "Termo de Teste — Nuvita Psi"
+    ],
+    "botoes": [
+      "Sair",
+      "Aceitar e continuar"
+    ],
+    "links": [],
+    "campos": [],
+    "dialogo": null,
+    "erros": []
+  },
+  {
+    "nome": "senha-fraca",
+    "url": "/definir-senha",
+    "titulos": [
+      "Defina sua senha"
+    ],
+    "botoes": [
+      "Sair",
+      "Definir senha"
+    ],
+    "links": [],
+    "campos": [
+      "novaSenha",
+      "confirmar"
+    ],
+    "dialogo": null,
+    "erros": [],
+    "camposSenha": 2,
+    "texto": "Defina sua senha\n\nSua senha atual é temporária. Escolha uma senha própria para continuar.\n\nNova senha\n\nMínimo de 10 caracteres.\n\nConfirme a nova senha\nSair\nDefinir senha\n\nTermo de Teste aceito."
+  },
+  {
+    "nome": "destino-final",
+    "url": "/login",
+    "titulos": [
+      "Gestão clínicaque cuida dequem cuida.",
+      "Acessar painel"
+    ],
+    "botoes": [
+      "Entrar"
+    ],
+    "links": [],
+    "campos": [
+      "voce@clinica.com.br",
+      "••••••••••"
+    ],
+    "dialogo": null,
+    "erros": [
+      {
+        "status": 401,
+        "metodo": "GET",
+        "url": "/financeiro/psicologia/painel",
+        "corpo": "{\"message\":\"Token invalido.\",\"error\":\"Unauthorized\",\"statusCode\":401}"
+      },
+      {
+        "status": 401,
+        "metodo": "GET",
+        "url": "/pacientes",
+        "corpo": "{\"message\":\"Token invalido.\",\"error\":\"Unauthorized\",\"statusCode\":401}"
+      },
+      {
+        "status": 401,
+        "metodo": "GET",
+        "url": "/agendamentos",
+        "corpo": "{\"message\":\"Token invalido.\",\"error\":\"Unauthorized\",\"statusCode\":401}"
+      },
+      {
+        "status": 401,
+        "metodo": "POST",
+        "url": "/auth/refresh",
+        "corpo": ""
+      }
+    ]
+  }
+]

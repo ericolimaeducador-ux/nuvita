@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSaidaProtegida } from '@/lib/saida-protegida';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -17,8 +18,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { agendaApi, pacientesApi } from '@/api/resources';
-import { apiErrorMessage } from '@/api/client';
+import { apiErrorMessage, avisarErroDeAcao } from '@/api/client';
 import { toItems, formatCpf } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import {
@@ -53,10 +55,11 @@ export function AgendaPage() {
   const { user } = useAuth();
   const [dia, setDia] = useState(dayjs().format('YYYY-MM-DD'));
   const [open, setOpen] = useState(false);
+  const [agParaCancelar, setAgParaCancelar] = useState<Agendamento | null>(null);
   const [visao, setVisao] = useState<'calendario' | 'lista'>('calendario');
 
   // Form state
-  const [fModalidade, setFModalidade] = useState<ModalidadeAtendimento>(ModalidadeAtendimento.MEDICO);
+  const [fModalidade, setFModalidade] = useState<ModalidadeAtendimento>(ModalidadeAtendimento.PSICOLOGIA);
   const [fPacienteId, setFPacienteId] = useState('');
   const [fMedicoId, setFMedicoId] = useState(
     user && PAPEIS_PROFISSIONAIS.includes(user.papel) ? user.id : ''
@@ -97,9 +100,10 @@ export function AgendaPage() {
       v.acao === 'cancelar' ? agendaApi.cancelar(v.id) : agendaApi.concluir(v.id),
     onSuccess: () => {
       toast.success('Agendamento atualizado.');
+      setAgParaCancelar(null);
       void qc.invalidateQueries({ queryKey: ['agenda'] });
     },
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+    onError: avisarErroDeAcao,
   });
 
   const agendamentos = toItems<Agendamento>(listQ.data as never);
@@ -110,16 +114,12 @@ export function AgendaPage() {
     [pacientes],
   );
 
-  function iniciarAtendimento(a: Agendamento) {
-    const tipo = TIPO_ATENDIMENTO_POR_AGENDAMENTO[a.tipo];
-    if (!tipo) return;
-    navigate(`/pacientes/${a.pacienteId}`, {
-      state: { iniciarAgendamento: { agendamentoId: a.id, tipo, data: a.dataHoraInicio } },
-    });
+  function iniciarAtendimento(_a: Agendamento) {
+    navigate('/atendimento-psicologico');
   }
 
   function resetForm() {
-    setFModalidade(ModalidadeAtendimento.MEDICO);
+    setFModalidade(ModalidadeAtendimento.PSICOLOGIA);
     setFPacienteId('');
     setFMedicoId(user && PAPEIS_PROFISSIONAIS.includes(user.papel) ? user.id : '');
     setFTipo('');
@@ -127,6 +127,12 @@ export function AgendaPage() {
     setFFim('');
     setFObs('');
   }
+
+  // Clique fora/ESC não fecham; Cancelar com algo preenchido pede confirmação.
+  const saida = useSaidaProtegida(
+    !!fObs.trim() || !!fPacienteId || !!fTipo || !!fInicio || !!fFim,
+    () => { setOpen(false); resetForm(); },
+  );
 
   function submit() {
     if (!fPacienteId || !fMedicoId || !fTipo || !fInicio || !fFim) {
@@ -149,7 +155,7 @@ export function AgendaPage() {
     <div className="p-6">
       <PageHeader
         title="Agenda"
-        subtitle="Agendamentos das três modalidades: médica, enfermagem e jurídica"
+        subtitle="Agendamentos de atendimento psicológico"
         extra={
           <div className="flex items-center gap-2">
             <div className="flex rounded-md border border-border p-0.5">
@@ -174,6 +180,11 @@ export function AgendaPage() {
           </div>
         }
       />
+
+      {/* Sem a lista de pacientes, linhas sem nome caem no ID e o seletor do novo agendamento fica vazio. */}
+      {pacientesQ.isError && (
+        <ErroConsulta className="mb-4" erro={pacientesQ.error} refetch={pacientesQ.refetch} recurso="os nomes dos pacientes" />
+      )}
 
       {visao === 'calendario' ? (
         <Card>
@@ -201,6 +212,8 @@ export function AgendaPage() {
 
           {listQ.isLoading ? (
             <div className="space-y-3">{[1,2,3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+          ) : listQ.isError ? (
+            <ErroConsulta erro={listQ.error} refetch={listQ.refetch} recurso="os agendamentos do dia" />
           ) : (
             <Table>
               <TableHeader>
@@ -258,7 +271,7 @@ export function AgendaPage() {
                               )}
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
-                                onClick={() => acaoMut.mutate({ id: a.id, acao: 'cancelar' })}
+                                onClick={() => setAgParaCancelar(a)}
                               >
                                 Cancelar
                               </DropdownMenuItem>
@@ -281,8 +294,37 @@ export function AgendaPage() {
       </Card>
       )}
 
-      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+      <Dialog open={!!agParaCancelar} onOpenChange={(o) => { if (!o) setAgParaCancelar(null); }}>
         <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancelar agendamento</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Cancelar o agendamento de{' '}
+            <span className="font-medium text-foreground">
+              {agParaCancelar?.pacienteNome
+                ?? (agParaCancelar ? nomePorPacienteId.get(agParaCancelar.pacienteId) : null)
+                ?? agParaCancelar?.pacienteId}
+            </span>{' '}
+            em {agParaCancelar && dayjs(agParaCancelar.dataHoraInicio).format('DD/MM/YYYY [às] HH:mm')}?
+          </p>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setAgParaCancelar(null)} disabled={acaoMut.isPending}>
+              Voltar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => agParaCancelar && acaoMut.mutate({ id: agParaCancelar.id, acao: 'cancelar' })}
+              disabled={acaoMut.isPending}
+            >
+              {acaoMut.isPending ? 'Cancelando…' : 'Cancelar agendamento'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={open} onOpenChange={saida.onOpenChange}>
+        <DialogContent className="max-w-md" {...saida.contentProps}>
           <DialogHeader>
             <DialogTitle>Novo agendamento</DialogTitle>
           </DialogHeader>
@@ -336,7 +378,7 @@ export function AgendaPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={saida.solicitarFechar}>Cancelar</Button>
             <Button onClick={submit} disabled={createMut.isPending}>{createMut.isPending ? 'Agendando...' : 'Agendar'}</Button>
           </DialogFooter>
         </DialogContent>

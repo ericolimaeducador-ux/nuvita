@@ -11,7 +11,7 @@ COPY packages/shared/package.json packages/shared/
 RUN npm ci
 
 COPY apps/web apps/web
-RUN npm run build --workspace @nuvita/web
+RUN npm run build --workspace @nuvita-psi/web
 
 # ---------- Runtime (nginx) ----------
 FROM nginx:1.27-alpine AS runner

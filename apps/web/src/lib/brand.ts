@@ -1,19 +1,15 @@
-// Identidade oficial do produto Nuvita.
-// Fonte única para logos e dados cadastrais usados na UI e nos documentos impressos/PDF.
+// Identidade do produto Nuvita Psi — SÓ para a interface do app (ex.: rodapé do app).
+// Nunca usar no corpo clínico dos documentos: o timbre vem da clínica (GET /clinicas/minha).
+// Assets de logo ainda são os do Nuvita original — trocar quando houver arte própria.
 import logoColor from '@/assets/nuvita-logo.png';
 import logoLight from '@/assets/nuvita-logo-light.png';
 import markColor from '@/assets/nuvita-mark.png';
 import markLight from '@/assets/nuvita-mark-light.png';
-import { EMPRESA } from '@/lib/empresa';
 
 export const brand = {
-  nome: 'Nuvita',
-  slogan: 'gestão de saúde na nuvem',
-  cnpj: EMPRESA.cnpj,
-  endereco: EMPRESA.endereco,
-  telefone: '+55 (11) 94739-1805',
-  // Logo completo (ícone + marca nominativa). `color` para superfícies claras /
-  // documentos impressos; `light` para o tema escuro do app.
+  nome: 'Nuvita Psi',
+  // Logo completo (ícone + marca nominativa). `color` para superfícies claras;
+  // `light` para o tema escuro do app.
   logo: { color: logoColor, light: logoLight },
   // Apenas o ícone (nuvem + batimento).
   mark: { color: markColor, light: markLight },

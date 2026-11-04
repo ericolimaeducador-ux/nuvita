@@ -1,0 +1,212 @@
+[
+  {
+    "nome": "pacientes-lista",
+    "ok": true,
+    "f": {
+      "url": "/pacientes",
+      "titulos": [
+        "Pacientes"
+      ],
+      "botoes": [
+        "Sair",
+        "Novo paciente",
+        "Mais recentes",
+        "Todas as linhas"
+      ],
+      "links": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "campos": [
+        "Nome ou CPF...",
+        "nascFiltro",
+        "button",
+        "button"
+      ],
+      "dialogo": null
+    },
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "pacientes-novo-dialog",
+    "ok": true,
+    "campos": [
+      "Nome completo",
+      "CPF (opcional)",
+      "Nascimento",
+      "Sexo (opcional)",
+      "Linha terapêutica (opcional)",
+      "Telefone",
+      "E-mail",
+      "Logradouro",
+      "Número",
+      "Complemento",
+      "Bairro",
+      "Cidade",
+      "UF",
+      "CEP",
+      "O paciente consente com o tratamento de seus dados (LGPD). Se ainda não foi obtido, deixe em branco e registre depois."
+    ],
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "pacientes-menor-sem-responsavel",
+    "ok": true,
+    "erros_tela": [
+      "Informe o nome do responsável legal.",
+      "Informe o CPF do responsável legal.",
+      "Informe o telefone do responsável legal.",
+      "Confirme a autorização do responsável legal."
+    ],
+    "aindaAberto": true,
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "pacientes-menor-com-responsavel",
+    "ok": true,
+    "dialogFechou": true,
+    "checkboxes": 2,
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "regressao-novo-paciente",
+    "ok": true,
+    "aposForaEEsc_aberto": true,
+    "aposForaEEsc_textoPreservado": true,
+    "cancelarComTexto_pediuConfirmacao": true,
+    "cancelarRecusado_mantemAberto": true,
+    "erros": [],
+    "confirms": [
+      "Descartar alterações?"
+    ]
+  },
+  {
+    "nome": "ficha-aberta",
+    "ok": true,
+    "f": {
+      "url": "/pacientes/6ada6457601ae7ce8e86495f",
+      "titulos": [
+        "Ana Exemplo Demonstração"
+      ],
+      "botoes": [
+        "Sair",
+        "Voltar",
+        "Exportar (LGPD)",
+        "Dados cadastrais",
+        "Prontuários e atendimentos0",
+        "Documentos clínicos",
+        "Testes Psicológicos1",
+        "Aplicar teste",
+        "Documentos0",
+        "Novo documento"
+      ],
+      "links": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "campos": [],
+      "dialogo": null
+    },
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "ficha-expandir-tudo",
+    "ok": true,
+    "botoes": [
+      "Sair",
+      "Voltar",
+      "Exportar (LGPD)",
+      "Dados cadastrais",
+      "Prontuários e atendimentos0",
+      "Documentos clínicos",
+      "Testes Psicológicos1",
+      "Aplicar teste",
+      "Documentos0",
+      "Novo documento"
+    ],
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "ficha-editar-cadastro-lapis",
+    "ok": true,
+    "campos": [
+      "Nome",
+      "CPF",
+      "Nascimento",
+      "Sexo",
+      "Linha terapêutica",
+      "Telefone",
+      "E-mail",
+      "Logradouro",
+      "Número",
+      "Complemento",
+      "Bairro",
+      "Cidade",
+      "UF",
+      "CEP",
+      "O paciente consente com o tratamento de seus dados (LGPD)."
+    ],
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "regressao-editar-cadastro",
+    "ok": true,
+    "aposForaEEsc_aberto": true,
+    "aposForaEEsc_textoPreservado": true,
+    "cancelarComEdicao_pediuConfirmacao": true,
+    "erros": [],
+    "confirms": [
+      "Descartar alterações?"
+    ]
+  },
+  {
+    "nome": "ficha-solicitar-correcao",
+    "ok": true,
+    "pediuConfirmacaoComEdicaoPendente": true,
+    "solicitacao_aposForaEEsc_aberto": true,
+    "solicitacao_textoPreservado": true,
+    "erros": [],
+    "confirms": [
+      "Você tem alterações não salvas. Descartar e continuar?",
+      "Você tem alterações não salvas. Descartar e continuar?"
+    ]
+  },
+  {
+    "nome": "ficha-testes",
+    "ok": true,
+    "aposForaEEsc_aberto": true,
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "ficha-testes-secao-recolhida",
+    "ok": true,
+    "botaoAbreDialogComSecaoRecolhida": true,
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "ficha-exportar-lgpd",
+    "ok": true,
+    "arquivo": "Ana_Exemplo_Demonstração-lgpd-2026-10-22.json",
+    "erros": [],
+    "confirms": []
+  }
+]

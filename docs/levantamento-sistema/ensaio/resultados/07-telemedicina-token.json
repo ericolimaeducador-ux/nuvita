@@ -1,0 +1,43 @@
+{
+  "criarSala": 201,
+  "chavesDaSala": [
+    "id",
+    "clinicaId",
+    "agendamentoId",
+    "medicoId",
+    "modalidade",
+    "pacienteId",
+    "status",
+    "tokenMedico",
+    "tokenPaciente",
+    "expiresAt",
+    "criadoEm"
+  ],
+  "tokenPacienteTam": 36,
+  "ttlHoras": 3.9999897222222223,
+  "semLogin_GET": 200,
+  "entrar_1a_vez": 201,
+  "entrar_2a_vez_reutilizavel": 201,
+  "entrarChaves": [
+    "salaId",
+    "papel",
+    "iceServers"
+  ],
+  "tokenAleatorio": 404,
+  "enumeracao_30_tentativas": {
+    "404": 18,
+    "429": 12
+  },
+  "anonimo_url": "/tele/:token",
+  "anonimo_texto": "Nuvita Psi Teleatendimento Link de atendimento inválido.",
+  "anonimo_erros": [
+    "429 /telemedicina/acesso/:token",
+    "429 /telemedicina/acesso/:token"
+  ],
+  "encerrar": 200,
+  "depoisDeEncerrar_entrar": 403,
+  "depoisDeEncerrar_GET": 429,
+  "token_no_log_da_api": false,
+  "sala_listada_expoe_tokens": null,
+  "lista_de_salas_expoe_tokens": false
+}

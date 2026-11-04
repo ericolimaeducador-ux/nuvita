@@ -9,9 +9,9 @@ export class PacienteCryptoService {
 
   constructor(configService: AppConfigService) {
     this.encryptionKey = this.parseKey(configService.getConfig().patientDataEncryptionKey);
-    this.hashKey = this.parseKey(
-      configService.getConfig().patientDataHashKey ?? configService.getConfig().patientDataEncryptionKey,
-    );
+    // Chave dedicada ao HMAC do CPF — domínio de segredo separado da chave de
+    // encriptação. Obrigatória (config falha no boot se ausente); sem fallback.
+    this.hashKey = this.parseKey(configService.getConfig().patientDataHashKey);
   }
 
   encryptString(value: string): string {

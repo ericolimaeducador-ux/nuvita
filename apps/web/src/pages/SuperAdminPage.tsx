@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSaidaProtegida } from '@/lib/saida-protegida';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,13 +15,16 @@ import { PasswordInput } from '@/components/ui/password-input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { LogoClinicaCard } from '@/components/LogoClinicaCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RecuperacaoSenhaPainel } from '@/components/RecuperacaoSenhaPainel';
 import { toast } from '@/components/ui/use-toast';
-import { superAdminApi } from '@/api/resources';
+import { superAdminApi, type UpdateClinicaPayload } from '@/api/resources';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import type { CreateAdminUserPayload, UpdateUsuarioPayload, ClinicaAdmin, TwoFactorSetup } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import {
@@ -28,12 +32,13 @@ import {
   resolvePermissoes, Papel, PAPEL_LABEL, registroLabel, papelTemRegistro,
 } from '@/types';
 import type { UsuarioAdmin } from '@/types';
+import { rotuloDocumentoClinica } from '@/lib/documentoClinica';
+import { documentoFiscalValido, formatarDocumentoFiscal, normalizarDocumentoFiscal, TipoDocumentoFiscal } from '@/lib/documento-fiscal';
+import { SegredoDoisFatores } from '@/components/SegredoDoisFatores';
 
 const PAPEL_BADGE: Record<Papel, string> = {
   [Papel.SUPER_ADMIN]: 'bg-purple-500/10 text-purple-600 border border-purple-500/20',
   [Papel.ADMIN]: 'bg-blue-500/10 text-blue-600 border border-blue-500/20',
-  [Papel.MEDICO]: 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20',
-  [Papel.ENFERMEIRO]: 'bg-teal-500/10 text-teal-600 border border-teal-500/20',
   [Papel.PSICOLOGO]: 'bg-rose-500/10 text-rose-600 border border-rose-500/20',
   [Papel.SECRETARIA]: 'bg-slate-500/10 text-slate-600 border border-slate-500/20',
   [Papel.PACIENTE]: 'bg-gray-500/10 text-gray-400 border border-gray-500/20',
@@ -50,7 +55,12 @@ const createSchema = z.object({
   papel: z.nativeEnum(Papel, { message: 'Selecione um perfil.' }),
   clinicaId: z.string().optional(),
   registroProfissional: z.string().optional(),
-  telefone: z.string().optional(),
+  crp: z.string().optional(),
+}).superRefine((v, ctx) => {
+  // O psicólogo precisa de CRP no perfil para assinar. Só "não vazio": o formato depende de fonte oficial do CFP.
+  if (v.papel === Papel.PSICOLOGO && !v.crp?.trim()) {
+    ctx.addIssue({ code: 'custom', path: ['crp'], message: 'Informe o CRP do psicólogo.' });
+  }
 });
 type CreateForm = z.infer<typeof createSchema>;
 
@@ -61,7 +71,6 @@ const editSchema = z.object({
   clinicaId: z.string().optional(),
   ativo: z.boolean(),
   registroProfissional: z.string().optional(),
-  telefone: z.string().optional(),
 });
 type EditForm = z.infer<typeof editSchema>;
 
@@ -74,8 +83,52 @@ const clinicaSchema = z.object({
   nome: z.string().min(1, 'Informe o nome.'),
   plano: z.enum(['basico', 'profissional', 'enterprise']),
   ativo: z.boolean(),
+  // Teste beta: enquanto marcada, os usuários aceitam o Termo de Teste. Desmarcar no
+  // lançamento faz todos aceitarem os Termos de Uso no próximo acesso.
+  faseTeste: z.boolean(),
+  // Identidade fiscal: corrigível só aqui (super-admin). O servidor é o gate; o cliente só avisa cedo.
+  tipoDocumento: z.nativeEnum(TipoDocumentoFiscal),
+  // Vazio = clínica ainda sem documento (a psicóloga informa no primeiro uso); só valida se for trocado.
+  documento: z.string(),
 });
 type ClinicaForm = z.infer<typeof clinicaSchema>;
+
+// Campos mínimos p/ criar clínica + 1º admin pela UI (mesmos da CLI bootstrap-admin).
+// A senha do admin NÃO é digitada aqui — é gerada no backend.
+const novaClinicaSchema = z
+  .object({
+  nome: z.string().min(1, 'Informe o nome.'),
+  // CPF: profissional que atende como pessoa física. CNPJ: empresa (aceita o alfanumérico).
+  tipoDocumento: z.nativeEnum(TipoDocumentoFiscal),
+  // Opcional: a psicóloga informa o CPF/CNPJ do consultório no primeiro uso.
+  documento: z.string(),
+  plano: z.enum(['basico', 'profissional', 'enterprise']),
+  fusoHorario: z.string().min(1, 'Informe o fuso horário.'),
+  duracaoConsultaPadrao: z
+    .string()
+    .refine((s) => Number.isInteger(Number(s)) && Number(s) >= 5, 'Mínimo de 5 minutos.'),
+  // Primeiro admin opcional (feature-clinica-sem-admin): os dois campos juntos, ou nenhum dos dois.
+  adminNome: z.string(),
+  adminEmail: z.string(),
+  // Sem valor padrão: o super-admin precisa escolher Sim ou Não (esquecer a marcação no lançamento
+  // colocaria o Termo de Teste na frente de clientes reais).
+  faseTeste: z.boolean({ message: 'Escolha se é clínica do teste beta.' }),
+  })
+  .superRefine((v, ctx) => {
+    if (v.documento.trim() && !documentoFiscalValido(v.tipoDocumento, v.documento)) {
+      ctx.addIssue({ code: 'custom', path: ['documento'], message: `${v.tipoDocumento} inválido. Confira os números.` });
+    }
+    const nome = v.adminNome.trim();
+    const email = v.adminEmail.trim();
+    if (nome || email) {
+      if (!nome) ctx.addIssue({ code: 'custom', path: ['adminNome'], message: 'Informe o nome do admin.' });
+      if (!email) ctx.addIssue({ code: 'custom', path: ['adminEmail'], message: 'Informe o e-mail do admin.' });
+      else if (!z.string().email().safeParse(email).success) {
+        ctx.addIssue({ code: 'custom', path: ['adminEmail'], message: 'E-mail inválido.' });
+      }
+    }
+  });
+type NovaClinicaForm = z.infer<typeof novaClinicaSchema>;
 
 const PLANO_LABEL: Record<ClinicaAdmin['plano'], string> = {
   basico: 'Básico',
@@ -87,7 +140,7 @@ const PLANO_LABEL: Record<ClinicaAdmin['plano'], string> = {
 const SEM_CLINICA = 'none';
 
 // Espelha PAPEIS_COM_2FA_OBRIGATORIO do backend (packages/shared/src/auth).
-const PAPEIS_2FA: Papel[] = [Papel.SUPER_ADMIN, Papel.ADMIN, Papel.MEDICO, Papel.ENFERMEIRO];
+const PAPEIS_2FA: Papel[] = [Papel.SUPER_ADMIN, Papel.ADMIN, Papel.PSICOLOGO];
 
 // ---- Component --------------------------------------------------------------
 export function SuperAdminPage() {
@@ -104,6 +157,15 @@ export function SuperAdminPage() {
   const [editTarget, setEditTarget] = useState<UsuarioAdmin | null>(null);
   const [resetTarget, setResetTarget] = useState<UsuarioAdmin | null>(null);
   const [clinicaTarget, setClinicaTarget] = useState<ClinicaAdmin | null>(null);
+  const [novaClinicaOpen, setNovaClinicaOpen] = useState(false);
+  // Segredos da clínica recém-criada, exibidos UMA vez (senha temporária + chave 2FA do admin).
+  const [segredosClinica, setSegredosClinica] = useState<{
+    clinicaNome: string;
+    adminEmail: string;
+    senhaTemporaria: string;
+    base32: string | null;
+    otpauthUrl: string | null;
+  } | null>(null);
   // Chave TOTP recém-gerada, exibida uma única vez para cadastrar no autenticador.
   const [twoFaSetup, setTwoFaSetup] = useState<{ email: string; setup: TwoFactorSetup } | null>(null);
   const [twoFaTarget, setTwoFaTarget] = useState<UsuarioAdmin | null>(null);
@@ -119,6 +181,14 @@ export function SuperAdminPage() {
   const editForm = useForm<EditForm>({ resolver: zodResolver(editSchema) });
   const resetForm = useForm<ResetForm>({ resolver: zodResolver(resetSchema) });
   const clinicaForm = useForm<ClinicaForm>({ resolver: zodResolver(clinicaSchema) });
+  const novaClinicaForm = useForm<NovaClinicaForm>({
+    resolver: zodResolver(novaClinicaSchema),
+    defaultValues: { tipoDocumento: TipoDocumentoFiscal.CNPJ, plano: 'basico', fusoHorario: 'America/Sao_Paulo', duracaoConsultaPadrao: '50' },
+  });
+
+  // Clique fora/ESC não fecham; Cancelar com algo digitado pede confirmação.
+  const saidaCriar = useSaidaProtegida(createForm.formState.isDirty, () => { setCreateOpen(false); createForm.reset(); });
+  const saidaNovaClinica = useSaidaProtegida(novaClinicaForm.formState.isDirty, () => { setNovaClinicaOpen(false); novaClinicaForm.reset(); });
 
   // Query params
   const queryParams = {
@@ -129,14 +199,20 @@ export function SuperAdminPage() {
     limit: LIMIT,
   };
 
-  const { data, isFetching, refetch } = useQuery({
+  const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['super-admin', 'usuarios', queryParams],
     queryFn: () => superAdminApi.listUsuarios(queryParams),
     placeholderData: (prev) => prev,
   });
 
   // Lista de clínicas: alimenta a aba Clínicas e os dropdowns de vínculo dos usuários.
-  const { data: clinicasData, isFetching: clinicasFetching } = useQuery({
+  const {
+    data: clinicasData,
+    isFetching: clinicasFetching,
+    isError: clinicasError,
+    error: clinicasErro,
+    refetch: refetchClinicas,
+  } = useQuery({
     queryKey: ['super-admin', 'clinicas'],
     queryFn: () => superAdminApi.listClinicas(),
   });
@@ -196,25 +272,78 @@ export function SuperAdminPage() {
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
+  const [erroDocumentoFiscal, setErroDocumentoFiscal] = useState<string | null>(null);
   const clinicaMut = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: ClinicaForm }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateClinicaPayload }) =>
       superAdminApi.updateClinica(id, payload),
+    onMutate: () => setErroDocumentoFiscal(null),
     onSuccess: () => {
       toast.success('Clínica atualizada.');
       setClinicaTarget(null);
       void qc.invalidateQueries({ queryKey: ['super-admin', 'clinicas'] });
     },
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+    onError: (e, { payload }) => {
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      if (payload.documento !== undefined && status === 409) {
+        setErroDocumentoFiscal(`Este ${payload.tipoDocumento} já está cadastrado em outra clínica.`);
+      } else if (payload.documento !== undefined && (status === 400 || status === 422)) {
+        setErroDocumentoFiscal('Documento inválido para o tipo escolhido. Confira os números.');
+      } else {
+        toast.error('Erro', apiErrorMessage(e));
+      }
+    },
+  });
+
+  const criarClinicaMut = useMutation({
+    mutationFn: (v: NovaClinicaForm) =>
+      superAdminApi.criarClinica({
+        clinica: {
+          nome: v.nome,
+          ...(v.documento.trim() ? { tipoDocumento: v.tipoDocumento, documento: v.documento } : {}),
+          plano: v.plano,
+          fusoHorario: v.fusoHorario,
+          duracaoConsultaPadrao: Number(v.duracaoConsultaPadrao),
+          faseTeste: v.faseTeste,
+        },
+        ...(v.adminNome.trim() && v.adminEmail.trim()
+          ? { primeiroAdmin: { nome: v.adminNome.trim(), email: v.adminEmail.trim() } }
+          : {}),
+      }),
+    onSuccess: (res) => {
+      setNovaClinicaOpen(false);
+      novaClinicaForm.reset();
+      if (res.admin && res.senhaTemporaria) {
+        setSegredosClinica({
+          clinicaNome: res.clinica.nome,
+          adminEmail: res.admin.email,
+          senhaTemporaria: res.senhaTemporaria,
+          base32: res.twoFactorSetup?.base32 ?? null,
+          otpauthUrl: res.twoFactorSetup?.otpauthUrl ?? null,
+        });
+      } else {
+        toast.success(
+          'Clínica criada SEM administrador.',
+          'Crie o psicólogo em "Novo usuário", escolhendo esta clínica.',
+        );
+      }
+      void qc.invalidateQueries({ queryKey: ['super-admin', 'clinicas'] });
+    },
+    onError: (e) => toast.error('Erro ao criar clínica', apiErrorMessage(e)),
   });
 
   function openEditClinica(c: ClinicaAdmin) {
     setClinicaTarget(c);
-    clinicaForm.reset({ nome: c.nome, plano: c.plano, ativo: c.ativo });
+    setErroDocumentoFiscal(null);
+    clinicaForm.reset({
+      nome: c.nome, plano: c.plano, ativo: c.ativo, faseTeste: c.faseTeste ?? false,
+      tipoDocumento: c.tipoDocumento as TipoDocumentoFiscal,
+      documento: formatarDocumentoFiscal(c.tipoDocumento as TipoDocumentoFiscal, c.documento),
+    });
   }
 
   function openEdit(u: UsuarioAdmin) {
     setEditTarget(u);
-    editForm.reset({ nome: u.nome, email: u.email, papel: u.papel, clinicaId: u.clinicaId ?? '', ativo: u.ativo, registroProfissional: u.registroProfissional ?? '', telefone: u.telefone ?? '' });
+    editForm.reset({ nome: u.nome, email: u.email, papel: u.papel, clinicaId: u.clinicaId ?? '', ativo: u.ativo, registroProfissional: u.registroProfissional ?? '' });
     // permissoes vem da API; fallback recalcula para respostas antigas em cache
     setModulosSel(u.permissoes ?? resolvePermissoes(u.papel, u.modulosConcedidos, u.modulosRevogados));
   }
@@ -245,7 +374,9 @@ export function SuperAdminPage() {
           <p className="text-sm font-medium text-foreground">Acesso irrestrito</p>
           <p className="text-sm text-muted-foreground mt-0.5">
             Aqui você cria usuários com qualquer papel, ativa/desativa contas, redefine senhas
-            e vincula usuários a clínicas. Todas as ações são registradas no audit log.
+            e vincula usuários a clínicas. Ficam registradas no audit log: criação de usuário e de
+            clínica, redefinição de senha e de 2FA, correção de CRP e edição dos dados fiscais e de
+            contato da clínica.
           </p>
         </div>
       </div>
@@ -254,6 +385,7 @@ export function SuperAdminPage() {
         <TabsList>
           <TabsTrigger value="usuarios">Usuários</TabsTrigger>
           <TabsTrigger value="clinicas">Clínicas</TabsTrigger>
+          <TabsTrigger value="recuperacao-senha">Recuperação de senha</TabsTrigger>
         </TabsList>
 
         <TabsContent value="usuarios" className="mt-4 space-y-4">
@@ -301,6 +433,12 @@ export function SuperAdminPage() {
             </Button>
           </div>
 
+          {isError && <ErroConsulta erro={error} refetch={refetch} recurso="os usuários" />}
+          {/* Sem a lista de clínicas, nomes e vínculos de clínica caem no ID e os seletores ficam vazios. */}
+          {clinicasError && (
+            <ErroConsulta erro={clinicasErro} refetch={refetchClinicas} recurso="as clínicas (nomes e vínculos)" />
+          )}
+
           {/* Table */}
           <Card>
             <CardContent className="p-0">
@@ -320,7 +458,7 @@ export function SuperAdminPage() {
                   {items.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
-                        {isFetching ? 'Carregando…' : 'Nenhum usuário encontrado.'}
+                        {isError ? 'Lista indisponível.' : isFetching ? 'Carregando…' : 'Nenhum usuário encontrado.'}
                       </TableCell>
                     </TableRow>
                   )}
@@ -384,14 +522,25 @@ export function SuperAdminPage() {
           )}
         </TabsContent>
 
+        <TabsContent value="recuperacao-senha" className="mt-4 space-y-4">
+          <RecuperacaoSenhaPainel />
+        </TabsContent>
+
         <TabsContent value="clinicas" className="mt-4 space-y-4">
+          <div className="flex justify-end">
+            <Button onClick={() => setNovaClinicaOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nova clínica
+            </Button>
+          </div>
+          {clinicasError && <ErroConsulta erro={clinicasErro} refetch={refetchClinicas} recurso="as clínicas" />}
           <Card>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
-                    <TableHead>CNPJ</TableHead>
+                    <TableHead>CPF / CNPJ</TableHead>
                     <TableHead>Plano</TableHead>
                     <TableHead>Usuários</TableHead>
                     <TableHead>Status</TableHead>
@@ -403,7 +552,7 @@ export function SuperAdminPage() {
                   {clinicas.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
-                        {clinicasFetching ? 'Carregando…' : 'Nenhuma clínica cadastrada.'}
+                        {clinicasError ? 'Lista indisponível.' : clinicasFetching ? 'Carregando…' : 'Nenhuma clínica cadastrada.'}
                       </TableCell>
                     </TableRow>
                   )}
@@ -413,9 +562,17 @@ export function SuperAdminPage() {
                         <div className="flex items-center gap-2">
                           <Building2 className="h-4 w-4 text-muted-foreground" />
                           {c.nome}
+                          {c.faseTeste && (
+                            <Badge variant="secondary" className="bg-amber-500/10 text-amber-700 border border-amber-500/20" title="Usuários aceitam o Termo de Teste">
+                              Teste beta
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-sm font-mono">{c.cnpj}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {c.documento && <span className="text-xs mr-1.5">{c.tipoDocumento}</span>}
+                        <span className="font-mono">{rotuloDocumentoClinica(c.tipoDocumento, c.documento)}</span>
+                      </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{PLANO_LABEL[c.plano]}</Badge>
                       </TableCell>
@@ -443,22 +600,14 @@ export function SuperAdminPage() {
       </Tabs>
 
       {/* Dialog: Criar usuário */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={createOpen} onOpenChange={saidaCriar.onOpenChange}>
+        <DialogContent className="max-w-lg" {...saidaCriar.contentProps}>
           <DialogHeader>
             <DialogTitle>Novo usuário</DialogTitle>
           </DialogHeader>
           <form
             onSubmit={createForm.handleSubmit((v) =>
-              createMut.mutate({
-                nome: v.nome,
-                email: v.email,
-                password: v.password,
-                papel: v.papel,
-                clinicaId: v.clinicaId || undefined,
-                registroProfissional: papelTemRegistro(v.papel) ? (v.registroProfissional || undefined) : undefined,
-                telefone: v.telefone || undefined,
-              })
+              createMut.mutate({ nome: v.nome, email: v.email, password: v.password, papel: v.papel, clinicaId: v.clinicaId || undefined, registroProfissional: papelTemRegistro(v.papel) ? (v.registroProfissional || undefined) : undefined, crp: v.papel === Papel.PSICOLOGO ? v.crp?.trim() : undefined })
             )}
             className="space-y-4 py-2"
           >
@@ -509,19 +658,24 @@ export function SuperAdminPage() {
                   </SelectContent>
                 </Select>
               </div>
-              {papelTemRegistro(createForm.watch('papel')) && (
+              {createForm.watch('papel') === Papel.PSICOLOGO && (
+                <div className="col-span-2 space-y-1.5">
+                  <Label>CRP do psicólogo <span className="text-muted-foreground">(obrigatório: é o carimbo da assinatura do prontuário)</span></Label>
+                  <Input placeholder="CRP 00/00000" {...createForm.register('crp')} />
+                  {createForm.formState.errors.crp && (
+                    <p className="text-xs text-destructive">{createForm.formState.errors.crp.message}</p>
+                  )}
+                </div>
+              )}
+              {papelTemRegistro(createForm.watch('papel')) && createForm.watch('papel') !== Papel.PSICOLOGO && (
                 <div className="col-span-2 space-y-1.5">
                   <Label>{registroLabel(createForm.watch('papel'))} <span className="text-muted-foreground">(opcional — preenche documentos automaticamente)</span></Label>
                   <Input placeholder={`Nº do ${registroLabel(createForm.watch('papel'))}`} {...createForm.register('registroProfissional')} />
                 </div>
               )}
-              <div className="col-span-2 space-y-1.5">
-                <Label>Telefone <span className="text-muted-foreground">(opcional — recuperação de login via WhatsApp)</span></Label>
-                <Input placeholder="(11) 91234-5678" {...createForm.register('telefone')} />
-              </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+              <Button type="button" variant="ghost" onClick={saidaCriar.solicitarFechar}>Cancelar</Button>
               <Button type="submit" disabled={createMut.isPending}>
                 {createMut.isPending ? 'Criando…' : 'Criar usuário'}
               </Button>
@@ -550,7 +704,6 @@ export function SuperAdminPage() {
                 ativo: v.ativo,
                 // Só faz sentido para papéis com conselho; limpa se o papel não tiver.
                 registroProfissional: papelTemRegistro(v.papel) ? (v.registroProfissional || '') : '',
-                telefone: v.telefone || undefined,
                 modulosConcedidos: modulosSel.filter((m) => !padrao.includes(m)),
                 modulosRevogados: padrao.filter((m) => !modulosSel.includes(m)),
               };
@@ -620,11 +773,6 @@ export function SuperAdminPage() {
                 </div>
               )}
 
-              <div className="col-span-2 space-y-1.5">
-                <Label>Telefone <span className="text-muted-foreground">(opcional — recuperação de login via WhatsApp)</span></Label>
-                <Input placeholder="(11) 91234-5678" {...editForm.register('telefone')} />
-              </div>
-
               {/* Permissões de módulos */}
               <div className="col-span-2 space-y-2 pt-2 border-t border-border">
                 <div className="flex items-center justify-between">
@@ -679,6 +827,7 @@ export function SuperAdminPage() {
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             Definindo nova senha para <span className="font-medium text-foreground">{resetTarget?.nome}</span> ({resetTarget?.email}).
+            Ela é provisória: a pessoa troca no próximo acesso e as sessões abertas caem. Para quem perdeu o 2FA, use o botão de redefinir 2FA.
           </p>
           <form
             onSubmit={resetForm.handleSubmit((v) => {
@@ -735,29 +884,9 @@ export function SuperAdminPage() {
             <DialogTitle>Chave 2FA — {twoFaSetup?.email}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Cadastre no <span className="font-medium text-foreground">Google Authenticator</span>:
-              toque em <span className="font-medium text-foreground">+</span> →{' '}
-              <span className="font-medium text-foreground">Inserir chave de configuração</span>, informe o
-              e-mail como nome da conta e a chave abaixo (tipo: baseado em tempo).
-            </p>
-            <div className="flex items-center gap-2 rounded-md border border-border bg-secondary p-3">
-              <code className="flex-1 text-sm font-mono break-all select-all">{twoFaSetup?.setup.base32}</code>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                title="Copiar chave"
-                onClick={() => {
-                  if (twoFaSetup) {
-                    void navigator.clipboard.writeText(twoFaSetup.setup.base32);
-                    toast.success('Chave copiada.');
-                  }
-                }}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
+            {twoFaSetup && (
+              <SegredoDoisFatores base32={twoFaSetup.setup.base32} otpauthUrl={twoFaSetup.setup.otpauthUrl} />
+            )}
             <p className="text-xs text-destructive">
               Esta chave não será exibida novamente — repasse ao usuário agora. Se ela se perder,
               gere outra pelo botão de escudo na lista de usuários.
@@ -775,16 +904,31 @@ export function SuperAdminPage() {
           <DialogHeader>
             <DialogTitle>Editar clínica — {clinicaTarget?.nome}</DialogTitle>
           </DialogHeader>
+          {clinicaTarget && <LogoClinicaCard clinicaId={clinicaTarget.id} logoAtualDesconhecida />}
           <form
             onSubmit={clinicaForm.handleSubmit((v) => {
               if (!clinicaTarget) return;
-              clinicaMut.mutate({ id: clinicaTarget.id, payload: v });
+              const { tipoDocumento, documento, ...resto } = v;
+              const mudouFiscal =
+                tipoDocumento !== clinicaTarget.tipoDocumento ||
+                normalizarDocumentoFiscal(documento) !== normalizarDocumentoFiscal(clinicaTarget.documento);
+              if (mudouFiscal && !documentoFiscalValido(tipoDocumento, documento)) {
+                clinicaForm.setError('documento', { message: `${tipoDocumento} inválido. Confira os números.` });
+                return;
+              }
+              // Os dois campos fiscais vão juntos, e só quando mudaram.
+              clinicaMut.mutate({
+                id: clinicaTarget.id,
+                payload: mudouFiscal
+                  ? { ...resto, tipoDocumento, documento: normalizarDocumentoFiscal(documento) }
+                  : resto,
+              });
             })}
             className="space-y-4 py-2"
           >
             <div className="space-y-1.5">
-              <Label>Nome</Label>
-              <Input {...clinicaForm.register('nome')} />
+              <Label htmlFor="clinica-nome">Nome</Label>
+              <Input id="clinica-nome" {...clinicaForm.register('nome')} />
               {clinicaForm.formState.errors.nome && (
                 <p className="text-xs text-destructive">{clinicaForm.formState.errors.nome.message}</p>
               )}
@@ -818,8 +962,62 @@ export function SuperAdminPage() {
                 </Select>
               </div>
             </div>
+            <label className="flex items-start gap-2 text-sm cursor-pointer select-none">
+              <Checkbox
+                checked={clinicaForm.watch('faseTeste')}
+                onCheckedChange={(c) => clinicaForm.setValue('faseTeste', c === true)}
+              />
+              <span>
+                Clínica do teste beta
+                <span className="block text-xs text-muted-foreground">
+                  Marcada: os usuários aceitam o Termo de Teste. Ao desmarcar (lançamento), todos
+                  passam a aceitar os Termos de Uso no próximo acesso.
+                </span>
+              </span>
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Tipo de documento</Label>
+                <Select
+                  value={clinicaForm.watch('tipoDocumento')}
+                  onValueChange={(t) => {
+                    clinicaForm.setValue('tipoDocumento', t as TipoDocumentoFiscal);
+                    clinicaForm.clearErrors('documento');
+                  }}
+                >
+                  <SelectTrigger aria-label="Tipo de documento"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TipoDocumentoFiscal.CNPJ}>CNPJ (empresa)</SelectItem>
+                    <SelectItem value={TipoDocumentoFiscal.CPF}>CPF (pessoa física)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="clinica-documento">Documento</Label>
+                <Input
+                  id="clinica-documento"
+                  className="font-mono"
+                  placeholder={clinicaForm.watch('tipoDocumento') === TipoDocumentoFiscal.CPF ? '000.000.000-00' : '00.000.000/0000-00'}
+                  {...clinicaForm.register('documento', {
+                    onBlur: (e) =>
+                      clinicaForm.setValue(
+                        'documento',
+                        formatarDocumentoFiscal(clinicaForm.getValues('tipoDocumento'), e.target.value),
+                      ),
+                  })}
+                />
+              </div>
+            </div>
+            {clinicaForm.formState.errors.documento && (
+              <p className="text-xs text-destructive">{clinicaForm.formState.errors.documento.message}</p>
+            )}
+            {erroDocumentoFiscal && (
+              <p role="alert" data-testid="erro-documento-fiscal" className="text-xs text-destructive">
+                {erroDocumentoFiscal}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
-              CNPJ: <span className="font-mono">{clinicaTarget?.cnpj}</span> (não editável)
+              Corrigir o documento é uma ação de super-admin e fica registrada na auditoria.
             </p>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setClinicaTarget(null)}>Cancelar</Button>
@@ -828,6 +1026,177 @@ export function SuperAdminPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Nova clínica (cria clínica + 1º admin; senha gerada no backend) */}
+      <Dialog open={novaClinicaOpen} onOpenChange={saidaNovaClinica.onOpenChange}>
+        <DialogContent className="max-w-lg" {...saidaNovaClinica.contentProps}>
+          <DialogHeader>
+            <DialogTitle>Nova clínica</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={novaClinicaForm.handleSubmit((v) => criarClinicaMut.mutate(v))}
+            className="space-y-4 py-2"
+          >
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 space-y-1.5">
+                <Label>Nome da clínica</Label>
+                <Input {...novaClinicaForm.register('nome')} />
+                {novaClinicaForm.formState.errors.nome && (
+                  <p className="text-xs text-destructive">{novaClinicaForm.formState.errors.nome.message}</p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Tipo de documento</Label>
+                <Select
+                  defaultValue={TipoDocumentoFiscal.CNPJ}
+                  onValueChange={(t) =>
+                    novaClinicaForm.setValue('tipoDocumento', t as TipoDocumentoFiscal, { shouldValidate: novaClinicaForm.formState.isSubmitted })
+                  }
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TipoDocumentoFiscal.CNPJ}>CNPJ (empresa)</SelectItem>
+                    <SelectItem value={TipoDocumentoFiscal.CPF}>CPF (pessoa física)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="nova-clinica-documento">Documento do consultório (CPF ou CNPJ) — opcional; a psicóloga informa no primeiro uso</Label>
+                <Input
+                  id="nova-clinica-documento"
+                  placeholder={novaClinicaForm.watch('tipoDocumento') === TipoDocumentoFiscal.CPF ? '000.000.000-00' : '00.000.000/0000-00'}
+                  {...novaClinicaForm.register('documento')}
+                />
+                {novaClinicaForm.formState.errors.documento && (
+                  <p className="text-xs text-destructive">{novaClinicaForm.formState.errors.documento.message}</p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Plano</Label>
+                <Select
+                  defaultValue="basico"
+                  onValueChange={(p) => novaClinicaForm.setValue('plano', p as NovaClinicaForm['plano'])}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(PLANO_LABEL) as ClinicaAdmin['plano'][]).map((p) => (
+                      <SelectItem key={p} value={p}>{PLANO_LABEL[p]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Fuso horário</Label>
+                <Input {...novaClinicaForm.register('fusoHorario')} />
+                {novaClinicaForm.formState.errors.fusoHorario && (
+                  <p className="text-xs text-destructive">{novaClinicaForm.formState.errors.fusoHorario.message}</p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Duração padrão da consulta (min)</Label>
+                <Input type="number" {...novaClinicaForm.register('duracaoConsultaPadrao')} />
+                {novaClinicaForm.formState.errors.duracaoConsultaPadrao && (
+                  <p className="text-xs text-destructive">
+                    {novaClinicaForm.formState.errors.duracaoConsultaPadrao.message}
+                  </p>
+                )}
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label>Clínica do teste beta?</Label>
+                <Select
+                  onValueChange={(v) => novaClinicaForm.setValue('faseTeste', v === 'sim', { shouldValidate: true })}
+                >
+                  <SelectTrigger aria-label="Clínica do teste beta"><SelectValue placeholder="Escolha uma opção" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sim">Sim — os usuários aceitam o Termo de Teste</SelectItem>
+                    <SelectItem value="nao">Não — os usuários aceitam os Termos de Uso</SelectItem>
+                  </SelectContent>
+                </Select>
+                {novaClinicaForm.formState.errors.faseTeste && (
+                  <p className="text-xs text-destructive">{novaClinicaForm.formState.errors.faseTeste.message}</p>
+                )}
+              </div>
+              <div className="col-span-2 border-t border-border pt-3 space-y-1">
+                <p className="text-sm font-medium">Primeiro administrador da clínica</p>
+                <p className="text-xs text-muted-foreground">
+                  Opcional: se preencher um, preencha os dois. Sem administrador, a clínica é criada só com o
+                  psicólogo, que você cria depois em "Novo usuário". Com administrador, a senha é gerada
+                  automaticamente e exibida uma única vez após a criação.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Nome do admin</Label>
+                <Input {...novaClinicaForm.register('adminNome')} />
+                {novaClinicaForm.formState.errors.adminNome && (
+                  <p className="text-xs text-destructive">{novaClinicaForm.formState.errors.adminNome.message}</p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>E-mail do admin</Label>
+                <Input type="email" {...novaClinicaForm.register('adminEmail')} />
+                {novaClinicaForm.formState.errors.adminEmail && (
+                  <p className="text-xs text-destructive">{novaClinicaForm.formState.errors.adminEmail.message}</p>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={saidaNovaClinica.solicitarFechar}>Cancelar</Button>
+              <Button type="submit" disabled={criarClinicaMut.isPending}>
+                {criarClinicaMut.isPending ? 'Criando…' : 'Criar clínica'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: segredos da clínica recém-criada (aparecem uma única vez) */}
+      <Dialog open={!!segredosClinica} onOpenChange={(o) => { if (!o) setSegredosClinica(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Clínica criada — {segredosClinica?.clinicaNome}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Repasse ao administrador (<span className="font-medium text-foreground">{segredosClinica?.adminEmail}</span>)
+              por um canal privado. Ele será obrigado a trocar a senha no primeiro acesso.
+            </p>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Senha temporária</Label>
+              <div className="flex items-center gap-2 rounded-md border border-border bg-secondary p-3">
+                <code className="flex-1 text-sm font-mono break-all select-all">
+                  {segredosClinica?.senhaTemporaria}
+                </code>
+                <Button
+                  type="button" variant="ghost" size="icon" title="Copiar senha"
+                  onClick={() => {
+                    if (segredosClinica) {
+                      void navigator.clipboard.writeText(segredosClinica.senhaTemporaria);
+                      toast.success('Senha copiada.');
+                    }
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {segredosClinica?.base32 && (
+              <div className="space-y-1">
+                <Label className="text-xs">Segundo fator do administrador</Label>
+                <SegredoDoisFatores base32={segredosClinica.base32} otpauthUrl={segredosClinica.otpauthUrl} />
+              </div>
+            )}
+
+            <p className="text-xs text-destructive">
+              Nem a senha nem a chave 2FA serão exibidas novamente.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button type="button" onClick={() => setSegredosClinica(null)}>Concluído</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

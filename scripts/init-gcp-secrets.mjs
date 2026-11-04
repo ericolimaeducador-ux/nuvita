@@ -25,9 +25,12 @@ import * as readline from 'readline';
 const secretClient = new SecretManagerServiceClient();
 const kmsClient = new KeyManagementServiceClient();
 
-const projectId = process.env.GCP_PROJECT_ID || 'nuvita-499800';
-const kmsKeyRing = 'nuvita-keyring';
-const kmsKey = 'nuvita-master-key';
+if (!process.env.GCP_PROJECT_ID) {
+  throw new Error('GCP_PROJECT_ID e obrigatorio (defina o projeto GCP do nuvita-psi antes de rodar este script).');
+}
+const projectId = process.env.GCP_PROJECT_ID;
+const kmsKeyRing = 'nuvita-psi-keyring';
+const kmsKey = 'nuvita-psi-master-key';
 const kmsLocation = 'global';
 
 const rl = readline.createInterface({
@@ -71,10 +74,9 @@ const REQUIRED_SECRETS = [
   },
   {
     name: 'patient-data-hash-key',
-    description: 'Hash key for patient data (base64-encoded 32 bytes, optional)',
+    description: 'Dedicated HMAC key for patient CPF hashing (base64-encoded 32 bytes) — separate secret domain from the encryption key',
     example: '<base64-encoded-32-bytes>',
     generate: () => crypto.randomBytes(32).toString('base64'),
-    optional: true,
   },
   {
     name: 'document-storage-bucket',

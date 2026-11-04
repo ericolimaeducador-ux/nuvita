@@ -1,0 +1,501 @@
+{
+  "perfil": "paciente",
+  "depoisDoLogin": "/dashboard",
+  "rotas": [
+    {
+      "slug": "dashboard",
+      "pedida": "/dashboard",
+      "final": "/dashboard",
+      "redirecionou": false,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/dashboard.png"
+    },
+    {
+      "slug": "pacientes",
+      "pedida": "/pacientes",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/pacientes.png"
+    },
+    {
+      "slug": "paciente-ficha",
+      "pedida": "/pacientes/:id",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/paciente-ficha.png"
+    },
+    {
+      "slug": "imprimir-prontuario",
+      "pedida": "/pacientes/6ada6457601ae7ce8e864969/prontuario/6ada6458601ae7ce8e864987/imprimir",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/imprimir-prontuario.png"
+    },
+    {
+      "slug": "doc-atestado",
+      "pedida": "/pacientes/:id/documentos/atestado",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/doc-atestado.png"
+    },
+    {
+      "slug": "doc-laudo",
+      "pedida": "/pacientes/:id/documentos/laudo",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/doc-laudo.png"
+    },
+    {
+      "slug": "doc-encaminhamento",
+      "pedida": "/pacientes/:id/documentos/encaminhamento",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/doc-encaminhamento.png"
+    },
+    {
+      "slug": "doc-prescricao",
+      "pedida": "/pacientes/:id/documentos/prescricao",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/doc-prescricao.png"
+    },
+    {
+      "slug": "agenda",
+      "pedida": "/agenda",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/agenda.png"
+    },
+    {
+      "slug": "prontuarios",
+      "pedida": "/prontuarios",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/prontuarios.png"
+    },
+    {
+      "slug": "documentos",
+      "pedida": "/documentos",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/documentos.png"
+    },
+    {
+      "slug": "notificacoes",
+      "pedida": "/notificacoes",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/notificacoes.png"
+    },
+    {
+      "slug": "telemedicina",
+      "pedida": "/telemedicina",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/telemedicina.png"
+    },
+    {
+      "slug": "atendimento-psicologico",
+      "pedida": "/atendimento-psicologico",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/atendimento-psicologico.png"
+    },
+    {
+      "slug": "financeiro-psicologia",
+      "pedida": "/financeiro-psicologia",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/financeiro-psicologia.png"
+    },
+    {
+      "slug": "clinica",
+      "pedida": "/clinica",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/clinica.png"
+    },
+    {
+      "slug": "relatorios",
+      "pedida": "/relatorios",
+      "final": "/relatorios",
+      "redirecionou": false,
+      "titulos": [
+        "Relatórios Gerenciais"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Relatórios Gerenciais Visão consolidada de pacientes e atendimentos para a gestão da clínica Período — de até Afeta: novos pacientes no período",
+      "img": "screenshots/perfis/paciente/relatorios.png"
+    },
+    {
+      "slug": "super-admin",
+      "pedida": "/super-admin",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/super-admin.png"
+    },
+    {
+      "slug": "tickets",
+      "pedida": "/tickets",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /agendamentos",
+        "403 GET /pacientes"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/tickets.png"
+    },
+    {
+      "slug": "rota-inexistente",
+      "pedida": "/rota-que-nao-existe",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Paciente Login Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [
+        "403 GET /pacientes",
+        "403 GET /agendamentos",
+        "403 GET /pacientes",
+        "403 GET /agendamentos"
+      ],
+      "consoleErros": 5,
+      "texto": "Nuvita Psi Dashboard Relatórios PL Paciente Login Demonstração PACIENTE Sair Paciente Login Demonstração PACIENTE PL Olá, Paciente Login Demonstração quinta-feira, 22 de outubro de 2026 Pacientes ativos 0 Agendamentos hoje 0 Atendimentos realizados 0 Prontuári",
+      "img": "screenshots/perfis/paciente/rota-inexistente.png"
+    }
+  ]
+}

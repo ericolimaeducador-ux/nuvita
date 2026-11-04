@@ -1,5 +1,4 @@
 import {
-  IsBoolean,
   IsEmail,
   IsEnum,
   IsISO8601,
@@ -11,10 +10,12 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ProjetoPaciente, Sexo } from '../../domain/paciente.entity';
+import { LinhaTerapeutica, ProjetoPaciente, Sexo } from '../../domain/paciente.entity';
 import { ConsentimentoLGpdDto } from './consentimento-lgpd.dto';
 import { ConvenioDto } from './convenio.dto';
 import { EnderecoDto } from './endereco.dto';
+import { IsCpfValido, IsDataNaoFutura } from './paciente-campos.validator';
+import { AutorizacaoResponsavelDto, ResponsavelLegalDto } from './responsavel-legal.dto';
 
 export class CreatePacienteDto {
   @IsMongoId()
@@ -26,11 +27,16 @@ export class CreatePacienteDto {
 
   @IsOptional()
   @Matches(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/)
+  @IsCpfValido()
   cpf?: string;
 
-  @IsOptional()
+  // Obrigatória SÓ no cadastro (aqui): sem ela não dá para saber se o paciente é
+  // menor de idade, e a regra de responsável legal depende dessa classificação.
+  // Em UpdatePacienteDto (PartialType deste DTO) ela volta a ser opcional, para
+  // não travar a edição de pacientes já cadastrados sem essa data.
   @IsISO8601()
-  dataNascimento?: string;
+  @IsDataNaoFutura()
+  dataNascimento!: string;
 
   @IsOptional()
   @IsEnum(Sexo)
@@ -60,14 +66,26 @@ export class CreatePacienteDto {
   consentimentoLGPD?: ConsentimentoLGpdDto;
 
   @IsOptional()
-  @IsBoolean()
-  programaIU?: boolean;
-
-  @IsOptional()
   @IsEnum(ProjetoPaciente)
   projeto?: ProjetoPaciente;
 
   @IsOptional()
+  @IsEnum(LinhaTerapeutica)
+  linhaTerapeutica?: LinhaTerapeutica;
+
+  @IsOptional()
   @IsString()
   representante?: string;
+
+  // Objeto inteiro opcional aqui — obrigatoriedade condicional (paciente menor)
+  // é validada em PacientesService.create()/update(), não neste DTO.
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ResponsavelLegalDto)
+  responsavelLegal?: ResponsavelLegalDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AutorizacaoResponsavelDto)
+  autorizacaoResponsavel?: AutorizacaoResponsavelDto;
 }

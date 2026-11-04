@@ -31,7 +31,10 @@ import * as path from 'path';
 import chalk from 'chalk';
 
 const secretClient = new SecretManagerServiceClient();
-const projectId = process.env.GCP_PROJECT_ID || 'nuvita-499800';
+if (!process.env.GCP_PROJECT_ID) {
+  throw new Error('GCP_PROJECT_ID e obrigatorio (defina o projeto GCP do nuvita-psi antes de rodar este script).');
+}
+const projectId = process.env.GCP_PROJECT_ID;
 const rotationScheduleDays = parseInt(process.env.ROTATION_SCHEDULE_DAYS || '90', 10);
 
 interface SecretRotationPolicy {

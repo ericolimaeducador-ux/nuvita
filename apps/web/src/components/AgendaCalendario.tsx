@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { agendaApi } from '@/api/resources';
-import { apiErrorMessage } from '@/api/client';
+import { avisarErroDeAcao } from '@/api/client';
 import { toast } from '@/components/ui/use-toast';
 import { toItems, formatCpf } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import {
   ModalidadeAtendimento, MODALIDADE_LABEL, StatusAgendamento, STATUS_AGENDAMENTO_LABEL,
   TIPO_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_POR_AGENDAMENTO,
@@ -22,8 +23,6 @@ const localizer = dayjsLocalizer(dayjs);
 const DnDCalendar = withDragAndDrop<RBCEvent>(Calendar<RBCEvent>);
 
 const CORES_MODALIDADE: Record<ModalidadeAtendimento, string> = {
-  [ModalidadeAtendimento.MEDICO]: '#2563eb',
-  [ModalidadeAtendimento.ENFERMAGEM]: '#059669',
   [ModalidadeAtendimento.PSICOLOGIA]: '#e11d48',
 };
 
@@ -64,7 +63,7 @@ export function AgendaCalendario({
       setSelecionado(null);
       void qc.invalidateQueries({ queryKey: ['agenda'] });
     },
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+    onError: avisarErroDeAcao,
   });
 
   const reagendarMut = useMutation({
@@ -73,7 +72,7 @@ export function AgendaCalendario({
       toast.success('Agendamento reagendado.');
       void qc.invalidateQueries({ queryKey: ['agenda'] });
     },
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
+    onError: avisarErroDeAcao,
   });
 
   const agendamentos = toItems<Agendamento>(listQ.data as never);
@@ -115,7 +114,12 @@ export function AgendaCalendario({
         <span className="text-muted-foreground/70">Arraste um evento para reagendar.</span>
       </div>
 
-      <div style={{ height: 650 }}>
+      {/* Calendário vazio por falha não pode parecer agenda livre: alerta e calendário inerte. */}
+      {listQ.isError && (
+        <ErroConsulta erro={listQ.error} refetch={listQ.refetch} recurso="os agendamentos do período" />
+      )}
+
+      <div style={{ height: 650 }} className={listQ.isError ? 'pointer-events-none opacity-40' : undefined}>
         <DnDCalendar
           localizer={localizer}
           culture="pt-br"

@@ -25,7 +25,7 @@ jobs:
 
       - name: Lint
         working-directory: apps/api
-        run: npx eslint "src/**/*.ts" --max-warnings 0 || true
+        run: npx eslint "{src,test}/**/*.ts" --max-warnings 0
 
       - name: Type check
         working-directory: apps/api
@@ -38,6 +38,18 @@ jobs:
       - name: Tests
         working-directory: apps/api
         run: npx jest --passWithNoTests
+
+      # Gate de vulnerabilidades nas dependências que vão para produção
+      # (--omit=dev: o que roda no container, não o ferramental de build).
+      #
+      # O nível está em `critical` e não em `high` porque hoje restam 5 highs
+      # que só saem com a migração Nest 10 -> 11 (multer via
+      # @nestjs/platform-express; js-yaml e lodash via @nestjs/swagger). Baixar
+      # para `high` agora deixaria o CI vermelho de forma permanente, o que
+      # treina todo mundo a ignorar o gate. Apertar para `high` junto com a
+      # migração — ver infra/PRODUCTION-BACKEND.md, seção 9.
+      - name: Auditoria de dependências de produção
+        run: npm audit --omit=dev --audit-level=critical
 
   web:
     name: Web — Type-check & Build
@@ -58,3 +70,8 @@ jobs:
       - name: Type check & build
         working-directory: apps/web
         run: npm run build
+
+      # Testes unitários do web (vitest). Teste que não roda no CI não entra: o job falha se algum quebrar.
+      - name: Testes unitários (vitest)
+        working-directory: apps/web
+        run: npm test

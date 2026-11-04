@@ -1,15 +1,8 @@
 export enum TipoAtendimento {
-  CONSULTA = 'consulta',
-  RETORNO = 'retorno',
-  URGENCIA = 'urgencia',
-  TELECONSULTA = 'teleconsulta',
-  CONSULTA_ENFERMAGEM = 'consulta_enfermagem',
   PSICOTERAPIA = 'psicoterapia',
 }
 
 export interface Subjetivo {
-  // Opcional pois a consulta de enfermagem (CONSULTA_ENFERMAGEM) não é um SOAP
-  // tradicional e não preenche este bloco.
   queixaPrincipal?: string;
   /** História da Doença Atual. */
   hda?: string;
@@ -81,124 +74,6 @@ export interface Plano {
   retorno?: string;
 }
 
-export enum NaturezaAtendimento {
-  SUS = 'sus',
-  SUPLEMENTAR = 'suplementar',
-  PARTICULAR = 'particular',
-}
-
-export enum TipoSolicitacaoJudicial {
-  MEDICAMENTO = 'medicamento',
-  PRODUTO = 'produto',
-  PROCEDIMENTO = 'procedimento',
-}
-
-export interface PrescritorJudicial {
-  nome?: string;
-  /** Conselho + número: ex. "CRM-SP 123456" ou "COREN-SP 123456". */
-  registro?: string;
-  especialidade?: string;
-}
-
-export interface ProdutoJudicial {
-  descricao?: string;
-  /** Calibre em French (Fr), quando cateter. */
-  calibreFrench?: number;
-  /** Comprimento em cm. */
-  comprimentoCm?: number;
-  quantidadePorDia?: number;
-  quantidadePorMes?: number;
-  usoContinuo?: boolean;
-}
-
-export interface MedicamentoJudicial {
-  /** Princípio ativo — DCB (ou DCI na ausência da DCB). */
-  principioAtivo?: string;
-  formaFarmaceuticaApresentacao?: string;
-  dose?: string;
-  posologia?: string;
-  viaAdministracao?: string;
-  duracaoTratamento?: string;
-}
-
-/**
- * Bloco de judicialização (NAT-JUS/SP). Preenchido quando o atendimento gera
- * uma demanda judicial de insumo/medicamento/procedimento. Espelha o Anexo IV
- * (Formulário de Solicitação de Informação Técnica ao NAT-JUS) e os requisitos
- * de relatório e receituário médico (validade de 90 dias).
- */
-export interface RelatorioJudicial {
-  municipioEstado?: string;
-  naturezaAtendimento?: NaturezaAtendimento;
-  /** Enfermidade + CID principal e causa de base. */
-  enfermidadeCid?: string;
-  /** História/evolução da doença. */
-  historicoDoenca?: string;
-  /** Tratamentos já realizados e respectivos resultados. */
-  tratamentosRealizados?: string;
-  tipoSolicitacao?: TipoSolicitacaoJudicial;
-  produto?: ProdutoJudicial;
-  medicamento?: MedicamentoJudicial;
-  procedimentoDescricao?: string;
-  urgente?: boolean;
-  justificativaUrgencia?: string;
-  imprescindivel?: boolean;
-  justificativaImprescindivel?: string;
-  beneficiosEsperados?: string;
-  consequenciasNaoUso?: string;
-  prescritor?: PrescritorJudicial;
-  /** Data de emissão do relatório (base para a validade de 90 dias). */
-  dataEmissao?: Date;
-}
-
-export interface CateterIndicado {
-  sexo?: string;
-  french?: number;
-  codigo?: number;
-}
-
-/** Questionário de Avaliação de Incontinência Urinária embutido no prontuário. */
-export interface FichaAvaliacaoIU {
-  local?: string;
-  estadoCivil?: string;
-  prescritor?: string;
-  planoSaude?: string;
-  hospitalReferencia?: string;
-  motivoIU?: string;
-  inicioSintomas?: string;
-  perfilCliente?: string;
-  destreza?: string;
-  dntui?: boolean;
-  tiposIU?: string[];
-  miccaoEspontanea?: boolean;
-  volumeAproximadoMl?: number;
-  realizaCateterismo?: boolean;
-  cateterismosDia?: number;
-  cateterUtilizado?: string;
-  ultimaInfeccaoUrinaria?: string;
-  emTratamento?: boolean;
-  tratamento?: string;
-  volumeDrenado?: string;
-  outrasIntercorrencias?: string;
-  cateterIndicado?: CateterIndicado;
-  encaminhamento?: string;
-  localEncaminhamento?: string;
-  responsavelCateterismo?: string;
-  autorizaPesquisa?: boolean;
-  aceitaInformacoes?: boolean;
-  emailContato?: string;
-  whatsappContato?: string;
-  coren?: string;
-  respCuidador?: string;
-}
-
-/** Registro da consulta de enfermagem (ligação de acompanhamento + chegada da sonda de teste). */
-export interface RegistroEnfermagem {
-  dataLigacao?: Date;
-  sondaChegouEm?: Date;
-  observacoes?: string;
-}
-
 /**
  * Registro de atendimento psicológico / sessão de psicoterapia.
  * Estruturado conforme o registro documental da Resolução CFP nº 006/2019
@@ -245,6 +120,27 @@ export interface RegistroPsicologico {
   anotacoesLivres?: string;
   /** CRP do psicólogo responsável. */
   crp?: string;
+
+  // Campos específicos por linha terapêutica do paciente (TCC, Psicanálise,
+  // Humanista, Gestalt, Junguiana) — preenchidos condicionalmente conforme
+  // Paciente.linhaTerapeutica, ver apps/web/src/lib/linhaTerapeutica.ts.
+  tccPensamentosAutomaticos?: string;
+  tccDistorcoesCognitivas?: string;
+  tccTarefaCasa?: string;
+  tccRegistroComportamental?: string;
+  psicanaliseAssociacaoLivre?: string;
+  psicanaliseConteudoOnirico?: string;
+  psicanaliseDinamicaTransferencial?: string;
+  psicanaliseRepeticoes?: string;
+  humanistaCongruencia?: string;
+  humanistaAutorrealizacao?: string;
+  humanistaAcolhimento?: string;
+  gestaltAwareness?: string;
+  gestaltFiguraFundo?: string;
+  gestaltContatoFronteira?: string;
+  junguianaSimbolosArquetipicos?: string;
+  junguianaMaterialOnirico?: string;
+  junguianaProcessoIndividuacao?: string;
 }
 
 export interface ArquivoProntuario {
@@ -254,10 +150,16 @@ export interface ArquivoProntuario {
   tamanho: number;
 }
 
+/** Qual formulário do registro de atendimento psicológico foi usado: avaliação inicial (completo) ou seguimento. */
+export const FORMULARIOS_PRONTUARIO = ['completo', 'seguimento'] as const;
+export type FormularioProntuario = (typeof FORMULARIOS_PRONTUARIO)[number];
+
 export interface AssinaturaProntuario {
   medicoId: string;
   dataAssinatura: Date;
   hash: string;
+  /** CRP do perfil do psicólogo, carimbado pelo servidor ao assinar. Ausente nos registros anteriores a essa regra. */
+  crp?: string;
 }
 
 export interface Prontuario {
@@ -272,10 +174,9 @@ export interface Prontuario {
   objetivo: Objetivo;
   avaliacao: Avaliacao;
   plano: Plano;
-  fichaAvaliacaoIU?: FichaAvaliacaoIU;
-  registroEnfermagem?: RegistroEnfermagem;
   registroPsicologico?: RegistroPsicologico;
-  relatorioJudicial?: RelatorioJudicial;
+  /** Formulário usado (psicoterapia). Ausente nos registros anteriores: a tela e o PDF o deduzem. */
+  formulario?: FormularioProntuario;
   arquivos: ArquivoProntuario[];
   assinado?: AssinaturaProntuario;
   criadoEm: Date;

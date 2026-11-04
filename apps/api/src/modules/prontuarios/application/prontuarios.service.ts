@@ -5,11 +5,13 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { AppConfigService } from '../../../common/security/config.service';
 import { createHmac } from 'crypto';
 import { AuthTokenPayload, ehProfissional } from '../../../../../../packages/shared/src/auth';
-import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
+import { AUDIT_LOG_REPOSITORY, USER_REPOSITORY } from '../../auth/auth.constants';
+import { UserRepository } from '../../auth/application/ports/user.repository';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
 import { AgendamentosService } from '../../agendamentos/application/agendamentos.service';
@@ -18,7 +20,9 @@ import { CreateProntuarioDto } from './dto/create-prontuario.dto';
 import { ListProntuariosQueryDto } from './dto/list-prontuarios-query.dto';
 import { UpdateProntuarioDto } from './dto/update-prontuario.dto';
 import { CID10_REPOSITORY, PRONTUARIO_REPOSITORY } from '../prontuarios.constants';
-import { Prontuario } from '../domain/prontuario.entity';
+import { StatusAgendamento } from '../../agendamentos/domain/agendamento.entity';
+import { assertAtendimentoComecou } from '../../agendamentos/domain/atendimento-horario';
+import { Prontuario, TipoAtendimento } from '../domain/prontuario.entity';
 import { Cid10Repository, ProntuarioRepository } from './ports/prontuario.repository';
 
 export interface ProntuarioRequestContext {
@@ -35,41 +39,41 @@ export class ProntuariosService {
     @Inject(AUDIT_LOG_REPOSITORY) private readonly auditLogs: AuditLogRepository,
     private readonly configService: AppConfigService,
     private readonly agendamentosService: AgendamentosService,
+    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
   ) {}
 
   async create(dto: CreateProntuarioDto, context: ProntuarioRequestContext): Promise<Prontuario> {
     this.assertMedico(context.user);
     const clinicaId = this.resolveClinicaId(context.user, dto.clinicaId);
+
+    // BUG-020: o prontuário é ancorado na agenda. A data é o horário AGENDADO do atendimento, nunca a do cliente.
+    if (!dto.agendamentoId) throw new NotFoundException('Agendamento nao encontrado.');
+    const agendamento = await this.agendamentosService.obterParaEmissao(clinicaId, dto.agendamentoId, context.user);
+    if (agendamento.pacienteId !== dto.pacienteId) {
+      throw new NotFoundException('Agendamento nao encontrado.');
+    }
+    if (agendamento.status === StatusAgendamento.CANCELADO || agendamento.status === StatusAgendamento.FALTA) {
+      throw new UnprocessableEntityException('Atendimento cancelado ou com falta nao gera prontuario.');
+    }
+    assertAtendimentoComecou(agendamento.dataHoraInicio);
+    // A mesma sessão não pode ser registrada duas vezes: a contagem de sessões (e o laudo) a afirmariam em dobro.
+    if (await this.prontuarios.findByAgendamento(clinicaId, dto.agendamentoId)) {
+      throw new ConflictException('Ja existe prontuario registrado para este atendimento.');
+    }
+
     const prontuario = await this.prontuarios.create({
       clinicaId,
       pacienteId: dto.pacienteId,
       medicoId: context.user.sub,
       agendamentoId: dto.agendamentoId,
-      dataAtendimento: new Date(dto.dataAtendimento),
+      dataAtendimento: agendamento.dataHoraInicio,
       tipo: dto.tipo,
       subjetivo: dto.subjetivo ?? {},
       objetivo: dto.objetivo ?? {},
       avaliacao: dto.avaliacao ?? {},
       plano: dto.plano ?? {},
-      fichaAvaliacaoIU: dto.fichaAvaliacaoIU,
       registroPsicologico: dto.registroPsicologico,
-      registroEnfermagem: dto.registroEnfermagem
-        ? {
-            ...dto.registroEnfermagem,
-            dataLigacao: dto.registroEnfermagem.dataLigacao ? new Date(dto.registroEnfermagem.dataLigacao) : undefined,
-            sondaChegouEm: dto.registroEnfermagem.sondaChegouEm
-              ? new Date(dto.registroEnfermagem.sondaChegouEm)
-              : undefined,
-          }
-        : undefined,
-      relatorioJudicial: dto.relatorioJudicial
-        ? {
-            ...dto.relatorioJudicial,
-            dataEmissao: dto.relatorioJudicial.dataEmissao
-              ? new Date(dto.relatorioJudicial.dataEmissao)
-              : undefined,
-          }
-        : undefined,
+      formulario: dto.tipo === TipoAtendimento.PSICOTERAPIA ? dto.formulario : undefined,
       arquivos: dto.arquivos ?? [],
     });
 
@@ -99,7 +103,9 @@ export class ProntuariosService {
     }
 
     const clinicaId = this.resolveClinicaId(context.user, query.clinicaId);
-    const prontuarios = await this.prontuarios.listByPaciente(clinicaId, query.pacienteId);
+    const todos = await this.prontuarios.listByPaciente(clinicaId, query.pacienteId);
+    // Sigilo profissional: o psicólogo só vê os prontuários que são dele, mesmo do mesmo paciente.
+    const prontuarios = todos.filter((p) => p.medicoId === context.user.sub);
 
     await this.audit(AuditEvent.MEDICAL_RECORD_LISTED, context, {
       clinicaId,
@@ -110,8 +116,37 @@ export class ProntuariosService {
     return prontuarios;
   }
 
+  /**
+   * Fatos que o laudo afirma a terceiros ("desde X, N sessões"), calculados aqui, só sobre sessões de
+   * psicoterapia do próprio psicólogo ANCORADAS na agenda (registros legados sem agendamento não contam) e ASSINADAS
+   * (rascunho não conta: o laudo não pode afirmar sessão que ainda não foi fechada).
+   */
+  async resumoAcompanhamento(
+    pacienteId: string,
+    clinicaIdSolicitada: string | undefined,
+    context: ProntuarioRequestContext,
+  ): Promise<{ desde: Date | null; totalSessoes: number }> {
+    this.assertMedico(context.user);
+    const clinicaId = this.resolveClinicaId(context.user, clinicaIdSolicitada);
+    const sessoes = (await this.prontuarios.listByPaciente(clinicaId, pacienteId)).filter(
+      (p) => p.tipo === TipoAtendimento.PSICOTERAPIA && p.medicoId === context.user.sub && !!p.agendamentoId && !!p.assinado,
+    );
+    const desde = sessoes.length
+      ? new Date(Math.min(...sessoes.map((p) => new Date(p.dataAtendimento).getTime())))
+      : null;
+
+    await this.audit(AuditEvent.MEDICAL_RECORD_LISTED, context, {
+      clinicaId,
+      pacienteId,
+      quantidade: sessoes.length,
+      recurso: 'resumo-acompanhamento',
+    });
+    return { desde, totalSessoes: sessoes.length };
+  }
+
   async findOne(prontuarioId: string, clinicaId: string | undefined, context: ProntuarioRequestContext) {
     const prontuario = await this.getProntuarioOrThrow(prontuarioId, clinicaId, context);
+    this.assertOwner(prontuario, context.user);
     const addendums = await this.prontuarios.listAddendums(prontuario.id);
 
     await this.audit(AuditEvent.MEDICAL_RECORD_VIEWED, context, {
@@ -136,27 +171,9 @@ export class ProntuariosService {
       throw new ConflictException('Prontuario assinado e imutavel. Use addendum.');
     }
 
-    const updated = await this.prontuarios.updateDraft(current.clinicaId, prontuarioId, {
-      ...dto,
-      dataAtendimento: dto.dataAtendimento ? new Date(dto.dataAtendimento) : undefined,
-      relatorioJudicial: dto.relatorioJudicial
-        ? {
-            ...dto.relatorioJudicial,
-            dataEmissao: dto.relatorioJudicial.dataEmissao
-              ? new Date(dto.relatorioJudicial.dataEmissao)
-              : undefined,
-          }
-        : undefined,
-      registroEnfermagem: dto.registroEnfermagem
-        ? {
-            ...dto.registroEnfermagem,
-            dataLigacao: dto.registroEnfermagem.dataLigacao ? new Date(dto.registroEnfermagem.dataLigacao) : undefined,
-            sondaChegouEm: dto.registroEnfermagem.sondaChegouEm
-              ? new Date(dto.registroEnfermagem.sondaChegouEm)
-              : undefined,
-          }
-        : undefined,
-    });
+    // A âncora (agendamento e data) é imutável: ignora o que vier no corpo.
+    const { dataAtendimento: _data, agendamentoId: _agendamento, ...edicao } = dto as UpdateProntuarioDto & { dataAtendimento?: string; agendamentoId?: string };
+    const updated = await this.prontuarios.updateDraft(current.clinicaId, prontuarioId, edicao);
 
     if (!updated) {
       throw new ConflictException('Prontuario nao pode ser alterado.');
@@ -184,11 +201,19 @@ export class ProntuariosService {
       throw new ConflictException('Prontuario ja assinado.');
     }
 
+    // Fonte única do CRP: o perfil do usuário (user.crp). O corpo do registro não carrega CRP.
+    const profissional = await this.users.findById(context.user.sub);
+    const crp = profissional?.crp?.trim();
+    if (!crp) {
+      throw new UnprocessableEntityException('Informe o CRP no seu perfil para assinar o prontuario.');
+    }
+
     const dataAssinatura = new Date();
     const signed = await this.prontuarios.sign(current.clinicaId, prontuarioId, {
       medicoId: context.user.sub,
       dataAssinatura,
-      hash: this.signatureHash(current, context.user.sub, dataAssinatura),
+      crp,
+      hash: this.signatureHash(current, context.user.sub, dataAssinatura, crp),
     });
 
     if (!signed) {
@@ -211,6 +236,7 @@ export class ProntuariosService {
     context: ProntuarioRequestContext,
   ) {
     const prontuario = await this.getProntuarioOrThrow(prontuarioId, clinicaId, context);
+    this.assertOwner(prontuario, context.user);
     if (!prontuario.assinado) {
       throw new ConflictException('Addendum deve ser usado apenas apos assinatura. Edite o rascunho antes disso.');
     }
@@ -229,6 +255,7 @@ export class ProntuariosService {
 
   async listAddendums(prontuarioId: string, clinicaId: string | undefined, context: ProntuarioRequestContext) {
     const prontuario = await this.getProntuarioOrThrow(prontuarioId, clinicaId, context);
+    this.assertOwner(prontuario, context.user);
     const addendums = await this.prontuarios.listAddendums(prontuarioId);
 
     await this.audit(AuditEvent.MEDICAL_RECORD_VIEWED, context, {
@@ -270,7 +297,6 @@ export class ProntuariosService {
   }
 
   private assertMedico(user: AuthTokenPayload): void {
-    // Paridade profissional: médico e enfermeiro acessam o prontuário.
     if (!ehProfissional(user.papel)) {
       throw new ForbiddenException('Somente profissionais de atendimento acessam o prontuario.');
     }
@@ -278,7 +304,7 @@ export class ProntuariosService {
 
   private assertOwner(prontuario: Prontuario, user: AuthTokenPayload): void {
     if (prontuario.medicoId !== user.sub) {
-      throw new ForbiddenException('Somente o medico responsavel pode alterar ou assinar este prontuario.');
+      throw new ForbiddenException('Somente o profissional responsavel acessa este prontuario.');
     }
   }
 
@@ -294,10 +320,8 @@ export class ProntuariosService {
     throw new BadRequestException('clinicaId e obrigatorio para esta operacao.');
   }
 
-  private signatureHash(prontuario: Prontuario, medicoId: string, dataAssinatura: Date): string {
-    const secret =
-      this.configService.getConfig().prontuarioSignatureSecret ??
-      this.configService.getConfig().jwtAccessSecret;
+  private signatureHash(prontuario: Prontuario, medicoId: string, dataAssinatura: Date, crp: string): string {
+    const secret = this.configService.getConfig().prontuarioSignatureSecret;
     const payload = {
       prontuario: {
         clinicaId: prontuario.clinicaId,
@@ -310,30 +334,17 @@ export class ProntuariosService {
         objetivo: prontuario.objetivo,
         avaliacao: prontuario.avaliacao,
         plano: prontuario.plano,
-        fichaAvaliacaoIU: prontuario.fichaAvaliacaoIU ?? null,
-        registroEnfermagem: prontuario.registroEnfermagem ?? null,
         registroPsicologico: prontuario.registroPsicologico ?? null,
-        relatorioJudicial: this.normalizeJudicial(prontuario.relatorioJudicial),
+        formulario: prontuario.formulario ?? null,
         arquivos: prontuario.arquivos,
       },
       medicoId,
+      // CRP carimbado: parte do que a assinatura atesta.
+      crp,
       dataAssinatura: dataAssinatura.toISOString(),
     };
 
     return createHmac('sha256', secret).update(this.stableStringify(payload)).digest('hex');
-  }
-
-  /**
-   * Normaliza o bloco jurídico para o hash de assinatura: `dataEmissao` pode
-   * chegar como Date (create) ou string ISO (update de rascunho); convertê-la
-   * para ISO garante que o hash seja idêntico independente da origem.
-   */
-  private normalizeJudicial(judicial: Prontuario['relatorioJudicial']): unknown {
-    if (!judicial) return null;
-    const dataEmissao = judicial.dataEmissao
-      ? new Date(judicial.dataEmissao).toISOString()
-      : null;
-    return { ...judicial, dataEmissao };
   }
 
   private stableStringify(value: unknown): string {

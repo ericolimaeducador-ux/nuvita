@@ -14,17 +14,19 @@ import { extractRequestMeta } from '../../../common/http/client-ip';
 import { AuthTokenPayload, PAPEIS_PROFISSIONAIS, Papel } from '../../../../../../packages/shared/src/auth';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
+import { AuthGatesGuard } from '../../auth/presentation/guards/auth-gates.guard';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
 import { CreatePacienteDto } from '../application/dto/create-paciente.dto';
 import { ListPacientesQueryDto } from '../application/dto/list-pacientes-query.dto';
+import { CorrigirIdentidadePacienteDto } from '../application/dto/corrigir-identidade-paciente.dto';
 import { UpdatePacienteDto } from '../application/dto/update-paciente.dto';
 import { UpdateObservacoesPacienteDto } from '../application/dto/update-observacoes-paciente.dto';
 import { PacientesService, RequestAuditContext } from '../application/pacientes.service';
 
 @Controller('pacientes')
-@UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
 export class PacientesController {
   constructor(private readonly pacientesService: PacientesService) {}
 
@@ -74,7 +76,7 @@ export class PacientesController {
 
   // Export LGPD é dump completo de dados sensíveis — não abre p/ todos os profissionais.
   @Get(':id/export')
-  @Roles(Papel.SECRETARIA, Papel.MEDICO, Papel.ADMIN)
+  @Roles(Papel.PSICOLOGO, Papel.ADMIN)
   exportLgpd(
     @Param('id') pacienteId: string,
     @Query('clinicaId') clinicaId: string | undefined,
@@ -96,6 +98,20 @@ export class PacientesController {
     return this.pacientesService.update(pacienteId, dto, clinicaId, this.contextFromRequest(request, user));
   }
 
+  // Correção de nome/CPF/data de nascimento: exclusiva do SUPER_ADMIN (atuando na
+  // clínica escolhida via x-clinica-id), sempre com justificativa.
+  @Patch(':id/identidade')
+  @Roles(Papel.SUPER_ADMIN)
+  corrigirIdentidade(
+    @Param('id') pacienteId: string,
+    @Body() dto: CorrigirIdentidadePacienteDto,
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.pacientesService.corrigirIdentidade(pacienteId, dto, clinicaId, this.contextFromRequest(request, user));
+  }
+
   // Campo de observações livres — mais aberto que o update geral, pois
   // qualquer profissional de atendimento pode registrar informação
   // pertinente sobre o paciente (não só secretaria/admin).
@@ -109,21 +125,6 @@ export class PacientesController {
     @Req() request: Request,
   ) {
     return this.pacientesService.updateObservacoes(pacienteId, dto, clinicaId, this.contextFromRequest(request, user));
-  }
-
-  // Avanço manual de etapa do fluxo clínico ("Avançar etapa" na tela do
-  // paciente) — a checagem de QUAL papel pode avançar de QUAL etapa é feita
-  // dentro do service (depende da etapa atual do paciente, não é estática),
-  // então aqui só exigimos que o usuário seja algum profissional/secretaria/admin.
-  @Patch(':id/fluxo/avancar')
-  @Roles(Papel.SECRETARIA, ...PAPEIS_PROFISSIONAIS, Papel.ADMIN)
-  avancarEtapaManual(
-    @Param('id') pacienteId: string,
-    @Query('clinicaId') clinicaId: string | undefined,
-    @CurrentUser() user: AuthTokenPayload,
-    @Req() request: Request,
-  ) {
-    return this.pacientesService.avancarEtapaManual(pacienteId, clinicaId, this.contextFromRequest(request, user));
   }
 
   @Patch(':id/desativar')

@@ -17,12 +17,31 @@ Thumbs.db
 # Claude Code – configurações locais/pessoais
 .claude/settings.local.json
 
-# Graphify – artefatos locais (caminhos absolutos, não portáveis)
-.graphify/
+# Graphify – allowlist: ignora tudo por padrão e libera só o que passou no
+# `graphify portable-check` (caminhos repo-relativos). manifest.json fica de
+# fora porque carrega caminhos absolutos da máquina; branch/worktree/cache são
+# estado local por definição. Assim, artefato novo do graphify nunca entra no
+# commit por acidente — precisa ser liberado explicitamente aqui.
+.graphify/*
+!.graphify/graph.json
+!.graphify/GRAPH_REPORT.md
 
 # INPI – documentos particulares de registro e pacotes gerados para depósito
 docs/inpi/
 inpi-deposito/
 
-# Documento interno de pendencias de lancamento (nunca versionar)
-docs/PENDENCIAS-LANCAMENTO.md
+# Firebase Hosting – cache local de deploy (hashes/versões); estado por máquina.
+# firebase.json e .firebaserc SÃO versionados; só o cache .firebase/ fica de fora.
+.firebase/
+
+# Termos de Uso: cópia gerada por apps/web/scripts/copy-legal.mjs no prebuild.
+# Fonte única versionada: docs/legal/termos-de-uso.md.
+apps/web/src/legal/termos-de-uso.md
+apps/web/src/legal/termo-de-teste.md
+
+# Playwright MCP – screenshots/snapshots de sessão (browser tooling), estado local
+.playwright-mcp/
+
+# Playwright (harness do timbre)
+apps/web/test-results/
+apps/web/playwright-report/

@@ -49,6 +49,11 @@ export class ProntuarioMongoRepository implements ProntuarioRepository {
     return document ? this.toProntuario(document) : null;
   }
 
+  async findByAgendamento(clinicaId: string, agendamentoId: string): Promise<Prontuario | null> {
+    const document = await this.prontuarioModel.findOne({ clinicaId, agendamentoId }).exec();
+    return document ? this.toProntuario(document) : null;
+  }
+
   async listByPaciente(clinicaId: string, pacienteId: string): Promise<Prontuario[]> {
     const documents = await this.prontuarioModel
       .find({ clinicaId, pacienteId })
@@ -58,7 +63,7 @@ export class ProntuarioMongoRepository implements ProntuarioRepository {
     return documents.map((document) => this.toProntuario(document));
   }
 
-  async resumoSessoesPorPaciente(
+  async resumoSessoesAssinadasPorPaciente(
     clinicaId: string,
     tipo: TipoAtendimento,
     medicoId?: string,
@@ -66,25 +71,27 @@ export class ProntuarioMongoRepository implements ProntuarioRepository {
     const match: Record<string, unknown> = { clinicaId, tipo };
     if (medicoId) match.medicoId = medicoId;
 
+    // Assinado = tem `assinado.dataAssinatura`. O $match NÃO filtra por isso: quem só tem rascunho precisa sair, com total 0.
+    const assinado = { $ne: [{ $type: '$assinado.dataAssinatura' }, 'missing'] };
     const linhas = await this.prontuarioModel
       .aggregate([
         { $match: match },
         {
           $group: {
             _id: '$pacienteId',
-            total: { $sum: 1 },
-            primeiraEm: { $min: '$dataAtendimento' },
-            ultimaEm: { $max: '$dataAtendimento' },
+            total: { $sum: { $cond: [assinado, 1, 0] } },
+            primeiraEm: { $min: { $cond: [assinado, '$dataAtendimento', null] } },
+            ultimaEm: { $max: { $cond: [assinado, '$dataAtendimento', null] } },
           },
         },
       ])
-      .exec() as Array<{ _id: string; total: number; primeiraEm: Date; ultimaEm: Date }>;
+      .exec() as Array<{ _id: string; total: number; primeiraEm: Date | null; ultimaEm: Date | null }>;
 
     return linhas.map((l) => ({
       pacienteId: l._id,
       total: l.total,
-      primeiraEm: l.primeiraEm,
-      ultimaEm: l.ultimaEm,
+      primeiraEm: l.primeiraEm ?? undefined,
+      ultimaEm: l.ultimaEm ?? undefined,
     }));
   }
 
@@ -167,10 +174,8 @@ export class ProntuarioMongoRepository implements ProntuarioRepository {
       objetivo: object.objetivo as unknown as Prontuario['objetivo'],
       avaliacao: object.avaliacao as unknown as Prontuario['avaliacao'],
       plano: object.plano as unknown as Prontuario['plano'],
-      fichaAvaliacaoIU: object.fichaAvaliacaoIU as unknown as Prontuario['fichaAvaliacaoIU'],
-      registroEnfermagem: object.registroEnfermagem as unknown as Prontuario['registroEnfermagem'],
       registroPsicologico: object.registroPsicologico as unknown as Prontuario['registroPsicologico'],
-      relatorioJudicial: object.relatorioJudicial as unknown as Prontuario['relatorioJudicial'],
+      formulario: object.formulario,
       arquivos: object.arquivos as unknown as Prontuario['arquivos'],
       assinado: object.assinado,
       criadoEm: object.criadoEm,

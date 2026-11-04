@@ -4,6 +4,7 @@ import { extractRequestMeta } from '../../../common/http/client-ip';
 import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
+import { AuthGatesGuard } from '../../auth/presentation/guards/auth-gates.guard';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
@@ -13,7 +14,7 @@ import { UpdateOptOutDto } from '../application/dto/update-optout.dto';
 import { NotificacaoRequestContext, NotificacoesService } from '../application/notificacoes.service';
 
 @Controller('notificacoes')
-@UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
 export class NotificacoesController {
   constructor(private readonly notificacoesService: NotificacoesService) {}
 
@@ -38,7 +39,7 @@ export class NotificacoesController {
   }
 
   @Patch('preferencias/:pacienteId/opt-out')
-  @Roles(Papel.PACIENTE, Papel.SECRETARIA, Papel.ADMIN)
+  @Roles(Papel.SECRETARIA, Papel.ADMIN)
   updateOptOut(
     @Param('pacienteId') pacienteId: string,
     @Body() dto: UpdateOptOutDto,

@@ -1,5 +1,13 @@
 {
   "projects": {
     "default": "nuvita-499800"
+  },
+  "targets": {
+    "nuvita-499800": {
+      "hosting": {
+        "web": ["nuvita-psi-web"],
+        "api": ["nuvita-psi-api"]
+      }
+    }
   }
 }

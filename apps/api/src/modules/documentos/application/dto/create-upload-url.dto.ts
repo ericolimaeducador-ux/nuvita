@@ -20,8 +20,10 @@ export class CreateUploadUrlDto {
   @IsString()
   nome!: string;
 
-  // Nome do paciente (já descriptografado no cliente) para compor um nome de
-  // arquivo legível no storage. Opcional para compatibilidade retroativa.
+  /**
+   * @deprecated Aceito só por compatibilidade com clientes antigos e IGNORADO:
+   * dado pessoal não entra na chave do storage nem em log. Não usar.
+   */
   @IsOptional()
   @IsString()
   nomePaciente?: string;

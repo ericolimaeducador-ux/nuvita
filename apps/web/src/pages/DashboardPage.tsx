@@ -1,16 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
-import { Users, Calendar, CheckCircle, FileText, Activity, UserCheck, ClipboardList, AlertTriangle, Brain } from 'lucide-react';
+import { Users, Calendar, CheckCircle, FileText, AlertTriangle, Brain } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  agendaApi, pacientesApi, avaliacaoIUApi, followUpApi, checklistDocumentosApi, psicoFinanceiroApi, laudoMedicoApi,
+  agendaApi, pacientesApi, psicoFinanceiroApi,
 } from '@/api/resources';
 import { toItems } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import { useAuth } from '@/auth/AuthContext';
 import {
   StatusAgendamento,
@@ -19,7 +20,6 @@ import {
   STATUS_CICLO_LABEL,
   TIPO_AGENDAMENTO_LABEL,
   Modulo,
-  Papel,
   rotuloProximaSessao,
   type Agendamento,
 } from '@/types';
@@ -37,10 +37,6 @@ function statusVariant(s: StatusAgendamento): 'default' | 'success' | 'destructi
 
 export function DashboardPage() {
   const { user, permissoes } = useAuth();
-  const podeVerChecklist = permissoes.includes(Modulo.DOCUMENTOS);
-  // Pipeline de IU é o fluxo da clínica de cateterismo — quem não tem o módulo
-  // (ex.: psicólogo, que atende fora do fluxo clínico) não vê o card.
-  const podeVerFluxoClinico = permissoes.includes(Modulo.FLUXO_CLINICO);
   const podeVerPsicologia = permissoes.includes(Modulo.FINANCEIRO_PSICOLOGIA);
 
   const painelPsiQ = useQuery({
@@ -50,37 +46,12 @@ export function DashboardPage() {
     retry: false,
   });
 
-  const pendentesDocsQ = useQuery({
-    queryKey: ['checklist-documentos', 'resumo-pendentes'],
-    queryFn: () => checklistDocumentosApi.resumoPendentes(),
-    enabled: podeVerChecklist,
-  });
-
-  const podeRevisarLaudos = user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
-  const laudosPendentesQ = useQuery({
-    queryKey: ['laudo-medico', 'pendentes-revisao'],
-    queryFn: () => laudoMedicoApi.pendentesRevisao(),
-    enabled: podeRevisarLaudos,
-  });
-
   const hojeIni = dayjs().startOf('day').toISOString();
   const hojeFim = dayjs().endOf('day').toISOString();
 
   const pacientesQ = useQuery({
     queryKey: ['pacientes', 'count'],
     queryFn: () => pacientesApi.list({ limit: 1 }),
-  });
-
-  const avaliacaoCountQ = useQuery({
-    queryKey: ['avaliacao-iu', 'count'],
-    queryFn: () => avaliacaoIUApi.count(),
-    enabled: podeVerFluxoClinico,
-  });
-
-  const followupResumoQ = useQuery({
-    queryKey: ['followup', 'resumo'],
-    queryFn: () => followUpApi.resumo(),
-    enabled: podeVerFluxoClinico,
   });
 
   const agendaHojeQ = useQuery({
@@ -94,10 +65,11 @@ export function DashboardPage() {
     (pacientesQ.data as { total?: number })?.total ?? toItems(pacientesQ.data as never).length;
 
   const stats = [
-    { title: 'Pacientes ativos', value: totalPacientes, icon: Users, loading: pacientesQ.isLoading },
-    { title: 'Agendamentos hoje', value: agendamentos.length, icon: Calendar, loading: agendaHojeQ.isLoading },
-    { title: 'Atendimentos realizados', value: realizados, icon: CheckCircle, loading: agendaHojeQ.isLoading },
-    { title: 'Prontuários', value: '—', icon: FileText, loading: false },
+  // Em erro o cartão mostra "—": zero seria um número inventado.
+    { title: 'Pacientes ativos', value: totalPacientes, icon: Users, loading: pacientesQ.isLoading, erro: pacientesQ.isError },
+    { title: 'Agendamentos hoje', value: agendamentos.length, icon: Calendar, loading: agendaHojeQ.isLoading, erro: agendaHojeQ.isError },
+    { title: 'Atendimentos realizados', value: realizados, icon: CheckCircle, loading: agendaHojeQ.isLoading, erro: agendaHojeQ.isError },
+    { title: 'Prontuários', value: '—', icon: FileText, loading: false, erro: false },
   ];
 
   return (
@@ -107,38 +79,16 @@ export function DashboardPage() {
         subtitle={dayjs().format('dddd, DD [de] MMMM [de] YYYY')}
       />
 
-      {/* Alerta de documentos pendentes (checklist da secretaria/admin) */}
-      {podeVerChecklist && !pendentesDocsQ.isLoading && (pendentesDocsQ.data?.pendentes ?? 0) > 0 && (
-        <Link to="/pacientes" className="block mb-6">
-          <div className="flex items-center gap-3 glass rounded-xl p-4 border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
-            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">
-                {pendentesDocsQ.data?.pendentes} documento{pendentesDocsQ.data?.pendentes !== 1 ? 's' : ''} pendente{pendentesDocsQ.data?.pendentes !== 1 ? 's' : ''} no checklist
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Abra o cadastro do paciente para ver quais documentos faltam receber.
-              </p>
-            </div>
-          </div>
-        </Link>
+      {podeVerPsicologia && painelPsiQ.isError && (
+        <ErroConsulta
+          className="mb-6"
+          erro={painelPsiQ.error}
+          refetch={painelPsiQ.refetch}
+          recurso="a situação de sessões e ciclos da psicoterapia"
+        />
       )}
-
-      {/* Relatórios médicos judiciários aguardando revisão do médico */}
-      {podeRevisarLaudos && !laudosPendentesQ.isLoading && (laudosPendentesQ.data?.length ?? 0) > 0 && (
-        <Link to="/pacientes" className="block mb-6">
-          <div className="flex items-center gap-3 glass rounded-xl p-4 border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
-            <FileText className="h-5 w-5 text-amber-600 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">
-                {laudosPendentesQ.data?.length} relatório{laudosPendentesQ.data?.length !== 1 ? 's' : ''} médico{laudosPendentesQ.data?.length !== 1 ? 's' : ''} judiciário{laudosPendentesQ.data?.length !== 1 ? 's' : ''} aguardando revisão
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Abra o cadastro do paciente para revisar e assinar o rascunho encaminhado pelo enfermeiro.
-              </p>
-            </div>
-          </div>
-        </Link>
+      {pacientesQ.isError && (
+        <ErroConsulta className="mb-6" erro={pacientesQ.error} refetch={pacientesQ.refetch} recurso="o total de pacientes" />
       )}
 
       {/* Psicoterapia: em que sessão cada paciente está e como está o ciclo de cobrança */}
@@ -154,12 +104,20 @@ export function DashboardPage() {
             </Link>
           </CardHeader>
           <CardContent>
-            {painelPsiQ.data.ciclosACobrar > 0 && (
+            {(painelPsiQ.data.ciclosFechadosARenovar ?? 0) > 0 && (
               <p className="mb-3 flex items-center gap-2 text-sm text-amber-700">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
-                {painelPsiQ.data.ciclosACobrar === 1
+                {painelPsiQ.data.ciclosFechadosARenovar === 1
                   ? 'Um paciente fechou o ciclo de 4 sessões — hora de renovar o pagamento.'
-                  : `${painelPsiQ.data.ciclosACobrar} pacientes fecharam o ciclo de 4 sessões — hora de renovar o pagamento.`}
+                  : `${painelPsiQ.data.ciclosFechadosARenovar} pacientes fecharam o ciclo de 4 sessões — hora de renovar o pagamento.`}
+              </p>
+            )}
+            {(painelPsiQ.data.ciclosSemCobranca ?? 0) > 0 && (
+              <p className="mb-3 flex items-center gap-2 text-sm text-amber-700">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                {painelPsiQ.data.ciclosSemCobranca === 1
+                  ? 'Um paciente está sem cobrança no ciclo atual.'
+                  : `${painelPsiQ.data.ciclosSemCobranca} pacientes estão sem cobrança no ciclo atual.`}
               </p>
             )}
             <Table>
@@ -196,47 +154,6 @@ export function DashboardPage() {
         </Card>
       )}
 
-      {/* Pipeline de Incontinência Urinária */}
-      {podeVerFluxoClinico && (
-      <Card className="mb-6 border-brand-cobalt/30">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-accent-gold-hover" />
-            <CardTitle className="text-sm font-semibold">Pipeline de Incontinência Urinária</CardTitle>
-          </div>
-          <Link to="/fluxo-clinico" className="text-xs font-medium text-primary hover:underline">
-            Ver pipeline completo →
-          </Link>
-        </CardHeader>
-        <CardContent>
-          {avaliacaoCountQ.isLoading || followupResumoQ.isLoading ? (
-            <div className="flex gap-6">
-              {[1,2,3].map((i) => <Skeleton key={i} className="h-16 w-28" />)}
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { icon: ClipboardList, label: 'Avaliações', value: avaliacaoCountQ.data?.total ?? 0, sub: 'total de fichas' },
-                { icon: UserCheck, label: 'Em acompanhamento', value: followupResumoQ.data?.emAvaliacao ?? 0, sub: 'aguardando elegibilidade' },
-                { icon: CheckCircle, label: 'Elegíveis', value: followupResumoQ.data?.elegivel ?? 0, sub: 'prontos para laudo' },
-              ].map(({ icon: BlocoIcon, label, value, sub }) => (
-                <div key={label} className="rounded-xl bg-brand-cobalt p-4 shadow-md shadow-brand-cobalt/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="p-1.5 rounded-lg bg-accent-gold">
-                      <BlocoIcon className="h-4 w-4 text-[#1F2937]" />
-                    </span>
-                    <span className="text-xs text-blue-100 font-medium">{label}</span>
-                  </div>
-                  <p className="text-2xl font-bold text-white">{value}</p>
-                  <p className="text-xs text-blue-200/70 mt-0.5">{sub}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      )}
-
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         {stats.map((s) => {
           const Icon = s.icon;
@@ -255,7 +172,7 @@ export function DashboardPage() {
                     </div>
                     <div>
                       <p className="text-xs text-blue-100">{s.title}</p>
-                      <p className="text-2xl font-bold text-white">{s.value}</p>
+                      <p className="text-2xl font-bold text-white">{s.erro ? '—' : s.value}</p>
                     </div>
                   </div>
                 )}
@@ -277,6 +194,8 @@ export function DashboardPage() {
             <div className="space-y-3">
               {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
             </div>
+          ) : agendaHojeQ.isError ? (
+            <ErroConsulta erro={agendaHojeQ.error} refetch={agendaHojeQ.refetch} recurso="a agenda de hoje" />
           ) : agendamentos.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Calendar className="h-8 w-8 mx-auto mb-2 opacity-40" />

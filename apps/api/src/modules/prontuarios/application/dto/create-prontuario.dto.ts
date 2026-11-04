@@ -1,22 +1,18 @@
-import { IsEnum, IsISO8601, IsMongoId, IsOptional, ValidateIf, ValidateNested } from 'class-validator';
+import { IsEnum, IsIn, IsISO8601, IsMongoId, IsOptional, ValidateIf, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TipoAtendimento } from '../../domain/prontuario.entity';
 import {
   ArquivoProntuarioDto,
   AvaliacaoDto,
-  FichaAvaliacaoIUDto,
   ObjetivoDto,
   PlanoDto,
-  RegistroEnfermagemDto,
   RegistroPsicologicoDto,
-  RelatorioJudicialDto,
   SubjetivoDto,
 } from './soap.dto';
 
-// Consulta de enfermagem e psicoterapia não são SOAPs tradicionais — os 4
-// blocos SOAP ficam dispensados de validação/obrigatoriedade nesses tipos.
-const ehAtendimentoSoap = (o: CreateProntuarioDto) =>
-  o.tipo !== TipoAtendimento.CONSULTA_ENFERMAGEM && o.tipo !== TipoAtendimento.PSICOTERAPIA;
+// Psicoterapia não é um SOAP tradicional — os 4 blocos SOAP ficam dispensados
+// de validação/obrigatoriedade nesse tipo.
+const ehAtendimentoSoap = (o: CreateProntuarioDto) => o.tipo !== TipoAtendimento.PSICOTERAPIA;
 
 export class CreateProntuarioDto {
   @IsMongoId()
@@ -25,15 +21,22 @@ export class CreateProntuarioDto {
   @IsMongoId()
   pacienteId!: string;
 
-  @IsOptional()
+  /** Obrigatório: o prontuário nasce de um atendimento da agenda. */
   @IsMongoId()
-  agendamentoId?: string;
+  agendamentoId!: string;
 
+  /** Obsoleto e IGNORADO: a data é o horário agendado. Aceito só para não quebrar uma tela antiga durante o deploy. */
+  @IsOptional()
   @IsISO8601()
-  dataAtendimento!: string;
+  dataAtendimento?: string;
 
   @IsEnum(TipoAtendimento)
   tipo!: TipoAtendimento;
+
+  /** Formulário usado no registro de psicoterapia (avaliação inicial × seguimento): obrigatório e validado aqui. */
+  @ValidateIf((o: CreateProntuarioDto) => o.tipo === TipoAtendimento.PSICOTERAPIA)
+  @IsIn(['completo', 'seguimento'], { message: 'formulario deve ser completo ou seguimento' })
+  formulario?: 'completo' | 'seguimento';
 
   @ValidateIf(ehAtendimentoSoap)
   @ValidateNested()
@@ -57,23 +60,8 @@ export class CreateProntuarioDto {
 
   @IsOptional()
   @ValidateNested()
-  @Type(() => FichaAvaliacaoIUDto)
-  fichaAvaliacaoIU?: FichaAvaliacaoIUDto;
-
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => RegistroEnfermagemDto)
-  registroEnfermagem?: RegistroEnfermagemDto;
-
-  @IsOptional()
-  @ValidateNested()
   @Type(() => RegistroPsicologicoDto)
   registroPsicologico?: RegistroPsicologicoDto;
-
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => RelatorioJudicialDto)
-  relatorioJudicial?: RelatorioJudicialDto;
 
   @IsOptional()
   @ValidateNested({ each: true })

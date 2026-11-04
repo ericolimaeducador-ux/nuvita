@@ -1,15 +1,54 @@
-// D4 (portado do nuvita-psi): os ids do payload de criação (pacienteId, medicoId, agendamentoId) precisam
-// ser validados como pertencentes à clínica ANTES de criar o registro.
-//
-// No Nuvita esse mecanismo AINDA NÃO EXISTE: os controllers não chamam `validarReferencias` e os services
-// gravam `dto.pacienteId` / `dto.medicoId` direto (ver AgendamentosService.create e ProntuariosService.create).
-// Não é diferença estrutural de teste, é lacuna real do produto — registrada em
-// docs/seguranca/ACHADOS-MATRIZ-2026-11-03.md. Como esta etapa NÃO altera código de produto, os casos ficam
-// como `todo` (aparecem no relatório do jest) e devem virar testes de verdade quando o produto for corrigido
-// (ver o spec equivalente no nuvita-psi: controllers recusam com NotFoundException e o service nunca é chamado).
-describe('controllers validam referências do payload (D4) — PENDENTE no Nuvita', () => {
-  it.todo('agendamento: create (pacienteId, medicoId), update (medicoId) e createBloqueio (medicoId)');
-  it.todo('telemedicina: createSala (pacienteId e agendamentoId)');
-  it.todo('documentos: createUploadUrl / presign (pacienteId)');
-  it.todo('prontuário: create (pacienteId e agendamentoId)');
+import { NotFoundException } from '@nestjs/common';
+import { Papel } from '../../../../../packages/shared/src/auth';
+import { AgendamentosController } from '../../modules/agendamentos/presentation/agendamentos.controller';
+import { DocumentosController } from '../../modules/documentos/presentation/documentos.controller';
+import { ProntuariosController } from '../../modules/prontuarios/presentation/prontuarios.controller';
+import { TelemedicinaController } from '../../modules/telemedicina/presentation/telemedicina.controller';
+
+// D4: os ids do payload de criação precisam ser validados como da clínica ANTES de criar.
+const user = { sub: 'u1', email: 'u@x.test', papel: Papel.SECRETARIA, clinicaId: 'cli-1', jti: 'j', typ: 'access' as const };
+const req = { headers: {}, ip: '127.0.0.1', socket: { remoteAddress: '127.0.0.1' } } as never;
+
+function agendamentosRecusando() {
+  return {
+    validarReferencias: jest.fn().mockRejectedValue(new NotFoundException('fora da clinica')),
+    create: jest.fn(), update: jest.fn(), createBloqueio: jest.fn(),
+  };
+}
+
+describe('controllers validam referências do payload (D4)', () => {
+  it('agendamento: create, update (medicoId) e bloqueio', async () => {
+    const svc = agendamentosRecusando();
+    const c = new AgendamentosController(svc as never);
+    await expect(c.create({ pacienteId: 'p', medicoId: 'm' } as never, user, req)).rejects.toThrow(NotFoundException);
+    await expect(c.update('a1', { medicoId: 'm' } as never, undefined, user, req)).rejects.toThrow(NotFoundException);
+    await expect(c.createBloqueio({ medicoId: 'm' } as never, user, req)).rejects.toThrow(NotFoundException);
+    expect(svc.create).not.toHaveBeenCalled();
+    expect(svc.update).not.toHaveBeenCalled();
+    expect(svc.createBloqueio).not.toHaveBeenCalled();
+  });
+
+  it('telemedicina: createSala (paciente e agendamento)', async () => {
+    const ag = agendamentosRecusando();
+    const tele = { createSala: jest.fn() };
+    const c = new TelemedicinaController(tele as never, ag as never);
+    await expect(c.createSala({ pacienteId: 'p', agendamentoId: 'a' } as never, user, req)).rejects.toThrow(NotFoundException);
+    expect(tele.createSala).not.toHaveBeenCalled();
+  });
+
+  it('documentos: presign (paciente)', async () => {
+    const ag = agendamentosRecusando();
+    const docs = { createUploadUrl: jest.fn() };
+    const c = new DocumentosController(docs as never, ag as never);
+    await expect(c.createUploadUrl({ pacienteId: 'p' } as never, user, req)).rejects.toThrow(NotFoundException);
+    expect(docs.createUploadUrl).not.toHaveBeenCalled();
+  });
+
+  it('prontuário: create (paciente e agendamento)', async () => {
+    const ag = agendamentosRecusando();
+    const pront = { create: jest.fn() };
+    const c = new ProntuariosController(pront as never, ag as never);
+    await expect(c.create({ pacienteId: 'p', agendamentoId: 'a' } as never, user, req)).rejects.toThrow(NotFoundException);
+    expect(pront.create).not.toHaveBeenCalled();
+  });
 });

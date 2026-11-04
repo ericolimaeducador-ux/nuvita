@@ -10,6 +10,7 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { validarForcaDosSegredos } from './config-validation';
 import { GoogleSecretsService } from './google-secrets.service';
 
 export type ConfigSource = 'gcp' | 'env';
@@ -53,7 +54,14 @@ export interface AppConfig {
 
   // Patient Data Encryption (LGPD/HIPAA)
   patientDataEncryptionKey: string;
-  patientDataHashKey?: string;
+  patientDataHashKey: string;
+
+  // AI usage audit trail — encryption of stored AI input/output.
+  // Own secret domain, never PATIENT_DATA_ENCRYPTION_KEY. Presence is required
+  // in every environment (enforced by the loader); the 32-byte format is
+  // checked by IaUsoCryptoService. Optional here only so the typed config
+  // fixtures keep compiling.
+  iaUsoEncryptionKey?: string;
 
   // Document Storage (S3/R2)
   documentStorageBucket: string;
@@ -102,11 +110,20 @@ export interface AppConfig {
   kmsKeyRing: string;
   kmsKey: string;
 
+  // Consultation Reminder Scheduler (feature-consultation-reminder-scheduler)
+  // — guard OIDC de POST /internal/processar-lembretes. Presença é obrigatória
+  // em todo ambiente (enforced pelo loader, ver requiredVars/getSecretOrThrow);
+  // opcional aqui só para os fixtures tipados de config-validation.spec.ts
+  // continuarem compilando (mesmo padrão de iaUsoEncryptionKey acima).
+  reminderSchedulerExpectedAudience?: string;
+  reminderSchedulerExpectedServiceAccount?: string;
+
+  // IA clínica (sugestão de abordagem + prescrição de exercícios)
+  anthropicApiKey?: string;
+  anthropicModel: string;
+
   // Logging
   logLevel: 'debug' | 'info' | 'warn' | 'error';
-
-  // IA (pré-preenchimento de relatório médico judiciário)
-  geminiApiKey?: string;
 }
 
 @Injectable()
@@ -126,11 +143,35 @@ export class AppConfigService {
     const source = resolveConfigSource();
     this.logger.log(`Config source: ${source} (NODE_ENV=${process.env.NODE_ENV || 'development'})`);
 
-    if (source === 'gcp') {
-      return this.loadFromGCP();
-    } else {
-      return this.loadFromEnv();
+    const config = source === 'gcp' ? await this.loadFromGCP() : this.loadFromEnv();
+
+    this.validate(config);
+
+    return config;
+  }
+
+  /**
+   * Fail-fast de configuração. Carregar sem erro só provava que as variáveis
+   * EXISTEM; aqui checamos se o conteúdo presta. Roda depois de qualquer uma
+   * das duas fontes (GCP ou env) justamente porque o risco é o mesmo nas duas:
+   * o CONFIG_SOURCE decide de onde vem o segredo, não se ele é forte.
+   */
+  private validate(config: AppConfig): void {
+    const { erros, avisos } = validarForcaDosSegredos(config);
+
+    for (const aviso of avisos) {
+      this.logger.warn(aviso);
     }
+
+    if (erros.length > 0) {
+      const lista = erros.map((problema) => `  - ${problema}`).join('\n');
+      throw new Error(
+        `Configuração inválida para NODE_ENV=${config.nodeEnv}:\n${lista}\n` +
+          'Gere segredos novos (ex.: openssl rand -base64 48) e atualize o Secret Manager.',
+      );
+    }
+
+    this.logger.log('✓ Segredos validados');
   }
 
   /**
@@ -147,6 +188,7 @@ export class AppConfigService {
         jwtRefreshSecret,
         patientDataEncryptionKey,
         patientDataHashKey,
+        iaUsoEncryptionKey,
         documentStorageBucket,
         documentStorageRegion,
         documentStorageEndpoint,
@@ -167,14 +209,18 @@ export class AppConfigService {
         appRootDomain,
         bootstrapSecret,
         prontuarioSignatureSecret,
-        geminiApiKey,
+        anthropicApiKey,
+        anthropicModel,
+        reminderSchedulerExpectedAudience,
+        reminderSchedulerExpectedServiceAccount,
       ] = await Promise.all([
         this.getSecretOrThrow('mongodb-uri'),
         this.getSecretOrThrow('redis-url'),
         this.getSecretOrThrow('jwt-access-secret'),
         this.getSecretOrThrow('jwt-refresh-secret'),
         this.getSecretOrThrow('patient-data-encryption-key'),
-        this.getSecretOrDefault('patient-data-hash-key', undefined),
+        this.getSecretOrThrow('patient-data-hash-key'),
+        this.getSecretOrThrow('ia-uso-encryption-key'),
         this.getSecretOrThrow('document-storage-bucket'),
         this.getSecretOrThrow('document-storage-region'),
         this.getSecretOrThrow('document-storage-endpoint'),
@@ -191,11 +237,14 @@ export class AppConfigService {
         this.getSecretOrDefault('zapi-instance-id', undefined),
         this.getSecretOrDefault('zapi-token', undefined),
         this.getSecretOrDefault('zapi-client-token', undefined),
-        this.getSecretOrDefault('totp-issuer', 'Nuvita'),
+        this.getSecretOrDefault('totp-issuer', 'Nuvita Psi'),
         this.getSecretOrThrow('app-root-domain'),
         this.getSecretOrThrow('bootstrap-secret'),
         this.getSecretOrThrow('prontuario-signature-secret'),
-        this.getSecretOrDefault('gemini-api-key', undefined),
+        this.getSecretOrDefault('anthropic-api-key', undefined),
+        this.getSecretOrDefault('anthropic-model', 'claude-sonnet-5'),
+        this.getSecretOrThrow('reminder-scheduler-expected-audience'),
+        this.getSecretOrThrow('reminder-scheduler-expected-service-account'),
       ]);
 
       const config: AppConfig = {
@@ -209,6 +258,7 @@ export class AppConfigService {
         bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
         patientDataEncryptionKey,
         patientDataHashKey,
+        iaUsoEncryptionKey,
         documentStorageBucket,
         documentStorageRegion,
         documentStorageEndpoint,
@@ -226,17 +276,20 @@ export class AppConfigService {
         zapiInstanceId,
         zapiToken,
         zapiClientToken,
-        totpIssuer: totpIssuer ?? 'Nuvita',
+        totpIssuer: totpIssuer ?? 'Nuvita Psi',
         appRootDomain,
         bootstrapSecret,
         prontuarioSignatureSecret,
-        geminiApiKey,
         allowPublicRegistration: resolveAllowPublicRegistration(
           (process.env.NODE_ENV as AppConfig['nodeEnv']) || 'production',
         ),
         gcpProjectId: process.env.GCP_PROJECT_ID!,
-        kmsKeyRing: process.env.KMS_KEY_RING || 'nuvita-keyring',
-        kmsKey: process.env.KMS_KEY || 'nuvita-master-key',
+        kmsKeyRing: process.env.KMS_KEY_RING || 'nuvita-psi-keyring',
+        kmsKey: process.env.KMS_KEY || 'nuvita-psi-master-key',
+        anthropicApiKey,
+        anthropicModel: anthropicModel ?? 'claude-sonnet-5',
+        reminderSchedulerExpectedAudience,
+        reminderSchedulerExpectedServiceAccount,
         logLevel: (process.env.LOG_LEVEL as AppConfig['logLevel']) || 'info',
       };
 
@@ -261,6 +314,8 @@ export class AppConfigService {
       'JWT_ACCESS_SECRET',
       'JWT_REFRESH_SECRET',
       'PATIENT_DATA_ENCRYPTION_KEY',
+      'PATIENT_DATA_HASH_KEY',
+      'IA_USO_ENCRYPTION_KEY',
       'DOCUMENT_STORAGE_BUCKET',
       'DOCUMENT_STORAGE_REGION',
       'DOCUMENT_STORAGE_ENDPOINT',
@@ -270,6 +325,8 @@ export class AppConfigService {
       'APP_ROOT_DOMAIN',
       'BOOTSTRAP_SECRET',
       'PRONTUARIO_SIGNATURE_SECRET',
+      'REMINDER_SCHEDULER_EXPECTED_AUDIENCE',
+      'REMINDER_SCHEDULER_EXPECTED_SERVICE_ACCOUNT',
     ];
 
     const missing = requiredVars.filter((key) => !process.env[key]);
@@ -290,7 +347,8 @@ export class AppConfigService {
       jwtRefreshSecret: process.env.JWT_REFRESH_SECRET!,
       bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
       patientDataEncryptionKey: process.env.PATIENT_DATA_ENCRYPTION_KEY!,
-      patientDataHashKey: process.env.PATIENT_DATA_HASH_KEY,
+      patientDataHashKey: process.env.PATIENT_DATA_HASH_KEY!,
+      iaUsoEncryptionKey: process.env.IA_USO_ENCRYPTION_KEY!,
       documentStorageBucket: process.env.DOCUMENT_STORAGE_BUCKET!,
       documentStorageRegion: process.env.DOCUMENT_STORAGE_REGION!,
       documentStorageEndpoint: process.env.DOCUMENT_STORAGE_ENDPOINT!,
@@ -308,20 +366,23 @@ export class AppConfigService {
       zapiInstanceId: process.env.ZAPI_INSTANCE_ID,
       zapiToken: process.env.ZAPI_TOKEN,
       zapiClientToken: process.env.ZAPI_CLIENT_TOKEN,
-      totpIssuer: process.env.TOTP_ISSUER || 'Nuvita',
+      totpIssuer: process.env.TOTP_ISSUER || 'Nuvita Psi',
       twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
       twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
       twilioFrom: process.env.TWILIO_FROM,
       appRootDomain: process.env.APP_ROOT_DOMAIN!,
       bootstrapSecret: process.env.BOOTSTRAP_SECRET!,
       prontuarioSignatureSecret: process.env.PRONTUARIO_SIGNATURE_SECRET!,
-      geminiApiKey: process.env.GEMINI_API_KEY,
       allowPublicRegistration: resolveAllowPublicRegistration(
         (process.env.NODE_ENV as AppConfig['nodeEnv']) || 'development',
       ),
-      gcpProjectId: process.env.GCP_PROJECT_ID || 'nuvita-499800',
-      kmsKeyRing: process.env.KMS_KEY_RING || 'nuvita-keyring',
-      kmsKey: process.env.KMS_KEY || 'nuvita-master-key',
+      gcpProjectId: process.env.GCP_PROJECT_ID || '',
+      kmsKeyRing: process.env.KMS_KEY_RING || 'nuvita-psi-keyring',
+      kmsKey: process.env.KMS_KEY || 'nuvita-psi-master-key',
+      anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+      anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5',
+      reminderSchedulerExpectedAudience: process.env.REMINDER_SCHEDULER_EXPECTED_AUDIENCE!,
+      reminderSchedulerExpectedServiceAccount: process.env.REMINDER_SCHEDULER_EXPECTED_SERVICE_ACCOUNT!,
       logLevel: (process.env.LOG_LEVEL as AppConfig['logLevel']) || 'debug',
     };
 

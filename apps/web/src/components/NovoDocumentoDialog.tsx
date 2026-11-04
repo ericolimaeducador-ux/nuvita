@@ -10,19 +10,9 @@ import { documentosApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/auth/AuthContext';
-import { DOCUMENTOS_PADRAO, TipoDocumento, TIPO_DOCUMENTO_LABEL } from '@/types';
+import { sha256Hex } from '@/lib/sha256';
+import { TipoDocumento, TIPO_DOCUMENTO_LABEL } from '@/types';
 
-// Sugestão de tipo quando o nome escolhido bate com um item da lista padrão —
-// o usuário ainda pode trocar manualmente depois.
-const SUGESTAO_TIPO: Record<string, TipoDocumento> = {
-  'Relatório médico': TipoDocumento.LAUDO,
-};
-
-async function sha256Hex(file: File): Promise<string> {
-  const buf = await file.arrayBuffer();
-  const hashBuf = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
 
 // Deve espelhar MAX_DOCUMENT_SIZE_BYTES no backend (economia de armazenamento no R2).
 const MAX_TAMANHO_MB = 10;
@@ -48,11 +38,6 @@ export function NovoDocumentoDialog({
 
   function reset() {
     setNome(''); setTipo(TipoDocumento.OUTRO); setFile(null); setEtapa('idle');
-  }
-
-  function selecionarSugestao(valor: string) {
-    setNome(valor);
-    setTipo(SUGESTAO_TIPO[valor] ?? TipoDocumento.OUTRO);
   }
 
   const mut = useMutation({
@@ -116,13 +101,7 @@ export function NovoDocumentoDialog({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Nome do documento</Label>
-            <Select value={DOCUMENTOS_PADRAO.includes(nome) ? nome : undefined} onValueChange={selecionarSugestao}>
-              <SelectTrigger><SelectValue placeholder="Escolha um documento da lista ou digite abaixo" /></SelectTrigger>
-              <SelectContent>
-                {DOCUMENTOS_PADRAO.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Input placeholder="Ou digite um nome personalizado" value={nome} onChange={(e) => setNome(e.target.value)} />
+            <Input placeholder="Digite o título do documento" value={nome} onChange={(e) => setNome(e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label>Categoria</Label>

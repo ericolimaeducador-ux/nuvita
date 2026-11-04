@@ -8,6 +8,7 @@ import { NotificacaoDispatcherService } from '../../application/notificacao-disp
 import { NotificacaoRepository } from '../../application/ports/notificacao.repository';
 import { NOTIFICACAO_REPOSITORY, NOTIFICATION_QUEUE_NAME } from '../../notificacoes.constants';
 import { AppConfigService } from '../../../../common/security/config.service';
+import { resolverOpcoesPolling } from './notificacao.worker.opcoes';
 
 interface SendJobData {
   notificacaoId: string;
@@ -32,6 +33,8 @@ export class NotificacaoWorker implements OnModuleInit, OnModuleDestroy {
         connection: new Redis(this.configService.getConfig().redisUrl, {
           maxRetriesPerRequest: null,
         }) as unknown as ConnectionOptions,
+        // Fila vazia: espera longa no BZPOPMIN (job novo acorda na hora pelo marker) e checagem de travados espaçada.
+        ...resolverOpcoesPolling(process.env),
       },
     );
   }

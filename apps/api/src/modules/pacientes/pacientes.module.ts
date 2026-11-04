@@ -30,6 +30,7 @@ import { PacientesController } from './presentation/pacientes.controller';
     { provide: PACIENTE_REPOSITORY, useClass: PacienteMongoRepository },
     { provide: AUDIT_LOG_REPOSITORY, useClass: AuditLogMongoRepository },
   ],
+  // PacienteCryptoService: reaproveitado pelo módulo de tickets para cifrar texto livre que pode citar dado do paciente.
   exports: [PacientesService, PacienteCryptoService],
 })
 export class PacientesModule {}

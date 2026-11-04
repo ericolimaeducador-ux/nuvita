@@ -1,15 +1,24 @@
 name: Deploy API to Cloud Run
 
-# Faz build da imagem (Dockerfile na raiz) e deploy da API no Google Cloud Run.
+# Build da imagem no runner (docker build a partir do Dockerfile da raiz) +
+# push para o Artifact Registry + deploy da API no Cloud Run com --image.
 #
-# Autenticação via Workload Identity Federation (OIDC) — sem chave de SA de longa
-# duração. Secrets (Settings > Secrets and variables > Actions):
-#   - GCP_PROJECT_ID       ID do projeto GCP (ex.: nuvita-499800).
-#   - GCP_WIF_PROVIDER     Resource name do provider WIF
-#                          (projects/<num>/locations/global/workloadIdentityPools/<pool>/providers/<prov>).
-#   - GCP_SA_EMAIL         E-mail da service account de deploy.
-#   - CLOUDRUN_ENV_YAML    Conteúdo COMPLETO do cloudrun.env.yaml (segredos da API).
-#                          Gere com `node scripts/gen-cloudrun-env.cjs` e cole aqui.
+# NÃO usa `gcloud run deploy --source` (que dispararia Cloud Build e exigiria
+# permissões de projeto: storage.buckets.create, cloudbuild.builds.create).
+# Buildar no runner mantém o deploy como update puro de serviço, coberto por
+# roles/run.admin ESCOPADO ao recurso nuvita-psi-api.
+#
+# Autenticação via Workload Identity Federation (OIDC) — sem chave de SA de
+# longa duração. Identidade: nuvita-psi-deployer@ (secret GCP_SA_EMAIL),
+# federada só ao repo ericolimaeducador-ux/nuvita-psi.
+#
+# Secrets (Settings > Secrets and variables > Actions):
+#   - GCP_PROJECT_ID     nuvita-499800 (mesmo projeto GCP do Nuvita original;
+#                        nuvita-psi roda como serviço Cloud Run próprio).
+#   - GCP_WIF_PROVIDER   projects/<num>/locations/global/workloadIdentityPools/<pool>/providers/<prov>.
+#   - GCP_SA_EMAIL       nuvita-psi-deployer@nuvita-499800.iam.gserviceaccount.com.
+#   - CLOUDRUN_ENV_YAML  Conteúdo COMPLETO do cloudrun.env.yaml (segredos da API).
+#                        Gere com `node scripts/gen-cloudrun-env.cjs` e cole aqui.
 on:
   push:
     branches: [main]
@@ -17,7 +26,7 @@ on:
       - 'apps/api/**'
       - 'packages/shared/**'
       - 'Dockerfile'
-      - '.gcloudignore'
+      - '.dockerignore'
       - '.github/workflows/deploy-api.yml'
   workflow_dispatch:
 
@@ -32,8 +41,11 @@ permissions:
   id-token: write
 
 env:
-  SERVICE: nuvita-api
+  SERVICE: nuvita-psi-api
   REGION: southamerica-east1
+  # Repositório Artifact Registry já existente no projeto; nuvita-psi-deployer
+  # tem roles/artifactregistry.writer ESCOPADO a ele.
+  IMAGE_REPO: cloud-run-source-deploy
 
 jobs:
   deploy:
@@ -54,6 +66,20 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
+      - name: Configura o Docker para o Artifact Registry
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Build da imagem no runner
+        env:
+          DOCKER_BUILDKIT: "1"
+        run: |
+          IMAGE="${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${IMAGE_REPO}/${SERVICE}:${{ github.sha }}"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+          docker build -f Dockerfile -t "$IMAGE" .
+
+      - name: Push da imagem para o Artifact Registry
+        run: docker push "$IMAGE"
+
       - name: Write env-vars file (masked)
         env:
           # Passa o secret via env (expandido em runtime) em vez de interpolar no
@@ -66,30 +92,12 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy "$SERVICE" \
-            --source . \
+            --image "$IMAGE" \
             --project "${{ secrets.GCP_PROJECT_ID }}" \
             --region "$REGION" \
+            --service-account nuvita-psi-api-runtime@nuvita-499800.iam.gserviceaccount.com \
             --allow-unauthenticated \
             --env-vars-file cloudrun.env.yaml \
-            --quiet
-
-      # O deploy acima substitui TODAS as variaveis pelo CLOUDRUN_ENV_YAML. As do
-      # Mercado Pago vivem em secrets proprios e sao reaplicadas aqui, sem tocar
-      # nas demais. Se o token nao estiver configurado, o passo e ignorado.
-      - name: Apply Mercado Pago env vars
-        env:
-          MP_TOKEN: ${{ secrets.MERCADO_PAGO_ACCESS_TOKEN }}
-          MP_WEBHOOK_SECRET: ${{ secrets.MERCADO_PAGO_WEBHOOK_SECRET }}
-          MP_NOTIFICATION_URL: ${{ secrets.MERCADO_PAGO_NOTIFICATION_URL }}
-        run: |
-          if [ -z "$MP_TOKEN" ]; then
-            echo "MERCADO_PAGO_ACCESS_TOKEN ausente: pulando."
-            exit 0
-          fi
-          gcloud run services update "$SERVICE" \
-            --project "${{ secrets.GCP_PROJECT_ID }}" \
-            --region "$REGION" \
-            --update-env-vars "^@^MERCADO_PAGO_ACCESS_TOKEN=${MP_TOKEN}@MERCADO_PAGO_WEBHOOK_SECRET=${MP_WEBHOOK_SECRET}@MERCADO_PAGO_NOTIFICATION_URL=${MP_NOTIFICATION_URL}" \
             --quiet
 
       - name: Show service URL

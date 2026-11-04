@@ -1,16 +1,12 @@
-import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { marcarEntradaPorRotaPublica } from '@/api/client';
 import { ProtectedRoute } from '@/auth/ProtectedRoute';
-import { useAuth } from '@/auth/AuthContext';
+import { GateChain, ROTA_ACEITAR_TERMOS, ROTA_DEFINIR_SENHA } from '@/auth/GateChain';
 import { AppLayout } from '@/layout/AppLayout';
+import { EsqueciSenhaPage } from '@/pages/EsqueciSenhaPage';
+import { RedefinirSenhaPage } from '@/pages/RedefinirSenhaPage';
 import { LoginPage } from '@/pages/LoginPage';
-import { LandingPage } from '@/pages/LandingPage';
-import { PrivacidadePage } from '@/pages/PrivacidadePage';
-import { TermosPage } from '@/pages/TermosPage';
-import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
-import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
-import { ForgotLoginPage } from '@/pages/ForgotLoginPage';
+import { AceitarTermosPage } from '@/pages/AceitarTermosPage';
+import { DefinirSenhaObrigatoriaPage } from '@/pages/DefinirSenhaObrigatoriaPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { PacientesPage } from '@/pages/PacientesPage';
 import { PacienteDetailPage } from '@/pages/PacienteDetailPage';
@@ -18,35 +14,21 @@ import { AgendaPage } from '@/pages/AgendaPage';
 import { ProntuariosPage } from '@/pages/ProntuariosPage';
 import { DocumentosPage } from '@/pages/DocumentosPage';
 import { NotificacoesPage } from '@/pages/NotificacoesPage';
-import { FinanceiroPage } from '@/pages/FinanceiroPage';
 import { FinanceiroPsicologiaPage } from '@/pages/FinanceiroPsicologiaPage';
 import { TelemedicinaPage } from '@/pages/TelemedicinaPage';
 import { AtendimentoTelemedicinaPage } from '@/pages/AtendimentoTelemedicinaPage';
 import { ClinicaPage } from '@/pages/ClinicaPage';
-import { FluxoClinicoPage } from '@/pages/FluxoClinicoPage';
-import { FluxoPacientePage } from '@/pages/FluxoPacientePage';
-import { LaudoImpressaoPage } from '@/pages/LaudoImpressaoPage';
-import { AvaliacaoImpressaoPage } from '@/pages/AvaliacaoImpressaoPage';
-import { NatjusImpressaoPage } from '@/pages/NatjusImpressaoPage';
 import { ProntuarioImpressaoPage } from '@/pages/ProntuarioImpressaoPage';
+import { AtestadoComparecimentoPage } from '@/pages/AtestadoComparecimentoPage';
+import { DeclaracaoComparecimentoPage } from '@/pages/DeclaracaoComparecimentoPage';
+import { LaudoPsicoterapicoPage } from '@/pages/LaudoPsicoterapicoPage';
+import { EncaminhamentoPage } from '@/pages/EncaminhamentoPage';
+import { PrescricaoCuidadosPage } from '@/pages/PrescricaoCuidadosPage';
 import { AtendimentoPsicologicoPage } from '@/pages/AtendimentoPsicologicoPage';
 import { SuperAdminPage } from '@/pages/SuperAdminPage';
+import { TicketsPage } from '@/pages/TicketsPage';
 import { RelatoriosGerenciaisPage } from '@/pages/RelatoriosGerenciaisPage';
-import { CaptacaoPage } from '@/pages/CaptacaoPage';
-import { CaptacaoPacientesPage } from '@/pages/CaptacaoPacientesPage';
 import { Modulo, Papel } from '@/types';
-
-// Usado em "/" e no catch-all: sessão válida → dashboard; senão → landing.
-function HomeOuLanding() {
-  const { user, token } = useAuth();
-  const logado = Boolean(token && user);
-  // Sessão vinda do localStorage ainda não validada: se a API responder 401,
-  // o interceptor limpa tudo e volta à landing (não ao /login).
-  useEffect(() => {
-    if (logado) marcarEntradaPorRotaPublica();
-  }, [logado]);
-  return logado ? <Navigate to="/dashboard" replace /> : <LandingPage />;
-}
 
 // O acesso é controlado por MÓDULO (permissões efetivas do usuário, ajustáveis
 // pelo super-admin). O papel só permanece como trava dura no /super-admin;
@@ -55,79 +37,75 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      {/* "/" é pública: autenticado vai ao dashboard, visitante vê a landing. */}
-      <Route path="/" element={<HomeOuLanding />} />
-      <Route path="/privacidade" element={<PrivacidadePage />} />
-      <Route path="/termos" element={<TermosPage />} />
-      <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
-      <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
-      <Route path="/esqueci-login" element={<ForgotLoginPage />} />
-      {/* Posto do enfermeiro captador. Sem login do Nuvita e sem caminho para o prontuário.
-          O código do enfermeiro só é gravado aqui. */}
-      <Route path="/captacao_pacientes" element={<CaptacaoPage />} />
-      <Route path="/captacao" element={<Navigate to="/captacao_pacientes" replace />} />
+      <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
+      <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
       {/* Sala de teleatendimento é PÚBLICA: o paciente entra pelo link com o
           token da sala, sem conta no sistema. O token UUID é a credencial. */}
       <Route path="/tele/:token" element={<AtendimentoTelemedicinaPage />} />
       <Route element={<ProtectedRoute />}>
-        {/* Páginas de impressão FORA do AppLayout: o documento sai limpo
-            (sem sidebar/header do site) tanto na tela quanto no print/PDF. */}
-        <Route element={<ProtectedRoute modulo={Modulo.PACIENTES} />}>
-          <Route path="/pacientes/:id/prontuario/:prontuarioId/natjus/imprimir" element={<NatjusImpressaoPage />} />
-          <Route path="/pacientes/:id/prontuario/:prontuarioId/imprimir" element={<ProntuarioImpressaoPage />} />
-        </Route>
-        <Route element={<ProtectedRoute modulo={Modulo.FLUXO_CLINICO} />}>
-          <Route path="/fluxo-clinico/:id/laudo/:laudoId/imprimir" element={<LaudoImpressaoPage />} />
-          <Route path="/fluxo-clinico/:id/avaliacao/:avaliacaoId/imprimir" element={<AvaliacaoImpressaoPage />} />
-        </Route>
-        <Route element={<AppLayout />}>
-          {/* /dashboard fica sem gate: é o destino dos redirects e todo papel o tem por padrão. */}
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route element={<ProtectedRoute modulo={Modulo.PACIENTES} />}>
-            <Route path="/pacientes" element={<PacientesPage />} />
-            <Route path="/pacientes/:id" element={<PacienteDetailPage />} />
-            <Route path="/captacao-pacientes" element={<CaptacaoPacientesPage />} />
+        {/* Cadeia de gates pós-login: enquanto houver termos a aceitar ou
+            senha temporária a trocar, só a tela do gate ativo é acessível. */}
+        <Route element={<GateChain />}>
+          <Route path={ROTA_ACEITAR_TERMOS} element={<AceitarTermosPage />} />
+          <Route path={ROTA_DEFINIR_SENHA} element={<DefinirSenhaObrigatoriaPage />} />
+          {/* Páginas de impressão FORA do AppLayout: o documento sai limpo
+              (sem sidebar/header do site) tanto na tela quanto no print/PDF. */}
+          {/* PRIVATIVO do psicólogo (documento clínico e prontuário). Esconder no menu nunca é a proteção:
+              a rota exige o papel. Ver e2e/matriz-rotas.pw.ts. */}
+          <Route element={<ProtectedRoute roles={[Papel.PSICOLOGO]} modulo={Modulo.PACIENTES} />}>
+            <Route path="/pacientes/:id/prontuario/:prontuarioId/imprimir" element={<ProntuarioImpressaoPage />} />
+            <Route path="/pacientes/:id/documentos/atestado" element={<AtestadoComparecimentoPage />} />
+            <Route path="/pacientes/:id/documentos/laudo" element={<LaudoPsicoterapicoPage />} />
+            <Route path="/pacientes/:id/documentos/encaminhamento" element={<EncaminhamentoPage />} />
+            <Route path="/pacientes/:id/documentos/prescricao" element={<PrescricaoCuidadosPage />} />
           </Route>
-          <Route element={<ProtectedRoute modulo={Modulo.AGENDA} />}>
-            <Route path="/agenda" element={<AgendaPage />} />
+          {/* Declaração de comparecimento: documento ADMINISTRATIVO (só presença), emitido pela secretária; data/hora vêm da agenda. */}
+          <Route element={<ProtectedRoute roles={[Papel.SECRETARIA, Papel.ADMIN, Papel.PSICOLOGO]} modulo={Modulo.PACIENTES} />}>
+            <Route path="/pacientes/:id/documentos/declaracao-comparecimento" element={<DeclaracaoComparecimentoPage />} />
           </Route>
-          <Route element={<ProtectedRoute modulo={Modulo.PRONTUARIOS} />}>
-            <Route path="/prontuarios" element={<ProntuariosPage />} />
-          </Route>
-          <Route element={<ProtectedRoute modulo={Modulo.DOCUMENTOS} />}>
-            <Route path="/documentos" element={<DocumentosPage />} />
-          </Route>
-          <Route element={<ProtectedRoute modulo={Modulo.NOTIFICACOES} />}>
-            <Route path="/notificacoes" element={<NotificacoesPage />} />
-          </Route>
-          <Route element={<ProtectedRoute modulo={Modulo.FINANCEIRO} />}>
-            <Route path="/financeiro" element={<FinanceiroPage />} />
-          </Route>
-          <Route element={<ProtectedRoute modulo={Modulo.TELEMEDICINA} />}>
-            <Route path="/telemedicina" element={<TelemedicinaPage />} />
-          </Route>
-          <Route element={<ProtectedRoute modulo={Modulo.FLUXO_CLINICO} />}>
-            <Route path="/fluxo-clinico" element={<FluxoClinicoPage />} />
-            <Route path="/fluxo-clinico/:id" element={<FluxoPacientePage />} />
-          </Route>
-          <Route element={<ProtectedRoute modulo={Modulo.ATENDIMENTO_PSICOLOGICO} />}>
-            <Route path="/atendimento-psicologico" element={<AtendimentoPsicologicoPage />} />
-          </Route>
-          <Route element={<ProtectedRoute modulo={Modulo.FINANCEIRO_PSICOLOGIA} />}>
-            <Route path="/financeiro-psicologia" element={<FinanceiroPsicologiaPage />} />
-          </Route>
-          <Route element={<ProtectedRoute modulo={Modulo.CLINICA} />}>
-            <Route path="/clinica" element={<ClinicaPage />} />
-          </Route>
-          <Route element={<ProtectedRoute modulo={Modulo.ANALYTICS} />}>
-            <Route path="/relatorios" element={<RelatoriosGerenciaisPage />} />
-          </Route>
-          <Route element={<ProtectedRoute roles={[Papel.SUPER_ADMIN]} modulo={Modulo.SUPER_ADMIN} />}>
-            <Route path="/super-admin" element={<SuperAdminPage />} />
+          <Route element={<AppLayout />}>
+            {/* /dashboard fica sem gate: é o destino dos redirects e todo papel o tem por padrão. */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route element={<ProtectedRoute modulo={Modulo.PACIENTES} />}>
+              <Route path="/pacientes" element={<PacientesPage />} />
+              <Route path="/pacientes/:id" element={<PacienteDetailPage />} />
+            </Route>
+            <Route element={<ProtectedRoute modulo={Modulo.AGENDA} />}>
+              <Route path="/agenda" element={<AgendaPage />} />
+            </Route>
+            <Route element={<ProtectedRoute modulo={Modulo.PRONTUARIOS} />}>
+              <Route path="/prontuarios" element={<ProntuariosPage />} />
+            </Route>
+            <Route element={<ProtectedRoute modulo={Modulo.DOCUMENTOS} />}>
+              <Route path="/documentos" element={<DocumentosPage />} />
+            </Route>
+            <Route element={<ProtectedRoute modulo={Modulo.NOTIFICACOES} />}>
+              <Route path="/notificacoes" element={<NotificacoesPage />} />
+            </Route>
+            <Route element={<ProtectedRoute modulo={Modulo.TELEMEDICINA} />}>
+              <Route path="/telemedicina" element={<TelemedicinaPage />} />
+            </Route>
+            <Route element={<ProtectedRoute modulo={Modulo.ATENDIMENTO_PSICOLOGICO} />}>
+              <Route path="/atendimento-psicologico" element={<AtendimentoPsicologicoPage />} />
+            </Route>
+            <Route element={<ProtectedRoute modulo={Modulo.FINANCEIRO_PSICOLOGIA} />}>
+              <Route path="/financeiro-psicologia" element={<FinanceiroPsicologiaPage />} />
+            </Route>
+            <Route element={<ProtectedRoute modulo={Modulo.CLINICA} />}>
+              <Route path="/clinica" element={<ClinicaPage />} />
+            </Route>
+            <Route element={<ProtectedRoute modulo={Modulo.ANALYTICS} />}>
+              <Route path="/relatorios" element={<RelatoriosGerenciaisPage />} />
+            </Route>
+            <Route element={<ProtectedRoute roles={[Papel.SUPER_ADMIN]} modulo={Modulo.SUPER_ADMIN} />}>
+              <Route path="/super-admin" element={<SuperAdminPage />} />
+              <Route path="/tickets" element={<TicketsPage />} />
+            </Route>
           </Route>
         </Route>
       </Route>
-      <Route path="*" element={<HomeOuLanding />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }

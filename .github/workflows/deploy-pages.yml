@@ -2,13 +2,13 @@ name: Deploy Web to GitHub Pages
 
 # Publica o frontend (apps/web) no GitHub Pages.
 # Pré-requisito (uma vez): Settings > Pages > Source = "GitHub Actions".
+#
+# ÓRFÃO desde o cutover de DNS pro Firebase Hosting (Arquitetura A,
+# 2026-09-10/11): psi.nuvita.app.br é 100% servido pelo Firebase
+# (deploy-web.yml) — este workflow publica pra um domínio *.github.io que
+# ninguém acessa. Mantido só como fallback manual (workflow_dispatch);
+# NÃO dispara mais em push. Ver infra/PENDENCIAS.md.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/web/**'
-      - 'packages/shared/**'
-      - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
 permissions:
@@ -40,12 +40,12 @@ jobs:
       - name: Build web
         working-directory: apps/web
         env:
-          # Domínio próprio www.nuvita.app.br (ver apps/web/public/CNAME) serve na raiz.
+          # Domínio próprio psi.nuvita.app.br (subdomínio do Nuvita original,
+          # ver apps/web/public/CNAME) serve na raiz.
           VITE_BASE: /
-          # URL pública da API (HTTPS). Secret VITE_API_URL = https://api.nuvita.app.br.
+          # URL pública da API (HTTPS). Secret VITE_API_URL = https://api-psi.nuvita.app.br
+          # (ainda não configurado neste repo — ver infra/PRODUCTION-CHECKLIST.md).
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
-          # Public Key de PRODUCAO do Mercado Pago (publica por natureza). Sem ela o Wallet Brick nao aparece.
-          VITE_MERCADO_PAGO_PUBLIC_KEY: ${{ secrets.VITE_MERCADO_PAGO_PUBLIC_KEY }}
         run: npm run build
 
       - name: Upload Pages artifact

@@ -1,10 +1,7 @@
 import {
   ArrayMaxSize,
   IsArray,
-  IsBoolean,
-  IsEnum,
   IsInt,
-  IsISO8601,
   IsNumber,
   IsOptional,
   IsString,
@@ -14,10 +11,6 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import {
-  NaturezaAtendimento,
-  TipoSolicitacaoJudicial,
-} from '../../domain/prontuario.entity';
 
 export class SubjetivoDto {
   @IsString()
@@ -174,65 +167,6 @@ export class PlanoDto {
   retorno?: string;
 }
 
-export class PrescritorJudicialDto {
-  @IsOptional() @IsString() nome?: string;
-  @IsOptional() @IsString() registro?: string;
-  @IsOptional() @IsString() especialidade?: string;
-}
-
-export class ProdutoJudicialDto {
-  @IsOptional() @IsString() descricao?: string;
-  @IsOptional() @IsNumber() calibreFrench?: number;
-  @IsOptional() @IsNumber() comprimentoCm?: number;
-  @IsOptional() @IsNumber() quantidadePorDia?: number;
-  @IsOptional() @IsNumber() quantidadePorMes?: number;
-  @IsOptional() @IsBoolean() usoContinuo?: boolean;
-}
-
-export class MedicamentoJudicialDto {
-  @IsOptional() @IsString() principioAtivo?: string;
-  @IsOptional() @IsString() formaFarmaceuticaApresentacao?: string;
-  @IsOptional() @IsString() dose?: string;
-  @IsOptional() @IsString() posologia?: string;
-  @IsOptional() @IsString() viaAdministracao?: string;
-  @IsOptional() @IsString() duracaoTratamento?: string;
-}
-
-/** Bloco de judicialização (NAT-JUS). Todos os campos são opcionais. */
-export class RelatorioJudicialDto {
-  @IsOptional() @IsString() municipioEstado?: string;
-  @IsOptional() @IsEnum(NaturezaAtendimento) naturezaAtendimento?: NaturezaAtendimento;
-  @IsOptional() @IsString() enfermidadeCid?: string;
-  @IsOptional() @IsString() historicoDoenca?: string;
-  @IsOptional() @IsString() tratamentosRealizados?: string;
-  @IsOptional() @IsEnum(TipoSolicitacaoJudicial) tipoSolicitacao?: TipoSolicitacaoJudicial;
-
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => ProdutoJudicialDto)
-  produto?: ProdutoJudicialDto;
-
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => MedicamentoJudicialDto)
-  medicamento?: MedicamentoJudicialDto;
-
-  @IsOptional() @IsString() procedimentoDescricao?: string;
-  @IsOptional() @IsBoolean() urgente?: boolean;
-  @IsOptional() @IsString() justificativaUrgencia?: string;
-  @IsOptional() @IsBoolean() imprescindivel?: boolean;
-  @IsOptional() @IsString() justificativaImprescindivel?: string;
-  @IsOptional() @IsString() beneficiosEsperados?: string;
-  @IsOptional() @IsString() consequenciasNaoUso?: string;
-
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => PrescritorJudicialDto)
-  prescritor?: PrescritorJudicialDto;
-
-  @IsOptional() @IsISO8601() dataEmissao?: string;
-}
-
 export class ArquivoProntuarioDto {
   @IsString()
   nome!: string;
@@ -257,58 +191,6 @@ export class ArquivosProntuarioDto {
   arquivos?: ArquivoProntuarioDto[];
 }
 
-export class CateterIndicadoDto {
-  @IsOptional() @IsString() sexo?: string;
-  @IsOptional() @IsNumber() french?: number;
-  @IsOptional() @IsNumber() codigo?: number;
-}
-
-/**
- * Questionário de Avaliação de Incontinência Urinária, amarrado ao
- * prontuário SOAP. Todos os campos são opcionais — a ficha só é
- * preenchida quando o atendimento envolve avaliação de IU.
- */
-export class FichaAvaliacaoIUDto {
-  @IsOptional() @IsString() local?: string;
-  @IsOptional() @IsString() estadoCivil?: string;
-  @IsOptional() @IsString() prescritor?: string;
-  @IsOptional() @IsString() planoSaude?: string;
-  @IsOptional() @IsString() hospitalReferencia?: string;
-  @IsOptional() @IsString() motivoIU?: string;
-  @IsOptional() @IsString() inicioSintomas?: string;
-  @IsOptional() @IsString() perfilCliente?: string;
-  @IsOptional() @IsString() destreza?: string;
-  @IsOptional() @IsBoolean() dntui?: boolean;
-  @IsOptional() @IsArray() @IsString({ each: true }) tiposIU?: string[];
-  @IsOptional() @IsBoolean() miccaoEspontanea?: boolean;
-  @IsOptional() @IsNumber() volumeAproximadoMl?: number;
-  @IsOptional() @IsBoolean() realizaCateterismo?: boolean;
-  @IsOptional() @IsNumber() cateterismosDia?: number;
-  @IsOptional() @IsString() cateterUtilizado?: string;
-  @IsOptional() @IsString() ultimaInfeccaoUrinaria?: string;
-  @IsOptional() @IsBoolean() emTratamento?: boolean;
-  @IsOptional() @IsString() tratamento?: string;
-  @IsOptional() @IsString() volumeDrenado?: string;
-  @IsOptional() @IsString() outrasIntercorrencias?: string;
-  @IsOptional() @ValidateNested() @Type(() => CateterIndicadoDto) cateterIndicado?: CateterIndicadoDto;
-  @IsOptional() @IsString() encaminhamento?: string;
-  @IsOptional() @IsString() localEncaminhamento?: string;
-  @IsOptional() @IsString() responsavelCateterismo?: string;
-  @IsOptional() @IsBoolean() autorizaPesquisa?: boolean;
-  @IsOptional() @IsBoolean() aceitaInformacoes?: boolean;
-  @IsOptional() @IsString() emailContato?: string;
-  @IsOptional() @IsString() whatsappContato?: string;
-  @IsOptional() @IsString() coren?: string;
-  @IsOptional() @IsString() respCuidador?: string;
-}
-
-/** Registro da consulta de enfermagem — ligação de acompanhamento + chegada da sonda de teste. */
-export class RegistroEnfermagemDto {
-  @IsOptional() @IsISO8601() dataLigacao?: string;
-  @IsOptional() @IsISO8601() sondaChegouEm?: string;
-  @IsOptional() @IsString() observacoes?: string;
-}
-
 /** Registro de atendimento psicológico / psicoterapia (Res. CFP 006/2019). */
 export class RegistroPsicologicoDto {
   @IsOptional() @IsString() motivoAtendimento?: string;
@@ -330,5 +212,23 @@ export class RegistroPsicologicoDto {
   @IsOptional() @IsString() evolucao?: string;
   @IsOptional() @IsString() encaminhamentos?: string;
   @IsOptional() @IsString() anotacoesLivres?: string;
-  @IsOptional() @IsString() crp?: string;
+  // O CRP NÃO é campo do registro: o servidor carimba o do perfil (user.crp) ao assinar.
+
+  @IsOptional() @IsString() tccPensamentosAutomaticos?: string;
+  @IsOptional() @IsString() tccDistorcoesCognitivas?: string;
+  @IsOptional() @IsString() tccTarefaCasa?: string;
+  @IsOptional() @IsString() tccRegistroComportamental?: string;
+  @IsOptional() @IsString() psicanaliseAssociacaoLivre?: string;
+  @IsOptional() @IsString() psicanaliseConteudoOnirico?: string;
+  @IsOptional() @IsString() psicanaliseDinamicaTransferencial?: string;
+  @IsOptional() @IsString() psicanaliseRepeticoes?: string;
+  @IsOptional() @IsString() humanistaCongruencia?: string;
+  @IsOptional() @IsString() humanistaAutorrealizacao?: string;
+  @IsOptional() @IsString() humanistaAcolhimento?: string;
+  @IsOptional() @IsString() gestaltAwareness?: string;
+  @IsOptional() @IsString() gestaltFiguraFundo?: string;
+  @IsOptional() @IsString() gestaltContatoFronteira?: string;
+  @IsOptional() @IsString() junguianaSimbolosArquetipicos?: string;
+  @IsOptional() @IsString() junguianaMaterialOnirico?: string;
+  @IsOptional() @IsString() junguianaProcessoIndividuacao?: string;
 }

@@ -9,6 +9,7 @@ import {
   UpdateAgendamentoInput,
 } from '../../application/ports/agendamento.repository';
 import { Agendamento, BloqueioAgenda, StatusAgendamento } from '../../domain/agendamento.entity';
+import { JanelaLembrete } from '../../domain/lembrete-window';
 import {
   AgendamentoDocument,
   AgendamentoMongo,
@@ -60,6 +61,20 @@ export class AgendamentoMongoRepository implements AgendamentoRepository {
 
     const docs = await this.model.find(query).sort({ dataHoraInicio: 1 }).limit(500).exec();
     return docs.map((d) => this.toEntity(d));
+  }
+
+  async findAtivoSobreposto(clinicaId: string, medicoId: string, inicio: Date, fim: Date, excluirId?: string): Promise<Agendamento | null> {
+    const query: Record<string, unknown> = {
+      clinicaId,
+      medicoId,
+      status: { $in: [StatusAgendamento.AGENDADO, StatusAgendamento.CONFIRMADO, StatusAgendamento.CONCLUIDO] },
+      // Sobreposição estrita: inicioA < fimB && inicioB < fimA (intervalos que encostam não colidem).
+      dataHoraInicio: { $lt: fim },
+      dataHoraFim: { $gt: inicio },
+    };
+    if (excluirId) query._id = { $ne: new Types.ObjectId(excluirId) };
+    const doc = await this.model.findOne(query).exec();
+    return doc ? this.toEntity(doc) : null;
   }
 
   async update(clinicaId: string, id: string, input: UpdateAgendamentoInput): Promise<Agendamento | null> {
@@ -131,6 +146,43 @@ export class AgendamentoMongoRepository implements AgendamentoRepository {
       .exec();
 
     return result.deletedCount > 0;
+  }
+
+  async listarParaLembrete(campo: 'lembrete24hEnviadoEm' | 'lembrete1hEnviadoEm', janela: JanelaLembrete): Promise<Agendamento[]> {
+    // Sem clinicaId de propósito: job de sistema (Cloud Scheduler) roda uma
+    // única vez varrendo todas as clínicas, não por tenant — mesmo espírito
+    // do acesso cross-tenant do SUPER_ADMIN. Todo outro método deste
+    // repositório é escopado por clinicaId; esta é a única exceção deliberada.
+    const docs = await this.model
+      .find({
+        dataHoraInicio: { $gte: janela.inicio, $lt: janela.fim },
+        [campo]: { $exists: false },
+      })
+      .sort({ dataHoraInicio: 1 })
+      .exec();
+
+    return docs.map((d) => this.toEntity(d));
+  }
+
+  async marcarLembreteEnviado(
+    clinicaId: string,
+    id: string,
+    campo: 'lembrete24hEnviadoEm' | 'lembrete1hEnviadoEm',
+    quando: Date,
+  ): Promise<boolean> {
+    // Filtro condicional no PRÓPRIO update (não um find + depois um set):
+    // se outra execução já marcou este campo entre a query e esta chamada,
+    // o findOneAndUpdate não acha o documento (o filtro exige {$exists:false})
+    // e retorna null — é assim que uma colisão de idempotência é detectada,
+    // não por uma leitura prévia separada (que teria uma janela de corrida).
+    const doc = await this.model
+      .findOneAndUpdate(
+        { clinicaId, _id: new Types.ObjectId(id), [campo]: { $exists: false } },
+        { $set: { [campo]: quando } },
+      )
+      .exec();
+
+    return doc !== null;
   }
 
   private toEntity(doc: AgendamentoDocument): Agendamento {

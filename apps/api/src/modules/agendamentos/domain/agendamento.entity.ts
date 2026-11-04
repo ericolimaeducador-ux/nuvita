@@ -11,17 +11,6 @@ export enum StatusAgendamento {
 }
 
 export enum TipoAgendamento {
-  CONSULTA = 'consulta',
-  RETORNO = 'retorno',
-  EXAME = 'exame',
-  PROCEDIMENTO = 'procedimento',
-  TELECONSULTA = 'teleconsulta',
-  // Enfermagem
-  ATENDIMENTO_ENFERMAGEM = 'atendimento_enfermagem',
-  PROCEDIMENTO_ENFERMAGEM = 'procedimento_enfermagem',
-  // Fluxo clínico
-  ENTREVISTA = 'entrevista',
-  // Psicologia
   AVALIACAO_PSICOLOGICA = 'avaliacao_psicologica',
   SESSAO_PSICOTERAPIA = 'sessao_psicoterapia',
 }
@@ -30,7 +19,7 @@ export interface Agendamento {
   id: string;
   clinicaId: string;
   pacienteId: string;
-  /** Profissional responsavel (medico ou enfermeiro conforme a modalidade). */
+  /** Profissional responsavel (medico ou psicologo conforme a modalidade). */
   medicoId: string;
   modalidade: ModalidadeAtendimento;
   dataHoraInicio: Date;

@@ -11,6 +11,7 @@ export interface CreateDocumentoInput {
   url: string;
   hash: string;
   uploadPor: string;
+  confirmadoEm: Date | null;
 }
 
 export interface ListDocumentoInput {
@@ -25,5 +26,8 @@ export interface DocumentoRepository {
   list(input: ListDocumentoInput): Promise<Documento[]>;
   sumActivePatientBytes(clinicaId: string, pacienteId: string): Promise<number>;
   setThumbnail(clinicaId: string, documentoId: string, thumbnailUrl: string): Promise<void>;
+  setConfirmadoEm(clinicaId: string, documentoId: string, confirmadoEm: Date): Promise<void>;
+  /** Registros com confirmadoEm = null (explícito; legado sem o campo NÃO entra) criados antes de `limite`, de todas as clínicas. */
+  listNaoConfirmadosAte(limite: Date): Promise<Documento[]>;
   softDelete(clinicaId: string, documentoId: string, excluidoPor: string): Promise<Documento | null>;
 }

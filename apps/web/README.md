@@ -1,6 +1,6 @@
-# Nuvita — Frontend Web
+# Nuvita Psi — Frontend Web
 
-Painel clínico/hospitalar do Nuvita. **React + Vite + TypeScript + Ant Design**,
+Painel de gestão para clínicas de psicologia. **React + Vite + TypeScript + Ant Design**,
 com tema de alta densidade inspirado em ERPs hospitalares (sidebar escura +
 área de trabalho clara).
 
@@ -23,7 +23,7 @@ com tema de alta densidade inspirado em ERPs hospitalares (sidebar escura +
 ## Desenvolvimento
 ```bash
 npm install            # na raiz do monorepo
-npm run dev -w @nuvita/web
+npm run dev -w @nuvita-psi/web
 ```
 O dev server sobe em http://localhost:5173 e encaminha as rotas da API
 (`/auth`, `/pacientes`, ...) para `http://localhost:3000` preservando o path
@@ -31,12 +31,12 @@ O dev server sobe em http://localhost:5173 e encaminha as rotas da API
 
 Para apontar a um host de API diferente no proxy de dev:
 ```bash
-VITE_PROXY_TARGET=http://localhost:3001 npm run dev -w @nuvita/web
+VITE_PROXY_TARGET=http://localhost:3001 npm run dev -w @nuvita-psi/web
 ```
 
 ## Build
 ```bash
-npm run build -w @nuvita/web   # gera apps/web/dist
+npm run build -w @nuvita-psi/web   # gera apps/web/dist
 ```
 
 ## Docker

@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import type { Endereco, PageResult } from '@/types';
+import { calcularIdadeAnos } from '@/paciente-idade';
 
 /** Normaliza respostas de lista que podem vir como array puro ou paginado. */
 export function toItems<T>(data: PageResult<T> | T[] | undefined | null): T[] {
@@ -15,13 +16,16 @@ export function formatCpf(cpf?: string): string {
   return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
 }
 
+// Calendário exato (ano/mês/dia), não aproximação por dias/365.25 — a mesma conta
+// que a API usa para decidir se o paciente é menor de idade (ver
+// paciente-idade.ts); antes desta mudança a aproximação podia errar por 1 ano bem
+// perto de um aniversário, o que aqui é só um número exibido, mas na tela de
+// cadastro é o que decide se a seção de responsável legal aparece.
 export function idade(dataNascimento?: string): string {
   if (!dataNascimento) return '—';
   const nasc = new Date(dataNascimento);
   if (Number.isNaN(nasc.getTime())) return '—';
-  const diff = Date.now() - nasc.getTime();
-  const anos = Math.floor(diff / (365.25 * 24 * 3600 * 1000));
-  return `${anos} anos`;
+  return `${calcularIdadeAnos(nasc)} anos`;
 }
 
 /**

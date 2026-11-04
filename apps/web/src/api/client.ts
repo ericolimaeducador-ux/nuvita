@@ -13,7 +13,6 @@ import { toast } from '@/components/ui/use-toast';
 const baseURL = import.meta.env.VITE_API_URL ?? '';
 
 const TOKEN_KEY = 'nuvita.accessToken';
-export const USER_KEY = 'nuvita.user';
 const CLINICA_ATIVA_KEY = 'nuvita.clinicaAtiva';
 
 export function getToken(): string | null {
@@ -67,15 +66,6 @@ function avisar403(error: AxiosError) {
   toast.error('Acesso negado', msg);
 }
 
-// Sessão que chegou ao app logado a partir de "/" ou "*" (rotas públicas, via
-// HomeOuLanding) e ainda não foi validada pela API. Se o 401 vier nesse estado,
-// o token guardado é lixo (expirado/revogado): limpamos e voltamos à landing em
-// vez de ir ao /login. Qualquer resposta OK da API confirma a sessão e desarma.
-let entradaPorRotaPublica = false;
-export function marcarEntradaPorRotaPublica(): void {
-  entradaPorRotaPublica = true;
-}
-
 // Refresh transparente em 401 (uma tentativa, com fila para chamadas paralelas).
 let refreshing: Promise<string | null> | null = null;
 
@@ -98,10 +88,7 @@ async function doRefresh(): Promise<string | null> {
 }
 
 api.interceptors.response.use(
-  (r) => {
-    entradaPorRotaPublica = false;
-    return r;
-  },
+  (r) => r,
   async (error: AxiosError) => {
     const original = error.config as
       | (AxiosRequestConfig & { _retry?: boolean })
@@ -124,23 +111,23 @@ api.interceptors.response.use(
         (original.headers as Record<string, string>).Authorization = `Bearer ${token}`;
         return api(original);
       }
-      // refresh falhou — limpa a sessão inteira (token + usuário)
-      // A flag não é zerada aqui: várias chamadas em paralelo falham juntas e
-      // todas precisam decidir o mesmo destino (a página recarrega em seguida).
-      const veioDaRotaPublica = entradaPorRotaPublica;
+      // refresh falhou — limpa sessão e manda pro login (respeitando o base path)
       setToken(null);
-      localStorage.removeItem(USER_KEY);
-      // Respeita o base path. Entrada por "/" ou "*" → landing; app logado → login.
-      const destino = veioDaRotaPublica
-        ? import.meta.env.BASE_URL
-        : `${import.meta.env.BASE_URL}login`.replace(/\/{2,}/g, '/');
-      if (veioDaRotaPublica || !location.pathname.startsWith(destino)) {
-        location.assign(destino);
+      const loginPath = `${import.meta.env.BASE_URL}login`.replace(/\/{2,}/g, '/');
+      if (!location.pathname.startsWith(loginPath)) {
+        location.assign(loginPath);
       }
     }
     return Promise.reject(error);
   },
 );
+
+/** onError de uma ação (cancelar, concluir, reagendar): o 403 já ganhou o toast "Acesso negado" do interceptor,
+ * com a mensagem do servidor; somar outro "Erro" duplicaria o aviso. */
+export function avisarErroDeAcao(err: unknown): void {
+  if ((err as AxiosError)?.response?.status === 403) return;
+  toast.error('Erro', apiErrorMessage(err));
+}
 
 export function apiErrorMessage(err: unknown, fallback = 'Ocorreu um erro.'): string {
   const e = err as AxiosError<{ message?: string | string[] }>;

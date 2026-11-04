@@ -1,0 +1,147 @@
+[
+  {
+    "alvo": "/agendamentos",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/agendamentos/bloqueios",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/analytics/pacientes",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/analytics/agendamentos",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/analytics/financeiro",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/analytics/notificacoes",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/analytics/pacientes-por-representante",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/analytics/cobrancas-psicologia",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/analytics/perda-seguimento",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/analytics/horarios-vagos",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/clinicas/minha",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/documentos",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/financeiro/lancamentos",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/financeiro/dashboard",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/financeiro/psicologia/painel",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/inscricoes-teste",
+    "status": 200,
+    "forma": "array[0]"
+  },
+  {
+    "alvo": "/notificacoes/dashboard",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/observacoes-paciente?pacienteId=:pac",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/pacientes",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/pacientes/:pac",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/pacientes/:pac/export",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/pacientes/representantes",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/prontuarios",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/prontuarios/:pront",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/telemedicina/salas",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/testes-psicologicos?pacienteId=:pac",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/tickets",
+    "status": 403,
+    "forma": "Selecione uma clinica para acessar esta area."
+  },
+  {
+    "alvo": "/super-admin/clinicas",
+    "status": 200,
+    "forma": "items[1] total=1"
+  },
+  {
+    "alvo": "/super-admin/usuarios",
+    "status": 200,
+    "forma": "items[6] total=6"
+  }
+]

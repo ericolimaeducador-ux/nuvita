@@ -1,44 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { PenLine, Scale, FileText, UserCheck } from 'lucide-react';
+import { PenLine, FileText } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
-import { prontuariosApi, avaliacaoIUApi } from '@/api/resources';
+import { prontuariosApi } from '@/api/resources';
+import { ErroConsulta } from '@/components/ErroConsulta';
+import { RespostaInvalidaError } from '@/lib/consulta';
 import { apiErrorMessage } from '@/api/client';
-import { formatData } from '@/utils';
 import { toast } from '@/components/ui/use-toast';
-import { useAuth } from '@/auth/AuthContext';
+import { camposDoFormulario, formularioDoRegistro, linhaDoRegistro, rotuloDoCampo, ROTULO_FORMULARIO } from '@/lib/registroPsicologico';
 import {
-  TipoAtendimento, TIPO_ATENDIMENTO_LABEL,
-  LocalAtendimento, LOCAL_LABEL, PerfilCliente, PERFIL_LABEL, Destreza, DESTREZA_LABEL,
-  TipoIU, TIPO_IU_LABEL, EncaminhamentoIU, ENCAMINHAMENTO_LABEL,
-  type Prontuario,
-  type ProntuarioSubjetivo, type ProntuarioObjetivo, type ExameSegmentar, type SinaisVitais,
-  type ProntuarioAvaliacao, type ProntuarioPlano,
-  type RelatorioJudicial, type NaturezaAtendimento, type TipoSolicitacaoJudicial,
+  TipoAtendimento, TIPO_ATENDIMENTO_LABEL, REGISTRO_PSICOLOGICO_CAMPOS,
+  type Prontuario, type ExameSegmentar, type RegistroPsicologico,
 } from '@/types';
 
-const NATUREZA_LABEL: Record<NaturezaAtendimento, string> = {
-  sus: 'Saúde Pública (SUS)',
-  suplementar: 'Saúde Suplementar',
-  particular: 'Particular',
-};
-
-const TIPO_SOLICITACAO_LABEL: Record<TipoSolicitacaoJudicial, string> = {
-  medicamento: 'Medicamento',
-  produto: 'Produto / Insumo',
-  procedimento: 'Procedimento',
-};
 
 const EXAME_SEGMENTAR_CAMPOS: { key: keyof ExameSegmentar; label: string }[] = [
   { key: 'cabecaPescoco', label: 'Cabeça e pescoço' },
@@ -61,6 +40,25 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
 }
 
 /** Só renderiza o Campo se houver valor — evita poluir a visualização. */
+/** Mesmos rótulos e mesma ordem do formulário e do PDF; o que ficou vazio no formulário usado aparece como "Não preenchido". */
+function RegistroPsicologicoLeitura({ registro, formulario }: { registro: RegistroPsicologico; formulario: 'completo' | 'seguimento' }) {
+  const lista = camposDoFormulario(formulario, linhaDoRegistro(registro));
+  const listados = new Set<string>(lista.map((c) => c.key));
+  const texto = (v: unknown) => (v === undefined || v === null || String(v).trim() === '' ? undefined : String(v));
+  return (
+    <>
+      <p className="text-xs text-muted-foreground">Formulário: {ROTULO_FORMULARIO[formulario]}</p>
+      {lista.map(({ key, label }) => (
+        <Campo key={key} label={label}>{texto(registro[key]) ?? 'Não preenchido'}</Campo>
+      ))}
+      {/* Conteúdo gravado fora do formulário usado (ex.: CRP digitado em registro antigo) nunca é escondido. */}
+      {REGISTRO_PSICOLOGICO_CAMPOS.filter(([key]) => !listados.has(key) && texto(registro[key]) !== undefined).map(([key]) => (
+        <Campo key={key} label={rotuloDoCampo(key)}>{texto(registro[key])}</Campo>
+      ))}
+    </>
+  );
+}
+
 function CampoSe({ label, children }: { label: string; children?: React.ReactNode }) {
   if (children === undefined || children === null || children === '' ||
       (Array.isArray(children) && children.length === 0)) return null;
@@ -74,10 +72,6 @@ function SecaoSOAP({ letra, titulo, children }: { letra: string; titulo: string;
       <div className="space-y-3">{children}</div>
     </div>
   );
-}
-
-function simNao(v?: boolean): string {
-  return v === undefined ? '' : v ? 'Sim' : 'Não';
 }
 
 /** Visualização (somente leitura) de um prontuário SOAP, com ação de assinar rascunho. */
@@ -94,6 +88,7 @@ export function ProntuarioDetailDialog({
 }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const [confirmandoAssinatura, setConfirmandoAssinatura] = useState(false);
   const q = useQuery({
     queryKey: ['prontuario', prontuarioId],
     queryFn: () => prontuariosApi.get(prontuarioId!),
@@ -103,6 +98,7 @@ export function ProntuarioDetailDialog({
     mutationFn: () => prontuariosApi.assinar(prontuarioId!),
     onSuccess: () => {
       toast.success('Prontuário assinado.');
+      setConfirmandoAssinatura(false);
       void qc.invalidateQueries({ queryKey: ['prontuario', prontuarioId] });
       void qc.invalidateQueries({ queryKey: ['prontuarios'] });
     },
@@ -110,16 +106,6 @@ export function ProntuarioDetailDialog({
   });
 
   const pr = q.data as Prontuario | undefined;
-
-  // Só carrega (e só importa) quando a consulta é de enfermagem e já foi assinada —
-  // é o pré-requisito pra liberar o atalho de follow-up (que exige avaliação de IU).
-  const podeMostrarAtalhoFollowup = !!pr && pr.tipo === TipoAtendimento.CONSULTA_ENFERMAGEM && !!pr.assinado;
-  const avaliacoesQ = useQuery({
-    queryKey: ['avaliacao-iu', 'paciente', pacienteId],
-    queryFn: () => avaliacaoIUApi.listByPaciente(pacienteId!),
-    enabled: podeMostrarAtalhoFollowup && !!pacienteId,
-  });
-  const temAvaliacaoIU = (avaliacoesQ.data ?? []).length > 0;
 
   const sv = pr?.objetivo?.sinaisVitais;
   const sinais = sv
@@ -135,9 +121,9 @@ export function ProntuarioDetailDialog({
       ].filter(Boolean).join('  ·  ')
     : '';
   const seg = pr?.objetivo?.exameSegmentar;
-  const rj = pr?.relatorioJudicial;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -149,8 +135,8 @@ export function ProntuarioDetailDialog({
 
         {q.isLoading ? (
           <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full" />)}</div>
-        ) : !pr ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">Não foi possível carregar o prontuário.</p>
+        ) : !pr || q.isError ? (
+          <ErroConsulta erro={q.error ?? new RespostaInvalidaError()} refetch={q.refetch} recurso="o prontuário" />
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 glass rounded-xl p-4">
@@ -166,30 +152,11 @@ export function ProntuarioDetailDialog({
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Registro de atendimento psicológico
                 </p>
-                <CampoSe label="Motivo do atendimento">{pr.registroPsicologico.motivoAtendimento}</CampoSe>
-                <CampoSe label="Avaliação de demanda">{pr.registroPsicologico.avaliacaoDemanda}</CampoSe>
-                <CampoSe label="Doenças prévias">{pr.registroPsicologico.doencasPrevias}</CampoSe>
-                <CampoSe label="Diagnósticos de saúde mental">{pr.registroPsicologico.diagnosticosSaudeMental}</CampoSe>
-                <CampoSe label="Medicamentos em uso">{pr.registroPsicologico.medicamentosEmUso}</CampoSe>
-                <CampoSe label="Histórico familiar de saúde mental">{pr.registroPsicologico.historicoFamiliarSaudeMental}</CampoSe>
-                <CampoSe label="Qualidade do sono">{pr.registroPsicologico.qualidadeSono}</CampoSe>
-                <CampoSe label="Apetite / alimentação">{pr.registroPsicologico.apetiteAlimentacao}</CampoSe>
-                <CampoSe label="Atividade física">{pr.registroPsicologico.atividadeFisica}</CampoSe>
-                <CampoSe label="Uso de substâncias">{pr.registroPsicologico.usoSubstancias}</CampoSe>
-                <CampoSe label="Estado emocional">{pr.registroPsicologico.estadoEmocional}</CampoSe>
-                <CampoSe label="Dor (0-10)">{pr.registroPsicologico.escalaDor !== undefined ? String(pr.registroPsicologico.escalaDor) : undefined}</CampoSe>
-                <CampoSe label="Avaliação de risco">{pr.registroPsicologico.avaliacaoRisco}</CampoSe>
-                <CampoSe label="Rede de apoio">{pr.registroPsicologico.redeApoio}</CampoSe>
-                <CampoSe label="Objetivos do acompanhamento">{pr.registroPsicologico.objetivosTrabalho}</CampoSe>
-                <CampoSe label="Procedimento / técnica">{pr.registroPsicologico.procedimentoTecnica}</CampoSe>
-                <CampoSe label="Evolução">{pr.registroPsicologico.evolucao}</CampoSe>
-                <CampoSe label="Encaminhamentos">{pr.registroPsicologico.encaminhamentos}</CampoSe>
-                <CampoSe label="Anotações livres">{pr.registroPsicologico.anotacoesLivres}</CampoSe>
-                <CampoSe label="CRP">{pr.registroPsicologico.crp}</CampoSe>
+                <RegistroPsicologicoLeitura registro={pr.registroPsicologico} formulario={formularioDoRegistro(pr)} />
               </div>
             )}
 
-            {pr.tipo !== TipoAtendimento.CONSULTA_ENFERMAGEM && pr.tipo !== TipoAtendimento.PSICOTERAPIA && (
+            {pr.tipo !== TipoAtendimento.PSICOTERAPIA && (
             <>
             <SecaoSOAP letra="S" titulo="Subjetivo / Anamnese">
               <Campo label="Queixa principal">{pr.subjetivo?.queixaPrincipal}</Campo>
@@ -233,103 +200,6 @@ export function ProntuarioDetailDialog({
             </SecaoSOAP>
             </>
             )}
-
-            {rj && (
-              <div className="glass rounded-xl p-4 border border-amber-500/20">
-                <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-                  <Scale className="h-3.5 w-3.5" /> Judicialização — NAT-JUS
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <CampoSe label="Município/Estado">{rj.municipioEstado}</CampoSe>
-                  <CampoSe label="Natureza do atendimento">{rj.naturezaAtendimento && NATUREZA_LABEL[rj.naturezaAtendimento]}</CampoSe>
-                  <CampoSe label="Data de emissão">{rj.dataEmissao && dayjs(rj.dataEmissao).format('DD/MM/YYYY')}</CampoSe>
-                  <CampoSe label="Tipo de solicitação">{rj.tipoSolicitacao && TIPO_SOLICITACAO_LABEL[rj.tipoSolicitacao]}</CampoSe>
-                </div>
-                <div className="mt-3 space-y-3">
-                  <CampoSe label="Enfermidade / CID">{rj.enfermidadeCid}</CampoSe>
-                  <CampoSe label="Histórico da doença">{rj.historicoDoenca}</CampoSe>
-                  <CampoSe label="Tratamentos realizados / resultado">{rj.tratamentosRealizados}</CampoSe>
-                  {rj.produto && (
-                    <CampoSe label="Produto solicitado">
-                      {[rj.produto.descricao,
-                        rj.produto.calibreFrench && `calibre ${rj.produto.calibreFrench} Fr`,
-                        rj.produto.comprimentoCm && `${rj.produto.comprimentoCm} cm`,
-                        rj.produto.quantidadePorDia && `${rj.produto.quantidadePorDia}/dia`,
-                        rj.produto.quantidadePorMes && `${rj.produto.quantidadePorMes}/mês`,
-                        rj.produto.usoContinuo && 'uso contínuo',
-                      ].filter(Boolean).join(' · ')}
-                    </CampoSe>
-                  )}
-                  {rj.medicamento && (
-                    <CampoSe label="Medicamento solicitado">
-                      {[rj.medicamento.principioAtivo, rj.medicamento.formaFarmaceuticaApresentacao,
-                        rj.medicamento.dose, rj.medicamento.posologia, rj.medicamento.viaAdministracao,
-                        rj.medicamento.duracaoTratamento].filter(Boolean).join(' · ')}
-                    </CampoSe>
-                  )}
-                  <CampoSe label="Procedimento">{rj.procedimentoDescricao}</CampoSe>
-                  <CampoSe label="Urgente">{rj.urgente !== undefined && `${simNao(rj.urgente)}${rj.justificativaUrgencia ? ` — ${rj.justificativaUrgencia}` : ''}`}</CampoSe>
-                  <CampoSe label="Imprescindível">{rj.imprescindivel !== undefined && `${simNao(rj.imprescindivel)}${rj.justificativaImprescindivel ? ` — ${rj.justificativaImprescindivel}` : ''}`}</CampoSe>
-                  <CampoSe label="Benefícios esperados">{rj.beneficiosEsperados}</CampoSe>
-                  <CampoSe label="Consequências da não utilização">{rj.consequenciasNaoUso}</CampoSe>
-                  <CampoSe label="Prescritor">{rj.prescritor && [rj.prescritor.nome, rj.prescritor.registro, rj.prescritor.especialidade].filter(Boolean).join(' · ')}</CampoSe>
-                </div>
-              </div>
-            )}
-
-            {!rj && (
-              <div className="glass rounded-xl p-4 border border-dashed border-border text-center">
-                <Scale className="h-4 w-4 text-muted-foreground mx-auto mb-1.5" />
-                <p className="text-sm text-muted-foreground">
-                  Este atendimento não tem ficha de judicialização (NAT-JUS) preenchida.
-                </p>
-              </div>
-            )}
-
-            {pr.fichaAvaliacaoIU && (
-              <div className="glass rounded-xl p-4 border border-primary/20">
-                <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-3">
-                  Ficha de Avaliação de Incontinência Urinária
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <Campo label="Local">{pr.fichaAvaliacaoIU.local ? LOCAL_LABEL[pr.fichaAvaliacaoIU.local as LocalAtendimento] : ''}</Campo>
-                  <Campo label="Início dos sintomas">{pr.fichaAvaliacaoIU.inicioSintomas}</Campo>
-                  <Campo label="Motivo da IU">{pr.fichaAvaliacaoIU.motivoIU}</Campo>
-                  <Campo label="Perfil do cliente">{pr.fichaAvaliacaoIU.perfilCliente ? PERFIL_LABEL[pr.fichaAvaliacaoIU.perfilCliente as PerfilCliente] : ''}</Campo>
-                  <Campo label="Destreza">{pr.fichaAvaliacaoIU.destreza ? DESTREZA_LABEL[pr.fichaAvaliacaoIU.destreza as Destreza] : ''}</Campo>
-                  <Campo label="DNTUI">{simNao(pr.fichaAvaliacaoIU.dntui)}</Campo>
-                  <Campo label="Tipos de IU">{(pr.fichaAvaliacaoIU.tiposIU ?? []).map((t) => TIPO_IU_LABEL[t as TipoIU] ?? t).join(', ')}</Campo>
-                  <Campo label="Micção espontânea">{simNao(pr.fichaAvaliacaoIU.miccaoEspontanea)}</Campo>
-                  <Campo label="Realiza cateterismo">{simNao(pr.fichaAvaliacaoIU.realizaCateterismo)}</Campo>
-                  <Campo label="Cateterismos/dia">{pr.fichaAvaliacaoIU.cateterismosDia}</Campo>
-                  <Campo label="Cateter utilizado">{pr.fichaAvaliacaoIU.cateterUtilizado}</Campo>
-                  <Campo label="Última ITU">{pr.fichaAvaliacaoIU.ultimaInfeccaoUrinaria}</Campo>
-                  <Campo label="Em tratamento">{simNao(pr.fichaAvaliacaoIU.emTratamento)}</Campo>
-                  <Campo label="Tratamento">{pr.fichaAvaliacaoIU.tratamento}</Campo>
-                  <Campo label="Volume drenado">{pr.fichaAvaliacaoIU.volumeDrenado}</Campo>
-                  <Campo label="Cateter indicado">{pr.fichaAvaliacaoIU.cateterIndicado ? `${pr.fichaAvaliacaoIU.cateterIndicado.sexo ?? ''} ${pr.fichaAvaliacaoIU.cateterIndicado.french ?? ''}Fr`.trim() : ''}</Campo>
-                  <Campo label="Encaminhamento">{pr.fichaAvaliacaoIU.encaminhamento ? ENCAMINHAMENTO_LABEL[pr.fichaAvaliacaoIU.encaminhamento as EncaminhamentoIU] : ''}</Campo>
-                  <Campo label="Responsável pelo cateterismo">{pr.fichaAvaliacaoIU.responsavelCateterismo}</Campo>
-                  <Campo label="COREN">{pr.fichaAvaliacaoIU.coren}</Campo>
-                </div>
-                <div className="mt-3">
-                  <Campo label="Outras intercorrências / medicamentos">{pr.fichaAvaliacaoIU.outrasIntercorrencias}</Campo>
-                </div>
-              </div>
-            )}
-
-            {pr.registroEnfermagem && (
-              <div className="glass rounded-xl p-4 border border-primary/20">
-                <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-3">
-                  Registro de Enfermagem
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <CampoSe label="Ligação ao paciente">{pr.registroEnfermagem.dataLigacao && formatData(pr.registroEnfermagem.dataLigacao)}</CampoSe>
-                  <CampoSe label="Chegada da sonda">{pr.registroEnfermagem.sondaChegouEm && formatData(pr.registroEnfermagem.sondaChegouEm)}</CampoSe>
-                </div>
-                <CampoSe label="Observações">{pr.registroEnfermagem.observacoes}</CampoSe>
-              </div>
-            )}
           </div>
         )}
 
@@ -339,23 +209,8 @@ export function ProntuarioDetailDialog({
               <FileText className="mr-2 h-4 w-4" /> Imprimir
             </Button>
           )}
-          {pr?.relatorioJudicial && pacienteId && (
-            <Button variant="outline" onClick={() => navigate(`/pacientes/${pacienteId}/prontuario/${pr.id}/natjus/imprimir`)}>
-              <FileText className="mr-2 h-4 w-4" /> Gerar relatório NAT-JUS
-            </Button>
-          )}
-          {podeMostrarAtalhoFollowup && pacienteId && (
-            <Button
-              variant="outline"
-              disabled={avaliacoesQ.isLoading || !temAvaliacaoIU}
-              title={!avaliacoesQ.isLoading && !temAvaliacaoIU ? 'Paciente ainda não tem avaliação de incontinência urinária registrada.' : undefined}
-              onClick={() => navigate(`/fluxo-clinico/${pacienteId}`)}
-            >
-              <UserCheck className="mr-2 h-4 w-4" /> Registrar follow-up
-            </Button>
-          )}
           {pr && !pr.assinado && (
-            <Button variant="outline" disabled={assinarMut.isPending} onClick={() => assinarMut.mutate()}>
+            <Button variant="outline" disabled={assinarMut.isPending} onClick={() => setConfirmandoAssinatura(true)}>
               <PenLine className="mr-2 h-4 w-4" /> {assinarMut.isPending ? 'Assinando...' : 'Assinar prontuário'}
             </Button>
           )}
@@ -363,387 +218,26 @@ export function ProntuarioDetailDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
 
-// ---- Formulário de novo atendimento ---------------------------------------
-
-function TextField({ label, value, onChange, rows = 2, placeholder }: {
-  label: string; value?: string; onChange: (v: string) => void; rows?: number; placeholder?: string;
-}) {
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <Textarea rows={rows} value={value ?? ''} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
-    </div>
-  );
-}
-
-/** Abre um novo atendimento (ficha SOAP em branco) já vinculado a um paciente.
- * Quando aberto a partir de um agendamento ("Iniciar atendimento"), `agendamentoId`
- * é enviado junto e o backend conclui o agendamento automaticamente ao salvar. */
-export function NovoAtendimentoDialog({
-  pacienteId,
-  pacienteNome,
-  open,
-  onOpenChange,
-  agendamentoId,
-  initialTipo,
-  initialData,
-}: {
-  pacienteId: string;
-  pacienteNome?: string;
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  agendamentoId?: string;
-  initialTipo?: TipoAtendimento;
-  initialData?: string;
-}) {
-  const qc = useQueryClient();
-  const { user } = useAuth();
-  const [data, setData] = useState(initialData ?? dayjs().format('YYYY-MM-DDTHH:mm'));
-  const [tipo, setTipo] = useState<TipoAtendimento>(initialTipo ?? TipoAtendimento.CONSULTA);
-  const isEnfermagem = tipo === TipoAtendimento.CONSULTA_ENFERMAGEM;
-
-  useEffect(() => {
-    if (open) {
-      setData(initialData ?? dayjs().format('YYYY-MM-DDTHH:mm'));
-      setTipo(initialTipo ?? TipoAtendimento.CONSULTA);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initialTipo, initialData]);
-
-  // Consulta de enfermagem: ligação de acompanhamento + chegada da sonda de teste.
-  const [dataLigacao, setDataLigacao] = useState('');
-  const [sondaChegouEm, setSondaChegouEm] = useState('');
-  const [obsEnfermagem, setObsEnfermagem] = useState('');
-
-  const [subjetivo, setSubjetivo] = useState<ProntuarioSubjetivo>({});
-  const [sinais, setSinais] = useState<SinaisVitais>({});
-  const [estadoGeral, setEstadoGeral] = useState('');
-  const [seg, setSeg] = useState<ExameSegmentar>({});
-  const [exameOutros, setExameOutros] = useState('');
-  const [avaliacao, setAvaliacao] = useState<ProntuarioAvaliacao>({});
-  const [plano, setPlano] = useState<ProntuarioPlano>({});
-
-  const [cidSearch, setCidSearch] = useState('');
-  const [cidSelected, setCidSelected] = useState<string[]>([]);
-  const [cidOpts, setCidOpts] = useState<{ value: string; label: string }[]>([]);
-
-  // Judicialização / NAT-JUS
-  const [incluirJudicial, setIncluirJudicial] = useState(false);
-  const [judicial, setJudicial] = useState<RelatorioJudicial>({});
-  const setJ = (patch: Partial<RelatorioJudicial>) => setJudicial((j) => ({ ...j, ...patch }));
-
-  const setS = (patch: Partial<ProntuarioSubjetivo>) => setSubjetivo((s) => ({ ...s, ...patch }));
-  const setSV = (patch: Partial<SinaisVitais>) => setSinais((s) => ({ ...s, ...patch }));
-  const setSeg2 = (patch: Partial<ExameSegmentar>) => setSeg((s) => ({ ...s, ...patch }));
-  const setA = (patch: Partial<ProntuarioAvaliacao>) => setAvaliacao((a) => ({ ...a, ...patch }));
-  const setP = (patch: Partial<ProntuarioPlano>) => setPlano((p) => ({ ...p, ...patch }));
-  const num = (v: string): number | undefined => (v ? Number(v) : undefined);
-
-  function reset() {
-    setData(dayjs().format('YYYY-MM-DDTHH:mm')); setTipo(TipoAtendimento.CONSULTA);
-    setSubjetivo({}); setSinais({}); setEstadoGeral(''); setSeg({}); setExameOutros('');
-    setAvaliacao({}); setPlano({});
-    setCidSearch(''); setCidSelected([]); setCidOpts([]);
-    setIncluirJudicial(false); setJudicial({});
-    setDataLigacao(''); setSondaChegouEm(''); setObsEnfermagem('');
-  }
-
-  async function buscarCid(qstr: string) {
-    setCidSearch(qstr);
-    if (!qstr || qstr.length < 2) return setCidOpts([]);
-    try {
-      const r = await prontuariosApi.cid10(qstr);
-      setCidOpts((r ?? []).map((c) => ({ value: c.codigo, label: `${c.codigo} — ${c.descricao}` })));
-    } catch { setCidOpts([]); }
-  }
-
-  const createMut = useMutation({
-    mutationFn: (payload: Record<string, unknown>) => prontuariosApi.create(payload),
-    onSuccess: () => {
-      toast.success('Atendimento registrado.');
-      reset();
-      onOpenChange(false);
-      void qc.invalidateQueries({ queryKey: ['prontuarios'] });
-      void qc.invalidateQueries({ queryKey: ['agenda'] });
-    },
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
-  });
-
-  function clean<T extends object>(obj: T): T | undefined {
-    const entries = Object.entries(obj).filter(([, v]) =>
-      v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0));
-    return entries.length ? (Object.fromEntries(entries) as T) : undefined;
-  }
-
-  function submit() {
-    if (isEnfermagem) {
-      if (!dataLigacao && !sondaChegouEm && !obsEnfermagem) {
-        toast.error('Informe ao menos um dado do registro de enfermagem.');
-        return;
-      }
-      createMut.mutate({
-        clinicaId: user?.clinicaId,
-        pacienteId,
-        agendamentoId,
-        dataAtendimento: dayjs(data).toISOString(),
-        tipo,
-        registroEnfermagem: clean({
-          dataLigacao: dataLigacao ? dayjs(dataLigacao).toISOString() : undefined,
-          sondaChegouEm: sondaChegouEm ? dayjs(sondaChegouEm).toISOString() : undefined,
-          observacoes: obsEnfermagem || undefined,
-        }),
-      });
-      return;
-    }
-
-    if (!subjetivo.queixaPrincipal) { toast.error('Informe ao menos a queixa principal.'); return; }
-    const objetivo: ProntuarioObjetivo = {
-      estadoGeral: estadoGeral || undefined,
-      sinaisVitais: clean(sinais),
-      exameSegmentar: clean(seg),
-      exameFisico: exameOutros || undefined,
-    };
-    createMut.mutate({
-      clinicaId: user?.clinicaId,
-      pacienteId,
-      agendamentoId,
-      dataAtendimento: dayjs(data).toISOString(),
-      tipo,
-      subjetivo: { ...subjetivo, queixaPrincipal: subjetivo.queixaPrincipal },
-      objetivo: clean(objetivo) ?? {},
-      avaliacao: { ...clean(avaliacao), cid10: cidSelected.length ? cidSelected : undefined } ,
-      plano: clean(plano) ?? {},
-      relatorioJudicial: incluirJudicial
-        ? clean({
-            ...judicial,
-            produto: clean(judicial.produto ?? {}),
-            medicamento: clean(judicial.medicamento ?? {}),
-            prescritor: clean(judicial.prescritor ?? {}),
-            dataEmissao: judicial.dataEmissao || undefined,
-          })
-        : undefined,
-    });
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={confirmandoAssinatura} onOpenChange={(o) => { if (!o) setConfirmandoAssinatura(false); }}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Novo atendimento{pacienteNome ? ` — ${pacienteNome}` : ''}</DialogTitle>
+          <DialogTitle>Assinar prontuário</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="naData">Data do atendimento</Label>
-              <Input id="naData" type="datetime-local" value={data} onChange={(e) => setData(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Tipo de atendimento</Label>
-              <Select value={tipo} onValueChange={(v) => setTipo(v as TipoAtendimento)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {/* Psicoterapia tem formulário próprio na aba Atendimento Psicológico. */}
-                  {Object.values(TipoAtendimento).filter((t) => t !== TipoAtendimento.PSICOTERAPIA).map((t) => <SelectItem key={t} value={t}>{TIPO_ATENDIMENTO_LABEL[t]}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {!isEnfermagem && (
-          <>
-          <Separator />
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">S — Subjetivo / Anamnese</p>
-          <div className="space-y-2">
-            <Label htmlFor="naQueixa">Queixa principal *</Label>
-            <Textarea id="naQueixa" rows={2} value={subjetivo.queixaPrincipal ?? ''} onChange={(e) => setS({ queixaPrincipal: e.target.value })} />
-          </div>
-          <TextField label="História da doença atual (HDA)" value={subjetivo.hda} onChange={(v) => setS({ hda: v })} />
-          <div className="grid grid-cols-2 gap-3">
-            <TextField label="Antecedentes pessoais / comorbidades" value={subjetivo.antecedentesPessoais} onChange={(v) => setS({ antecedentesPessoais: v })} />
-            <TextField label="Antecedentes cirúrgicos" value={subjetivo.antecedentesCirurgicos} onChange={(v) => setS({ antecedentesCirurgicos: v })} />
-            <TextField label="Medicamentos em uso" value={subjetivo.medicamentosEmUso} onChange={(v) => setS({ medicamentosEmUso: v })} />
-            <TextField label="Alergias" value={subjetivo.alergias} onChange={(v) => setS({ alergias: v })} />
-            <TextField label="História familiar" value={subjetivo.historiaFamiliar} onChange={(v) => setS({ historiaFamiliar: v })} />
-            <TextField label="História social (tabagismo, etilismo, ocupação)" value={subjetivo.historiaSocial} onChange={(v) => setS({ historiaSocial: v })} />
-          </div>
-          <TextField label="Revisão de sistemas" value={subjetivo.revisaoSistemas} onChange={(v) => setS({ revisaoSistemas: v })} />
-
-          <Separator />
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">O — Objetivo / Exame físico</p>
-          <TextField label="Estado geral" value={estadoGeral} onChange={setEstadoGeral} rows={2} placeholder="BEG, LOTE, hidratado, corado, afebril…" />
-          <div className="grid grid-cols-4 gap-3">
-            <div className="space-y-2"><Label>PA</Label><Input placeholder="120/80" value={sinais.pressaoArterial ?? ''} onChange={(e) => setSV({ pressaoArterial: e.target.value })} /></div>
-            <div className="space-y-2"><Label>FC (bpm)</Label><Input inputMode="numeric" value={sinais.frequenciaCardiaca ?? ''} onChange={(e) => setSV({ frequenciaCardiaca: num(e.target.value) })} /></div>
-            <div className="space-y-2"><Label>FR (irpm)</Label><Input inputMode="numeric" value={sinais.frequenciaRespiratoria ?? ''} onChange={(e) => setSV({ frequenciaRespiratoria: num(e.target.value) })} /></div>
-            <div className="space-y-2"><Label>Tax (°C)</Label><Input inputMode="decimal" value={sinais.temperatura ?? ''} onChange={(e) => setSV({ temperatura: num(e.target.value) })} /></div>
-            <div className="space-y-2"><Label>SatO₂ (%)</Label><Input inputMode="numeric" value={sinais.saturacaoO2 ?? ''} onChange={(e) => setSV({ saturacaoO2: num(e.target.value) })} /></div>
-            <div className="space-y-2"><Label>Peso (kg)</Label><Input inputMode="decimal" value={sinais.peso ?? ''} onChange={(e) => setSV({ peso: num(e.target.value) })} /></div>
-            <div className="space-y-2"><Label>Altura (cm)</Label><Input inputMode="numeric" value={sinais.altura ?? ''} onChange={(e) => setSV({ altura: num(e.target.value) })} /></div>
-            <div className="space-y-2"><Label>Dor (0–10)</Label><Input inputMode="numeric" value={sinais.escalaDor ?? ''} onChange={(e) => setSV({ escalaDor: num(e.target.value) })} /></div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {EXAME_SEGMENTAR_CAMPOS.map(({ key, label }) => (
-              <TextField key={key} label={label} value={seg[key]} onChange={(v) => setSeg2({ [key]: v })} />
-            ))}
-          </div>
-          <TextField label="Outros achados" value={exameOutros} onChange={setExameOutros} />
-
-          <Separator />
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">A — Avaliação</p>
-          <TextField label="Hipótese diagnóstica" value={avaliacao.hipotesesDiagnosticas?.join('\n')} onChange={(v) => setA({ hipotesesDiagnosticas: v ? v.split('\n').map((s) => s.trim()).filter(Boolean) : undefined })} placeholder="Uma por linha" />
-          <div className="space-y-2">
-            <Label htmlFor="naCid">CID-10 {cidSelected.length > 0 && <span className="text-primary">({cidSelected.join(', ')})</span>}</Label>
-            <Input id="naCid" placeholder="Digite para buscar (ex.: N31)" value={cidSearch} onChange={(e) => buscarCid(e.target.value)} />
-            {cidOpts.length > 0 && (
-              <div className="glass rounded-lg p-1 space-y-0.5 max-h-40 overflow-y-auto">
-                {cidOpts.map((o) => (
-                  <button key={o.value} type="button"
-                    className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-secondary text-foreground"
-                    onClick={() => { setCidSelected((cur) => cur.includes(o.value) ? cur : [...cur, o.value]); setCidSearch(''); setCidOpts([]); }}>
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-            )}
-            {cidSelected.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {cidSelected.map((c) => (
-                  <Badge key={c} variant="secondary" className="cursor-pointer" onClick={() => setCidSelected((cur) => cur.filter((x) => x !== c))}>
-                    {c} ✕
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-          <TextField label="Diagnóstico definitivo" value={avaliacao.diagnosticoDefinitivo} onChange={(v) => setA({ diagnosticoDefinitivo: v })} />
-          <TextField label="Evolução" value={avaliacao.evolucao} onChange={(v) => setA({ evolucao: v })} />
-
-          <Separator />
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">P — Plano</p>
-          <TextField label="Conduta" value={plano.conduta} onChange={(v) => setP({ conduta: v })} />
-          <TextField label="Prescrição" value={plano.prescricao} onChange={(v) => setP({ prescricao: v })} />
-          <TextField label="Exames solicitados" value={plano.examesSolicitados?.join('\n')} onChange={(v) => setP({ examesSolicitados: v ? v.split('\n').map((s) => s.trim()).filter(Boolean) : undefined })} placeholder="Um por linha" />
-          <div className="grid grid-cols-2 gap-3">
-            <TextField label="Orientações" value={plano.orientacoes} onChange={(v) => setP({ orientacoes: v })} />
-            <TextField label="Encaminhamentos" value={plano.encaminhamentos} onChange={(v) => setP({ encaminhamentos: v })} />
-          </div>
-          <div className="space-y-2"><Label>Retorno</Label><Input value={plano.retorno ?? ''} placeholder="Ex.: 30 dias / conforme necessidade" onChange={(e) => setP({ retorno: e.target.value })} /></div>
-
-          {/* --- Judicialização / NAT-JUS --- */}
-          <Separator />
-          <label className="flex items-center gap-2 cursor-pointer">
-            <Checkbox checked={incluirJudicial} onCheckedChange={(c) => setIncluirJudicial(!!c)} />
-            <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider flex items-center gap-2">
-              <Scale className="h-3.5 w-3.5" /> Judicialização — Relatório NAT-JUS
-            </span>
-          </label>
-
-          {incluirJudicial && (
-            <div className="space-y-4 glass rounded-xl p-4 border border-amber-500/20">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-2"><Label>Município/Estado</Label><Input value={judicial.municipioEstado ?? ''} placeholder="São Paulo/SP" onChange={(e) => setJ({ municipioEstado: e.target.value })} /></div>
-                <div className="space-y-2">
-                  <Label>Natureza do atendimento</Label>
-                  <Select value={judicial.naturezaAtendimento ?? undefined} onValueChange={(v) => setJ({ naturezaAtendimento: v as NaturezaAtendimento })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>{(Object.keys(NATUREZA_LABEL) as NaturezaAtendimento[]).map((n) => <SelectItem key={n} value={n}>{NATUREZA_LABEL[n]}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2"><Label>Data de emissão</Label><Input type="date" value={judicial.dataEmissao ? dayjs(judicial.dataEmissao).format('YYYY-MM-DD') : ''} onChange={(e) => setJ({ dataEmissao: e.target.value ? dayjs(e.target.value).toISOString() : undefined })} /></div>
-              </div>
-              <TextField label="Enfermidade / CID (principal e causa de base)" value={judicial.enfermidadeCid} onChange={(v) => setJ({ enfermidadeCid: v })} />
-              <TextField label="Histórico da doença" value={judicial.historicoDoenca} onChange={(v) => setJ({ historicoDoenca: v })} rows={3} />
-              <TextField label="Tratamentos já realizados / resultado" value={judicial.tratamentosRealizados} onChange={(v) => setJ({ tratamentosRealizados: v })} rows={3} />
-
-              <div className="space-y-2">
-                <Label>Tipo de solicitação</Label>
-                <Select value={judicial.tipoSolicitacao ?? undefined} onValueChange={(v) => setJ({ tipoSolicitacao: v as TipoSolicitacaoJudicial })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>{(Object.keys(TIPO_SOLICITACAO_LABEL) as TipoSolicitacaoJudicial[]).map((t) => <SelectItem key={t} value={t}>{TIPO_SOLICITACAO_LABEL[t]}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-
-              {judicial.tipoSolicitacao === 'produto' && (
-                <div className="space-y-3 border-l-2 border-amber-500/20 pl-3">
-                  <TextField label="Descrição do produto" value={judicial.produto?.descricao} onChange={(v) => setJ({ produto: { ...judicial.produto, descricao: v } })} placeholder="Ex.: Cateter intermitente hidrofílico, pronto para uso, com ponta protetora" />
-                  <div className="grid grid-cols-4 gap-3">
-                    <div className="space-y-2"><Label>Calibre (Fr)</Label><Input inputMode="numeric" value={judicial.produto?.calibreFrench ?? ''} onChange={(e) => setJ({ produto: { ...judicial.produto, calibreFrench: num(e.target.value) } })} /></div>
-                    <div className="space-y-2"><Label>Compr. (cm)</Label><Input inputMode="numeric" value={judicial.produto?.comprimentoCm ?? ''} onChange={(e) => setJ({ produto: { ...judicial.produto, comprimentoCm: num(e.target.value) } })} /></div>
-                    <div className="space-y-2"><Label>Qtd/dia</Label><Input inputMode="numeric" value={judicial.produto?.quantidadePorDia ?? ''} onChange={(e) => setJ({ produto: { ...judicial.produto, quantidadePorDia: num(e.target.value) } })} /></div>
-                    <div className="space-y-2"><Label>Qtd/mês</Label><Input inputMode="numeric" value={judicial.produto?.quantidadePorMes ?? ''} onChange={(e) => setJ({ produto: { ...judicial.produto, quantidadePorMes: num(e.target.value) } })} /></div>
-                  </div>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={!!judicial.produto?.usoContinuo} onCheckedChange={(c) => setJ({ produto: { ...judicial.produto, usoContinuo: !!c } })} /> Uso contínuo</label>
-                </div>
-              )}
-
-              {judicial.tipoSolicitacao === 'medicamento' && (
-                <div className="space-y-3 border-l-2 border-amber-500/20 pl-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2"><Label>Princípio ativo (DCB/DCI)</Label><Input value={judicial.medicamento?.principioAtivo ?? ''} onChange={(e) => setJ({ medicamento: { ...judicial.medicamento, principioAtivo: e.target.value } })} /></div>
-                    <div className="space-y-2"><Label>Forma farm. e apresentação</Label><Input value={judicial.medicamento?.formaFarmaceuticaApresentacao ?? ''} onChange={(e) => setJ({ medicamento: { ...judicial.medicamento, formaFarmaceuticaApresentacao: e.target.value } })} /></div>
-                    <div className="space-y-2"><Label>Dose</Label><Input value={judicial.medicamento?.dose ?? ''} onChange={(e) => setJ({ medicamento: { ...judicial.medicamento, dose: e.target.value } })} /></div>
-                    <div className="space-y-2"><Label>Posologia</Label><Input value={judicial.medicamento?.posologia ?? ''} onChange={(e) => setJ({ medicamento: { ...judicial.medicamento, posologia: e.target.value } })} /></div>
-                    <div className="space-y-2"><Label>Via de administração</Label><Input value={judicial.medicamento?.viaAdministracao ?? ''} onChange={(e) => setJ({ medicamento: { ...judicial.medicamento, viaAdministracao: e.target.value } })} /></div>
-                    <div className="space-y-2"><Label>Duração do tratamento</Label><Input value={judicial.medicamento?.duracaoTratamento ?? ''} onChange={(e) => setJ({ medicamento: { ...judicial.medicamento, duracaoTratamento: e.target.value } })} /></div>
-                  </div>
-                </div>
-              )}
-
-              {judicial.tipoSolicitacao === 'procedimento' && (
-                <TextField label="Descrição do procedimento" value={judicial.procedimentoDescricao} onChange={(v) => setJ({ procedimentoDescricao: v })} />
-              )}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={!!judicial.urgente} onCheckedChange={(c) => setJ({ urgente: !!c })} /> É urgente</label>
-                  {judicial.urgente && <Textarea rows={2} placeholder="Por quê?" value={judicial.justificativaUrgencia ?? ''} onChange={(e) => setJ({ justificativaUrgencia: e.target.value })} />}
-                </div>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer"><Checkbox checked={!!judicial.imprescindivel} onCheckedChange={(c) => setJ({ imprescindivel: !!c })} /> É imprescindível</label>
-                  {judicial.imprescindivel && <Textarea rows={2} placeholder="Por quê?" value={judicial.justificativaImprescindivel ?? ''} onChange={(e) => setJ({ justificativaImprescindivel: e.target.value })} />}
-                </div>
-              </div>
-              <TextField label="Benefícios esperados com o tratamento" value={judicial.beneficiosEsperados} onChange={(v) => setJ({ beneficiosEsperados: v })} />
-              <TextField label="Consequências da não utilização" value={judicial.consequenciasNaoUso} onChange={(v) => setJ({ consequenciasNaoUso: v })} />
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-2"><Label>Prescritor — nome</Label><Input value={judicial.prescritor?.nome ?? ''} onChange={(e) => setJ({ prescritor: { ...judicial.prescritor, nome: e.target.value } })} /></div>
-                <div className="space-y-2"><Label>Registro (CRM/COREN)</Label><Input value={judicial.prescritor?.registro ?? ''} placeholder="CRM-SP 123456" onChange={(e) => setJ({ prescritor: { ...judicial.prescritor, registro: e.target.value } })} /></div>
-                <div className="space-y-2"><Label>Especialidade</Label><Input value={judicial.prescritor?.especialidade ?? ''} onChange={(e) => setJ({ prescritor: { ...judicial.prescritor, especialidade: e.target.value } })} /></div>
-              </div>
-            </div>
-          )}
-          </>
-          )}
-
-          {/* Avaliação de incontinência urinária foi desacoplada do atendimento SOAP —
-              agora é registro independente, criado em /fluxo-clinico/:id. */}
-
-          {isEnfermagem && (
-            <div className="space-y-4">
-              <Separator />
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Registro de enfermagem</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Dia em que ligou para o paciente</Label>
-                  <Input type="date" value={dataLigacao} onChange={(e) => setDataLigacao(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Dia em que a sonda chegou na casa do paciente</Label>
-                  <Input type="date" value={sondaChegouEm} onChange={(e) => setSondaChegouEm(e.target.value)} />
-                </div>
-              </div>
-              <TextField label="Observações" value={obsEnfermagem} onChange={setObsEnfermagem} rows={3} />
-            </div>
-          )}
-        </div>
+        <p className="text-sm text-muted-foreground">
+          Depois de assinado, este prontuário não pode mais ser editado — qualquer
+          correção exigirá um addendum.
+        </p>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={submit} disabled={createMut.isPending}>{createMut.isPending ? 'Registrando...' : 'Registrar atendimento'}</Button>
+          <Button variant="ghost" onClick={() => setConfirmandoAssinatura(false)} disabled={assinarMut.isPending}>
+            Cancelar
+          </Button>
+          <Button onClick={() => assinarMut.mutate()} disabled={assinarMut.isPending}>
+            <PenLine className="mr-2 h-4 w-4" /> {assinarMut.isPending ? 'Assinando...' : 'Assinar prontuário'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </>
   );
 }

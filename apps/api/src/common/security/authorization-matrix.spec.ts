@@ -8,64 +8,45 @@ import { MATRIZ_API, PapelSigla, SIGLA_PAPEL } from './authorization-matrix.expe
 import { AgendamentosController } from '../../modules/agendamentos/presentation/agendamentos.controller';
 import { AnalyticsController } from '../../modules/analytics/presentation/analytics.controller';
 import { AuthController } from '../../modules/auth/presentation/auth.controller';
-import { AvaliacaoIUController } from '../../modules/avaliacao-iu/presentation/avaliacao-iu.controller';
-import { CaptacaoController } from '../../modules/captacao/presentation/captacao.controller';
-import { ChecklistDocumentosController } from '../../modules/checklist-documentos/presentation/checklist-documentos.controller';
+import { PasswordResetController } from '../../modules/auth/presentation/password-reset.controller';
+import { ClinicaDocumentoController } from '../../modules/clinicas/presentation/clinica-documento.controller';
 import { ClinicasController } from '../../modules/clinicas/presentation/clinicas.controller';
 import { DocumentosController } from '../../modules/documentos/presentation/documentos.controller';
-import { EntregasController } from '../../modules/entregas/presentation/entregas.controller';
+import { DocumentosEmitidosController } from '../../modules/documentos-emitidos/presentation/documentos-emitidos.controller';
 import { FinanceiroController } from '../../modules/financeiro/presentation/financeiro.controller';
-import { FollowUpController } from '../../modules/followup/presentation/followup.controller';
+import { PsicologiaFinanceiroController } from '../../modules/financeiro/presentation/psicologia-financeiro.controller';
 import { HealthController } from '../../modules/health/health.controller';
-import { LaudoMedicoController } from '../../modules/laudo-medico/presentation/laudo-medico.controller';
-import { MercadoPagoController } from '../../modules/mercado-pago/mercado-pago.controller';
+import { IaClinicaController } from '../../modules/ia-clinica/presentation/ia-clinica.controller';
+import { InscricoesTesteController } from '../../modules/inscricoes-teste/presentation/inscricoes-teste.controller';
+import { LembretesAgendamentoController } from '../../modules/lembretes-agendamento/presentation/lembretes-agendamento.controller';
 import { NotificacoesController } from '../../modules/notificacoes/presentation/notificacoes.controller';
 import { ObservacoesPacienteController } from '../../modules/observacoes-paciente/presentation/observacoes-paciente.controller';
 import { PacientesController } from '../../modules/pacientes/presentation/pacientes.controller';
-import { ProdutosController } from '../../modules/produtos/presentation/produtos.controller';
 import { ProntuariosController } from '../../modules/prontuarios/presentation/prontuarios.controller';
-import { PsicologiaFinanceiroController } from '../../modules/financeiro/presentation/psicologia-financeiro.controller';
 import { SuperAdminController } from '../../modules/super-admin/super-admin.controller';
-import { TelemedicinaAcessoController } from '../../modules/telemedicina/presentation/telemedicina-acesso.controller';
 import { TelemedicinaController } from '../../modules/telemedicina/presentation/telemedicina.controller';
+import { TelemedicinaAcessoController } from '../../modules/telemedicina/presentation/telemedicina-acesso.controller';
+import { TestesPsicologicosController } from '../../modules/testes-psicologicos/presentation/testes-psicologicos.controller';
+import { TicketsController } from '../../modules/tickets/presentation/tickets.controller';
 
 /**
  * MATRIZ DE AUTORIZAÇÃO (papel × endpoint). Para cada rota HTTP de cada controller o teste:
  *  1. exige que a rota esteja declarada em `MATRIZ_API` (rota nova sem declaração = teste vermelho:
  *     negação por padrão, esconder no menu nunca é a proteção);
- *  2. tenta o acesso com cada um dos 7 papéis, executando o RolesGuard REAL com os metadados REAIS do
+ *  2. tenta o acesso com cada um dos 5 papéis, executando o RolesGuard REAL com os metadados REAIS do
  *     handler, e compara com o esperado.
  * Rotas sem RolesGuard só são aceitas se a matriz as marcar explicitamente (PUBLICO / LOGADO / ...).
  */
 const CONTROLLERS = [
-  AgendamentosController,
-  AnalyticsController,
-  AuthController,
-  AvaliacaoIUController,
-  CaptacaoController,
-  ChecklistDocumentosController,
-  ClinicasController,
-  DocumentosController,
-  EntregasController,
-  FinanceiroController,
-  FollowUpController,
-  HealthController,
-  LaudoMedicoController,
-  MercadoPagoController,
-  NotificacoesController,
-  ObservacoesPacienteController,
-  PacientesController,
-  ProdutosController,
-  ProntuariosController,
-  PsicologiaFinanceiroController,
-  SuperAdminController,
-  TelemedicinaAcessoController,
-  TelemedicinaController,
+  AgendamentosController, AnalyticsController, AuthController, PasswordResetController, ClinicasController, ClinicaDocumentoController, DocumentosController,
+  DocumentosEmitidosController,
+  FinanceiroController, PsicologiaFinanceiroController, HealthController, IaClinicaController,
+  InscricoesTesteController, LembretesAgendamentoController, NotificacoesController,
+  ObservacoesPacienteController, PacientesController, ProntuariosController, SuperAdminController,
+  TelemedicinaController, TelemedicinaAcessoController, TestesPsicologicosController, TicketsController,
 ];
 
-const PAPEIS: Papel[] = [
-  Papel.SUPER_ADMIN, Papel.ADMIN, Papel.MEDICO, Papel.ENFERMEIRO, Papel.PSICOLOGO, Papel.SECRETARIA, Papel.PACIENTE,
-];
+const PAPEIS: Papel[] = [Papel.SUPER_ADMIN, Papel.ADMIN, Papel.PSICOLOGO, Papel.SECRETARIA, Papel.PACIENTE];
 
 interface RotaDescoberta {
   chave: string;
@@ -121,7 +102,7 @@ const ROTAS = descobrir();
 
 describe('Matriz de autorização — API (papel × endpoint)', () => {
   it('descobre as rotas (sanidade)', () => {
-    expect(ROTAS.length).toBeGreaterThan(100);
+    expect(ROTAS.length).toBeGreaterThan(80);
   });
 
   it('toda rota está declarada na matriz (negação por padrão)', () => {

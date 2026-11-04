@@ -1,3 +1,5 @@
+import { TipoDocumentoFiscal } from '../../../../../../packages/shared/src/documentos';
+
 export enum PlanoClinica {
   BASICO = 'basico',
   PROFISSIONAL = 'profissional',
@@ -15,10 +17,16 @@ export interface EnderecoClinica {
 }
 
 export interface ConfiguracoesClinica {
+  /** Legado: nada o grava mais e /clinicas/minha o ignora. A logo vigente é `logoKey`. */
   logoUrl?: string;
+  /** Chave do objeto da logo no bucket privado (logos/<clinicaId>/...). Nunca exposta ao cliente. */
+  logoKey?: string;
   corPrimaria?: string;
   whatsappNumero?: string;
   emailRemetente?: string;
+  /** Telefone e e-mail de contato impressos no timbre dos documentos clínicos. Ausentes = o campo some. */
+  telefone?: string;
+  emailContato?: string;
   fusoHorario: string;
   duracaoConsultaPadrao: number;
 }
@@ -26,11 +34,18 @@ export interface ConfiguracoesClinica {
 export interface Clinica {
   id: string;
   nome: string;
-  cnpj: string;
+  /** CPF (profissional pessoa física) ou CNPJ, normalizado: maiúsculas, sem pontuação. */
+  documento: string;
+  tipoDocumento: TipoDocumentoFiscal;
   endereco?: EnderecoClinica;
   plano: PlanoClinica;
   configuracoes: ConfiguracoesClinica;
   ativo: boolean;
+  /**
+   * Clínica do teste beta: seus usuários aceitam o Termo de Teste em vez dos Termos
+   * de Uso. Desmarcar no lançamento faz todos aceitarem os Termos de Uso no próximo acesso.
+   */
+  faseTeste: boolean;
   criadoEm: Date;
 }
 

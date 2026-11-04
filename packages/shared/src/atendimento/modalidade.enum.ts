@@ -1,20 +1,14 @@
 /**
- * Modalidade do atendimento prestado pela clinica.
- * O sistema atende tres frentes de trabalho:
- * - MEDICO: consultas e procedimentos clinicos
- * - ENFERMAGEM: atendimento e procedimentos de enfermagem
- * - PSICOLOGIA: atendimento psicologico / psicoterapia (extra do sistema)
+ * Modalidade do atendimento prestado pela clinica. Nuvita-psi atende só
+ * psicologia — o campo continua existindo (schemas/telemedicina já o usam)
+ * para não forçar uma migração de dado, mas hoje só tem um valor possível.
  */
 export enum ModalidadeAtendimento {
-  MEDICO = 'medico',
-  ENFERMAGEM = 'enfermagem',
   PSICOLOGIA = 'psicologia',
 }
 
 export const MODALIDADES_ATENDIMENTO = Object.values(ModalidadeAtendimento);
 
 export const ROTULO_MODALIDADE: Record<ModalidadeAtendimento, string> = {
-  [ModalidadeAtendimento.MEDICO]: 'Atendimento Medico',
-  [ModalidadeAtendimento.ENFERMAGEM]: 'Atendimento de Enfermagem',
   [ModalidadeAtendimento.PSICOLOGIA]: 'Atendimento Psicologico',
 };

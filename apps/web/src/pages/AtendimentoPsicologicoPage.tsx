@@ -1,10 +1,12 @@
-import { MutableRefObject, useEffect, useMemo, useRef, useState } from 'react';
+import { MutableRefObject, useEffect, useMemo, useRef, useState, useId } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import dayjs from 'dayjs';
-import { Brain, CalendarPlus, ClipboardList, Copy, History, Loader2, PenLine, User, Video, X } from 'lucide-react';
+import { Brain, CalendarPlus, Check, ClipboardList, Copy, History, Loader2, PenLine, Sparkles, User, Video, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { temCrp } from '@/lib/timbre';
+import { ROTULO, ROTULO_ANOTACOES, ROTULO_FORMULARIO, type FormularioRegistro } from '@/lib/registroPsicologico';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -19,12 +21,14 @@ import {
 import { toast } from '@/components/ui/use-toast';
 import { SalaVideo } from '@/components/SalaVideo';
 import { useAuth } from '@/auth/AuthContext';
-import { agendaApi, pacientesApi, prontuariosApi, psicoFinanceiroApi, telemedicinaApi } from '@/api/resources';
+import { agendaApi, authApi, iaClinicaApi, pacientesApi, prontuariosApi, psicoFinanceiroApi, telemedicinaApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
-import { formatData, formatEndereco, linkDaSala, toItems } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
+import { formatCpf, formatData, formatEndereco, linkDaSala, toItems } from '@/utils';
+import { CAMPOS_POR_LINHA } from '@/lib/linhaTerapeutica';
 import {
-  Agendamento, ModalidadeAtendimento, Paciente, Papel, Prontuario, RegistroPsicologico,
-  REGISTRO_PSICOLOGICO_CAMPOS,
+  Agendamento, DecisaoUsoIA, ModalidadeAtendimento, Paciente, Papel, Prontuario, RegistroPsicologico,
+  REGISTRO_PSICOLOGICO_CAMPOS, LINHA_TERAPEUTICA_LABEL,
   SalaTelemedicina, StatusAgendamento, StatusSala, STATUS_AGENDAMENTO_LABEL,
   TipoAgendamento, TipoAtendimento,
   TIPO_AGENDAMENTO_LABEL, TIPOS_POR_MODALIDADE, rotuloProximaSessao,
@@ -35,8 +39,8 @@ import {
  * inteira enquanto escreve, sem rolagem interna num campo pequeno.
  */
 function AutoTextarea({
-  value, onChange, placeholder, minRows = 3,
-}: { value?: string; onChange: (v: string) => void; placeholder?: string; minRows?: number }) {
+  value, onChange, placeholder, minRows = 3, id, ariaLabel,
+}: { value?: string; onChange: (v: string) => void; placeholder?: string; minRows?: number; id?: string; ariaLabel?: string }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     const el = ref.current;
@@ -46,6 +50,8 @@ function AutoTextarea({
   }, [value]);
   return (
     <textarea
+      id={id}
+      aria-label={ariaLabel}
       ref={ref}
       rows={minRows}
       value={value ?? ''}
@@ -59,10 +65,11 @@ function AutoTextarea({
 function CampoTexto({
   label, value, onChange, placeholder, minRows,
 }: { label: string; value?: string; onChange: (v: string) => void; placeholder?: string; minRows?: number }) {
+  const id = useId();
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
-      <AutoTextarea value={value} onChange={onChange} placeholder={placeholder} minRows={minRows} />
+      <Label htmlFor={id}>{label}</Label>
+      <AutoTextarea id={id} value={value} onChange={onChange} placeholder={placeholder} minRows={minRows} />
     </div>
   );
 }
@@ -99,6 +106,73 @@ function ultimoValor(sessoes: Prontuario[], campo: keyof RegistroPsicologico): s
   return undefined;
 }
 
+/** Campos de sessão específicos da linha terapêutica do paciente (TCC,
+ * Psicanálise, Humanista, Gestalt, Junguiana) — só aparece quando o paciente
+ * tem uma linha terapêutica classificada no cadastro. */
+function CamposLinhaTerapeutica({
+  paciente, reg, set,
+}: { paciente?: Paciente; reg: RegistroPsicologico; set: (patch: Partial<RegistroPsicologico>) => void }) {
+  if (!paciente?.linhaTerapeutica) return null;
+  const campos = CAMPOS_POR_LINHA[paciente.linhaTerapeutica];
+  return (
+    <>
+      <SecaoTitulo>{LINHA_TERAPEUTICA_LABEL[paciente.linhaTerapeutica]} — campos específicos</SecaoTitulo>
+      {campos.map(({ key, label, placeholder }) => (
+        <CampoTexto
+          key={key}
+          label={label}
+          placeholder={placeholder}
+          value={reg[key] as string | undefined}
+          onChange={(v) => set({ [key]: v })}
+          minRows={2}
+        />
+      ))}
+    </>
+  );
+}
+
+/**
+ * O CRP é o do PERFIL (o servidor o carimba ao assinar): com CRP, só se mostra; sem CRP, informa-se uma vez
+ * (mesmo endpoint do portão dos documentos) e o botão de assinar libera. Só "não vazio": o formato fica pendente de
+ * fonte oficial do CFP.
+ */
+function CrpDoPerfil({ crp }: { crp?: string }) {
+  const { user, atualizarUsuario } = useAuth();
+  const [novo, setNovo] = useState('');
+  const [salvando, setSalvando] = useState(false);
+  const tem = temCrp(crp);
+
+  async function salvar() {
+    if (!user || !temCrp(novo)) return;
+    setSalvando(true);
+    try {
+      const res = await authApi.salvarMeuCrp(novo.trim());
+      atualizarUsuario({ ...user, ...res.user });
+    } catch (e) {
+      toast({ title: 'Não foi possível salvar o CRP', description: apiErrorMessage(e), variant: 'destructive' });
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="crpPerfil">CRP do psicólogo responsável</Label>
+      {tem ? (
+        <Input id="crpPerfil" readOnly value={crp!} className="max-w-xs" />
+      ) : (
+        <>
+          <div className="flex max-w-md gap-2">
+            <Input id="crpPerfil" value={novo} onChange={(e) => setNovo(e.target.value)} placeholder="CRP 00/00000" />
+            <Button type="button" variant="secondary" onClick={salvar} disabled={salvando || !temCrp(novo)}>Salvar CRP</Button>
+          </div>
+          <p className="text-xs text-destructive">Informe o CRP no seu perfil para assinar o prontuário.</p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function BlocoContexto({ label, valor }: { label: string; valor?: string }) {
   return (
     <div>
@@ -113,7 +187,8 @@ function BlocoContexto({ label, valor }: { label: string; valor?: string }) {
  * "Prontuário" e ao lado do vídeo, na tela de atendimento — por isso não traz
  * moldura própria.
  */
-function RegistroSessao({
+// Exportado para teste de componente (a tela só o usa via RegistroSessaoDialog e AtendimentoVideo).
+export function RegistroSessao({
   agendamento, open, onClose, fecharRef,
 }: {
   agendamento: Agendamento;
@@ -126,16 +201,20 @@ function RegistroSessao({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [reg, setReg] = useState<RegistroPsicologico>({});
-  const [forcarCompleto, setForcarCompleto] = useState(false);
+  // Formulário escolhido no seletor do topo; null = ainda vale o padrão definido pelo agendamento.
+  const [formularioEscolhido, setFormularioEscolhido] = useState<FormularioRegistro | null>(null);
   const [editandoContexto, setEditandoContexto] = useState(false);
+  // Decisão registrada sobre a sugestão da IA atual (null = ainda pendente).
+  const [decisaoIa, setDecisaoIa] = useState<DecisaoUsoIA | null>(null);
   const set = (patch: Partial<RegistroPsicologico>) => setReg((r) => ({ ...r, ...patch }));
 
   useEffect(() => {
     if (!open) return;
-    setReg({ crp: user?.registroProfissional });
-    setForcarCompleto(false);
+    setReg({});
+    setFormularioEscolhido(null);
     setEditandoContexto(false);
-  }, [open, user?.registroProfissional]);
+    setDecisaoIa(null);
+  }, [open]);
 
   const pacienteQ = useQuery({
     queryKey: ['paciente', agendamento?.pacienteId],
@@ -153,16 +232,26 @@ function RegistroSessao({
   });
   const sessoes = useMemo(
     () => toItems<Prontuario>(sessoesQ.data)
-      .filter((p) => p.tipo === TipoAtendimento.PSICOTERAPIA)
+      // Só prontuário ASSINADO conta como sessão anterior; rascunho é trabalho em andamento (mesmo critério do ciclo de cobrança).
+      .filter((p) => p.tipo === TipoAtendimento.PSICOTERAPIA && !!p.assinado)
       .sort((a, b) => dayjs(a.dataAtendimento).valueOf() - dayjs(b.dataAtendimento).valueOf()),
     [sessoesQ.data],
   );
   const primeiraSessao = sessoes[0];
   const ultimaSessao = sessoes[sessoes.length - 1];
 
-  const carregando = sessoesQ.isLoading || (open && !sessoesQ.data);
+  // Sem o histórico não dá para saber se é 1ª consulta ou seguimento: falha explícita, nunca "carregando" eterno.
+  const historicoErro = sessoesQ.isError;
+  const carregando = !historicoErro && (sessoesQ.isLoading || (open && !sessoesQ.data));
   const ehSeguimento = sessoes.length > 0;
-  const completo = !ehSeguimento || forcarCompleto;
+  // O padrão vem do TIPO DO AGENDAMENTO (avaliação → completo; sessão → seguimento). Só um agendamento sem tipo
+  // (dado antigo) cai na regra do histórico ASSINADO. O seletor do topo corrige antes de salvar.
+  const formularioPadrao: FormularioRegistro =
+    agendamento?.tipo === TipoAgendamento.AVALIACAO_PSICOLOGICA ? 'completo'
+      : agendamento?.tipo === TipoAgendamento.SESSAO_PSICOTERAPIA ? 'seguimento'
+        : ehSeguimento ? 'seguimento' : 'completo';
+  const formulario = formularioEscolhido ?? formularioPadrao;
+  const completo = formulario === 'completo';
 
   // Queixa vem da PRIMEIRA consulta (é a demanda que trouxe o paciente);
   // medicamentos e diagnósticos, do registro mais recente que os informou.
@@ -192,14 +281,48 @@ function RegistroSessao({
     setEditandoContexto(true);
   }
 
+  const sugerirIaMut = useMutation({
+    mutationFn: () =>
+      iaClinicaApi.sugerirAbordagem({
+        linhaTerapeutica: paciente?.linhaTerapeutica,
+        motivoAtendimento: reg.motivoAtendimento,
+        diagnosticosSaudeMental: reg.diagnosticosSaudeMental,
+        avaliacaoRisco: reg.avaliacaoRisco,
+        evolucao: reg.evolucao,
+        anotacoesLivres: reg.anotacoesLivres,
+        numeroSessoesAnteriores: sessoes.length,
+      }),
+    onSuccess: () => setDecisaoIa(null),
+    onError: (e) => toast({ title: 'Erro ao sugerir abordagem', description: apiErrorMessage(e), variant: 'destructive' }),
+  });
+
+  const decisaoIaMut = useMutation({
+    mutationFn: (decisao: DecisaoUsoIA) =>
+      iaClinicaApi.registrarDecisao(sugerirIaMut.data!.registroUsoIaId, decisao),
+    onSuccess: (_r, decisao) => {
+      setDecisaoIa(decisao);
+      toast({
+        title: decisao === DecisaoUsoIA.ACEITA
+          ? 'Sugestao registrada como aceita.'
+          : 'Sugestao descartada.',
+      });
+    },
+    onError: (e) => toast({ title: 'Erro ao registrar a decisao', description: apiErrorMessage(e), variant: 'destructive' }),
+  });
+
+  const sugestaoIaVisivel = !!sugerirIaMut.data && decisaoIa !== DecisaoUsoIA.DESCARTADA;
+  // Sugestão exibida e ainda sem decisão: bloqueia gerar outra (guarda de UI; o servidor não exige — ver feature doc).
+  const sugestaoIaPendente = !!sugerirIaMut.data && decisaoIa === null;
+
   const salvarM = useMutation({
     mutationFn: async (assinar: boolean) => {
       const prontuario = await prontuariosApi.create({
         clinicaId: user?.clinicaId,
         pacienteId: agendamento!.pacienteId,
+        // A data do prontuário é o horário AGENDADO e quem define é o servidor; a tela só informa o atendimento.
         agendamentoId: agendamento!.id,
-        dataAtendimento: new Date().toISOString(),
         tipo: TipoAtendimento.PSICOTERAPIA,
+        formulario,
         registroPsicologico: limpar(reg as Record<string, unknown>),
       });
       if (assinar) await prontuariosApi.assinar(prontuario.id);
@@ -217,6 +340,10 @@ function RegistroSessao({
   });
 
   const salvar = (assinar: boolean) => {
+    if (historicoErro) {
+      toast({ title: 'Não é possível salvar sem o histórico do paciente carregado.', variant: 'destructive' });
+      return;
+    }
     if (completo && !reg.motivoAtendimento && !reg.evolucao && !reg.anotacoesLivres) {
       toast({ title: 'Preencha ao menos o motivo do atendimento, a evolução ou as anotações da sessão.', variant: 'destructive' });
       return;
@@ -229,7 +356,7 @@ function RegistroSessao({
   };
 
   /** Um formulário aberto durante a consulta não pode fechar por um clique fora ou um ESC distraído. */
-  const temConteudo = Object.entries(reg).some(([k, v]) => k !== 'crp' && v !== undefined && v !== '');
+  const temConteudo = Object.entries(reg).some(([, v]) => v !== undefined && v !== '');
   function fechar() {
     if (salvarM.isPending) return;
     if (temConteudo && !window.confirm('As anotações desta sessão ainda não foram salvas. Fechar mesmo assim?')) return;
@@ -243,11 +370,25 @@ function RegistroSessao({
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        {carregando ? 'Carregando o histórico do paciente…'
+        {historicoErro ? 'Registro da sessão indisponível enquanto o histórico do paciente não for carregado.'
+          : carregando ? 'Carregando o histórico do paciente…'
           : completo
             ? `${ehSeguimento ? 'Prontuário completo' : 'Primeira consulta'} — anamnese psicológica. Registro documental conforme a Resolução CFP nº 006/2019: após assinado, fica imutável (correções só por adendo).`
             : `Consulta de seguimento — ${sessoes.length + 1}ª sessão. Contexto da primeira consulta e anotações livres da psicoterapia.`}
       </p>
+
+      {!carregando && !historicoErro && (
+        <fieldset className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm" disabled={salvarM.isPending}>
+          <legend className="sr-only">Formulário do registro</legend>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Formulário</span>
+          {(['completo', 'seguimento'] as const).map((f) => (
+            <label key={f} className="flex cursor-pointer items-center gap-2">
+              <input type="radio" name="formulario-registro" checked={formulario === f} onChange={() => setFormularioEscolhido(f)} />
+              {ROTULO_FORMULARIO[f]}
+            </label>
+          ))}
+        </fieldset>
+      )}
 
       {/* Dados do paciente */}
       <div className="rounded-xl border p-4 space-y-1 text-sm">
@@ -258,9 +399,17 @@ function RegistroSessao({
           <Skeleton className="h-16 w-full" />
         ) : (
           <>
+            {pacienteQ.isError && (
+              <ErroConsulta
+                className="mb-2"
+                erro={pacienteQ.error}
+                refetch={pacienteQ.refetch}
+                recurso="os dados cadastrais do paciente (incluindo os campos da linha terapêutica)"
+              />
+            )}
             <p className="font-medium text-base">{paciente?.nome ?? agendamento?.pacienteNome ?? '—'}</p>
             <p className="text-muted-foreground">
-              CPF: {paciente?.cpf ?? agendamento?.pacienteCpf ?? '—'} · Nascimento: {formatData(paciente?.dataNascimento)} · Sexo: {paciente?.sexo ?? '—'}
+              CPF: {formatCpf(paciente?.cpf ?? agendamento?.pacienteCpf)} · Nascimento: {formatData(paciente?.dataNascimento)} · Sexo: {paciente?.sexo ?? '—'}
             </p>
             <p className="text-muted-foreground">
               Telefone: {paciente?.telefone ?? '—'}{paciente?.endereco ? ` · ${formatEndereco(paciente.endereco)}` : ''}
@@ -269,7 +418,71 @@ function RegistroSessao({
         )}
       </div>
 
-      {carregando ? (
+      {/* Sugestão de abordagem via IA — apoio ao psicólogo, nunca decide por ele. */}
+      {!carregando && !historicoErro && (
+        <div className="rounded-xl border border-dashed bg-muted/20 p-4 space-y-2 text-sm">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5" /> Sugestão de abordagem (IA)
+            </p>
+            <Button variant="outline" size="sm" onClick={() => sugerirIaMut.mutate()}
+              disabled={sugerirIaMut.isPending || sugestaoIaPendente}
+              title={sugestaoIaPendente ? 'Decida sobre a sugestão atual antes de gerar outra.' : undefined}>
+              {sugerirIaMut.isPending ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-2" />}
+              {sugestaoIaVisivel ? 'Gerar novamente' : 'Sugerir abordagem'}
+            </Button>
+          </div>
+          {sugestaoIaVisivel && (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="text-violet-600 border-violet-500/30">
+                  <Sparkles className="h-3 w-3 mr-1" /> Gerado por IA
+                </Badge>
+                {decisaoIa === DecisaoUsoIA.ACEITA && (
+                  <Badge variant="outline" className="text-emerald-600 border-emerald-500/30">
+                    <Check className="h-3 w-3 mr-1" /> Sugestão aceita
+                  </Badge>
+                )}
+              </div>
+              <p className="whitespace-pre-wrap text-foreground">{sugerirIaMut.data!.sugestao}</p>
+              <p className="text-xs text-muted-foreground">
+                Sugestão da IA: não entra no prontuário. Ao clicar em Usar ou Descartar, sua decisão fica registrada na
+                auditoria. Para adotar o conteúdo, copie para as anotações e revise antes de assinar.
+              </p>
+              {decisaoIa === null && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button
+                    variant="secondary" size="sm"
+                    onClick={() => decisaoIaMut.mutate(DecisaoUsoIA.ACEITA)}
+                    disabled={decisaoIaMut.isPending}
+                  >
+                    {decisaoIaMut.isPending
+                      ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                      : <Check className="h-3.5 w-3.5 mr-2" />}
+                    Usar esta sugestão
+                  </Button>
+                  <Button
+                    variant="ghost" size="sm"
+                    onClick={() => decisaoIaMut.mutate(DecisaoUsoIA.DESCARTADA)}
+                    disabled={decisaoIaMut.isPending}
+                  >
+                    <X className="h-3.5 w-3.5 mr-2" /> Descartar
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+          {!sugestaoIaVisivel && !sugerirIaMut.isPending && (
+            <p className="text-xs text-muted-foreground">
+              Gera uma sugestão de técnica/condução com base no que já foi preenchido nesta sessão e na linha terapêutica do paciente. Apoio, não substitui o julgamento clínico.
+            </p>
+          )}
+        </div>
+      )}
+
+      {historicoErro ? (
+          <ErroConsulta erro={sessoesQ.error} refetch={sessoesQ.refetch} recurso="o histórico do paciente" />
+        ) : carregando ? (
           <div className="space-y-2 py-4">
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-40 w-full" />
@@ -289,15 +502,16 @@ function RegistroSessao({
                 )}
               </div>
 
+              {/* O seguimento pode abrir sem sessão anterior (o agendamento é quem decide): então não há "1ª consulta" a citar. */}
               <BlocoContexto
-                label={`Queixa principal (1ª consulta — ${dayjs(primeiraSessao.dataAtendimento).format('DD/MM/YYYY')})`}
+                label={primeiraSessao ? `Queixa principal (1ª consulta — ${dayjs(primeiraSessao.dataAtendimento).format('DD/MM/YYYY')})` : 'Queixa principal'}
                 valor={queixaPrimaria}
               />
 
               {editandoContexto ? (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <CampoTexto label="Diagnósticos de saúde mental" value={reg.diagnosticosSaudeMental} onChange={(v) => set({ diagnosticosSaudeMental: v })} minRows={2} />
-                  <CampoTexto label="Medicamentos em uso" value={reg.medicamentosEmUso} onChange={(v) => set({ medicamentosEmUso: v })} minRows={2} />
+                  <CampoTexto label={ROTULO.diagnosticosSaudeMental} value={reg.diagnosticosSaudeMental} onChange={(v) => set({ diagnosticosSaudeMental: v })} minRows={2} />
+                  <CampoTexto label={ROTULO.medicamentosEmUso} value={reg.medicamentosEmUso} onChange={(v) => set({ medicamentosEmUso: v })} minRows={2} />
                 </div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -324,8 +538,11 @@ function RegistroSessao({
               </div>
             )}
 
-            <SecaoTitulo>Anotações da psicoterapia</SecaoTitulo>
+            <CamposLinhaTerapeutica paciente={paciente} reg={reg} set={set} />
+
+            <SecaoTitulo>{ROTULO_ANOTACOES.seguimento}</SecaoTitulo>
             <AutoTextarea
+              ariaLabel={ROTULO_ANOTACOES.seguimento}
               value={reg.anotacoesLivres}
               onChange={(v) => set({ anotacoesLivres: v })}
               placeholder="Registro livre da sessão — o campo cresce conforme você escreve."
@@ -333,81 +550,78 @@ function RegistroSessao({
             />
 
             <div className="flex flex-wrap items-end justify-between gap-4">
-              <div className="space-y-2">
-                <Label>CRP do psicólogo responsável</Label>
-                <Input value={reg.crp ?? ''} onChange={(e) => set({ crp: e.target.value })} placeholder="CRP 00/00000" />
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setForcarCompleto(true)}>
-                <ClipboardList className="h-4 w-4 mr-2" /> Abrir prontuário completo
-              </Button>
+              <CrpDoPerfil crp={user?.crp} />
             </div>
           </div>
         ) : (
           /* ---------------- Primeira consulta / prontuário completo ---------------- */
           <div className="space-y-4">
             <SecaoTitulo>Demanda</SecaoTitulo>
-            <CampoTexto label="Motivo do atendimento / queixa principal" value={reg.motivoAtendimento} onChange={(v) => set({ motivoAtendimento: v })} />
-            <CampoTexto label="Avaliação de demanda" value={reg.avaliacaoDemanda} onChange={(v) => set({ avaliacaoDemanda: v })} minRows={2} />
+            <CampoTexto label={ROTULO.motivoAtendimento} value={reg.motivoAtendimento} onChange={(v) => set({ motivoAtendimento: v })} />
+            <CampoTexto label={ROTULO.avaliacaoDemanda} value={reg.avaliacaoDemanda} onChange={(v) => set({ avaliacaoDemanda: v })} minRows={2} />
 
             <SecaoTitulo>Histórico de saúde</SecaoTitulo>
-            <CampoTexto label="Doenças prévias / condições de saúde" value={reg.doencasPrevias} onChange={(v) => set({ doencasPrevias: v })} minRows={2} />
-            <CampoTexto label="Diagnósticos de saúde mental (prévios ou atuais)" value={reg.diagnosticosSaudeMental} onChange={(v) => set({ diagnosticosSaudeMental: v })} minRows={2} />
+            <CampoTexto label={ROTULO.doencasPrevias} value={reg.doencasPrevias} onChange={(v) => set({ doencasPrevias: v })} minRows={2} />
+            <CampoTexto label={ROTULO.diagnosticosSaudeMental} value={reg.diagnosticosSaudeMental} onChange={(v) => set({ diagnosticosSaudeMental: v })} minRows={2} />
             <div className="grid gap-4 sm:grid-cols-2">
-              <CampoTexto label="Medicamentos em uso" value={reg.medicamentosEmUso} onChange={(v) => set({ medicamentosEmUso: v })} minRows={2} />
-              <CampoTexto label="Histórico familiar de saúde mental" value={reg.historicoFamiliarSaudeMental} onChange={(v) => set({ historicoFamiliarSaudeMental: v })} minRows={2} />
+              <CampoTexto label={ROTULO.medicamentosEmUso} value={reg.medicamentosEmUso} onChange={(v) => set({ medicamentosEmUso: v })} minRows={2} />
+              <CampoTexto label={ROTULO.historicoFamiliarSaudeMental} value={reg.historicoFamiliarSaudeMental} onChange={(v) => set({ historicoFamiliarSaudeMental: v })} minRows={2} />
             </div>
 
             <SecaoTitulo>Hábitos de vida</SecaoTitulo>
             <div className="grid gap-4 sm:grid-cols-2">
-              <CampoTexto label="Qualidade do sono" value={reg.qualidadeSono} onChange={(v) => set({ qualidadeSono: v })} minRows={2} />
-              <CampoTexto label="Apetite / alimentação" value={reg.apetiteAlimentacao} onChange={(v) => set({ apetiteAlimentacao: v })} minRows={2} />
-              <CampoTexto label="Atividade física" value={reg.atividadeFisica} onChange={(v) => set({ atividadeFisica: v })} minRows={2} />
-              <CampoTexto label="Uso de álcool, tabaco e outras substâncias" value={reg.usoSubstancias} onChange={(v) => set({ usoSubstancias: v })} minRows={2} />
+              <CampoTexto label={ROTULO.qualidadeSono} value={reg.qualidadeSono} onChange={(v) => set({ qualidadeSono: v })} minRows={2} />
+              <CampoTexto label={ROTULO.apetiteAlimentacao} value={reg.apetiteAlimentacao} onChange={(v) => set({ apetiteAlimentacao: v })} minRows={2} />
+              <CampoTexto label={ROTULO.atividadeFisica} value={reg.atividadeFisica} onChange={(v) => set({ atividadeFisica: v })} minRows={2} />
+              <CampoTexto label={ROTULO.usoSubstancias} value={reg.usoSubstancias} onChange={(v) => set({ usoSubstancias: v })} minRows={2} />
             </div>
 
             <SecaoTitulo>Estado na sessão</SecaoTitulo>
-            <CampoTexto label="Estado emocional / sentimentos relatados e afeto observado" value={reg.estadoEmocional} onChange={(v) => set({ estadoEmocional: v })} />
+            <CampoTexto label={ROTULO.estadoEmocional} value={reg.estadoEmocional} onChange={(v) => set({ estadoEmocional: v })} />
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Dor (0 a 10)</Label>
+                <Label>{ROTULO.escalaDor}</Label>
                 <Input
                   type="number" min={0} max={10} value={reg.escalaDor ?? ''}
                   onChange={(e) => set({ escalaDor: e.target.value === '' ? undefined : Math.max(0, Math.min(10, Number(e.target.value))) })}
                 />
               </div>
-              <CampoTexto label="Rede de apoio familiar / social" value={reg.redeApoio} onChange={(v) => set({ redeApoio: v })} minRows={2} />
+              <CampoTexto label={ROTULO.redeApoio} value={reg.redeApoio} onChange={(v) => set({ redeApoio: v })} minRows={2} />
             </div>
-            <CampoTexto label="Avaliação de risco (ideação suicida, autolesão, risco a terceiros)" value={reg.avaliacaoRisco} onChange={(v) => set({ avaliacaoRisco: v })} minRows={2} />
+            <CampoTexto label={ROTULO.avaliacaoRisco} value={reg.avaliacaoRisco} onChange={(v) => set({ avaliacaoRisco: v })} minRows={2} />
 
             <SecaoTitulo>Sessão</SecaoTitulo>
-            <CampoTexto label="Objetivos do acompanhamento" value={reg.objetivosTrabalho} onChange={(v) => set({ objetivosTrabalho: v })} minRows={2} />
-            <CampoTexto label="Procedimento / técnica utilizada" value={reg.procedimentoTecnica} onChange={(v) => set({ procedimentoTecnica: v })} minRows={2} />
-            <CampoTexto label="Evolução" value={reg.evolucao} onChange={(v) => set({ evolucao: v })} />
-            <CampoTexto label="Encaminhamentos" value={reg.encaminhamentos} onChange={(v) => set({ encaminhamentos: v })} minRows={2} />
+            <CampoTexto label={ROTULO.objetivosTrabalho} value={reg.objetivosTrabalho} onChange={(v) => set({ objetivosTrabalho: v })} minRows={2} />
+            <CampoTexto label={ROTULO.procedimentoTecnica} value={reg.procedimentoTecnica} onChange={(v) => set({ procedimentoTecnica: v })} minRows={2} />
+            <CampoTexto label={ROTULO.evolucao} value={reg.evolucao} onChange={(v) => set({ evolucao: v })} />
+            <CampoTexto label={ROTULO.encaminhamentos} value={reg.encaminhamentos} onChange={(v) => set({ encaminhamentos: v })} minRows={2} />
 
-            <SecaoTitulo>Anotações livres da sessão</SecaoTitulo>
+            <CamposLinhaTerapeutica paciente={paciente} reg={reg} set={set} />
+
+            <SecaoTitulo>{ROTULO_ANOTACOES.completo}</SecaoTitulo>
             <AutoTextarea
+              ariaLabel={ROTULO_ANOTACOES.completo}
               value={reg.anotacoesLivres}
               onChange={(v) => set({ anotacoesLivres: v })}
               placeholder="Anotações livres — o campo cresce conforme você escreve."
               minRows={8}
             />
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>CRP do psicólogo responsável</Label>
-                <Input value={reg.crp ?? ''} onChange={(e) => set({ crp: e.target.value })} placeholder="CRP 00/00000" />
-              </div>
-            </div>
+            <CrpDoPerfil crp={user?.crp} />
           </div>
         )}
 
+      {historicoErro && (
+        <p data-testid="salvar-bloqueado" className="pt-2 text-xs text-destructive sm:text-right">
+          Salvar bloqueado: sem o histórico não dá para saber se esta é a primeira consulta ou um seguimento.
+        </p>
+      )}
       <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
         <Button variant="outline" onClick={fechar} disabled={salvarM.isPending}>Fechar</Button>
-        <Button variant="secondary" onClick={() => salvar(false)} disabled={salvarM.isPending || carregando}>
+        <Button variant="secondary" onClick={() => salvar(false)} disabled={salvarM.isPending || carregando || historicoErro}>
           {salvarM.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Salvar rascunho
         </Button>
-        <Button onClick={() => salvar(true)} disabled={salvarM.isPending || carregando}>
+        <Button onClick={() => salvar(true)} disabled={salvarM.isPending || carregando || historicoErro || !temCrp(user?.crp)}>
           {salvarM.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PenLine className="h-4 w-4 mr-2" />}
           Salvar e assinar
         </Button>
@@ -519,6 +733,8 @@ function HistoricoSessoesDialog({
         </DialogHeader>
         {sessoesQ.isLoading ? (
           <div className="space-y-2"><Skeleton className="h-14 w-full" /><Skeleton className="h-14 w-full" /></div>
+        ) : sessoesQ.isError ? (
+          <ErroConsulta erro={sessoesQ.error} refetch={sessoesQ.refetch} recurso="o histórico de sessões" />
         ) : sessoes.length === 0 ? (
           <p className="text-sm text-muted-foreground py-6 text-center">Nenhuma sessão registrada ainda.</p>
         ) : (
@@ -571,6 +787,8 @@ function NovoAgendamentoDialog({ open, onClose }: { open: boolean; onClose: () =
   const [pacienteId, setPacienteId] = useState('');
   const [profissionalId, setProfissionalId] = useState('');
   const [tipo, setTipo] = useState<TipoAgendamento>(TipoAgendamento.AVALIACAO_PSICOLOGICA);
+  // Se o psicólogo mexeu no tipo, o padrão calculado não o sobrescreve.
+  const [tipoManual, setTipoManual] = useState(false);
   const [inicio, setInicio] = useState('');
   const [duracaoMin, setDuracaoMin] = useState('50');
   const [observacoes, setObservacoes] = useState('');
@@ -579,11 +797,26 @@ function NovoAgendamentoDialog({ open, onClose }: { open: boolean; onClose: () =
     if (open) {
       setBusca(''); setPacienteId(''); setObservacoes('');
       setTipo(TipoAgendamento.AVALIACAO_PSICOLOGICA);
+      setTipoManual(false);
       setInicio(dayjs().add(1, 'hour').startOf('hour').format('YYYY-MM-DDTHH:mm'));
       setDuracaoMin('50');
       setProfissionalId(ehPsicologo ? (user?.id ?? '') : '');
     }
   }, [open, ehPsicologo, user?.id]);
+
+  // Padrão CALCULADO do tipo: paciente sem nenhuma sessão ASSINADA → avaliação; com → sessão de psicoterapia.
+  // O tipo do agendamento é o que define qual formulário abre depois (rascunho não conta como sessão).
+  const historicoDoPacienteQ = useQuery({
+    queryKey: ['sessoes-psicologia', pacienteId],
+    queryFn: () => prontuariosApi.list({ pacienteId }),
+    enabled: open && !!pacienteId,
+  });
+  useEffect(() => {
+    if (tipoManual || !historicoDoPacienteQ.data) return;
+    const temAssinada = toItems<Prontuario>(historicoDoPacienteQ.data)
+      .some((p) => p.tipo === TipoAtendimento.PSICOTERAPIA && !!p.assinado);
+    setTipo(temAssinada ? TipoAgendamento.SESSAO_PSICOTERAPIA : TipoAgendamento.AVALIACAO_PSICOLOGICA);
+  }, [historicoDoPacienteQ.data, tipoManual]);
 
   const pacientesQ = useQuery({
     queryKey: ['pacientes-busca-psico', busca],
@@ -630,11 +863,14 @@ function NovoAgendamentoDialog({ open, onClose }: { open: boolean; onClose: () =
           <div className="space-y-2">
             <Label>Paciente</Label>
             <Input placeholder="Buscar por nome…" value={busca} onChange={(e) => setBusca(e.target.value)} />
+            {pacientesQ.isError && (
+              <ErroConsulta erro={pacientesQ.error} refetch={pacientesQ.refetch} recurso="a lista de pacientes" />
+            )}
             <Select value={pacienteId} onValueChange={setPacienteId}>
               <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
               <SelectContent>
                 {pacientes.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.nome}{p.cpf ? ` — ${p.cpf}` : ''}</SelectItem>
+                  <SelectItem key={p.id} value={p.id}>{p.nome}{p.cpf ? ` — ${formatCpf(p.cpf)}` : ''}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -647,7 +883,7 @@ function NovoAgendamentoDialog({ open, onClose }: { open: boolean; onClose: () =
           )}
           <div className="space-y-2">
             <Label>Tipo</Label>
-            <Select value={tipo} onValueChange={(v) => setTipo(v as TipoAgendamento)}>
+            <Select value={tipo} onValueChange={(v) => { setTipoManual(true); setTipo(v as TipoAgendamento); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {TIPOS_POR_MODALIDADE[ModalidadeAtendimento.PSICOLOGIA].map((t) => (
@@ -764,11 +1000,21 @@ export function AtendimentoPsicologicoPage() {
 
   const agendamentos = useMemo(() => {
     const itens = toItems<Agendamento>(agendamentosQ.data);
+    // O servidor recusa registrar atendimento que ainda não começou (422); a tela não oferece o que seria recusado.
+    const agora = dayjs();
     const filtrados = status === 'ativos'
-      ? itens.filter((a) => a.status === StatusAgendamento.AGENDADO || a.status === StatusAgendamento.CONFIRMADO)
+      ? itens.filter((a) => (a.status === StatusAgendamento.AGENDADO || a.status === StatusAgendamento.CONFIRMADO) && !dayjs(a.dataHoraInicio).isAfter(agora))
       : itens.filter((a) => a.status === status);
     return [...filtrados].sort((a, b) => dayjs(a.dataHoraInicio).valueOf() - dayjs(b.dataHoraInicio).valueOf());
   }, [agendamentosQ.data, status]);
+
+  // Agendados/confirmados que ainda não começaram: o estado vazio explica por que não estão na lista.
+  const aindaNaoComecaram = useMemo(() => {
+    const agora = dayjs();
+    return toItems<Agendamento>(agendamentosQ.data).filter(
+      (a) => (a.status === StatusAgendamento.AGENDADO || a.status === StatusAgendamento.CONFIRMADO) && dayjs(a.dataHoraInicio).isAfter(agora),
+    ).length;
+  }, [agendamentosQ.data]);
 
   if (sessao) {
     return (
@@ -788,7 +1034,7 @@ export function AtendimentoPsicologicoPage() {
             <Brain className="h-6 w-6" /> Atendimento Psicológico
           </h1>
           <p className="text-sm text-muted-foreground">
-            Pacientes agendados para avaliação psicológica e psicoterapia — fora do fluxo clínico.
+            Agendamentos de avaliação psicológica e psicoterapia. Os agendados e confirmados aparecem aqui a partir do horário de início.
           </p>
         </div>
         <Button onClick={() => setNovoAberto(true)}>
@@ -809,11 +1055,30 @@ export function AtendimentoPsicologicoPage() {
         </Select>
       </div>
 
+      {/* A numeração (sessão/ciclo) é calculada pela API; sem o painel, nenhum número é exibido. */}
+      {painelQ.isError && (
+        <ErroConsulta
+          className="mb-3"
+          erro={painelQ.error}
+          refetch={painelQ.refetch}
+          recurso="a numeração das sessões e dos ciclos"
+        />
+      )}
+
       {agendamentosQ.isLoading ? (
         <div className="space-y-2"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>
+      ) : agendamentosQ.isError ? (
+        <ErroConsulta erro={agendamentosQ.error} refetch={agendamentosQ.refetch} recurso="os agendamentos" />
       ) : agendamentos.length === 0 ? (
         <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
-          Nenhum paciente agendado para o psicólogo neste filtro.
+          {status === 'ativos' && aindaNaoComecaram > 0 ? (
+            <>
+              Nenhum atendimento para registrar agora. {aindaNaoComecaram === 1 ? '1 agendamento ainda não começou' : `${aindaNaoComecaram} agendamentos ainda não começaram`}:
+              aparecem aqui a partir do horário de início. Veja na <Link to="/agenda" className="underline">Agenda</Link>.
+            </>
+          ) : (
+            'Nenhum paciente agendado para o psicólogo neste filtro.'
+          )}
         </div>
       ) : (
         <div className="space-y-2">
@@ -832,17 +1097,25 @@ export function AtendimentoPsicologicoPage() {
                   {a.pacienteNome ?? a.pacienteId}
                 </Link>
                 <p className="text-sm text-muted-foreground">
-                  {a.pacienteCpf ? `CPF ${a.pacienteCpf} · ` : ''}{TIPO_AGENDAMENTO_LABEL[a.tipo]}
+                  {a.pacienteCpf ? `CPF ${formatCpf(a.pacienteCpf)} · ` : ''}{TIPO_AGENDAMENTO_LABEL[a.tipo]}
                 </p>
               </div>
               <div className="text-sm">
-                <p className="font-medium">
-                  {situacao ? rotuloProximaSessao(situacao) : '1ª consulta'}
-                </p>
-                {situacao && situacao.sessoesRealizadas > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Ciclo {situacao.cicloAtual} · {situacao.sessoesNoCiclo}/{painelQ.data?.sessoesPorCiclo ?? 4} sessões
+                {painelQ.isError ? (
+                  <p data-testid="numero-sessao-indisponivel" className="text-xs text-muted-foreground">
+                    Nº da sessão indisponível
                   </p>
+                ) : (
+                  <>
+                    <p className="font-medium">
+                      {situacao ? rotuloProximaSessao(situacao) : '1ª consulta'}
+                    </p>
+                    {situacao && situacao.sessoesRealizadas > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Ciclo {situacao.cicloAtual} · {situacao.sessoesNoCiclo}/{painelQ.data?.sessoesPorCiclo ?? 4} sessões
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
               <Badge variant="outline" className={STATUS_BADGE[a.status]}>

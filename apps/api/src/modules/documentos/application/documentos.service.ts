@@ -1,20 +1,33 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
+import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
 import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
 import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
+import { NotificacoesService } from '../../notificacoes/application/notificacoes.service';
+import { PacientesService } from '../../pacientes/application/pacientes.service';
 import {
   DOCUMENTO_REPOSITORY,
   DOCUMENT_ACCESS_URL_TTL_SECONDS,
+  DOCUMENTO_NAO_CONFIRMADO_TTL_MS,
   MAX_DOCUMENT_SIZE_BYTES,
   MAX_PATIENT_STORAGE_BYTES,
 } from '../documentos.constants';
-import { ALLOWED_DOCUMENT_MIME_TYPES } from '../domain/documento.entity';
+import { ALLOWED_DOCUMENT_MIME_TYPES, Documento } from '../domain/documento.entity';
 
-// Extensão de arquivo por MIME type permitido — usada para nomear o objeto no
-// storage de forma legível ao baixar.
+// Extensão de arquivo por MIME type permitido (allowlist). É a ÚNICA fonte da
+// extensão da chave do objeto e do nome sugerido no download: nunca vem do
+// nome do arquivo ou do título informados pelo usuário.
 const EXTENSAO_POR_MIME: Record<string, string> = {
   'application/pdf': '.pdf',
   'image/jpeg': '.jpg',
@@ -34,10 +47,16 @@ export interface DocumentoRequestContext {
 
 @Injectable()
 export class DocumentosService {
+  private readonly logger = new Logger(DocumentosService.name);
+
   constructor(
     @Inject(DOCUMENTO_REPOSITORY) private readonly documentos: DocumentoRepository,
     @Inject('DOCUMENT_STORAGE') private readonly storage: DocumentStorage,
     @Inject(AUDIT_LOG_REPOSITORY) private readonly auditLogs: AuditLogRepository,
+    // Sem uso hoje: upload de prontuário é arquivo interno e não notifica o paciente. Mantidos para a futura
+    // feature "psicólogo envia documento ao paciente" (template RESULTADO_DISPONIVEL e EmailSender seguem existindo).
+    private readonly pacientesService: PacientesService,
+    private readonly notificacoesService: NotificacoesService,
   ) {}
 
   async createUploadUrl(dto: CreateUploadUrlDto, context: DocumentoRequestContext) {
@@ -49,7 +68,7 @@ export class DocumentosService {
       throw new BadRequestException('Limite de 500MB por paciente excedido.');
     }
 
-    const key = this.buildObjectKey(clinicaId, dto.pacienteId, dto.nomePaciente, dto.nome, dto.mimeType);
+    const key = this.buildObjectKey(clinicaId, dto.pacienteId, dto.mimeType);
     const presigned = await this.storage.createUploadUrl({
       key,
       mimeType: dto.mimeType,
@@ -67,6 +86,7 @@ export class DocumentosService {
       url: presigned.privateUrl,
       hash: dto.hash.toLowerCase(),
       uploadPor: context.user.sub,
+      confirmadoEm: null,
     });
 
     await this.audit(AuditEvent.DOCUMENT_UPLOAD_URL_CREATED, context, {
@@ -83,10 +103,9 @@ export class DocumentosService {
       uploadUrl: presigned.uploadUrl,
       expiresInSeconds: presigned.expiresInSeconds,
       requiredHeaders: {
+        // Headers que o navegador DEVE enviar no PUT: a URL assina ambos (ver createUploadUrl em
+        // s3-document-storage.service.ts); com valor diferente o R2 responde 403 SignatureDoesNotMatch.
         'Content-Type': dto.mimeType,
-        // A URL presignada assina o Metadata do PutObjectCommand (ver
-        // s3-document-storage.service.ts) — sem este header exato, o S3/R2
-        // rejeita o PUT com SignatureDoesNotMatch.
         'x-amz-meta-sha256': dto.hash.toLowerCase(),
       },
     };
@@ -95,7 +114,8 @@ export class DocumentosService {
   async confirmUpload(documentoId: string, clinicaId: string | undefined, context: DocumentoRequestContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
     const documento = await this.getDocumentoOrThrow(resolvedClinicaId, documentoId);
-    const thumbnailUrl = await this.storage.createThumbnailIfSupported(documento);
+    const confirmadoEm = documento.confirmadoEm ?? (await this.confirmarObjetoNoStorage(documento, resolvedClinicaId));
+    const thumbnailUrl = await this.criarThumbnailBestEffort(documento);
     if (thumbnailUrl) {
       await this.documentos.setThumbnail(resolvedClinicaId, documentoId, thumbnailUrl);
     }
@@ -110,8 +130,22 @@ export class DocumentosService {
 
     return {
       ...documento,
+      confirmadoEm,
       thumbnailUrl: thumbnailUrl ?? documento.thumbnailUrl,
     };
+  }
+
+  /**
+   * Miniatura é best-effort: o objeto já foi validado (HeadObject) e confirmadoEm já foi gravado,
+   * então falhar aqui não pode virar 500 nem esconder o documento. Só ids e a mensagem do erro no log.
+   */
+  private async criarThumbnailBestEffort(documento: Documento): Promise<string | undefined> {
+    try {
+      return await this.storage.createThumbnailIfSupported(documento);
+    } catch (error) {
+      this.logger.warn(`Miniatura nao gerada para o documento ${documento.id}: ${(error as Error).message}`);
+      return undefined;
+    }
   }
 
   async list(query: ListDocumentosQueryDto, context: DocumentoRequestContext) {
@@ -129,13 +163,21 @@ export class DocumentosService {
       quantidade: documentos.length,
     });
 
-    return documentos;
+    // Só documentos com upload confirmado; pendentes (null) e legados sem backfill (indefinido) ficam ocultos.
+    return documentos.filter((documento) => documento.confirmadoEm != null);
   }
 
   async createAccessUrl(documentoId: string, clinicaId: string | undefined, context: DocumentoRequestContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
     const documento = await this.getDocumentoOrThrow(resolvedClinicaId, documentoId);
-    const accessUrl = await this.storage.createReadUrl(documento.url, DOCUMENT_ACCESS_URL_TTL_SECONDS);
+    if (documento.confirmadoEm == null) {
+      throw new NotFoundException('Documento nao encontrado.');
+    }
+    const accessUrl = await this.storage.createReadUrl(
+      documento.url,
+      DOCUMENT_ACCESS_URL_TTL_SECONDS,
+      this.buildDownloadFilename(documento),
+    );
 
     await this.audit(AuditEvent.DOCUMENT_VIEW_URL_CREATED, context, {
       clinicaId: resolvedClinicaId,
@@ -153,6 +195,9 @@ export class DocumentosService {
 
   async softDelete(documentoId: string, clinicaId: string | undefined, context: DocumentoRequestContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+    if (context.user.papel === Papel.PSICOLOGO) {
+      this.assertPosse(await this.getDocumentoOrThrow(resolvedClinicaId, documentoId), context.user);
+    }
     const documento = await this.documentos.softDelete(resolvedClinicaId, documentoId, context.user.sub);
     if (!documento) {
       throw new NotFoundException('Documento nao encontrado.');
@@ -177,6 +222,50 @@ export class DocumentosService {
     return documento;
   }
 
+  /**
+   * Soft-delete de registros criados no presign e nunca confirmados há mais de 24h.
+   * Só age sobre confirmadoEm === null explícito: confirmados e legados (indefinido) são intocáveis.
+   */
+  async limparNaoConfirmados(agora: Date = new Date()): Promise<number> {
+    const limite = new Date(agora.getTime() - DOCUMENTO_NAO_CONFIRMADO_TTL_MS);
+    const pendentes = await this.documentos.listNaoConfirmadosAte(limite);
+    let removidos = 0;
+    for (const documento of pendentes) {
+      if (documento.confirmadoEm !== null) {
+        continue;
+      }
+      try {
+        await this.documentos.softDelete(documento.clinicaId, documento.id, 'system:limpeza-nao-confirmados');
+        removidos += 1;
+        await this.storage.deleteObject(documento.url).catch(() => undefined);
+      } catch (error) {
+        this.logger.warn(`Falha ao limpar documento nao confirmado ${documento.id}: ${(error as Error).message}`);
+      }
+    }
+    return removidos;
+  }
+
+  // HeadObject: o objeto precisa existir no bucket com o tamanho declarado no presign. Só então
+  // a flag confirmadoEm é gravada. R2 indisponível falha o confirm (reenvio é melhor que fantasma).
+  private async confirmarObjetoNoStorage(documento: Documento, clinicaId: string): Promise<Date> {
+    let head: { tamanho: number } | undefined;
+    try {
+      head = await this.storage.headObject(documento.url);
+    } catch (error) {
+      this.logger.warn(`HeadObject falhou para o documento ${documento.id}: ${(error as Error).message}`);
+      throw new ServiceUnavailableException('Nao foi possivel verificar o arquivo enviado. Tente novamente.');
+    }
+    if (!head) {
+      throw new UnprocessableEntityException('Arquivo nao encontrado no armazenamento. Envie o arquivo novamente.');
+    }
+    if (head.tamanho !== documento.tamanho) {
+      throw new UnprocessableEntityException('O tamanho do arquivo enviado difere do declarado. Envie o arquivo novamente.');
+    }
+    const confirmadoEm = new Date();
+    await this.documentos.setConfirmadoEm(clinicaId, documento.id, confirmadoEm);
+    return confirmadoEm;
+  }
+
   private async getDocumentoOrThrow(clinicaId: string, documentoId: string) {
     const documento = await this.documentos.findById(clinicaId, documentoId);
     if (!documento) {
@@ -184,6 +273,16 @@ export class DocumentosService {
     }
 
     return documento;
+  }
+
+  /**
+   * Abrir e listar: qualquer papel da clínica (documento é do paciente, não de quem enviou).
+   * Excluir é destrutivo: o psicólogo só exclui o que ele mesmo enviou.
+   */
+  private assertPosse(documento: Documento, user: AuthTokenPayload): void {
+    if (user.papel === Papel.PSICOLOGO && documento.uploadPor !== user.sub) {
+      throw new ForbiddenException('Este documento pertence a outro profissional.');
+    }
   }
 
   private assertAllowedMimeType(mimeType: string): void {
@@ -202,31 +301,17 @@ export class DocumentosService {
     return resolveTenantClinicaId(user, requestedClinicaId);
   }
 
-  private buildObjectKey(
-    clinicaId: string,
-    pacienteId: string,
-    nomePaciente: string | undefined,
-    nomeDocumento: string,
-    mimeType: string,
-  ): string {
-    // Nome legível do arquivo = "<nome do paciente> - <titulo do documento>",
-    // para que o download traga um nome que faz sentido. O UUID garante unicidade
-    // da chave mesmo que dois documentos tenham o mesmo nome.
-    const partes = [nomePaciente, nomeDocumento].map((p) => this.slug(p)).filter(Boolean);
-    const base = partes.join('-') || 'documento';
-    const extensao = EXTENSAO_POR_MIME[mimeType] ?? '';
-    return `${clinicaId}/pacientes/${pacienteId}/${randomUUID()}-${base}${extensao}`;
+  // A chave do objeto não carrega dado pessoal: nem nome do paciente, nem título
+  // ou nome do arquivo (a chave aparece em URLs, logs do storage e histórico).
+  private buildObjectKey(clinicaId: string, pacienteId: string, mimeType: string): string {
+    return `${clinicaId}/pacientes/${pacienteId}/${randomUUID()}${EXTENSAO_POR_MIME[mimeType] ?? ''}`;
   }
 
-  // Remove acentos e caracteres inseguros para chaves de objeto S3/R2, mantendo
-  // legibilidade (espaços viram "_").
-  private slug(value: string | undefined): string {
-    if (!value) return '';
-    return value
-      .normalize('NFD')
-      .replace(new RegExp('[\\u0300-\\u036f]', 'g'), '')
-      .replace(/[^a-zA-Z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '');
+  // Nome genérico sugerido no download (vai na query string da URL assinada).
+  // Data de criação em UTC + extensão da allowlist; nunca o título.
+  private buildDownloadFilename(documento: Documento): string {
+    const data = new Date(documento.criadoEm).toISOString().slice(0, 10);
+    return `documento-${data}${EXTENSAO_POR_MIME[documento.mimeType] ?? ''}`;
   }
 
   private async audit(

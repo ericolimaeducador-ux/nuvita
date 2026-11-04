@@ -9,7 +9,7 @@ export class SalaTelemedicinaMongo {
   @Prop({ required: true, index: true }) clinicaId!: string;
   @Prop({ required: true, index: true }) agendamentoId!: string;
   @Prop({ required: true, index: true }) medicoId!: string;
-  @Prop({ required: true, enum: ModalidadeAtendimento, default: ModalidadeAtendimento.MEDICO, index: true }) modalidade!: ModalidadeAtendimento;
+  @Prop({ required: true, enum: ModalidadeAtendimento, default: ModalidadeAtendimento.PSICOLOGIA, index: true }) modalidade!: ModalidadeAtendimento;
   @Prop({ required: true, index: true }) pacienteId!: string;
   @Prop({ required: true, enum: StatusSala, default: StatusSala.AGUARDANDO, index: true }) status!: StatusSala;
   @Prop({ required: true, unique: true, select: false }) tokenMedico!: string;

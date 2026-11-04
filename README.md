@@ -2,22 +2,23 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="apps/web/src/assets/nuvita-logo-light.png">
-  <img src="apps/web/src/assets/nuvita-logo.png" alt="Nuvita — gestão de saúde na nuvem" width="420">
+  <img src="apps/web/src/assets/nuvita-logo.png" alt="Nuvita Psi — gestão para clínicas de psicologia" width="420">
 </picture>
 
-### Gestão de saúde na nuvem
+### Gestão para clínicas de psicologia
 
-**Plataforma SaaS multi-tenant de gestão clínica** — do agendamento ao prontuário assinado,
-da telemedicina ao fornecimento de produtos pelo SUS.
+**Plataforma SaaS multi-tenant de gestão clínica para psicólogos** — do agendamento
+ao prontuário assinado, da sessão por telemedicina ao financeiro por ciclos de sessão.
 
-[![CI](https://github.com/ericolimaeducador-ux/nuvita/actions/workflows/ci.yml/badge.svg)](https://github.com/ericolimaeducador-ux/nuvita/actions/workflows/ci.yml)
-[![Deploy API](https://github.com/ericolimaeducador-ux/nuvita/actions/workflows/deploy-api.yml/badge.svg)](https://github.com/ericolimaeducador-ux/nuvita/actions/workflows/deploy-api.yml)
-[![Deploy Web](https://github.com/ericolimaeducador-ux/nuvita/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/ericolimaeducador-ux/nuvita/actions/workflows/deploy-pages.yml)
+[![CI](https://github.com/ericolimaeducador-ux/nuvita-psi/actions/workflows/ci.yml/badge.svg)](https://github.com/ericolimaeducador-ux/nuvita-psi/actions/workflows/ci.yml)
+[![Deploy API](https://github.com/ericolimaeducador-ux/nuvita-psi/actions/workflows/deploy-api.yml/badge.svg)](https://github.com/ericolimaeducador-ux/nuvita-psi/actions/workflows/deploy-api.yml)
+[![Deploy Web](https://github.com/ericolimaeducador-ux/nuvita-psi/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/ericolimaeducador-ux/nuvita-psi/actions/workflows/deploy-pages.yml)
 
-[**www.nuvita.app.br**](https://www.nuvita.app.br) · [API `api.nuvita.app.br`](https://api.nuvita.app.br/health)
+> Roda como subdomínio do Nuvita original: **psi.nuvita.app.br** (web) /
+> **api-psi.nuvita.app.br** (API) — DNS e Cloud Run pendentes, ver
+> `infra/PRODUCTION-CHECKLIST.md`.
 
 [Funcionalidades](#-funcionalidades) ·
-[Fluxo clínico](#-o-fluxo-clínico-pipeline-de-incontinência-urinária) ·
 [Arquitetura](#%EF%B8%8F-arquitetura) ·
 [Segurança](#-segurança--lgpd) ·
 [Rodando localmente](#-rodando-localmente) ·
@@ -27,20 +28,22 @@ da telemedicina ao fornecimento de produtos pelo SUS.
 
 ---
 
-## 💡 O que é o Nuvita
+## 💡 O que é o Nuvita Psi
 
-O **Nuvita** é uma plataforma completa de gestão clínica na nuvem, projetada para
-clínicas e equipes multidisciplinares (médicos, enfermeiros, psicólogos
-e secretariado). Além dos módulos clássicos de gestão — pacientes, agenda,
-prontuário eletrônico, financeiro e telemedicina — o Nuvita implementa um fluxo
-especializado e único: o **pipeline de atendimento de incontinência urinária**,
-que acompanha o paciente da avaliação de enfermagem até o fornecimento do produto
-pelo SUS, passando por follow-up de elegibilidade, laudo médico assinado
-digitalmente e entrega.
+O **Nuvita Psi** é uma plataforma de gestão clínica na nuvem projetada para
+clínicas e psicólogos autônomos. Cobre pacientes, agenda, prontuário eletrônico
+(SOAP + registro estruturado de atendimento psicológico conforme a Resolução CFP
+nº 006/2019), financeiro e telemedicina — com um módulo próprio de **atendimento
+psicológico**: sessão por vídeo e prontuário lado a lado, e financeiro por
+**ciclos de 4 sessões** pagos antecipadamente, para o psicólogo autônomo.
 
 Cada clínica é um **tenant isolado**: dados, usuários, agenda e financeiro são
 segregados por clínica, com um painel **super-admin** global para provisionamento
 e gestão fina de permissões.
+
+> Este projeto nasceu como um spin-off do [Nuvita](https://github.com/ericolimaeducador-ux/nuvita),
+> uma plataforma de gestão clínica mais ampla — o histórico de commits anterior a este
+> spin-off pertence ao projeto original.
 
 ## ✨ Funcionalidades
 
@@ -50,32 +53,17 @@ e gestão fina de permissões.
 |---|---|
 | 🧑‍⚕️ **Pacientes** | Cadastro completo com **criptografia de dados pessoais (LGPD)** em repouso; busca por hash cego; observações clínicas |
 | 📅 **Agenda** | Calendário por profissional e visão geral da clínica; cada profissional vê a própria agenda; status de atendimento |
-| 📋 **Prontuário eletrônico** | Evoluções **SOAP** e consulta de enfermagem; **assinatura digital imutável** — prontuário assinado não se altera, correções entram como addendum |
-| 🧠 **Psicologia** | Sessão com vídeo e prontuário lado a lado; financeiro por **ciclos de 4 sessões**; sessão atual no dashboard |
+| 📋 **Prontuário eletrônico** | Evoluções **SOAP**; **assinatura digital imutável** — prontuário assinado não se altera, correções entram como addendum |
+| 🧠 **Atendimento psicológico** | Sessão com vídeo e prontuário lado a lado; financeiro por **ciclos de 4 sessões**; sessão atual no dashboard |
 | 🎥 **Telemedicina** | Vídeo **WebRTC P2P** com sinalização própria; paciente entra **sem login** via link tokenizado (`/tele/:token`); eventos de sala auditados |
 | 📄 **Documentos** | Upload/download seguro via **presigned URLs** (Cloudflare R2/S3); checklist de documentos por paciente |
 | 💰 **Financeiro** | Lançamentos, recebimentos e visão por competência; integração com ciclos de sessões |
 | 🔔 **Notificações** | E-mail (Resend) e **WhatsApp** (Z-API/Evolution/Twilio) processados por **fila** (BullMQ), com janela de envio 8h–22h |
 | 📊 **Analytics** | Painéis e indicadores operacionais da clínica |
-| 🛒 **Produtos** | Catálogo dos produtos (cateteres etc.) indicados no fluxo clínico |
-
-### Pipeline de incontinência urinária (diferencial)
-
-| Etapa | Módulo | Responsável |
-|---|---|---|
-| 1. Avaliação IU | `avaliacao-iu` | Enfermeiro preenche a ficha e indica o produto |
-| 2. Follow-up | `followup` | Enfermeiro acompanha e define **elegibilidade** |
-| 3. Laudo médico | `laudo-medico` | Médico emite e **assina** o laudo para solicitação ao SUS |
-| 4. Entrega | `entregas` | Registro dos produtos enviados ao paciente |
-
-Secretária e admin enxergam o pipeline (leitura); as **mutações são restritas ao
-papel responsável** por cada etapa. Laudo, ficha de avaliação e relatório NAT-JUS
-têm páginas de impressão dedicadas (rotas `/imprimir`, fora do layout do app,
-com **timbre oficial** e prontas para PDF pelo navegador).
 
 ### Administração e acesso
 
-- **Papéis**: `SUPER_ADMIN`, `ADMIN`, `MEDICO`, `ENFERMEIRO`, `PSICOLOGO`,
+- **Papéis**: `SUPER_ADMIN`, `ADMIN`, `MEDICO`, `PSICOLOGO`,
   `SECRETARIA`, `PACIENTE`.
 - **2FA TOTP obrigatório** para super-admin, admin e profissionais.
 - **Permissões por módulo** (`packages/shared/src/auth/permissao.ts`): cada papel
@@ -85,16 +73,6 @@ com **timbre oficial** e prontas para PDF pelo navegador).
 - **Multi-tenancy**: quase toda rota exige tenant (clínica) resolvido por
   `TenantMiddleware` + `TenantRequiredGuard`; rotas globais usam
   `@AllowWithoutTenant`.
-
-## 🏥 O fluxo clínico (pipeline de incontinência urinária)
-
-```mermaid
-flowchart LR
-    A["🩺 Avaliação IU<br/><i>enfermeiro</i>"] --> B["🔄 Follow-up<br/><i>enfermeiro</i>"]
-    B -->|elegível| C["📝 Laudo médico<br/><i>médico assina</i>"]
-    C --> E["📦 Entrega<br/><i>produtos ao paciente</i>"]
-    B -.->|não elegível| F["Encerramento"]
-```
 
 ## 🏗️ Arquitetura
 
@@ -110,8 +88,8 @@ flowchart LR
 ### Estrutura do monorepo (npm workspaces)
 
 ```text
-apps/api          API NestJS (workspace @nuvita/api)
-apps/web          Frontend React (workspace @nuvita/web)
+apps/api          API NestJS (workspace @nuvita-psi/api)
+apps/web          Frontend React (workspace @nuvita-psi/web)
 packages/shared   Contratos, enums e regras compartilhadas (papéis, permissões)
 scripts/          Bootstrap, seeds de demonstração e utilitários (TOTP, GCP)
 infra/            Notas de integração e PRODUCTION-CHECKLIST.md
@@ -130,18 +108,16 @@ presentation/     Controllers, guards e decorators HTTP
 
 Módulos: `auth`, `clinicas`, `pacientes`, `agendamentos`, `prontuarios`,
 `documentos`, `notificacoes`, `financeiro`, `telemedicina`, `analytics`,
-`produtos`, `avaliacao-iu`, `followup`, `laudo-medico`,
-`entregas`, `checklist-documentos`,
 `observacoes-paciente`, `super-admin`, `health` — mais `common/tenancy`
 (resolução de tenant por request) e `common/security`.
 
 ```mermaid
 flowchart TB
     subgraph Cliente
-        W["🖥️ Web — React 18 + Ant Design<br/>www.nuvita.app.br"]
+        W["🖥️ Web — React 18 + Ant Design"]
         T["📱 Paciente sem login<br/>/tele/:token"]
     end
-    subgraph "Cloud Run — api.nuvita.app.br"
+    subgraph "Cloud Run — API"
         API["⚙️ API NestJS<br/>hexagonal / DDD · multi-tenant"]
     end
     subgraph Dados
@@ -178,8 +154,8 @@ flowchart TB
 Pré-requisitos: **Node 20+**, **Docker** (para MongoDB e Redis) e npm.
 
 ```bash
-git clone https://github.com/ericolimaeducador-ux/nuvita.git
-cd nuvita
+git clone https://github.com/ericolimaeducador-ux/nuvita-psi.git
+cd nuvita-psi
 npm install
 
 # 1) Infra de dev (MongoDB 7 + Redis 7)
@@ -196,14 +172,14 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 npm run api:dev
 
 # 4) Web (http://localhost:5173, proxy para a API)
-npm run dev -w @nuvita/web
+npm run dev -w @nuvita-psi/web
 ```
 
 > ⚠️ **Atenção ao `.env`**: `apps/api/.env` é o que a API carrega em dev
 > (`envFilePath: ['.env.local', '.env']` relativo a `apps/api`). O `.env` da
 > raiz alimenta só o `docker compose`. Nunca aponte o dev local para banco de
 > produção — se precisar sobrescrever pontualmente:
-> `MONGODB_URI="mongodb://localhost:27017/nuvita" npm run api:dev`.
+> `MONGODB_URI="mongodb://localhost:27017/nuvita-psi" npm run api:dev`.
 
 ### Dados de demonstração
 
@@ -211,10 +187,9 @@ npm run dev -w @nuvita/web
 # Cria clínica + admin (direto no Mongo, sem depender da API)
 node scripts/bootstrap-direto.mjs
 
-# Popula o pipeline completo: 10 pacientes, avaliações, follow-ups,
-# laudos assinados e entregas + equipe (médico, enfermeiro,
-# secretária). Requer BOOTSTRAP_SECRET no ambiente.
-BOOTSTRAP_SECRET="<o mesmo do .env>" node scripts/seed-fluxo-clinico.mjs
+# Popula a clínica demo com médico, pacientes e agendamentos variados
+# (a API precisa estar rodando).
+node scripts/seed-demo.mjs
 ```
 
 O seed cria a equipe com senha `SenhaForte123!` e segredo TOTP de
@@ -222,7 +197,7 @@ desenvolvimento compartilhado (`JBSWY3DPEHPK3PXP` — **apenas dev**). Para
 gerar o código 2FA na hora do login:
 
 ```bash
-node scripts/totp.mjs   # imprime o código TOTP atual
+TOTP_SECRET=JBSWY3DPEHPK3PXP node scripts/totp.mjs   # imprime o código TOTP atual (segredo de dev do seed)
 ```
 
 ### Stack completa via Docker
@@ -238,7 +213,7 @@ docker compose up -d    # mongodb + redis + api (:3000) + web via nginx (:8080)
   `../../../../packages/shared/src/auth`), não por alias. Por isso o build da
   API emite em `dist/apps/api/src/main.js` — o script `start` já aponta pra lá.
 - **A API não tem prefixo `/api`**: o front chama `/auth`, `/pacientes`,
-  `/followup`… e o proxy (Vite em dev, nginx em produção) encaminha esses
+  `/agendamentos`… e o proxy (Vite em dev, nginx em produção) encaminha esses
   paths para a API preservando-os. Isso é necessário porque o cookie httpOnly
   de refresh tem `path=/auth`. Como as rotas do SPA colidem com as da API, o
   proxy distingue navegação (Accept: text/html → SPA) de XHR (→ API).
@@ -253,16 +228,16 @@ docker compose up -d    # mongodb + redis + api (:3000) + web via nginx (:8080)
 - **Identidade visual**: fonte única de marca em `apps/web/src/lib/brand.ts`
   (logos, CNPJ, endereço); documentos impressos usam
   `DocumentoTimbre`/`DocumentoRodape`.
-- **Commits**: conventional commits em pt-BR (`fix(followup): …`,
+- **Commits**: conventional commits em pt-BR (`fix(agenda): …`,
   `feat(web): …`), como no histórico.
 
 ## ✅ Qualidade e CI/CD
 
 ```bash
-npm run build -w @nuvita/api        # build (o workspace api não tem typecheck)
-npm test  -w @nuvita/api            # testes da API
-npm run typecheck -w @nuvita/web    # tsc --noEmit do front
-npm run build -w @nuvita/web        # build de produção do front
+npm run build -w @nuvita-psi/api        # build (o workspace api não tem typecheck)
+npm test  -w @nuvita-psi/api            # testes da API
+npm run typecheck -w @nuvita-psi/web    # tsc --noEmit do front
+npm run build -w @nuvita-psi/web        # build de produção do front
 ```
 
 - **CI** (`.github/workflows/ci.yml`): roda em pushes/PRs para `main` e
@@ -272,9 +247,10 @@ npm run build -w @nuvita/web        # build de produção do front
   Federation** (sem chave de service account). Env de produção gerado por
   `node scripts/gen-cloudrun-env.cjs` (liga `NODE_ENV=production`, CSP/HSTS,
   fecha o Swagger).
-- **CD do Web** (`deploy-pages.yml`): push em `main` publica no GitHub Pages
-  (domínio `www.nuvita.app.br`; API em `api.nuvita.app.br` via Firebase
-  Hosting → Cloud Run).
+- **CD do Web** (`deploy-pages.yml`): push em `main` publica no GitHub Pages,
+  domínio próprio `psi.nuvita.app.br` (subdomínio do Nuvita original, mesmo
+  projeto GCP `nuvita-499800`) — DNS e Cloud Run ainda pendentes, ver
+  `infra/PRODUCTION-CHECKLIST.md`.
 - Pendências de go-live e rotação de segredos: veja
   [`infra/PRODUCTION-CHECKLIST.md`](infra/PRODUCTION-CHECKLIST.md).
 
@@ -302,17 +278,15 @@ A lista completa e comentada está em [`.env.example`](.env.example).
 - [`apps/web/README.md`](apps/web/README.md) — detalhes do frontend
 - [`infra/`](infra/) — notas de integração por módulo (auth, documentos,
   notificações, pacientes, prontuários) e checklist de produção
-- [`docs/SMOKE_PROD_v1.md`](docs/SMOKE_PROD_v1.md) — smoke não destrutivo de
-  produção (`npm run smoke:prod`)
 
 ## 📄 Propriedade intelectual
 
-© Nuvita — razão social, CNPJ e endereço em `apps/web/src/lib/empresa.ts`.
-Software proprietário; todos os direitos reservados.
+© Nuvita — CNPJ 55.747.955/0001-07 · Rua Levindo Lopes, 391 – Funcionários,
+Belo Horizonte/MG. Software proprietário; todos os direitos reservados.
 Este repositório não concede licença de uso, cópia ou distribuição.
 
 ---
 
 <div align="center">
-<sub>Feito com 💚 · <b>Nuvita — gestão de saúde na nuvem</b></sub>
+<sub>Feito com 💚 em Belo Horizonte · <b>Nuvita — gestão de saúde na nuvem</b></sub>
 </div>

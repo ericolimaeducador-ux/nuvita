@@ -30,13 +30,13 @@ FROM node:20-bookworm-slim AS runner
 ENV NODE_ENV=production
 WORKDIR /app
 
-RUN groupadd -r nuvita && useradd -r -g nuvita nuvita
+RUN groupadd -r nuvita-psi && useradd -r -g nuvita-psi nuvita-psi
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
 COPY --from=builder /app/package.json ./package.json
 
-USER nuvita
+USER nuvita-psi
 EXPOSE 3000
 CMD ["node", "apps/api/dist/apps/api/src/main.js"]

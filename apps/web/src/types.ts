@@ -281,6 +281,82 @@ export interface AutorizacaoResponsavel {
   registradaEm?: string;
 }
 
+/** Classificação de área do paciente (espelho de packages/shared/src/paciente/classificacao.ts). */
+export enum ClassificacaoArea {
+  IU = 'IU',
+  FA = 'FA',
+  OT = 'OT',
+}
+
+export const CLASSIFICACAO_AREA_LABEL: Record<ClassificacaoArea, string> = {
+  [ClassificacaoArea.IU]: 'IU — Incontinência urinária',
+  [ClassificacaoArea.FA]: 'FA — Incontinência fecal',
+  [ClassificacaoArea.OT]: 'OT — Outras áreas',
+};
+
+/** Elegibilidade ao fluxo clínico (DERIVADA): classificado exatamente como IU. Espelha o shared/backend. */
+export function elegivelFluxoClinico(classificacoes?: readonly ClassificacaoArea[] | null): boolean {
+  return !!classificacoes && classificacoes.length === 1 && classificacoes[0] === ClassificacaoArea.IU;
+}
+
+export enum EtapaFluxoClinico {
+  AGUARDANDO_ATENDIMENTO = 'aguardando_atendimento',
+  AVALIACAO_IU = 'avaliacao_iu',
+  APTO_AGUARDANDO_CONTATO = 'apto_aguardando_contato',
+  ENTREVISTA_AGENDADA = 'entrevista_agendada',
+  AGUARDANDO_DOCUMENTOS = 'aguardando_documentos',
+  AGUARDANDO_CONSULTA_MEDICA = 'aguardando_consulta_medica',
+  AGUARDANDO_ENTREGA = 'aguardando_entrega',
+  NAO_ELEGIVEL = 'nao_elegivel',
+  CONCLUIDO = 'concluido',
+}
+
+export const ETAPA_FLUXO_LABEL: Record<EtapaFluxoClinico, string> = {
+  [EtapaFluxoClinico.AGUARDANDO_ATENDIMENTO]: 'Aguardando Atendimento',
+  [EtapaFluxoClinico.AVALIACAO_IU]: 'Avaliação IU / Teste do Produto',
+  [EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO]: 'Apto — Aguardando Contato',
+  [EtapaFluxoClinico.ENTREVISTA_AGENDADA]: 'Entrevista Agendada',
+  [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: 'Aguardando Documentos',
+  [EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA]: 'Aguardando Consulta Médica',
+  [EtapaFluxoClinico.AGUARDANDO_ENTREGA]: 'Aguardando Entrega',
+  [EtapaFluxoClinico.NAO_ELEGIVEL]: 'Não Elegível',
+  [EtapaFluxoClinico.CONCLUIDO]: 'Concluído',
+};
+
+/** Prazos (em dias) só para as etapas com SLA definido pelo negócio (espelho do shared). */
+export const PRAZO_DIAS_POR_ETAPA: Partial<Record<EtapaFluxoClinico, number>> = {
+  [EtapaFluxoClinico.AGUARDANDO_ATENDIMENTO]: 10,
+  [EtapaFluxoClinico.AVALIACAO_IU]: 20,
+  [EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO]: 15,
+  [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: 10,
+  [EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA]: 15, // prazo médio, não SLA duro
+};
+
+export interface PrazoEtapaInfo {
+  diasLimite?: number;
+  diasDecorridos: number;
+  diasRestantes?: number;
+  atrasado: boolean;
+}
+
+/** Calcula a situação de prazo de uma etapa a partir de quando ela começou. */
+export function calcularPrazoEtapa(
+  etapa: EtapaFluxoClinico,
+  etapaDesde: string,
+  agora: Date = new Date(),
+): PrazoEtapaInfo {
+  const diasLimite = PRAZO_DIAS_POR_ETAPA[etapa];
+  const msPorDia = 24 * 60 * 60 * 1000;
+  const diasDecorridos = Math.floor((agora.getTime() - new Date(etapaDesde).getTime()) / msPorDia);
+
+  if (diasLimite === undefined) {
+    return { diasDecorridos, atrasado: false };
+  }
+
+  const diasRestantes = diasLimite - diasDecorridos;
+  return { diasLimite, diasDecorridos, diasRestantes, atrasado: diasRestantes < 0 };
+}
+
 export interface Paciente {
   id: string;
   clinicaId: string;
@@ -298,6 +374,11 @@ export interface Paciente {
   responsavelLegal?: ResponsavelLegal;
   autorizacaoResponsavel?: AutorizacaoResponsavel;
   observacoes?: string;
+  /** Classificação de área (IU/FA/OT). Ausente em dado anterior à classificação. */
+  classificacoes?: ClassificacaoArea[];
+  /** Etapa do fluxo clínico; ausente = fora do fluxo. Mantida mesmo se o paciente deixar de ser elegível. */
+  etapaFluxo?: EtapaFluxoClinico;
+  etapaFluxoDesde?: string;
   ativo?: boolean;
   criadoEm?: string;
 }

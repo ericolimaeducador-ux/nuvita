@@ -6,6 +6,7 @@ import type {
   DecisaoUsoIA,
   Documento,
   Endereco,
+  EtapaFluxoClinico,
   Lancamento,
   LinhaTerapeutica,
   ListUsuariosResult,
@@ -133,6 +134,10 @@ export interface ListPacientesParams {
   clinicaId?: string;
   projeto?: ProjetoPaciente;
   representante?: string;
+  /** Fluxo clínico: filtra pela etapa atual. */
+  etapaFluxo?: EtapaFluxoClinico;
+  /** true = só pacientes elegíveis ao fluxo clínico (classificados exatamente como IU). */
+  fluxoClinico?: boolean;
 }
 export const pacientesApi = {
   list: (params: ListPacientesParams = {}) =>
@@ -146,6 +151,9 @@ export const pacientesApi = {
     api.patch<Paciente>(`/pacientes/${id}`, payload).then((r) => r.data),
   deactivate: (id: string) =>
     api.patch(`/pacientes/${id}/desativar`).then((r) => r.data),
+  /** Avanço manual de etapa do fluxo clínico (a API valida elegibilidade, etapa e papel). */
+  avancarEtapa: (id: string) =>
+    api.patch<Paciente>(`/pacientes/${id}/fluxo/avancar`).then((r) => r.data),
   export: (id: string) =>
     api.get(`/pacientes/${id}/export`).then((r) => r.data),
   updateObservacoes: (id: string, observacoes: string) =>

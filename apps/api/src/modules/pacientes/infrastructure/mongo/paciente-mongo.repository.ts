@@ -11,7 +11,7 @@ import {
   UpdatePacienteInput,
 } from '../../application/ports/paciente.repository';
 import { CursorPaginationResult } from '../../domain/pagination';
-import { Convenio, Endereco, Paciente, ResponsavelLegal } from '../../domain/paciente.entity';
+import { ClassificacaoArea, Convenio, Endereco, Paciente, ResponsavelLegal } from '../../domain/paciente.entity';
 import { PacienteCryptoService } from '../crypto/paciente-crypto.service';
 import { PacienteDocument, PacienteMongo } from './paciente.schema';
 
@@ -56,8 +56,14 @@ export class PacienteMongoRepository implements PacienteRepository {
       representante: input.representante,
       responsavelLegal: this.encryptJsonOptional(input.responsavelLegal),
       autorizacaoResponsavel: input.autorizacaoResponsavel,
+      classificacoes: input.classificacoes,
       ativo: true,
     };
+    // Etapa inicial só entra quando informada (paciente elegível ao fluxo): sem null explícito.
+    if (input.etapaFluxo !== undefined) {
+      doc.etapaFluxo = input.etapaFluxo;
+      doc.etapaFluxoDesde = input.etapaFluxoDesde ?? new Date();
+    }
     if (input.cpf) {
       doc.cpf = this.crypto.encryptString(this.crypto.normalizeCpf(input.cpf));
       doc.cpfHash = this.crypto.cpfHash(input.cpf);
@@ -300,6 +306,9 @@ export class PacienteMongoRepository implements PacienteRepository {
     if (input.projeto !== undefined) update.projeto = input.projeto;
     if (input.linhaTerapeutica !== undefined) update.linhaTerapeutica = input.linhaTerapeutica;
     if (input.representante !== undefined) update.representante = input.representante;
+    if (input.classificacoes !== undefined) update.classificacoes = input.classificacoes;
+    if (input.etapaFluxo !== undefined) update.etapaFluxo = input.etapaFluxo;
+    if (input.etapaFluxoDesde !== undefined) update.etapaFluxoDesde = input.etapaFluxoDesde;
     if (input.responsavelLegal !== undefined) update.responsavelLegal = this.encryptJsonOptional(input.responsavelLegal);
     if (input.autorizacaoResponsavel !== undefined) update.autorizacaoResponsavel = input.autorizacaoResponsavel;
     if (input.observacoes !== undefined) update.observacoes = this.encryptOptional(input.observacoes);
@@ -344,6 +353,9 @@ export class PacienteMongoRepository implements PacienteRepository {
       representante: object.representante,
       responsavelLegal: this.decryptJsonOptional<ResponsavelLegal>(object.responsavelLegal),
       autorizacaoResponsavel: object.autorizacaoResponsavel,
+      classificacoes: object.classificacoes as ClassificacaoArea[] | undefined,
+      etapaFluxo: object.etapaFluxo,
+      etapaFluxoDesde: object.etapaFluxoDesde,
       ativo: object.ativo,
       criadoEm: object.criadoEm,
       atualizadoEm: object.atualizadoEm,
@@ -363,6 +375,9 @@ export class PacienteMongoRepository implements PacienteRepository {
     if (input.projeto !== undefined) query.projeto = input.projeto;
     if (input.linhaTerapeutica !== undefined) query.linhaTerapeutica = input.linhaTerapeutica;
     if (input.representante !== undefined) query.representante = input.representante;
+    if (input.etapaFluxo !== undefined) query.etapaFluxo = input.etapaFluxo;
+    // Elegível ao fluxo = classificacoes é EXATAMENTE ['IU'] (igualdade de array no Mongo).
+    if (input.somenteFluxoClinico) query.classificacoes = [ClassificacaoArea.IU];
     if (input.dataNascimento) {
       // Campo gravado como meia-noite UTC; intervalo de 24h cobre o dia inteiro.
       const inicio = new Date(`${input.dataNascimento}T00:00:00.000Z`);

@@ -28,8 +28,9 @@ import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import {
   Sexo, SEXO_LABEL, ProjetoPaciente, PROJETO_LABEL, Papel,
-  LinhaTerapeutica, LINHA_TERAPEUTICA_LABEL, type Paciente,
+  LinhaTerapeutica, LINHA_TERAPEUTICA_LABEL, ClassificacaoArea, type Paciente,
 } from '@/types';
+import { ClassificacaoAreaSelector } from '@/components/ClassificacaoAreaSelector';
 
 const CPF_REGEX = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/;
 
@@ -52,6 +53,8 @@ export const pacienteSchema = z
     sexo: z.nativeEnum(Sexo, { error: 'Selecione.' }).optional(),
     projeto: z.nativeEnum(ProjetoPaciente, { error: 'Selecione.' }).optional(),
     linhaTerapeutica: z.nativeEnum(LinhaTerapeutica, { error: 'Selecione.' }).optional(),
+    // Classificação de área: ao menos uma (IU, FA, OT). Só "somente IU" entra no fluxo clínico.
+    classificacoes: z.array(z.nativeEnum(ClassificacaoArea)).min(1, 'Selecione ao menos uma classificação.'),
     telefone: z.string().optional(),
     email: z.string().email('E-mail inválido.').optional().or(z.literal('')),
     consentimento: z.boolean().optional(),
@@ -121,7 +124,7 @@ export function PacientesPage() {
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors, isDirty } } = useForm<PacienteForm>({
     resolver: zodResolver(pacienteSchema),
-    defaultValues: { consentimento: false },
+    defaultValues: { consentimento: false, classificacoes: [] },
   });
   // Clique fora/ESC não fecham; Cancelar com algo digitado pede confirmação.
   const saida = useSaidaProtegida(isDirty, () => { setOpen(false); reset(); });
@@ -199,6 +202,7 @@ export function PacientesPage() {
       sexo: v.sexo || undefined,
       projeto: ehEnfermeiro ? ProjetoPaciente.PSI : (v.projeto || undefined),
       linhaTerapeutica: v.linhaTerapeutica || undefined,
+      classificacoes: v.classificacoes,
       telefone: v.telefone || undefined,
       email: v.email || undefined,
       endereco: temEndereco ? enderecoCampos : undefined,
@@ -495,6 +499,16 @@ export function PacientesPage() {
                 )}
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label>Classificação de área *</Label>
+              <ClassificacaoAreaSelector
+                idPrefix="novoClassificacao"
+                value={watch('classificacoes') ?? []}
+                onChange={(v) => setValue('classificacoes', v, { shouldDirty: true, shouldValidate: true })}
+              />
+              {errors.classificacoes && <p className="text-sm text-destructive">{errors.classificacoes.message}</p>}
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               {!ehEnfermeiro && (

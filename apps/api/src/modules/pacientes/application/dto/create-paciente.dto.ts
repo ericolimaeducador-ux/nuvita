@@ -1,4 +1,7 @@
 import {
+  ArrayNotEmpty,
+  ArrayUnique,
+  IsArray,
   IsEmail,
   IsEnum,
   IsISO8601,
@@ -10,7 +13,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { LinhaTerapeutica, ProjetoPaciente, Sexo } from '../../domain/paciente.entity';
+import { ClassificacaoArea, LinhaTerapeutica, ProjetoPaciente, Sexo } from '../../domain/paciente.entity';
 import { ConsentimentoLGpdDto } from './consentimento-lgpd.dto';
 import { ConvenioDto } from './convenio.dto';
 import { EnderecoDto } from './endereco.dto';
@@ -20,6 +23,14 @@ import { AutorizacaoResponsavelDto, ResponsavelLegalDto } from './responsavel-le
 export class CreatePacienteDto {
   @IsMongoId()
   clinicaId!: string;
+
+  // Classificação de área: ao menos uma (IU, FA, OT), sem repetição. No PATCH (Partial) é opcional,
+  // mas se vier, também não pode ser vazia.
+  @IsArray()
+  @ArrayNotEmpty({ message: 'Informe ao menos uma classificação (IU, FA ou OT).' })
+  @ArrayUnique()
+  @IsEnum(ClassificacaoArea, { each: true })
+  classificacoes!: ClassificacaoArea[];
 
   @IsString()
   @IsNotEmpty()

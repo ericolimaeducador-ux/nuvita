@@ -31,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/use-toast';
+import { ClassificacaoAreaSelector } from '@/components/ClassificacaoAreaSelector';
 import { useAuth } from '@/auth/AuthContext';
 import {
   pacientesApi, prontuariosApi, agendaApi, documentosApi,
@@ -45,6 +46,7 @@ import { classificarIdadePorString } from '@/paciente-idade';
 import {
   Sexo, SEXO_LABEL, ProjetoPaciente, PROJETO_LABEL, STATUS_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_LABEL,
   Papel, TIPO_DOCUMENTO_LABEL, LinhaTerapeutica, LINHA_TERAPEUTICA_LABEL,
+  ClassificacaoArea, ETAPA_FLUXO_LABEL, elegivelFluxoClinico,
   type Agendamento, type Prontuario, type Documento, type Paciente,
 } from '@/types';
 
@@ -437,6 +439,7 @@ const editPacienteSchema = z.object({
   sexo: z.nativeEnum(Sexo).optional().or(z.literal('')),
   projeto: z.nativeEnum(ProjetoPaciente).optional().or(z.literal('')),
   linhaTerapeutica: z.nativeEnum(LinhaTerapeutica).optional().or(z.literal('')),
+  classificacoes: z.array(z.nativeEnum(ClassificacaoArea)).min(1, 'Selecione ao menos uma classificação.'),
   telefone: z.string().optional(),
   email: z.string().email('E-mail inválido.').optional().or(z.literal('')),
   consentimento: z.boolean().optional(),
@@ -478,6 +481,7 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
       sexo: p.sexo ?? '',
       projeto: ehEnfermeiro ? ProjetoPaciente.PSI : (p.projeto ?? ''),
       linhaTerapeutica: p.linhaTerapeutica ?? '',
+      classificacoes: p.classificacoes ?? [],
       telefone: p.telefone ?? '',
       email: p.email ?? '',
       consentimento: !!p.consentimentoLGPD?.aceito,
@@ -523,6 +527,7 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
       sexo: v.sexo || undefined,
       projeto: v.projeto || undefined,
       linhaTerapeutica: v.linhaTerapeutica || undefined,
+      classificacoes: v.classificacoes,
       telefone: v.telefone || undefined,
       email: v.email || undefined,
       endereco: temEndereco ? enderecoCampos : undefined,
@@ -558,6 +563,16 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
           <DescItem label="Sexo" value={p.sexo ? SEXO_LABEL[p.sexo] : '—'} />
           <DescItem label="Projeto" value={p.projeto ? PROJETO_LABEL[p.projeto] : '—'} />
           <DescItem label="Linha terapêutica" value={p.linhaTerapeutica ? LINHA_TERAPEUTICA_LABEL[p.linhaTerapeutica] : '—'} />
+          <DescItem
+            label="Classificação de área"
+            value={p.classificacoes?.length ? p.classificacoes.join(' + ') : '—'}
+          />
+          {p.etapaFluxo && (
+            <DescItem
+              label="Etapa do fluxo clínico"
+              value={`${ETAPA_FLUXO_LABEL[p.etapaFluxo]}${elegivelFluxoClinico(p.classificacoes) ? '' : ' (fora do fluxo)'}`}
+            />
+          )}
           <DescItem label="Telefone" value={p.telefone || '—'} />
           <DescItem label="E-mail" value={p.email || '—'} />
           <DescItem label="Consentimento LGPD" value={p.consentimentoLGPD?.aceito ? 'Aceito' : 'Pendente'} />
@@ -641,6 +656,16 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
                 </Select>
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label>Classificação de área *</Label>
+              <ClassificacaoAreaSelector
+                idPrefix="editClassificacao"
+                value={watch('classificacoes') ?? []}
+                onChange={(v) => setValue('classificacoes', v, { shouldDirty: true, shouldValidate: true })}
+              />
+              {errors.classificacoes && <p className="text-sm text-destructive">{errors.classificacoes.message}</p>}
+            </div>
 
             <div className="space-y-2">
               <Label>Linha terapêutica</Label>

@@ -14,6 +14,7 @@ const ROTAS: Array<[string, string, Papel[]]> = [
   ['/dashboard', '/dashboard', PAPEIS],
   ['/pacientes', '/pacientes', ['SUPER_ADMIN', 'ADMIN', 'ENFERMEIRO', 'SECRETARIA']],
   ['/pacientes/:id', '/pacientes/p1', ['SUPER_ADMIN', 'ADMIN', 'ENFERMEIRO', 'SECRETARIA']],
+  ['/fluxo-clinico', '/fluxo-clinico', ['SUPER_ADMIN', 'ADMIN', 'ENFERMEIRO', 'SECRETARIA']],
   // documentos clínicos e impressão do prontuário: PRIVATIVOS do enfermeiro
   ['/pacientes/:id/prontuario/:prontuarioId/imprimir', '/pacientes/p1/prontuario/r1/imprimir', ['ENFERMEIRO']],
   ['/pacientes/:id/documentos/atestado', '/pacientes/p1/documentos/atestado', ['ENFERMEIRO']],

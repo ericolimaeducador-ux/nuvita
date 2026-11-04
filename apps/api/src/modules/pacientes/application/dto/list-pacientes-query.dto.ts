@@ -1,6 +1,6 @@
 import { IsEnum, IsIn, IsInt, IsMongoId, IsOptional, IsString, Matches, Max, Min } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { LinhaTerapeutica, ProjetoPaciente } from '../../domain/paciente.entity';
+import { EtapaFluxoClinico, LinhaTerapeutica, ProjetoPaciente } from '../../domain/paciente.entity';
 import { PACIENTE_SORTS, PacienteSort } from '../ports/paciente.repository';
 
 export class ListPacientesQueryDto {
@@ -52,4 +52,14 @@ export class ListPacientesQueryDto {
   @IsOptional()
   @IsString()
   representante?: string;
+
+  // Fluxo clínico: filtra pela etapa atual.
+  @IsOptional()
+  @IsEnum(EtapaFluxoClinico)
+  etapaFluxo?: EtapaFluxoClinico;
+
+  // true = lista só pacientes elegíveis ao fluxo clínico (classificados exatamente como IU).
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  fluxoClinico?: boolean;
 }

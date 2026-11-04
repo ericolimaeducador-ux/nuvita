@@ -1,0 +1,1 @@
+export const ENTREGA_REPOSITORY = Symbol('ENTREGA_REPOSITORY');

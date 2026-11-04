@@ -915,3 +915,106 @@ export enum DecisaoUsoIA {
   ACEITA = 'ACEITA',
   DESCARTADA = 'DESCARTADA',
 }
+
+// ---------- Produtos (catálogo operacional global) e Entregas ----------
+// TODO(conteudo): rótulos de incontinência urinária (sonda, coletor, marcas, SUS) — revisar na etapa de conteúdo.
+export enum TipoProduto {
+  CATETER_VAPRO = 'cateter_vapro',
+  COLETOR_ACTICOAT = 'coletor_acticoat',
+  CATETER_SAMTRONIC = 'cateter_samtronic',
+}
+export const TIPO_PRODUTO_LABEL: Record<TipoProduto, string> = {
+  [TipoProduto.CATETER_VAPRO]: 'Cateter (VaPro)',
+  [TipoProduto.COLETOR_ACTICOAT]: 'Coletor (Acticoat)',
+  [TipoProduto.CATETER_SAMTRONIC]: 'Cateter (Samtronic)',
+};
+
+export enum SexoProduto {
+  MASCULINO = 'masculino',
+  FEMININO = 'feminino',
+  UNIVERSAL = 'universal',
+}
+export const SEXO_PRODUTO_LABEL: Record<SexoProduto, string> = {
+  [SexoProduto.MASCULINO]: 'Masculino',
+  [SexoProduto.FEMININO]: 'Feminino',
+  [SexoProduto.UNIVERSAL]: 'Universal',
+};
+
+export enum EmbalagemProduto {
+  STANDARD = 'standard',
+  POCKET = 'pocket',
+}
+export const EMBALAGEM_PRODUTO_LABEL: Record<EmbalagemProduto, string> = {
+  [EmbalagemProduto.STANDARD]: 'Standard',
+  [EmbalagemProduto.POCKET]: 'Pocket',
+};
+
+export enum ProjetoCatalogo {
+  ALPHA = 'ALPHA',
+  BETA = 'BETA',
+}
+
+export interface Produto {
+  id: string;
+  codigo: number;
+  codigoFabricante?: string;
+  nome: string;
+  tipo: TipoProduto;
+  sexo: SexoProduto;
+  embalagem: EmbalagemProduto;
+  projeto: ProjetoCatalogo;
+  french?: number;
+  comprimentoCm?: number;
+  descricaoTecnica: string;
+  descricaoSiafisico?: string;
+  codigoSiafisico?: number;
+  ativo: boolean;
+}
+
+export enum OrigemEntrega {
+  SUS = 'sus',
+  PLANO_SAUDE = 'plano_saude',
+  VAREJO = 'varejo',
+  DOACAO = 'doacao',
+}
+export const ORIGEM_ENTREGA_LABEL: Record<OrigemEntrega, string> = {
+  [OrigemEntrega.SUS]: 'SUS',
+  [OrigemEntrega.PLANO_SAUDE]: 'Plano de saúde',
+  [OrigemEntrega.VAREJO]: 'Varejo',
+  [OrigemEntrega.DOACAO]: 'Doação',
+};
+
+export enum StatusEntrega {
+  PENDENTE = 'pendente',
+  ENVIADA = 'enviada',
+  ENTREGUE = 'entregue',
+  DEVOLVIDA = 'devolvida',
+}
+export const STATUS_ENTREGA_LABEL: Record<StatusEntrega, string> = {
+  [StatusEntrega.PENDENTE]: 'Pendente',
+  [StatusEntrega.ENVIADA]: 'Enviada',
+  [StatusEntrega.ENTREGUE]: 'Entregue',
+  [StatusEntrega.DEVOLVIDA]: 'Devolvida',
+};
+
+export interface ItemEntrega {
+  codigo: number;
+  descricao: string;
+  quantidade: number;
+  valorUnitarioCentavos: number;
+  valorTotalCentavos: number;
+  categoria?: string;
+}
+
+export interface Entrega {
+  id: string;
+  clinicaId: string;
+  pacienteId: string;
+  dataEntrega: string;
+  origem: OrigemEntrega;
+  status: StatusEntrega;
+  itens: ItemEntrega[];
+  valorTotalCentavos: number;
+  notaFiscal?: string;
+  observacoes?: string;
+}

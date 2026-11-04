@@ -11,6 +11,7 @@ import { DashboardPage } from '@/pages/DashboardPage';
 import { PacientesPage } from '@/pages/PacientesPage';
 import { PacienteDetailPage } from '@/pages/PacienteDetailPage';
 import { FluxoClinicoPage } from '@/pages/FluxoClinicoPage';
+import { ProdutosPage } from '@/pages/ProdutosPage';
 import { AgendaPage } from '@/pages/AgendaPage';
 import { ProntuariosPage } from '@/pages/ProntuariosPage';
 import { DocumentosPage } from '@/pages/DocumentosPage';
@@ -97,6 +98,8 @@ export function AppRoutes() {
             </Route>
             <Route element={<ProtectedRoute modulo={Modulo.CLINICA} />}>
               <Route path="/clinica" element={<ClinicaPage />} />
+              {/* Catálogo operacional de produtos (global). Rota SEM o prefixo /produtos: ele é da API e o proxy do Vite o desviaria. */}
+              <Route path="/catalogo-produtos" element={<ProdutosPage />} />
             </Route>
             <Route element={<ProtectedRoute modulo={Modulo.ANALYTICS} />}>
               <Route path="/relatorios" element={<RelatoriosGerenciaisPage />} />

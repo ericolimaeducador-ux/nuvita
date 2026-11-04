@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   LayoutDashboard, Users, Calendar, Bell,
-  Video, Building2, LogOut, ChevronLeft, ChevronRight, Shield, Brain, Wallet, BarChart3, LifeBuoy, Workflow,
+  Video, Building2, LogOut, ChevronLeft, ChevronRight, Shield, Brain, Wallet, BarChart3, LifeBuoy, Workflow, Package,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -29,6 +29,7 @@ const navItems: { to: string; icon: React.ElementType; label: string; modulo: Mo
   { to: '/telemedicina', icon: Video, label: 'Telemedicina', modulo: Modulo.TELEMEDICINA },
   { to: '/relatorios', icon: BarChart3, label: 'Relatórios', modulo: Modulo.ANALYTICS },
   { to: '/clinica', icon: Building2, label: 'Clínica', modulo: Modulo.CLINICA },
+  { to: '/catalogo-produtos', icon: Package, label: 'Produtos', modulo: Modulo.CLINICA },
   { to: '/super-admin', icon: Shield, label: 'Super Admin', modulo: Modulo.SUPER_ADMIN, roles: [Papel.SUPER_ADMIN] },
   { to: '/tickets', icon: LifeBuoy, label: 'Tickets', modulo: Modulo.SUPER_ADMIN, roles: [Papel.SUPER_ADMIN] },
 ];

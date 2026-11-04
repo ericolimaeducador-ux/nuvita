@@ -6,11 +6,13 @@ import type {
   DecisaoUsoIA,
   Documento,
   Endereco,
+  Entrega,
   EtapaFluxoClinico,
   Lancamento,
   LinhaTerapeutica,
   ListUsuariosResult,
   LoginResponse,
+  Produto,
   ModalidadeAtendimento,
   Modulo,
   ObservacaoPaciente,
@@ -598,4 +600,54 @@ export const analyticsApi = {
     horaFim?: number;
     slotMinutos?: number;
   }) => api.get<SlotVago[]>('/analytics/horarios-vagos', { params }).then((r) => comoLista<SlotVago>(r.data) as SlotVago[]),
+};
+
+// ---------- Produtos (catálogo operacional global) ----------
+export interface ProdutoPayload {
+  codigo?: number;
+  codigoFabricante?: string;
+  nome: string;
+  tipo: string;
+  sexo: string;
+  embalagem: string;
+  projeto: string;
+  french?: number;
+  comprimentoCm?: number;
+  descricaoTecnica: string;
+  descricaoSiafisico?: string;
+  codigoSiafisico?: number;
+}
+
+export const produtosApi = {
+  list: (params: { tipo?: string; incluirInativos?: boolean } = {}) =>
+    api.get<Produto[]>('/produtos', { params }).then((r) => comoLista<Produto>(r.data) as Produto[]),
+  create: (payload: ProdutoPayload) => api.post<Produto>('/produtos', payload).then((r) => r.data),
+  update: (codigo: number, payload: Partial<ProdutoPayload>) =>
+    api.patch<Produto>(`/produtos/${codigo}`, payload).then((r) => r.data),
+  desativar: (codigo: number) => api.patch<Produto>(`/produtos/${codigo}/desativar`).then((r) => r.data),
+};
+
+// ---------- Entregas ----------
+export interface CreateEntregaPayload {
+  pacienteId: string;
+  dataEntrega: string;
+  origem: string;
+  itens: Array<{
+    codigo: number;
+    descricao: string;
+    quantidade: number;
+    valorUnitarioCentavos: number;
+    valorTotalCentavos: number;
+  }>;
+  valorTotalCentavos: number;
+  notaFiscal?: string;
+  observacoes?: string;
+}
+
+export const entregasApi = {
+  listByPaciente: (pacienteId: string) =>
+    api.get<Entrega[]>('/entregas', { params: { pacienteId } }).then((r) => comoLista<Entrega>(r.data) as Entrega[]),
+  create: (payload: CreateEntregaPayload) => api.post<Entrega>('/entregas', payload).then((r) => r.data),
+  /** Pode levar o paciente elegível para CONCLUIDO no fluxo clínico (decisão do servidor). */
+  confirmar: (id: string) => api.post<Entrega>(`/entregas/${id}/confirmar`).then((r) => r.data),
 };

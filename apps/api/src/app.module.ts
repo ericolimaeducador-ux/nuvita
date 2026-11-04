@@ -23,6 +23,8 @@ import { ProntuariosModule } from './modules/prontuarios/prontuarios.module';
 import { TelemedicinaModule } from './modules/telemedicina/telemedicina.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { ObservacoesPacienteModule } from './modules/observacoes-paciente/observacoes-paciente.module';
+import { ProdutosModule } from './modules/produtos/produtos.module';
+import { EntregasModule } from './modules/entregas/entregas.module';
 import { TestesPsicologicosModule } from './modules/testes-psicologicos/testes-psicologicos.module';
 import { IaClinicaModule } from './modules/ia-clinica/ia-clinica.module';
 import { InscricoesTesteModule } from './modules/inscricoes-teste/inscricoes-teste.module';
@@ -75,6 +77,8 @@ import { InscricoesTesteModule } from './modules/inscricoes-teste/inscricoes-tes
     HealthModule,
     SuperAdminModule,
     ObservacoesPacienteModule,
+    ProdutosModule,
+    EntregasModule,
     TestesPsicologicosModule,
     IaClinicaModule,
     InscricoesTesteModule,

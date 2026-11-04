@@ -2,7 +2,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { Papel } from '../../../../../../packages/shared/src/auth';
 import { DocumentosService } from './documentos.service';
 
-// Documento é do paciente: qualquer papel da clínica abre; excluir é restrito a quem enviou (psicólogo).
+// Documento é do paciente: qualquer papel da clínica abre; excluir é restrito a quem enviou (enfermeiro).
 const doc = (uploadPor: string) => ({
   id: 'd1', clinicaId: 'cli-1', pacienteId: 'pac-1', nome: 'n', tipo: 'EXAME', mimeType: 'application/pdf',
   tamanho: 1, url: 'k', hash: 'h', uploadPor, confirmadoEm: new Date(), criadoEm: new Date(),
@@ -25,21 +25,21 @@ function criar(uploadPor: string) {
 }
 
 describe('DocumentosService – posse (D2)', () => {
-  const psiB = ctxDe('psi-B', Papel.PSICOLOGO);
+  const psiB = ctxDe('psi-B', Papel.ENFERMEIRO);
 
-  it('psicólogo ABRE documento enviado por outro (encaminhamento/exame da secretária)', async () => {
+  it('enfermeiro ABRE documento enviado por outro (encaminhamento/exame da secretária)', async () => {
     const { service, storage } = criar('sec-1');
     await expect(service.createAccessUrl('d1', undefined, psiB)).resolves.toBeDefined();
     expect(storage.createReadUrl).toHaveBeenCalled();
   });
 
-  it('psicólogo NÃO exclui documento enviado por outro', async () => {
+  it('enfermeiro NÃO exclui documento enviado por outro', async () => {
     const { service, documentos } = criar('psi-A');
     await expect(service.softDelete('d1', undefined, psiB)).rejects.toThrow(ForbiddenException);
     expect(documentos.softDelete).not.toHaveBeenCalled();
   });
 
-  it('psicólogo exclui o que ele mesmo enviou', async () => {
+  it('enfermeiro exclui o que ele mesmo enviou', async () => {
     const { service } = criar('psi-B');
     await expect(service.softDelete('d1', undefined, psiB)).resolves.toBeDefined();
   });

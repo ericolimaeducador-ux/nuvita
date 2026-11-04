@@ -82,7 +82,7 @@ export function LoginPage() {
         </div>
 
         <p className="relative text-blue-300/70 text-sm">
-          © {new Date().getFullYear()} Nuvita Psi · Plataforma para psicólogos
+          © {new Date().getFullYear()} Nuvita Psi · Plataforma para enfermeiros
         </p>
       </div>
 

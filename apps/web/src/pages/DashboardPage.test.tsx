@@ -14,7 +14,7 @@ vi.mock('@/auth/AuthContext', async () => {
   const { Modulo } = await import('@/types');
   return {
     useAuth: () => ({
-      user: { id: 'u1', clinicaId: 'c1', papel: 'PSICOLOGO', nome: 'Psi Teste' },
+      user: { id: 'u1', clinicaId: 'c1', papel: 'ENFERMEIRO', nome: 'Psi Teste' },
       permissoes: [Modulo.FINANCEIRO_PSICOLOGIA],
     }),
   };

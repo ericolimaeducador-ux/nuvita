@@ -39,7 +39,7 @@ import { SegredoDoisFatores } from '@/components/SegredoDoisFatores';
 const PAPEL_BADGE: Record<Papel, string> = {
   [Papel.SUPER_ADMIN]: 'bg-purple-500/10 text-purple-600 border border-purple-500/20',
   [Papel.ADMIN]: 'bg-blue-500/10 text-blue-600 border border-blue-500/20',
-  [Papel.PSICOLOGO]: 'bg-rose-500/10 text-rose-600 border border-rose-500/20',
+  [Papel.ENFERMEIRO]: 'bg-rose-500/10 text-rose-600 border border-rose-500/20',
   [Papel.SECRETARIA]: 'bg-slate-500/10 text-slate-600 border border-slate-500/20',
   [Papel.PACIENTE]: 'bg-gray-500/10 text-gray-400 border border-gray-500/20',
 };
@@ -55,11 +55,11 @@ const createSchema = z.object({
   papel: z.nativeEnum(Papel, { message: 'Selecione um perfil.' }),
   clinicaId: z.string().optional(),
   registroProfissional: z.string().optional(),
-  crp: z.string().optional(),
+  coren: z.string().optional(),
 }).superRefine((v, ctx) => {
-  // O psicólogo precisa de CRP no perfil para assinar. Só "não vazio": o formato depende de fonte oficial do CFP.
-  if (v.papel === Papel.PSICOLOGO && !v.crp?.trim()) {
-    ctx.addIssue({ code: 'custom', path: ['crp'], message: 'Informe o CRP do psicólogo.' });
+  // O enfermeiro precisa de COREN no perfil para assinar. Só "não vazio": TODO(legal): o formato do COREN depende de fonte oficial.
+  if (v.papel === Papel.ENFERMEIRO && !v.coren?.trim()) {
+    ctx.addIssue({ code: 'custom', path: ['coren'], message: 'Informe o COREN do enfermeiro.' });
   }
 });
 type CreateForm = z.infer<typeof createSchema>;
@@ -88,7 +88,7 @@ const clinicaSchema = z.object({
   faseTeste: z.boolean(),
   // Identidade fiscal: corrigível só aqui (super-admin). O servidor é o gate; o cliente só avisa cedo.
   tipoDocumento: z.nativeEnum(TipoDocumentoFiscal),
-  // Vazio = clínica ainda sem documento (a psicóloga informa no primeiro uso); só valida se for trocado.
+  // Vazio = clínica ainda sem documento (a enfermeira informa no primeiro uso); só valida se for trocado.
   documento: z.string(),
 });
 type ClinicaForm = z.infer<typeof clinicaSchema>;
@@ -100,7 +100,7 @@ const novaClinicaSchema = z
   nome: z.string().min(1, 'Informe o nome.'),
   // CPF: profissional que atende como pessoa física. CNPJ: empresa (aceita o alfanumérico).
   tipoDocumento: z.nativeEnum(TipoDocumentoFiscal),
-  // Opcional: a psicóloga informa o CPF/CNPJ do consultório no primeiro uso.
+  // Opcional: a enfermeira informa o CPF/CNPJ do consultório no primeiro uso.
   documento: z.string(),
   plano: z.enum(['basico', 'profissional', 'enterprise']),
   fusoHorario: z.string().min(1, 'Informe o fuso horário.'),
@@ -140,7 +140,7 @@ const PLANO_LABEL: Record<ClinicaAdmin['plano'], string> = {
 const SEM_CLINICA = 'none';
 
 // Espelha PAPEIS_COM_2FA_OBRIGATORIO do backend (packages/shared/src/auth).
-const PAPEIS_2FA: Papel[] = [Papel.SUPER_ADMIN, Papel.ADMIN, Papel.PSICOLOGO];
+const PAPEIS_2FA: Papel[] = [Papel.SUPER_ADMIN, Papel.ADMIN, Papel.ENFERMEIRO];
 
 // ---- Component --------------------------------------------------------------
 export function SuperAdminPage() {
@@ -323,7 +323,7 @@ export function SuperAdminPage() {
       } else {
         toast.success(
           'Clínica criada SEM administrador.',
-          'Crie o psicólogo em "Novo usuário", escolhendo esta clínica.',
+          'Crie o enfermeiro em "Novo usuário", escolhendo esta clínica.',
         );
       }
       void qc.invalidateQueries({ queryKey: ['super-admin', 'clinicas'] });
@@ -375,7 +375,7 @@ export function SuperAdminPage() {
           <p className="text-sm text-muted-foreground mt-0.5">
             Aqui você cria usuários com qualquer papel, ativa/desativa contas, redefine senhas
             e vincula usuários a clínicas. Ficam registradas no audit log: criação de usuário e de
-            clínica, redefinição de senha e de 2FA, correção de CRP e edição dos dados fiscais e de
+            clínica, redefinição de senha e de 2FA, correção de COREN e edição dos dados fiscais e de
             contato da clínica.
           </p>
         </div>
@@ -607,7 +607,7 @@ export function SuperAdminPage() {
           </DialogHeader>
           <form
             onSubmit={createForm.handleSubmit((v) =>
-              createMut.mutate({ nome: v.nome, email: v.email, password: v.password, papel: v.papel, clinicaId: v.clinicaId || undefined, registroProfissional: papelTemRegistro(v.papel) ? (v.registroProfissional || undefined) : undefined, crp: v.papel === Papel.PSICOLOGO ? v.crp?.trim() : undefined })
+              createMut.mutate({ nome: v.nome, email: v.email, password: v.password, papel: v.papel, clinicaId: v.clinicaId || undefined, registroProfissional: papelTemRegistro(v.papel) ? (v.registroProfissional || undefined) : undefined, coren: v.papel === Papel.ENFERMEIRO ? v.coren?.trim() : undefined })
             )}
             className="space-y-4 py-2"
           >
@@ -658,16 +658,16 @@ export function SuperAdminPage() {
                   </SelectContent>
                 </Select>
               </div>
-              {createForm.watch('papel') === Papel.PSICOLOGO && (
+              {createForm.watch('papel') === Papel.ENFERMEIRO && (
                 <div className="col-span-2 space-y-1.5">
-                  <Label>CRP do psicólogo <span className="text-muted-foreground">(obrigatório: é o carimbo da assinatura do prontuário)</span></Label>
-                  <Input placeholder="CRP 00/00000" {...createForm.register('crp')} />
-                  {createForm.formState.errors.crp && (
-                    <p className="text-xs text-destructive">{createForm.formState.errors.crp.message}</p>
+                  <Label>COREN do enfermeiro <span className="text-muted-foreground">(obrigatório: é o carimbo da assinatura do prontuário)</span></Label>
+                  <Input placeholder="COREN 00/00000" {...createForm.register('coren')} />
+                  {createForm.formState.errors.coren && (
+                    <p className="text-xs text-destructive">{createForm.formState.errors.coren.message}</p>
                   )}
                 </div>
               )}
-              {papelTemRegistro(createForm.watch('papel')) && createForm.watch('papel') !== Papel.PSICOLOGO && (
+              {papelTemRegistro(createForm.watch('papel')) && createForm.watch('papel') !== Papel.ENFERMEIRO && (
                 <div className="col-span-2 space-y-1.5">
                   <Label>{registroLabel(createForm.watch('papel'))} <span className="text-muted-foreground">(opcional — preenche documentos automaticamente)</span></Label>
                   <Input placeholder={`Nº do ${registroLabel(createForm.watch('papel'))}`} {...createForm.register('registroProfissional')} />
@@ -1063,7 +1063,7 @@ export function SuperAdminPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="nova-clinica-documento">Documento do consultório (CPF ou CNPJ) — opcional; a psicóloga informa no primeiro uso</Label>
+                <Label htmlFor="nova-clinica-documento">Documento do consultório (CPF ou CNPJ) — opcional; a enfermeira informa no primeiro uso</Label>
                 <Input
                   id="nova-clinica-documento"
                   placeholder={novaClinicaForm.watch('tipoDocumento') === TipoDocumentoFiscal.CPF ? '000.000.000-00' : '00.000.000/0000-00'}
@@ -1122,7 +1122,7 @@ export function SuperAdminPage() {
                 <p className="text-sm font-medium">Primeiro administrador da clínica</p>
                 <p className="text-xs text-muted-foreground">
                   Opcional: se preencher um, preencha os dois. Sem administrador, a clínica é criada só com o
-                  psicólogo, que você cria depois em "Novo usuário". Com administrador, a senha é gerada
+                  enfermeiro, que você cria depois em "Novo usuário". Com administrador, a senha é gerada
                   automaticamente e exibida uma única vez após a criação.
                 </p>
               </div>

@@ -50,9 +50,9 @@ export function AppRoutes() {
           <Route path={ROTA_DEFINIR_SENHA} element={<DefinirSenhaObrigatoriaPage />} />
           {/* Páginas de impressão FORA do AppLayout: o documento sai limpo
               (sem sidebar/header do site) tanto na tela quanto no print/PDF. */}
-          {/* PRIVATIVO do psicólogo (documento clínico e prontuário). Esconder no menu nunca é a proteção:
+          {/* PRIVATIVO do enfermeiro (documento clínico e prontuário). Esconder no menu nunca é a proteção:
               a rota exige o papel. Ver e2e/matriz-rotas.pw.ts. */}
-          <Route element={<ProtectedRoute roles={[Papel.PSICOLOGO]} modulo={Modulo.PACIENTES} />}>
+          <Route element={<ProtectedRoute roles={[Papel.ENFERMEIRO]} modulo={Modulo.PACIENTES} />}>
             <Route path="/pacientes/:id/prontuario/:prontuarioId/imprimir" element={<ProntuarioImpressaoPage />} />
             <Route path="/pacientes/:id/documentos/atestado" element={<AtestadoComparecimentoPage />} />
             <Route path="/pacientes/:id/documentos/laudo" element={<LaudoPsicoterapicoPage />} />
@@ -60,7 +60,7 @@ export function AppRoutes() {
             <Route path="/pacientes/:id/documentos/prescricao" element={<PrescricaoCuidadosPage />} />
           </Route>
           {/* Declaração de comparecimento: documento ADMINISTRATIVO (só presença), emitido pela secretária; data/hora vêm da agenda. */}
-          <Route element={<ProtectedRoute roles={[Papel.SECRETARIA, Papel.ADMIN, Papel.PSICOLOGO]} modulo={Modulo.PACIENTES} />}>
+          <Route element={<ProtectedRoute roles={[Papel.SECRETARIA, Papel.ADMIN, Papel.ENFERMEIRO]} modulo={Modulo.PACIENTES} />}>
             <Route path="/pacientes/:id/documentos/declaracao-comparecimento" element={<DeclaracaoComparecimentoPage />} />
           </Route>
           <Route element={<AppLayout />}>

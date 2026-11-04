@@ -42,9 +42,9 @@ export class UserMongo {
   @Prop({ trim: true })
   registroProfissional?: string;
 
-  // CRP do psicólogo (timbre dos documentos clínicos). Sem unique: o formato não é validado.
+  // COREN do enfermeiro (timbre dos documentos clínicos). Sem unique: o formato não é validado.
   @Prop({ trim: true })
-  crp?: string;
+  coren?: string;
 
   @Prop({ default: true, index: true })
   ativo!: boolean;

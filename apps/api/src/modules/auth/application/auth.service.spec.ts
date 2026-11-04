@@ -111,7 +111,7 @@ describe('AuthService — contrato do user na resposta (Fase 2)', () => {
 
   it('refresh expõe os dois campos no user', async () => {
     const user = makeUser({
-      papel: Papel.PSICOLOGO,
+      papel: Papel.ENFERMEIRO,
       deveTrocarSenha: true,
       termosAceitos: TERMOS,
     });
@@ -141,12 +141,12 @@ describe('AuthService.validateAccessPayload — enriquece request.user (Fase 2b)
     jti: 'access-jti',
     sub: 'u1',
     email: 'fulana@nuvita.test',
-    papel: Papel.PSICOLOGO,
+    papel: Papel.ENFERMEIRO,
   };
 
   it('anexa deveTrocarSenha e termosAceitos ao que retorna', async () => {
     const termos = { versao: '1.0', dataAceite: new Date('2026-09-10T12:00:00.000Z') };
-    const user = makeUser({ papel: Papel.PSICOLOGO, deveTrocarSenha: true, termosAceitos: termos });
+    const user = makeUser({ papel: Papel.ENFERMEIRO, deveTrocarSenha: true, termosAceitos: termos });
     const { service } = makeService(user);
 
     const result = await service.validateAccessPayload(accessPayload);
@@ -172,13 +172,13 @@ describe('AuthService.aceitarTermos (Fase 5)', () => {
   const context = { ip: '127.0.0.1', userAgent: 'jest' };
 
   it('rejeita versão diferente da vigente com 400', async () => {
-    const { service } = makeService(makeUser({ papel: Papel.PSICOLOGO }));
+    const { service } = makeService(makeUser({ papel: Papel.ENFERMEIRO }));
 
     await expect(service.aceitarTermos('u1', '0.9', context)).rejects.toThrow(BadRequestException);
   });
 
   it('registra termosAceitos { versao, dataAceite } e escreve TERMS_ACCEPTED', async () => {
-    const user = makeUser({ papel: Papel.PSICOLOGO, termosAceitos: null });
+    const user = makeUser({ papel: Papel.ENFERMEIRO, termosAceitos: null });
     const { service, users, auditLogs } = makeService(user);
 
     const res = await service.aceitarTermos('u1', TERMOS_DE_USO_VERSAO_ATUAL, context);
@@ -197,7 +197,7 @@ describe('AuthService.aceitarTermos (Fase 5)', () => {
 
   it('é idempotente: aceitar de novo a mesma versão não regrava nem re-audita', async () => {
     const user = makeUser({
-      papel: Papel.PSICOLOGO,
+      papel: Papel.ENFERMEIRO,
       termosAceitos: { versao: TERMOS_DE_USO_VERSAO_ATUAL, dataAceite: new Date('2026-09-10') },
     });
     const { service, users, auditLogs } = makeService(user);
@@ -210,7 +210,7 @@ describe('AuthService.aceitarTermos (Fase 5)', () => {
   });
 
   it('não vaza passwordHash/twoFactorSecret na resposta', async () => {
-    const user = makeUser({ papel: Papel.PSICOLOGO, twoFactorSecret: 'BASE32', termosAceitos: null });
+    const user = makeUser({ papel: Papel.ENFERMEIRO, twoFactorSecret: 'BASE32', termosAceitos: null });
     const { service } = makeService(user);
 
     const res = await service.aceitarTermos('u1', TERMOS_DE_USO_VERSAO_ATUAL, context);
@@ -289,7 +289,7 @@ describe('AuthService — observabilidade dos gates (Fase 13)', () => {
     spy.mock.calls.map((c) => JSON.parse(c[0] as string));
 
   it('aceitarTermos: versão inválida → warn gate_endpoint_4xx status=400 gate=terms', async () => {
-    const { service } = makeService(makeUser({ papel: Papel.PSICOLOGO }));
+    const { service } = makeService(makeUser({ papel: Papel.ENFERMEIRO }));
 
     await expect(service.aceitarTermos('u1', '0.9', context)).rejects.toThrow(BadRequestException);
 
@@ -327,7 +327,7 @@ describe('AuthService — observabilidade dos gates (Fase 13)', () => {
   });
 
   it('aceitarTermos: falha ao persistir → error auth_gate_persist_failure gate=terms', async () => {
-    const user = makeUser({ papel: Papel.PSICOLOGO, termosAceitos: null });
+    const user = makeUser({ papel: Papel.ENFERMEIRO, termosAceitos: null });
     const { service, users } = makeService(user);
     (users.update as jest.Mock).mockRejectedValueOnce(new Error('mongo down'));
 
@@ -369,7 +369,7 @@ describe('AuthService — observabilidade dos gates (Fase 13)', () => {
   });
 
   it('caminho feliz de cada gate → nenhum evento de erro/warn', async () => {
-    const psi = makeService(makeUser({ papel: Papel.PSICOLOGO, termosAceitos: null }));
+    const psi = makeService(makeUser({ papel: Papel.ENFERMEIRO, termosAceitos: null }));
     await psi.service.aceitarTermos('u1', TERMOS_DE_USO_VERSAO_ATUAL, context);
 
     const pwd = makeService(makeUser({ deveTrocarSenha: true }));
@@ -394,7 +394,7 @@ describe('AuthService — revogação de sessão na troca de senha (Fase 3)', ()
     jti: 'access-jti',
     sub: 'u1',
     email: 'fulana@nuvita.test',
-    papel: Papel.PSICOLOGO,
+    papel: Papel.ENFERMEIRO,
   };
 
   const cutoff = new Date('2026-09-12T10:00:00.000Z');
@@ -402,7 +402,7 @@ describe('AuthService — revogação de sessão na troca de senha (Fase 3)', ()
 
   describe('validateAccessPayload', () => {
     it('rejeita access token cujo iat é anterior a tokensValidosApartirDe', async () => {
-      const user = makeUser({ papel: Papel.PSICOLOGO, tokensValidosApartirDe: cutoff });
+      const user = makeUser({ papel: Papel.ENFERMEIRO, tokensValidosApartirDe: cutoff });
       const { service } = makeService(user);
 
       await expect(
@@ -411,7 +411,7 @@ describe('AuthService — revogação de sessão na troca de senha (Fase 3)', ()
     });
 
     it('aceita access token cujo iat é igual ou posterior a tokensValidosApartirDe', async () => {
-      const user = makeUser({ papel: Papel.PSICOLOGO, tokensValidosApartirDe: cutoff });
+      const user = makeUser({ papel: Papel.ENFERMEIRO, tokensValidosApartirDe: cutoff });
       const { service } = makeService(user);
 
       const result = await service.validateAccessPayload({ ...accessPayload, iat: cutoffEpoch + 60 });
@@ -420,7 +420,7 @@ describe('AuthService — revogação de sessão na troca de senha (Fase 3)', ()
     });
 
     it('REGRESSÃO CRÍTICA: tokensValidosApartirDe ausente nunca rejeita, mesmo com iat muito antigo', async () => {
-      const user = makeUser({ papel: Papel.PSICOLOGO, tokensValidosApartirDe: undefined });
+      const user = makeUser({ papel: Papel.ENFERMEIRO, tokensValidosApartirDe: undefined });
       const { service } = makeService(user);
 
       const result = await service.validateAccessPayload({ ...accessPayload, iat: 1 });
@@ -429,7 +429,7 @@ describe('AuthService — revogação de sessão na troca de senha (Fase 3)', ()
     });
 
     it('REGRESSÃO CRÍTICA: tokensValidosApartirDe null nunca rejeita, mesmo com iat muito antigo', async () => {
-      const user = makeUser({ papel: Papel.PSICOLOGO, tokensValidosApartirDe: null });
+      const user = makeUser({ papel: Papel.ENFERMEIRO, tokensValidosApartirDe: null });
       const { service } = makeService(user);
 
       const result = await service.validateAccessPayload({ ...accessPayload, iat: 1 });
@@ -440,7 +440,7 @@ describe('AuthService — revogação de sessão na troca de senha (Fase 3)', ()
 
   describe('refresh', () => {
     it('rejeita refresh token cujo iat é anterior a tokensValidosApartirDe', async () => {
-      const user = makeUser({ papel: Papel.PSICOLOGO, tokensValidosApartirDe: cutoff });
+      const user = makeUser({ papel: Papel.ENFERMEIRO, tokensValidosApartirDe: cutoff });
       const { service, jwtService } = makeService(user);
       (jwtService.verifyAsync as jest.Mock).mockResolvedValueOnce({
         typ: 'refresh',
@@ -455,7 +455,7 @@ describe('AuthService — revogação de sessão na troca de senha (Fase 3)', ()
     });
 
     it('aceita refresh token cujo iat é igual ou posterior a tokensValidosApartirDe', async () => {
-      const user = makeUser({ papel: Papel.PSICOLOGO, tokensValidosApartirDe: cutoff });
+      const user = makeUser({ papel: Papel.ENFERMEIRO, tokensValidosApartirDe: cutoff });
       const { service, jwtService } = makeService(user);
       (jwtService.verifyAsync as jest.Mock).mockResolvedValueOnce({
         typ: 'refresh',
@@ -472,7 +472,7 @@ describe('AuthService — revogação de sessão na troca de senha (Fase 3)', ()
     });
 
     it('REGRESSÃO CRÍTICA: tokensValidosApartirDe ausente nunca rejeita o refresh, mesmo com iat muito antigo', async () => {
-      const user = makeUser({ papel: Papel.PSICOLOGO, tokensValidosApartirDe: undefined });
+      const user = makeUser({ papel: Papel.ENFERMEIRO, tokensValidosApartirDe: undefined });
       const { service, jwtService } = makeService(user);
       (jwtService.verifyAsync as jest.Mock).mockResolvedValueOnce({
         typ: 'refresh',
@@ -489,7 +489,7 @@ describe('AuthService — revogação de sessão na troca de senha (Fase 3)', ()
     });
 
     it('REGRESSÃO CRÍTICA: tokensValidosApartirDe null nunca rejeita o refresh, mesmo com iat muito antigo', async () => {
-      const user = makeUser({ papel: Papel.PSICOLOGO, tokensValidosApartirDe: null });
+      const user = makeUser({ papel: Papel.ENFERMEIRO, tokensValidosApartirDe: null });
       const { service, jwtService } = makeService(user);
       (jwtService.verifyAsync as jest.Mock).mockResolvedValueOnce({
         typ: 'refresh',
@@ -562,14 +562,14 @@ describe('AuthService — visibilidade e isolamento da revogação de sessão (F
     jti: 'access-jti',
     sub: 'u1',
     email: 'fulana@nuvita.test',
-    papel: Papel.PSICOLOGO,
+    papel: Papel.ENFERMEIRO,
   };
   const cutoff = new Date('2026-09-12T10:00:00.000Z');
   const cutoffEpoch = Math.floor(cutoff.getTime() / 1000);
 
   describe('independência entre a checagem de jti (Redis) e a de tokensValidosApartirDe (Mongo)', () => {
     it('jti revogado rejeita mesmo com token fresco e sem tokensValidosApartirDe setado', async () => {
-      const user = makeUser({ papel: Papel.PSICOLOGO, tokensValidosApartirDe: undefined });
+      const user = makeUser({ papel: Papel.ENFERMEIRO, tokensValidosApartirDe: undefined });
       const { service, tokenRevocation } = makeService(user);
       (tokenRevocation.isRevoked as jest.Mock).mockResolvedValueOnce(true);
 
@@ -579,7 +579,7 @@ describe('AuthService — visibilidade e isolamento da revogação de sessão (F
     });
 
     it('token stale rejeita mesmo com jti não revogado', async () => {
-      const user = makeUser({ papel: Papel.PSICOLOGO, tokensValidosApartirDe: cutoff });
+      const user = makeUser({ papel: Papel.ENFERMEIRO, tokensValidosApartirDe: cutoff });
       const { service, tokenRevocation } = makeService(user);
       (tokenRevocation.isRevoked as jest.Mock).mockResolvedValueOnce(false);
 
@@ -589,7 +589,7 @@ describe('AuthService — visibilidade e isolamento da revogação de sessão (F
     });
 
     it('nenhum dos dois mecanismos mascara o outro: quando ambos passam, o token é aceito', async () => {
-      const user = makeUser({ papel: Papel.PSICOLOGO, tokensValidosApartirDe: cutoff });
+      const user = makeUser({ papel: Papel.ENFERMEIRO, tokensValidosApartirDe: cutoff });
       const { service, tokenRevocation } = makeService(user);
       (tokenRevocation.isRevoked as jest.Mock).mockResolvedValueOnce(false);
 
@@ -613,7 +613,7 @@ describe('AuthService — visibilidade e isolamento da revogação de sessão (F
     const payloadsOf = (spy: jest.SpyInstance) => spy.mock.calls.map((c) => JSON.parse(c[0] as string));
 
     it('emite token_rejected_stale_session ao rejeitar access token stale', async () => {
-      const user = makeUser({ papel: Papel.PSICOLOGO, tokensValidosApartirDe: cutoff });
+      const user = makeUser({ papel: Papel.ENFERMEIRO, tokensValidosApartirDe: cutoff });
       const { service } = makeService(user);
 
       await expect(
@@ -633,7 +633,7 @@ describe('AuthService — visibilidade e isolamento da revogação de sessão (F
     });
 
     it('emite token_rejected_stale_session ao rejeitar refresh token stale', async () => {
-      const user = makeUser({ papel: Papel.PSICOLOGO, tokensValidosApartirDe: cutoff });
+      const user = makeUser({ papel: Papel.ENFERMEIRO, tokensValidosApartirDe: cutoff });
       const { service, jwtService } = makeService(user);
       (jwtService.verifyAsync as jest.Mock).mockResolvedValueOnce({
         typ: 'refresh',
@@ -659,7 +659,7 @@ describe('AuthService — visibilidade e isolamento da revogação de sessão (F
     });
 
     it('rejeição por jti revogado NÃO emite token_rejected_stale_session (evento distinto por causa)', async () => {
-      const user = makeUser({ papel: Papel.PSICOLOGO, tokensValidosApartirDe: undefined });
+      const user = makeUser({ papel: Papel.ENFERMEIRO, tokensValidosApartirDe: undefined });
       const { service, tokenRevocation } = makeService(user);
       (tokenRevocation.isRevoked as jest.Mock).mockResolvedValueOnce(true);
 
@@ -692,7 +692,7 @@ describe('AuthService.aceitarTermos — fase de teste (C3, 2026-10-15)', () => {
   });
 
   it('usuário fora do teste NÃO aceita o Termo de Teste', async () => {
-    const { service } = makeService(makeUser({ papel: Papel.PSICOLOGO, termosAceitos: null, faseTeste: false }));
+    const { service } = makeService(makeUser({ papel: Papel.ENFERMEIRO, termosAceitos: null, faseTeste: false }));
     await expect(service.aceitarTermos('u1', TERMO_DE_TESTE_VERSAO_ATUAL, context)).rejects.toThrow(BadRequestException);
   });
 });

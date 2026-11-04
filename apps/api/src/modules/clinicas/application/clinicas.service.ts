@@ -194,8 +194,8 @@ export class ClinicasService {
       throw new ForbiddenException('Admin so pode criar usuarios da propria clinica.');
     }
 
-    if (![Papel.PSICOLOGO, Papel.SECRETARIA].includes(dto.papel)) {
-      throw new ForbiddenException('Admin da clinica so pode criar PSICOLOGO ou SECRETARIA.');
+    if (![Papel.ENFERMEIRO, Papel.SECRETARIA].includes(dto.papel)) {
+      throw new ForbiddenException('Admin da clinica so pode criar ENFERMEIRO ou SECRETARIA.');
     }
 
     const clinica = await this.clinicas.findById(adminClinicaId);
@@ -217,8 +217,8 @@ export class ClinicasService {
       papel: dto.papel,
       clinicaId: adminClinicaId,
       twoFactorSecret: twoFactorSetup?.base32,
-      // O CRP informado na criação do PSICÓLOGO é o do perfil (fonte única do carimbo no prontuário).
-      ...(dto.papel === Papel.PSICOLOGO && dto.crp?.trim() ? { crp: dto.crp.trim() } : {}),
+      // O COREN informado na criação do ENFERMEIRO é o do perfil (fonte única do carimbo no prontuário).
+      ...(dto.papel === Papel.ENFERMEIRO && dto.coren?.trim() ? { coren: dto.coren.trim() } : {}),
       // A senha é gerada e repassada por fora (WhatsApp): TODO papel nasce com troca obrigatória.
       deveTrocarSenha: true,
       // Usuário de clínica em teste beta aceita o Termo de Teste, como o ADMIN dela.
@@ -238,8 +238,8 @@ export class ClinicasService {
         createdUserId: user.id,
         createdUserEmail: user.email,
         createdUserPapel: user.papel,
-        // O CRP costuma nascer vazio (o psicólogo o preenche depois): null explícito, não chave ausente.
-        createdUserCrp: user.crp ?? null,
+        // O COREN costuma nascer vazio (o enfermeiro o preenche depois): null explícito, não chave ausente.
+        createdUserCoren: user.coren ?? null,
       },
     });
 
@@ -268,7 +268,7 @@ export class ClinicasService {
   }
 
   /**
-   * Primeiro uso: a psicóloga informa o documento do PRÓPRIO consultório, uma única vez. O tenant vem só do token.
+   * Primeiro uso: a enfermeira informa o documento do PRÓPRIO consultório, uma única vez. O tenant vem só do token.
    * A trava é o filtro do update (atômico); depois só o super-admin corrige. A auditoria leva só o valor mascarado.
    */
   async preencherDocumento(dto: PreencherDocumentoDto, context: ClinicAdminContext): Promise<MinhaClinica> {

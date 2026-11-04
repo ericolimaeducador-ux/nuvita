@@ -29,7 +29,7 @@ describe('CreateProntuarioDto — formulario', () => {
 const context = {
   ip: '127.0.0.1',
   userAgent: 'jest',
-  user: { sub: 'psi-1', email: 'p@x.test', papel: Papel.PSICOLOGO, clinicaId: ids.clinicaId, jti: 'j', typ: 'access' as const },
+  user: { sub: 'psi-1', email: 'p@x.test', papel: Papel.ENFERMEIRO, clinicaId: ids.clinicaId, jti: 'j', typ: 'access' as const },
 };
 
 describe('ProntuariosService — grava e assina o formulário usado', () => {
@@ -70,7 +70,7 @@ describe('ProntuariosService — grava e assina o formulário usado', () => {
           { create: jest.fn().mockResolvedValue(undefined) } as never,
           { getConfig: () => ({ prontuarioSignatureSecret: 's' }) } as never,
           { conclude: jest.fn() } as never,
-          { findById: jest.fn().mockResolvedValue({ id: 'psi-1', crp: 'CRP 06/1' }) } as never,
+          { findById: jest.fn().mockResolvedValue({ id: 'psi-1', coren: 'COREN 06/1' }) } as never,
         );
         await service.sign('pr-1', undefined, context);
         return sign.mock.calls[0][2].hash as string;

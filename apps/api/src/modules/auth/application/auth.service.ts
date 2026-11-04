@@ -210,7 +210,7 @@ export class AuthService {
   }
 
   /**
-   * Registra o aceite dos Termos de Uso do PSICOLOGO (feature-terms-of-service-acceptance).
+   * Registra o aceite dos Termos de Uso do ENFERMEIRO (feature-terms-of-service-acceptance).
    * Em clínica na fase de teste, o termo aceito é o Termo de Teste (versaoTermosExigida).
    * Endpoint isento do gate (@GateExempt), senão o usuário travaria: não pode
    * aceitar porque aceitar está bloqueado pelo próprio gate de termos.
@@ -276,31 +276,31 @@ export class AuthService {
   }
 
   /**
-   * O profissional preenche o PRÓPRIO CRP uma única vez (feature-timbre-clinico-dinamico). Depois de
+   * O profissional preenche o PRÓPRIO COREN uma única vez (feature-timbre-clinico-dinamico). Depois de
    * preenchido fica travado (409): a correção é só do super-admin, também auditada. O id vem do token,
-   * nunca do corpo. Formato do CRP não validado — confirmar em fonte do CFP.
+   * nunca do corpo. TODO(legal): formato do COREN não validado — confirmar em fonte oficial.
    */
-  async atualizarMeuCrp(userId: string, crp: string, context: RequestContext): Promise<{ user: PublicUser }> {
+  async atualizarMeuCoren(userId: string, coren: string, context: RequestContext): Promise<{ user: PublicUser }> {
     const user = await this.users.findById(userId);
     if (!user || !user.ativo) {
       throw new UnauthorizedException('Usuario inativo ou inexistente.');
     }
-    if (user.crp) {
-      throw new ConflictException('CRP já definido; correção só pelo administrador.');
+    if (user.coren) {
+      throw new ConflictException('COREN já definido; correção só pelo administrador.');
     }
 
-    const updated = await this.users.update(userId, { crp });
+    const updated = await this.users.update(userId, { coren });
     if (!updated) {
       throw new UnauthorizedException('Usuario inativo ou inexistente.');
     }
 
     await this.auditLogs.create({
-      event: AuditEvent.USER_CRP_SET,
+      event: AuditEvent.USER_COREN_SET,
       userId,
       email: user.email,
       ip: context.ip,
       userAgent: context.userAgent,
-      metadata: { crpNovo: crp },
+      metadata: { corenNovo: coren },
     });
 
     return { user: toPublicUser(updated) };

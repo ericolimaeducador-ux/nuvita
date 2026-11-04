@@ -54,7 +54,7 @@ export class FinanceiroService {
       agendamentoId: query.agendamentoId,
       tipo: query.tipo,
       status: query.status,
-      // O caixa do psicólogo autônomo é dele: não entra no financeiro da clínica.
+      // O caixa do enfermeiro autônomo é dele: não entra no financeiro da clínica.
       origem: OrigemLancamento.GERAL,
       dataInicio: query.dataInicio ? new Date(query.dataInicio) : undefined,
       dataFim: query.dataFim ? new Date(query.dataFim) : undefined,

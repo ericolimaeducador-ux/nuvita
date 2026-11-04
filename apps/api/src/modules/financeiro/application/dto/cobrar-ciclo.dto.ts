@@ -29,7 +29,7 @@ export class CobrarCicloDto {
   @IsString()
   observacoes?: string;
 
-  /** Só admin/super-admin: cobra em nome de um psicólogo. */
+  /** Só admin/super-admin: cobra em nome de um enfermeiro. */
   @IsOptional()
   @IsMongoId()
   profissionalId?: string;

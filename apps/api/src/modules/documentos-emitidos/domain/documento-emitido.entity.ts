@@ -24,7 +24,7 @@ export interface DocumentoEmitidoView {
   titulo: string;
   corpo: string;
   atendimento: { data: string; horaInicio: string; horaFim: string };
-  emissor: { nome: string; crp?: string };
+  emissor: { nome: string; coren?: string };
   clinica: { nome: string };
   emitidoEm: string;
 }

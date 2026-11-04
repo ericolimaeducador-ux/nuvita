@@ -3,7 +3,7 @@
 export enum Papel {
   SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
-  PSICOLOGO = 'PSICOLOGO',
+  ENFERMEIRO = 'ENFERMEIRO',
   SECRETARIA = 'SECRETARIA',
   PACIENTE = 'PACIENTE',
 }
@@ -11,14 +11,14 @@ export enum Papel {
 export const PAPEL_LABEL: Record<Papel, string> = {
   [Papel.SUPER_ADMIN]: 'Super Admin',
   [Papel.ADMIN]: 'Administrador',
-  [Papel.PSICOLOGO]: 'Psicólogo(a)',
+  [Papel.ENFERMEIRO]: 'Enfermeiro(a)',
   [Papel.SECRETARIA]: 'Secretaria',
   [Papel.PACIENTE]: 'Paciente',
 };
 
 // Papéis profissionais que prestam atendimento (paridade de permissões clínicas).
 export const PAPEIS_PROFISSIONAIS: Papel[] = [
-  Papel.PSICOLOGO,
+  Papel.ENFERMEIRO,
 ];
 
 export enum ModalidadeAtendimento {
@@ -44,7 +44,7 @@ export const SEXO_LABEL: Record<Sexo, string> = {
 };
 
 // Classificação interna do paciente. Hoje só existe o Projeto PSI
-// (atendimento psicológico) — visibilidade restrita ao papel PSICOLOGO.
+// (atendimento psicológico) — visibilidade restrita ao papel ENFERMEIRO.
 export enum ProjetoPaciente {
   PSI = 'PSI',
 }
@@ -168,15 +168,15 @@ const M = Modulo;
 export const PERMISSOES_PADRAO_POR_PAPEL: Record<Papel, Modulo[]> = {
   [Papel.SUPER_ADMIN]: TODOS_MODULOS,
   [Papel.ADMIN]: [
-    // Sem PRONTUARIOS: dado clínico é do psicólogo (a API nega o prontuário ao admin).
+    // Sem PRONTUARIOS: dado clínico é do enfermeiro (a API nega o prontuário ao admin).
     M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS,
     M.NOTIFICACOES, M.TELEMEDICINA, M.ANALYTICS, M.CLINICA,
   ],
-  // Atendimento psicológico é um extra: só o psicólogo enxerga por padrão;
+  // Atendimento psicológico é um extra: só o enfermeiro enxerga por padrão;
   // outros usuários ganham por concessão individual no painel super-admin.
   // O financeiro da psicologia é o único financeiro do produto — é o caixa
-  // do próprio psicólogo (autônomo), por ciclo de sessões.
-  [Papel.PSICOLOGO]: [
+  // do próprio enfermeiro (autônomo), por ciclo de sessões.
+  [Papel.ENFERMEIRO]: [
     M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS, M.TELEMEDICINA,
     M.ATENDIMENTO_PSICOLOGICO, M.FINANCEIRO_PSICOLOGIA, M.ANALYTICS,
   ],
@@ -221,8 +221,8 @@ export interface AuthUser {
   clinicaId?: string;
   /** Registro do conselho (CRM/COREN/OAB) — usado p/ preencher documentos. Ausente em sessões antigas. */
   registroProfissional?: string;
-  /** CRP do psicólogo (assinatura dos documentos clínicos). Preenchido uma vez pelo próprio; ausente = sem CRP. */
-  crp?: string;
+  /** COREN do enfermeiro (assinatura dos documentos clínicos). Preenchido uma vez pelo próprio; ausente = sem COREN. */
+  coren?: string;
   /** Permissões efetivas calculadas pela API; ausente em sessões antigas. */
   permissoes?: Modulo[];
   /** Troca de senha obrigatória no próximo login (feature-forced-password-change). Ausente em sessões antigas. */
@@ -235,7 +235,7 @@ export interface AuthUser {
 
 /** Rótulo do registro profissional conforme o papel (CRM/COREN/OAB). */
 export const REGISTRO_LABEL: Partial<Record<Papel, string>> = {
-  [Papel.PSICOLOGO]: 'CRP',
+  [Papel.ENFERMEIRO]: 'COREN',
 };
 export function registroLabel(papel?: Papel): string {
   return (papel && REGISTRO_LABEL[papel]) || 'Registro profissional';
@@ -317,7 +317,7 @@ export interface DocumentoEmitido {
   titulo: string;
   corpo: string;
   atendimento: { data: string; horaInicio: string; horaFim: string };
-  emissor: { nome: string; crp?: string };
+  emissor: { nome: string; coren?: string };
   clinica: { nome: string };
   emitidoEm: string;
 }
@@ -400,8 +400,8 @@ export interface AssinaturaProntuario {
   medicoId: string;
   dataAssinatura: string;
   hash?: string;
-  /** CRP do perfil carimbado pelo servidor ao assinar. Ausente nos registros anteriores. */
-  crp?: string;
+  /** COREN do perfil carimbado pelo servidor ao assinar. Ausente nos registros anteriores. */
+  coren?: string;
 }
 
 /** Registro de atendimento psicológico / psicoterapia (Res. CFP 006/2019). */
@@ -425,7 +425,7 @@ export interface RegistroPsicologico {
   evolucao?: string;
   encaminhamentos?: string;
   anotacoesLivres?: string;
-  crp?: string;
+  coren?: string;
 
   // Campos específicos por linha terapêutica (ver LinhaTerapeutica) —
   // preenchidos condicionalmente conforme a classificação do paciente,
@@ -471,7 +471,7 @@ export const REGISTRO_PSICOLOGICO_CAMPOS: Array<[keyof RegistroPsicologico, stri
   ['evolucao', 'Evolução'],
   ['encaminhamentos', 'Encaminhamentos'],
   ['anotacoesLivres', 'Anotações livres'],
-  ['crp', 'CRP'],
+  ['coren', 'COREN'],
   ['tccPensamentosAutomaticos', 'Pensamentos automáticos identificados'],
   ['tccDistorcoesCognitivas', 'Distorções cognitivas trabalhadas'],
   ['tccTarefaCasa', 'Tarefa de casa (exercício comportamental)'],
@@ -629,7 +629,7 @@ export interface DashboardFinanceiro {
   porFormaPagamento: Array<{ forma: string; total: number; quantidade: number }>;
 }
 
-// ---------- Financeiro da psicologia (psicólogo autônomo) ----------
+// ---------- Financeiro da psicologia (enfermeiro autônomo) ----------
 
 /** O acompanhamento é vendido em pacotes fechados de sessões, pagos adiantado. */
 export const SESSOES_POR_CICLO = 4;

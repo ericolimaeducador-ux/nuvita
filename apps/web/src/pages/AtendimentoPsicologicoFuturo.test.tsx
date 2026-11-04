@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 const mocks = vi.hoisted(() => ({ agendaList: vi.fn(), painel: vi.fn(), prontuariosList: vi.fn(), pacientesList: vi.fn() }));
 
 vi.mock('@/auth/AuthContext', () => ({
-  useAuth: () => ({ user: { id: 'u1', clinicaId: 'c1', papel: 'PSICOLOGO', nome: 'Psi Teste' } }),
+  useAuth: () => ({ user: { id: 'u1', clinicaId: 'c1', papel: 'ENFERMEIRO', nome: 'Psi Teste' } }),
 }));
 vi.mock('@/api/resources', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/api/resources')>();

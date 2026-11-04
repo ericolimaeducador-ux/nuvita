@@ -18,7 +18,7 @@ const ctxDe = (papel: Papel, sub = 'psi-1') => ({
   user: { sub, email: `${sub}@x.test`, papel, clinicaId: 'cli-1', nome: 'Dra. Ana Souza', jti: 'j', typ: 'access' as const },
 });
 
-function criar(over: { ag?: unknown; paciente?: boolean; crp?: string | undefined } = {}) {
+function criar(over: { ag?: unknown; paciente?: boolean; coren?: string | undefined } = {}) {
   const documentos = {
     create: jest.fn(async (input: Record<string, unknown>) => ({ id: 'doc-1', ...input })),
   };
@@ -33,7 +33,7 @@ function criar(over: { ag?: unknown; paciente?: boolean; crp?: string | undefine
     resumoPorIds: jest.fn().mockResolvedValue(over.paciente === false ? new Map() : new Map([['pac-1', { nome: 'Paciente Fictício' }]])),
   };
   const clinicas = { contextoDeEmissao: jest.fn().mockResolvedValue({ nome: 'Clínica Mente Sã', fusoHorario: 'America/Sao_Paulo' }), assertDocumentoInformado: jest.fn().mockResolvedValue(undefined) };
-  const users = { findById: jest.fn().mockResolvedValue({ id: 'psi-1', crp: 'crp' in over ? over.crp : '06/12345' }) };
+  const users = { findById: jest.fn().mockResolvedValue({ id: 'psi-1', coren: 'coren' in over ? over.coren : '06/12345' }) };
   const service = new DocumentosEmitidosService(
     documentos as never, auditLogs as never, agendamentos as never, pacientes as never, clinicas as never, users as never,
   );
@@ -51,7 +51,7 @@ describe('DocumentosEmitidosService – declaração de comparecimento', () => {
     expect(doc.atendimento).toEqual({ data: '20/10/2026', horaInicio: '14:00', horaFim: '15:00' });
   });
 
-  it('assina por quem emite, sem CRP; devolve protocolo e nome da clínica', async () => {
+  it('assina por quem emite, sem COREN; devolve protocolo e nome da clínica', async () => {
     const { service } = criar();
     const doc = await service.emitirDeclaracao(dto, ctxDe(Papel.SECRETARIA, 'sec-1'));
     expect(doc.emissor).toEqual({ nome: 'Dra. Ana Souza' });
@@ -106,31 +106,31 @@ describe('DocumentosEmitidosService – declaração de comparecimento', () => {
 });
 
 describe('DocumentosEmitidosService – atestado de comparecimento (clínico)', () => {
-  it('texto clínico com data/hora da agenda; assina com nome e CRP', async () => {
+  it('texto clínico com data/hora da agenda; assina com nome e COREN', async () => {
     const { service } = criar();
-    const doc = await service.emitirAtestado(dto, ctxDe(Papel.PSICOLOGO));
+    const doc = await service.emitirAtestado(dto, ctxDe(Papel.ENFERMEIRO));
     expect(doc.corpo).toBe('Atesto para os devidos fins que Paciente Fictício compareceu a atendimento psicológico em 20/10/2026, às 14:00.');
-    expect(doc.emissor).toEqual({ nome: 'Dra. Ana Souza', crp: '06/12345' });
+    expect(doc.emissor).toEqual({ nome: 'Dra. Ana Souza', coren: '06/12345' });
   });
 
-  it('só psicólogo emite; sem CRP cadastrado → 422', async () => {
+  it('só enfermeiro emite; sem COREN cadastrado → 422', async () => {
     await expect(criar().service.emitirAtestado(dto, ctxDe(Papel.SECRETARIA, 'sec-1'))).rejects.toThrow(ForbiddenException);
-    const semCrp = criar({ crp: undefined });
-    await expect(semCrp.service.emitirAtestado(dto, ctxDe(Papel.PSICOLOGO))).rejects.toThrow(UnprocessableEntityException);
-    expect(semCrp.documentos.create).not.toHaveBeenCalled();
+    const semCoren = criar({ coren: undefined });
+    await expect(semCoren.service.emitirAtestado(dto, ctxDe(Papel.ENFERMEIRO))).rejects.toThrow(UnprocessableEntityException);
+    expect(semCoren.documentos.create).not.toHaveBeenCalled();
   });
 
   it('mesma regra da agenda: não concluído → 422; a posse é conferida pelo agendamento', async () => {
     const naoConcluido = criar({ ag: agendamento({ status: StatusAgendamento.AGENDADO }) });
-    await expect(naoConcluido.service.emitirAtestado(dto, ctxDe(Papel.PSICOLOGO))).rejects.toThrow(UnprocessableEntityException);
+    await expect(naoConcluido.service.emitirAtestado(dto, ctxDe(Papel.ENFERMEIRO))).rejects.toThrow(UnprocessableEntityException);
     const { service, agendamentos } = criar();
-    await service.emitirAtestado(dto, ctxDe(Papel.PSICOLOGO));
-    expect(agendamentos.obterParaEmissao).toHaveBeenCalledWith('cli-1', 'ag-1', expect.objectContaining({ papel: Papel.PSICOLOGO }));
+    await service.emitirAtestado(dto, ctxDe(Papel.ENFERMEIRO));
+    expect(agendamentos.obterParaEmissao).toHaveBeenCalledWith('cli-1', 'ag-1', expect.objectContaining({ papel: Papel.ENFERMEIRO }));
   });
 
   it('registra a emissão como ATESTADO_COMPARECIMENTO', async () => {
     const { service, documentos } = criar();
-    await service.emitirAtestado(dto, ctxDe(Papel.PSICOLOGO));
+    await service.emitirAtestado(dto, ctxDe(Papel.ENFERMEIRO));
     expect(documentos.create).toHaveBeenCalledWith(expect.objectContaining({ tipo: 'ATESTADO_COMPARECIMENTO', emitidoPor: 'psi-1' }));
   });
 });

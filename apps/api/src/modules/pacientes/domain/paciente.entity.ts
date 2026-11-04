@@ -6,7 +6,7 @@ export enum Sexo {
 }
 
 // Classificação interna do paciente. Hoje só existe o Projeto PSI
-// (atendimento psicológico) — visibilidade restrita ao papel PSICOLOGO (ver
+// (atendimento psicológico) — visibilidade restrita ao papel ENFERMEIRO (ver
 // PacientesService.list/findOne).
 export enum ProjetoPaciente {
   PSI = 'PSI',

@@ -12,7 +12,7 @@ describe('AuthTokenPayload — iat (Fase 2b)', () => {
     const payload: AuthTokenPayload = {
       sub: 'user-1',
       email: 'user1@example.com',
-      papel: Papel.PSICOLOGO,
+      papel: Papel.ENFERMEIRO,
       jti: 'jti-1',
       typ: 'access',
       iat: 1700000000,

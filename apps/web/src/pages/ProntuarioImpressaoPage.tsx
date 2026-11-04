@@ -9,7 +9,7 @@ import { formatData, formatEndereco } from '@/utils';
 import { ErroConsulta } from '@/components/ErroConsulta';
 import { primeiraFalha } from '@/lib/consulta';
 import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
-import { GateCrpEmissao } from '@/components/GateCrpEmissao';
+import { GateCorenEmissao } from '@/components/GateCorenEmissao';
 import { GateDocumentoConsultorio } from '@/components/GateDocumentoConsultorio';
 import { useEmissor } from '@/components/DocumentoAssinatura';
 import { TipoAtendimento, TIPO_ATENDIMENTO_LABEL, REGISTRO_PSICOLOGICO_CAMPOS, type ExameSegmentar } from '@/types';
@@ -95,10 +95,10 @@ export function ProntuarioImpressaoPage() {
         .filter(([key]) => !jaListados.has(key) && textoCampo(pr?.registroPsicologico?.[key]) !== undefined)
         .map(([key]) => ({ key, label: rotuloDoCampo(key) }))
     : [];
-  // CRP da assinatura: o CARIMBADO no registro pelo servidor. Registro antigo (sem carimbo): o de quem está logado, como antes.
-  const crpCarimbado = pr?.assinado?.crp?.trim();
-  const identificacaoAssinatura = crpCarimbado
-    ? [emissor.nome, /^crp/i.test(crpCarimbado) ? crpCarimbado : `CRP ${crpCarimbado}`].filter(Boolean).join(' — ')
+  // COREN da assinatura: o CARIMBADO no registro pelo servidor. Registro antigo (sem carimbo): o de quem está logado, como antes.
+  const corenCarimbado = pr?.assinado?.coren?.trim();
+  const identificacaoAssinatura = corenCarimbado
+    ? [emissor.nome, /^coren/i.test(corenCarimbado) ? corenCarimbado : `COREN ${corenCarimbado}`].filter(Boolean).join(' — ')
     : emissor.identificacao;
   const sv = pr?.objetivo?.sinaisVitais;
   const sinais = sv
@@ -117,7 +117,7 @@ export function ProntuarioImpressaoPage() {
 
   return (
     <GateDocumentoConsultorio>
-    <GateCrpEmissao>
+    <GateCorenEmissao>
       {/* Botões só na tela, não imprimem */}
       <div className="print:hidden flex items-center gap-3 p-4 border-b border-border">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -170,7 +170,7 @@ export function ProntuarioImpressaoPage() {
               {camposDoRegistro.map(({ key, label }) => (
                 <Campo key={key} label={label}>{textoCampo(pr?.registroPsicologico?.[key]) ?? 'Não preenchido'}</Campo>
               ))}
-              {/* Nunca esconder conteúdo gravado que não está no formulário usado (ex.: CRP digitado em registro antigo). */}
+              {/* Nunca esconder conteúdo gravado que não está no formulário usado (ex.: COREN digitado em registro antigo). */}
               {camposExtras.map(({ key, label }) => (
                 <Campo key={key} label={label}>{textoCampo(pr?.registroPsicologico?.[key])}</Campo>
               ))}
@@ -267,7 +267,7 @@ export function ProntuarioImpressaoPage() {
           }
         }
       `}</style>
-    </GateCrpEmissao>
+    </GateCorenEmissao>
     </GateDocumentoConsultorio>
   );
 }

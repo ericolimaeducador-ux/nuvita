@@ -30,8 +30,8 @@ const cA = O(), cB = O(), cG = O(), cFantasma = O();
 await ins('clinicas', [{ _id: cA, nome: 'Clinica A fict' }, { _id: cB, nome: 'ZZ-TESTE Clinica B fict' }, { _id: cG, nome: 'Gerenciadora', cnpj: 'DOC-FICT' }]);
 const [uA1, uA2, uB1, uB2, uSA, uG] = [O(), O(), O(), O(), O(), O()];
 await ins('users', [
-  { _id: uA1, papel: 'ADMIN', clinicaId: s(cA) }, { _id: uA2, papel: 'PSICOLOGO', clinicaId: s(cA) },
-  { _id: uB1, papel: 'ADMIN', clinicaId: s(cB) }, { _id: uB2, papel: 'PSICOLOGO', clinicaId: s(cB) },
+  { _id: uA1, papel: 'ADMIN', clinicaId: s(cA) }, { _id: uA2, papel: 'ENFERMEIRO', clinicaId: s(cA) },
+  { _id: uB1, papel: 'ADMIN', clinicaId: s(cB) }, { _id: uB2, papel: 'ENFERMEIRO', clinicaId: s(cB) },
   { _id: uSA, papel: 'SUPER_ADMIN' }, { _id: uG, papel: 'ADMIN', clinicaId: s(cG) }]);
 await ins('pacientes', [{ clinicaId: s(cA) }, { clinicaId: cB }, { clinicaId: s(cG) }, { clinicaId: s(cFantasma) }, { clinicaId: cFantasma }]);
 await ins('agendamentos', [{ clinicaId: s(cA) }, { clinicaId: s(cA) }, { clinicaId: s(cA) }, { clinicaId: cB }, { clinicaId: cB }, { clinicaId: cB }, { clinicaId: s(cG) }]);

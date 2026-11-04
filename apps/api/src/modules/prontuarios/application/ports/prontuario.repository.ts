@@ -14,8 +14,8 @@ export interface SignProntuarioInput {
   medicoId: string;
   dataAssinatura: Date;
   hash: string;
-  /** CRP do perfil, carimbado pelo servidor. */
-  crp: string;
+  /** COREN do perfil, carimbado pelo servidor. */
+  coren: string;
 }
 
 /** Quantas sessões de um tipo o paciente já tem em prontuário, e quando foram. */

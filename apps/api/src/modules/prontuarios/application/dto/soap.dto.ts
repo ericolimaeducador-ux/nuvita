@@ -212,7 +212,7 @@ export class RegistroPsicologicoDto {
   @IsOptional() @IsString() evolucao?: string;
   @IsOptional() @IsString() encaminhamentos?: string;
   @IsOptional() @IsString() anotacoesLivres?: string;
-  // O CRP NÃO é campo do registro: o servidor carimba o do perfil (user.crp) ao assinar.
+  // O COREN NÃO é campo do registro: o servidor carimba o do perfil (user.coren) ao assinar.
 
   @IsOptional() @IsString() tccPensamentosAutomaticos?: string;
   @IsOptional() @IsString() tccDistorcoesCognitivas?: string;

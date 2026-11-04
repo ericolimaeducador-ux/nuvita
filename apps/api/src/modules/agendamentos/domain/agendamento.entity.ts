@@ -19,7 +19,7 @@ export interface Agendamento {
   id: string;
   clinicaId: string;
   pacienteId: string;
-  /** Profissional responsavel (medico ou psicologo conforme a modalidade). */
+  /** Profissional responsavel (medico ou enfermeiro conforme a modalidade). */
   medicoId: string;
   modalidade: ModalidadeAtendimento;
   dataHoraInicio: Date;

@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/auth/AuthContext', () => ({
-  useAuth: () => ({ user: { id: 'u1', clinicaId: 'c1', papel: 'PSICOLOGO', nome: 'Psi Teste' }, permissoes: [] }),
+  useAuth: () => ({ user: { id: 'u1', clinicaId: 'c1', papel: 'ENFERMEIRO', nome: 'Psi Teste' }, permissoes: [] }),
 }));
 
 vi.mock('@/api/resources', async (importOriginal) => {

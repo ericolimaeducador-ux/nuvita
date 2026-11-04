@@ -27,13 +27,13 @@ export class UpdateUserDto {
   @IsString()
   registroProfissional?: string;
 
-  /** Correção do CRP pelo super-admin (auditada). Formato do CRP não validado — confirmar em fonte do CFP. */
+  /** Correção do COREN pelo super-admin (auditada). TODO(legal): formato do COREN não validado — confirmar em fonte oficial. */
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @IsNotEmpty()
   @MaxLength(40)
-  crp?: string;
+  coren?: string;
 
   // Exceções de permissão por usuário sobre o padrão do papel.
   @IsOptional()

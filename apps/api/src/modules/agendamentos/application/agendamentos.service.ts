@@ -95,9 +95,9 @@ export class AgendamentosService {
 
   async update(id: string, dto: UpdateAgendamentoDto, clinicaId: string | undefined, context: RequestAuditContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
-    await this.assertPosseSePsicologo(resolvedClinicaId, id, context.user);
-    if (context.user.papel === Papel.PSICOLOGO && dto.medicoId && dto.medicoId !== context.user.sub) {
-      throw new ForbiddenException('Psicologo nao pode passar o agendamento para outro profissional.');
+    await this.assertPosseSeEnfermeiro(resolvedClinicaId, id, context.user);
+    if (context.user.papel === Papel.ENFERMEIRO && dto.medicoId && dto.medicoId !== context.user.sub) {
+      throw new ForbiddenException('Enfermeiro nao pode passar o agendamento para outro profissional.');
     }
 
     const anterior = await this.agendamentos.findById(resolvedClinicaId, id);
@@ -143,7 +143,7 @@ export class AgendamentosService {
 
   async cancel(id: string, dto: CancelAgendamentoDto, clinicaId: string | undefined, context: RequestAuditContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
-    // Lê antes de cancelar: a posse do psicólogo e o status anterior (vai para a auditoria).
+    // Lê antes de cancelar: a posse do enfermeiro e o status anterior (vai para a auditoria).
     const anterior = await this.agendamentos.findById(resolvedClinicaId, id);
     if (!anterior) throw new NotFoundException('Agendamento nao encontrado.');
     this.assertPosse(anterior, context.user);
@@ -169,7 +169,7 @@ export class AgendamentosService {
 
   async conclude(id: string, clinicaId: string | undefined, context: RequestAuditContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
-    await this.assertPosseSePsicologo(resolvedClinicaId, id, context.user);
+    await this.assertPosseSeEnfermeiro(resolvedClinicaId, id, context.user);
 
     const atual = await this.agendamentos.findById(resolvedClinicaId, id);
     if (!atual) throw new NotFoundException('Agendamento nao encontrado.');
@@ -227,7 +227,7 @@ export class AgendamentosService {
 
   /**
    * Leitura SILENCIOSA (sem auditar "visualizou") para o servidor montar documentos: 404 se não é da
-   * clínica; 403 se o psicólogo não é o profissional do atendimento.
+   * clínica; 403 se o enfermeiro não é o profissional do atendimento.
    */
   async obterParaEmissao(clinicaId: string, id: string, user: AuthTokenPayload): Promise<Agendamento> {
     const agendamento = await this.agendamentos.findById(clinicaId, id);
@@ -237,7 +237,7 @@ export class AgendamentosService {
   }
 
   /**
-   * Os ids do payload de criação precisam pertencer à clínica do token (D4). Para o psicólogo, o
+   * Os ids do payload de criação precisam pertencer à clínica do token (D4). Para o enfermeiro, o
    * agendamento referenciado também precisa ser dele. Chamado pelos controllers antes de criar.
    */
   async validarReferencias(
@@ -260,16 +260,16 @@ export class AgendamentosService {
     }
   }
 
-  /** Psicólogo só opera o que é dele; admin e secretária seguem com a clínica inteira. */
+  /** Enfermeiro só opera o que é dele; admin e secretária seguem com a clínica inteira. */
   private assertPosse(agendamento: Agendamento, user: AuthTokenPayload): void {
-    if (user.papel === Papel.PSICOLOGO && agendamento.medicoId !== user.sub) {
+    if (user.papel === Papel.ENFERMEIRO && agendamento.medicoId !== user.sub) {
       throw new ForbiddenException('Este agendamento pertence a outro profissional.');
     }
   }
 
-  /** Só o psicólogo precisa da leitura extra; os demais papéis seguem direto para a atualização atômica. */
-  private async assertPosseSePsicologo(clinicaId: string, id: string, user: AuthTokenPayload): Promise<void> {
-    if (user.papel === Papel.PSICOLOGO) await this.assertPossePorId(clinicaId, id, user);
+  /** Só o enfermeiro precisa da leitura extra; os demais papéis seguem direto para a atualização atômica. */
+  private async assertPosseSeEnfermeiro(clinicaId: string, id: string, user: AuthTokenPayload): Promise<void> {
+    if (user.papel === Papel.ENFERMEIRO) await this.assertPossePorId(clinicaId, id, user);
   }
 
   private async assertPossePorId(clinicaId: string, id: string, user: AuthTokenPayload): Promise<void> {
@@ -283,13 +283,13 @@ export class AgendamentosService {
   }
 
   /**
-   * O psicólogo enxerga só a própria agenda (pacientes do Projeto PSI já são
+   * O enfermeiro enxerga só a própria agenda (pacientes do Projeto PSI já são
    * isolados por profissional individualmente) — ignora qualquer `medicoId`
    * pedido na query e força o próprio id. Demais papéis mantêm a agenda
    * compartilhada da clínica (fluxo clínico passa por vários profissionais).
    */
   private resolveMedicoIdFiltro(user: AuthTokenPayload, medicoIdSolicitado?: string): string | undefined {
-    if (user.papel === Papel.PSICOLOGO) return user.sub;
+    if (user.papel === Papel.ENFERMEIRO) return user.sub;
     return medicoIdSolicitado;
   }
 

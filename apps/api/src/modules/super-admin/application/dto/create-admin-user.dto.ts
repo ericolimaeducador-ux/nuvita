@@ -24,10 +24,10 @@ export class CreateAdminUserDto {
   @IsString()
   registroProfissional?: string;
 
-  /** Obrigatório para PSICÓLOGO (não vazio; o formato do CRP ainda depende de fonte oficial do CFP). */
-  @ValidateIf((o: { papel?: Papel }) => o.papel === Papel.PSICOLOGO)
+  /** Obrigatório para ENFERMEIRO (não vazio; TODO(legal): o formato do COREN ainda depende de fonte oficial). */
+  @ValidateIf((o: { papel?: Papel }) => o.papel === Papel.ENFERMEIRO)
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
-  @IsNotEmpty({ message: 'Informe o CRP do psicólogo.' })
-  crp?: string;
+  @IsNotEmpty({ message: 'Informe o COREN do enfermeiro.' })
+  coren?: string;
 }

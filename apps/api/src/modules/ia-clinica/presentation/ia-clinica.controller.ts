@@ -14,13 +14,13 @@ import { SugerirAbordagemDto } from '../application/dto/sugerir-abordagem.dto';
 import { GerarPrescricaoDto } from '../application/dto/gerar-prescricao.dto';
 import { RegistrarDecisaoDto } from '../application/dto/registrar-decisao.dto';
 
-// Só o psicólogo aciona a IA — mesmo padrão de acesso dos documentos
+// Só o enfermeiro aciona a IA — mesmo padrão de acesso dos documentos
 // clínicos. Throttle apertado: são chamadas pagas a um provedor externo,
 // o limite é uma trava de custo/abuso, não uma questão de segurança. O guard
 // de throttling é global (APP_GUARD); aqui fica só o @Throttle que aperta.
 @Controller('ia-clinica')
 @UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
-@Roles(Papel.PSICOLOGO)
+@Roles(Papel.ENFERMEIRO)
 @Throttle({ default: { ttl: 60_000, limit: 10 } })
 export class IaClinicaController {
   constructor(private readonly service: IaClinicaService) {}

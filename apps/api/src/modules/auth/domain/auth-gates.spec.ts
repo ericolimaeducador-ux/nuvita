@@ -8,13 +8,13 @@ import { gatePendente } from './auth-gates';
 describe('gatePendente — predicado da cadeia de gates pós-login (Fase 2b)', () => {
   it('deveTrocarSenha=true => gate pendente, independente do papel', () => {
     expect(gatePendente({ papel: Papel.SECRETARIA, deveTrocarSenha: true })).toBe(true);
-    expect(gatePendente({ papel: Papel.PSICOLOGO, deveTrocarSenha: true })).toBe(true);
+    expect(gatePendente({ papel: Papel.ENFERMEIRO, deveTrocarSenha: true })).toBe(true);
     expect(gatePendente({ papel: Papel.SUPER_ADMIN, deveTrocarSenha: true })).toBe(true);
   });
 
-  it('PSICOLOGO sem termosAceitos => gate pendente', () => {
-    expect(gatePendente({ papel: Papel.PSICOLOGO, termosAceitos: null })).toBe(true);
-    expect(gatePendente({ papel: Papel.PSICOLOGO })).toBe(true);
+  it('ENFERMEIRO sem termosAceitos => gate pendente', () => {
+    expect(gatePendente({ papel: Papel.ENFERMEIRO, termosAceitos: null })).toBe(true);
+    expect(gatePendente({ papel: Papel.ENFERMEIRO })).toBe(true);
   });
 
   it('ADMIN sem termosAceitos => gate pendente (amendment 2026-09-10)', () => {
@@ -22,10 +22,10 @@ describe('gatePendente — predicado da cadeia de gates pós-login (Fase 2b)', (
     expect(gatePendente({ papel: Papel.ADMIN })).toBe(true);
   });
 
-  it('PSICOLOGO com versão de termo defasada => gate pendente', () => {
+  it('ENFERMEIRO com versão de termo defasada => gate pendente', () => {
     expect(
       gatePendente({
-        papel: Papel.PSICOLOGO,
+        papel: Papel.ENFERMEIRO,
         termosAceitos: { versao: '0.9', dataAceite: new Date('2026-01-01') },
       }),
     ).toBe(true);
@@ -40,10 +40,10 @@ describe('gatePendente — predicado da cadeia de gates pós-login (Fase 2b)', (
     ).toBe(true);
   });
 
-  it('PSICOLOGO com a versão atual aceita => nenhum gate pendente', () => {
+  it('ENFERMEIRO com a versão atual aceita => nenhum gate pendente', () => {
     expect(
       gatePendente({
-        papel: Papel.PSICOLOGO,
+        papel: Papel.ENFERMEIRO,
         deveTrocarSenha: false,
         termosAceitos: { versao: TERMOS_DE_USO_VERSAO_ATUAL, dataAceite: new Date() },
       }),
@@ -60,7 +60,7 @@ describe('gatePendente — predicado da cadeia de gates pós-login (Fase 2b)', (
     ).toBe(false);
   });
 
-  it('o gate de termos é para PSICOLOGO e ADMIN — SECRETARIA e PACIENTE nunca são barrados por termo (amendment 2026-09-10)', () => {
+  it('o gate de termos é para ENFERMEIRO e ADMIN — SECRETARIA e PACIENTE nunca são barrados por termo (amendment 2026-09-10)', () => {
     expect(gatePendente({ papel: Papel.SECRETARIA, termosAceitos: null })).toBe(false);
     expect(gatePendente({ papel: Papel.PACIENTE, termosAceitos: null })).toBe(false);
   });
@@ -83,13 +83,13 @@ describe('gatePendente — clínica em fase de teste exige o Termo de Teste (C3,
 
   it('faseTeste + só os Termos de Uso aceitos => gate pendente (precisa aceitar o Termo de Teste)', () => {
     expect(
-      gatePendente({ papel: Papel.PSICOLOGO, faseTeste: true, termosAceitos: aceite(TERMOS_DE_USO_VERSAO_ATUAL) }),
+      gatePendente({ papel: Papel.ENFERMEIRO, faseTeste: true, termosAceitos: aceite(TERMOS_DE_USO_VERSAO_ATUAL) }),
     ).toBe(true);
   });
 
   it('saiu da fase de teste com o Termo de Teste aceito => gate pendente (aceitar os Termos de Uso no lançamento)', () => {
     expect(
-      gatePendente({ papel: Papel.PSICOLOGO, faseTeste: false, termosAceitos: aceite(TERMO_DE_TESTE_VERSAO_ATUAL) }),
+      gatePendente({ papel: Papel.ENFERMEIRO, faseTeste: false, termosAceitos: aceite(TERMO_DE_TESTE_VERSAO_ATUAL) }),
     ).toBe(true);
   });
 

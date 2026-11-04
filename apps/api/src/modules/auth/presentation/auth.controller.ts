@@ -98,7 +98,7 @@ export class AuthController {
   }
 
   // Isento do gate (@GateExempt): é justamente o endpoint que resolve o gate
-  // de termos — sem a isenção, um PSICOLOGO com termos pendentes nunca
+  // de termos — sem a isenção, um ENFERMEIRO com termos pendentes nunca
   // conseguiria aceitá-los (deadlock). Ver §2.6/§9 do TDD.
   @Post('aceitar-termos')
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
@@ -133,7 +133,7 @@ export class AuthController {
     );
   }
 
-  // O profissional grava o PRÓPRIO CRP (uma vez). O id vem do token; o corpo só aceita `crp`.
+  // O profissional grava o PRÓPRIO COREN (uma vez). O id vem do token; o corpo só aceita `coren`.
   @Patch('me')
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @UseGuards(JwtAuthGuard, AuthGatesGuard)
@@ -143,7 +143,7 @@ export class AuthController {
     @CurrentUser() user: AuthTokenPayload,
     @Req() request: Request,
   ) {
-    return this.authService.atualizarMeuCrp(user.sub, dto.crp, this.contextFromRequest(request));
+    return this.authService.atualizarMeuCoren(user.sub, dto.coren, this.contextFromRequest(request));
   }
 
   private setRefreshCookie(response: Response, tokens: AuthTokens): void {

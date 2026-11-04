@@ -17,9 +17,9 @@ class AssinaturaMongo {
   @Prop({ required: true })
   hash!: string;
 
-  // CRP do perfil carimbado ao assinar; ausente nos registros anteriores.
+  // COREN do perfil carimbado ao assinar; ausente nos registros anteriores.
   @Prop()
-  crp?: string;
+  coren?: string;
 }
 
 @Schema({ collection: 'prontuarios', versionKey: false })

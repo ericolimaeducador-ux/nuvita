@@ -68,7 +68,7 @@ function montar(overrides: { repo?: Record<string, jest.Mock>; pacientes?: Recor
   return { service: apiDe(real), repo, pacientes, auditCreate };
 }
 
-const PAPEIS_ABREM = [Papel.PSICOLOGO, Papel.SECRETARIA, Papel.ADMIN];
+const PAPEIS_ABREM = [Papel.ENFERMEIRO, Papel.SECRETARIA, Papel.ADMIN];
 
 describe('TicketsService', () => {
   describe('abrir()', () => {

@@ -13,10 +13,10 @@ import { PsicologiaFinanceiroService } from '../application/psicologia-financeir
 import { CobrarCicloDto } from '../application/dto/cobrar-ciclo.dto';
 import { SalvarConfigPsicologoDto } from '../application/dto/salvar-config-psicologo.dto';
 
-/** Recebimento das consultas do psicólogo autônomo — separado do financeiro da clínica. */
+/** Recebimento das consultas do enfermeiro autônomo — separado do financeiro da clínica. */
 @Controller('financeiro/psicologia')
 @UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
-@Roles(Papel.PSICOLOGO)
+@Roles(Papel.ENFERMEIRO)
 export class PsicologiaFinanceiroController {
   constructor(private readonly service: PsicologiaFinanceiroService) {}
 

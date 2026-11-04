@@ -3,7 +3,7 @@ import { DocumentoAssinatura } from '@/components/DocumentoAssinatura';
 import { documentosEmitidosApi } from '@/api/resources';
 
 /**
- * Atestado de comparecimento (clínico, privativo do psicólogo). A data e o horário vêm de um atendimento
+ * Atestado de comparecimento (clínico, privativo do enfermeiro). A data e o horário vêm de um atendimento
  * CONCLUÍDO na agenda e o texto é montado pelo SERVIDOR; não há campo de data digitável.
  */
 export function AtestadoComparecimentoPage() {

@@ -1,9 +1,9 @@
-// Seed de DEMONSTRAÇÃO para o ensaio do manual dos psicólogos. Só roda contra Mongo LOCAL.
-// Cria (idempotente): 1 clínica, 1 psicólogo (com 2FA), 2 pacientes fictícios, 1 agendamento,
+// Seed de DEMONSTRAÇÃO para o ensaio do manual dos enfermeiros. Só roda contra Mongo LOCAL.
+// Cria (idempotente): 1 clínica, 1 enfermeiro (com 2FA), 2 pacientes fictícios, 1 agendamento,
 // 1 evolução de psicoterapia (rascunho) e 1 teste psicológico aplicado.
 // Uso (API local em http://localhost:3000, mesmo MONGODB_URI da API):
 //   MONGODB_URI=mongodb://127.0.0.1:27017/nuvita-psi node scripts/seed-manual-psicologos.mjs
-// Ao final o psicólogo fica em "primeiro acesso" (troca de senha + aceite do Termo de Teste pendentes).
+// Ao final o enfermeiro fica em "primeiro acesso" (troca de senha + aceite do Termo de Teste pendentes).
 import { MongoClient, ObjectId } from 'mongodb';
 import { createRequire } from 'module';
 
@@ -102,7 +102,7 @@ async function main() {
   }
   const clinicaId = clinica._id.toString();
 
-  // 2) Psicólogo (2FA obrigatório para este papel)
+  // 2) Enfermeiro (2FA obrigatório para este papel)
   let psi = await db.collection('users').findOne({ email: PSI_EMAIL });
   let segredo2fa;
   if (!psi) {
@@ -112,20 +112,20 @@ async function main() {
       nome: 'Psicóloga Demonstração',
       email: PSI_EMAIL,
       passwordHash: await bcrypt.hash(PSI_SENHA, 12),
-      papel: 'PSICOLOGO',
+      papel: 'ENFERMEIRO',
       clinicaId,
-      crp: 'CRP 00/00000',
-      registroProfissional: 'CRP 00/00000',
+      coren: 'COREN 00/00000',
+      registroProfissional: 'COREN 00/00000',
       '2faSecret': segredo2fa,
       ativo: true,
       faseTeste: true,
       criadoEm: agora,
     };
     await db.collection('users').insertOne(psi);
-    console.log('✓ psicólogo criado');
+    console.log('✓ enfermeiro criado');
   } else {
     segredo2fa = psi['2faSecret'];
-    console.log('= psicólogo já existe');
+    console.log('= enfermeiro já existe');
   }
   const psiId = psi._id.toString();
 
@@ -142,7 +142,7 @@ async function main() {
     totpCode: speakeasy.totp({ secret: segredo2fa, encoding: 'base32' }),
   });
   token = login.accessToken;
-  console.log('✓ login do psicólogo pela API local');
+  console.log('✓ login do enfermeiro pela API local');
 
   // 4) Pacientes fictícios
   const modelos = [
@@ -226,7 +226,7 @@ async function main() {
       agendamentoId: ag2.id,
       dataAtendimento: agora.toISOString(),
       tipo: 'psicoterapia',
-      // Desde o #62 o registro grava qual formulário foi usado; o CRP não vai no corpo (o servidor carimba o do perfil, #61).
+      // Desde o #62 o registro grava qual formulário foi usado; o COREN não vai no corpo (o servidor carimba o do perfil, #61).
       formulario: 'completo',
       registroPsicologico: {
         motivoAtendimento: 'Paciente fictício, criado para o manual. Relata cansaço e dificuldade para dormir.',
@@ -255,7 +255,7 @@ async function main() {
     console.log('= teste já existe');
   }
 
-  // 8) Devolve o psicólogo ao estado de PRIMEIRO ACESSO (troca de senha + aceite do termo pendentes)
+  // 8) Devolve o enfermeiro ao estado de PRIMEIRO ACESSO (troca de senha + aceite do termo pendentes)
   await db.collection('users').updateOne({ _id: psi._id }, { $set: { deveTrocarSenha: true }, $unset: { termosAceitos: '' } });
   await client.close();
 

@@ -46,7 +46,7 @@ const CONTROLLERS = [
   TelemedicinaController, TelemedicinaAcessoController, TestesPsicologicosController, TicketsController,
 ];
 
-const PAPEIS: Papel[] = [Papel.SUPER_ADMIN, Papel.ADMIN, Papel.PSICOLOGO, Papel.SECRETARIA, Papel.PACIENTE];
+const PAPEIS: Papel[] = [Papel.SUPER_ADMIN, Papel.ADMIN, Papel.ENFERMEIRO, Papel.SECRETARIA, Papel.PACIENTE];
 
 interface RotaDescoberta {
   chave: string;

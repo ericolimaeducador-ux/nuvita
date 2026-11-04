@@ -7,11 +7,11 @@ import { ClinicasService } from './clinicas.service';
 
 jest.mock('bcrypt', () => ({ hash: jest.fn().mockResolvedValue('hash-bcrypt') }));
 
-// feature-clinic-fiscal-document-first-use: a clínica nasce sem documento; a psicóloga informa UMA vez (gravação atômica).
+// feature-clinic-fiscal-document-first-use: a clínica nasce sem documento; a enfermeira informa UMA vez (gravação atômica).
 const CPF = '529.982.247-25';
 const ctx = (clinicaId: string | undefined = 'cli-1') => ({
   ip: '1.1.1.1', userAgent: 'jest',
-  user: { sub: 'psi-1', email: 'psi@x.test', papel: Papel.PSICOLOGO, clinicaId, jti: 'j', typ: 'access' as const },
+  user: { sub: 'psi-1', email: 'psi@x.test', papel: Papel.ENFERMEIRO, clinicaId, jti: 'j', typ: 'access' as const },
 });
 const ctxSemClinica = () => ({ ...ctx(), user: { ...ctx().user, clinicaId: undefined } });
 

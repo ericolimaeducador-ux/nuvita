@@ -51,7 +51,7 @@ function RegistroPsicologicoLeitura({ registro, formulario }: { registro: Regist
       {lista.map(({ key, label }) => (
         <Campo key={key} label={label}>{texto(registro[key]) ?? 'Não preenchido'}</Campo>
       ))}
-      {/* Conteúdo gravado fora do formulário usado (ex.: CRP digitado em registro antigo) nunca é escondido. */}
+      {/* Conteúdo gravado fora do formulário usado (ex.: COREN digitado em registro antigo) nunca é escondido. */}
       {REGISTRO_PSICOLOGICO_CAMPOS.filter(([key]) => !listados.has(key) && texto(registro[key]) !== undefined).map(([key]) => (
         <Campo key={key} label={rotuloDoCampo(key)}>{texto(registro[key])}</Campo>
       ))}

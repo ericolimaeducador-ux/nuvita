@@ -15,7 +15,7 @@ import { ClinicasController } from './clinicas.controller';
  * GET /clinicas/minha (feature-timbre-clinico-dinamico, PR 1 backend).
  * Contratos novos assumidos (não existem hoje):
  *   ClinicasService.obterMinha(user): Promise<{ nome, documento, tipoDocumento, endereco, telefone, emailContato, logoUrl }>
- *   ClinicasController.minha(user)  — @Get('minha'), JwtAuthGuard + RolesGuard(ADMIN, PSICOLOGO, SECRETARIA)
+ *   ClinicasController.minha(user)  — @Get('minha'), JwtAuthGuard + RolesGuard(ADMIN, ENFERMEIRO, SECRETARIA)
  */
 const clinica = (id: string, nome: string) => ({
   id,
@@ -35,7 +35,7 @@ const clinica = (id: string, nome: string) => ({
   criadoEm: new Date('2026-01-01T00:00:00.000Z'),
 });
 
-const userDe = (clinicaId: string | undefined, papel: Papel = Papel.PSICOLOGO) => ({
+const userDe = (clinicaId: string | undefined, papel: Papel = Papel.ENFERMEIRO) => ({
   sub: 'u1',
   email: 'u@clinica.test',
   papel,
@@ -133,9 +133,9 @@ describe('GET /clinicas/minha', () => {
       expect(guards).toEqual(expect.arrayContaining([JwtAuthGuard, TenantRequiredGuard, RolesGuard]));
     });
 
-    it('papéis liberados: ADMIN, PSICOLOGO e SECRETARIA (e só eles)', () => {
+    it('papéis liberados: ADMIN, ENFERMEIRO e SECRETARIA (e só eles)', () => {
       const roles = Reflect.getMetadata(ROLES_KEY, handler()) as Papel[];
-      expect([...roles].sort()).toEqual([Papel.ADMIN, Papel.PSICOLOGO, Papel.SECRETARIA].sort());
+      expect([...roles].sort()).toEqual([Papel.ADMIN, Papel.ENFERMEIRO, Papel.SECRETARIA].sort());
     });
 
     const roles = new RolesGuard(new Reflector());
@@ -146,7 +146,7 @@ describe('GET /clinicas/minha', () => {
         switchToHttp: () => ({ getRequest: () => ({ user: userDe('cli-A', papel) }) }),
       }) as never;
 
-    it.each([Papel.ADMIN, Papel.PSICOLOGO, Papel.SECRETARIA])('RolesGuard real libera %s', (papel) => {
+    it.each([Papel.ADMIN, Papel.ENFERMEIRO, Papel.SECRETARIA])('RolesGuard real libera %s', (papel) => {
       expect(roles.canActivate(ctx(papel))).toBe(true);
     });
 

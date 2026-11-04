@@ -92,9 +92,9 @@ export function PacienteDetailPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
-  // Psicólogo atende fora do fluxo clínico da Mais Quali Vida: só enxerga
+  // Enfermeiro atende fora do fluxo clínico da Mais Quali Vida: só enxerga
   // dados cadastrais, os próprios atendimentos (psicoterapia) e documentos.
-  const ehPsicologo = user?.papel === Papel.PSICOLOGO;
+  const ehEnfermeiro = user?.papel === Papel.ENFERMEIRO;
   const [viewProntuarioId, setViewProntuarioId] = useState<string | null>(null);
   const [novoDocOpen, setNovoDocOpen] = useState(false);
   const [docParaExcluir, setDocParaExcluir] = useState<Documento | null>(null);
@@ -113,7 +113,7 @@ export function PacienteDetailPage() {
     onError: (e) => toast.error('Erro ao excluir', apiErrorMessage(e)),
   });
   // Export LGPD: mesmos papéis autorizados no backend (GET /pacientes/:id/export): não é da secretária.
-  const podeExportar = user?.papel === Papel.PSICOLOGO || user?.papel === Papel.ADMIN;
+  const podeExportar = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN;
 
   // Direito de acesso/portabilidade (LGPD): baixa um JSON com todos os dados do
   // paciente. Antes o botão só disparava o GET e descartava a resposta (nada
@@ -279,7 +279,7 @@ export function PacienteDetailPage() {
       </Secao>
 
       {/* Declaração de comparecimento: documento administrativo (só presença, data/hora da agenda). */}
-      {(ehPsicologo || user?.papel === Papel.SECRETARIA || user?.papel === Papel.ADMIN) && (
+      {(ehEnfermeiro || user?.papel === Papel.SECRETARIA || user?.papel === Papel.ADMIN) && (
         <Secao icon={<FileSignature className="h-4 w-4" />} titulo="Declaração de comparecimento" defaultOpen={false}>
           <Button variant="outline" size="sm" onClick={() => navigate(`/pacientes/${id}/documentos/declaracao-comparecimento`)}>
             Emitir declaração de comparecimento
@@ -289,7 +289,7 @@ export function PacienteDetailPage() {
 
       {/* Documentos clínicos — emissão de atestado/laudo/encaminhamento/prescrição,
           distinto da seção "Documentos" abaixo (que é upload de arquivo). */}
-      {ehPsicologo && (
+      {ehEnfermeiro && (
         <Secao icon={<FileSignature className="h-4 w-4" />} titulo="Documentos clínicos" defaultOpen={false}>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate(`/pacientes/${id}/documentos/atestado`)}>
@@ -310,10 +310,10 @@ export function PacienteDetailPage() {
 
       {/* Testes psicológicos — placeholder: sem catálogo de testes ainda,
           nome do teste é texto livre. Estrutura pronta pra receber conteúdo depois. */}
-      {ehPsicologo && <TestesPsicologicosSecao pacienteId={id} />}
+      {ehEnfermeiro && <TestesPsicologicosSecao pacienteId={id} />}
 
-      {/* Observações gerais — campo livre p/ qualquer profissional de atendimento (fora do escopo do psicólogo) */}
-      {!ehPsicologo && <ObservacoesSecao pacienteId={id} observacoesAtuais={p.observacoes} />}
+      {/* Observações gerais — campo livre p/ qualquer profissional de atendimento (fora do escopo do enfermeiro) */}
+      {!ehEnfermeiro && <ObservacoesSecao pacienteId={id} observacoesAtuais={p.observacoes} />}
 
       {/* Documentos */}
       <Secao
@@ -366,8 +366,8 @@ export function PacienteDetailPage() {
         )}
       </Secao>
 
-      {/* Histórico de agenda — fora do escopo do psicólogo (agenda dele fica em Atendimento Psicológico) */}
-      {!ehPsicologo && (
+      {/* Histórico de agenda — fora do escopo do enfermeiro (agenda dele fica em Atendimento Psicológico) */}
+      {!ehEnfermeiro && (
         <Secao icon={<CalendarClock className="h-4 w-4" />} titulo="Histórico de agenda" contagem={agendaQ.isError ? undefined : toItems<Agendamento>(agendaQ.data as never).length} defaultOpen={false}>
           {agendaQ.isLoading ? (
             <Skeleton className="h-20 w-full" />
@@ -456,9 +456,9 @@ type EditPacienteForm = z.infer<typeof editPacienteSchema>;
 function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente; pacienteId: string }) {
   const qc = useQueryClient();
   const { user } = useAuth();
-  // Psicólogo só cuida de pacientes do Projeto PSI — trava o campo em vez de
+  // Enfermeiro só cuida de pacientes do Projeto PSI — trava o campo em vez de
   // expor o seletor (evita que o paciente suma da lista dele por engano).
-  const ehPsicologo = user?.papel === Papel.PSICOLOGO;
+  const ehEnfermeiro = user?.papel === Papel.ENFERMEIRO;
   // Nome, CPF e nascimento não se editam aqui (feature-correcao-identidade-paciente): só o
   // SUPER_ADMIN corrige, com justificativa; os demais papéis abrem um ticket.
   const ehSuperAdmin = user?.papel === Papel.SUPER_ADMIN;
@@ -476,7 +476,7 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
       cpf: p.cpf ?? '',
       dataNascimento: p.dataNascimento ? p.dataNascimento.slice(0, 10) : '',
       sexo: p.sexo ?? '',
-      projeto: ehPsicologo ? ProjetoPaciente.PSI : (p.projeto ?? ''),
+      projeto: ehEnfermeiro ? ProjetoPaciente.PSI : (p.projeto ?? ''),
       linhaTerapeutica: p.linhaTerapeutica ?? '',
       telefone: p.telefone ?? '',
       email: p.email ?? '',
@@ -630,7 +630,7 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
               </div>
             </div>
 
-            {!ehPsicologo && (
+            {!ehEnfermeiro && (
               <div className="space-y-2">
                 <Label>Projeto</Label>
                 <Select value={watch('projeto') || undefined} onValueChange={(v) => setValue('projeto', v as ProjetoPaciente)}>

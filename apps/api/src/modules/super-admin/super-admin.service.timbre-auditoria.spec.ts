@@ -11,7 +11,7 @@ jest.mock('bcrypt', () => ({ hash: jest.fn().mockResolvedValue('hash-bcrypt') })
 
 /**
  * Auditoria do timbre (feature-timbre-clinico-dinamico, PR 1):
- *  - SUPER_ADMIN corrige o CRP de um usuário (sempre permitido) → AuditLog USER_CRP_CORRECTED anterior/novo;
+ *  - SUPER_ADMIN corrige o COREN de um usuário (sempre permitido) → AuditLog USER_COREN_CORRECTED anterior/novo;
  *  - SUPER_ADMIN muda telefone/emailContato da clínica → AuditLog CLINIC_CONTACT_UPDATED antes/depois.
  * O SuperAdminService não tem repositório de auditoria próprio: a escrita passa pelo ClinicasService
  * (que já grava AuditLog), via registrarAuditoriaAdministrativa(input) — contrato novo assumido.
@@ -26,7 +26,7 @@ const usuario = (extra: Partial<User> = {}): User => ({
   nome: 'Fulano',
   email: 'fulano@clinica.test',
   passwordHash: 'x',
-  papel: Papel.PSICOLOGO,
+  papel: Papel.ENFERMEIRO,
   clinicaId: 'cli-1',
   ativo: true,
   criadoEm: new Date('2026-01-01T00:00:00.000Z'),
@@ -68,50 +68,50 @@ const updateUsuario = (s: SuperAdminService, id: string, dto: unknown, ctx: unkn
 const updateClinica = (s: SuperAdminService, id: string, dto: unknown, ctx: unknown) =>
   (s as unknown as { updateClinica(i: string, d: unknown, c: unknown): Promise<unknown> }).updateClinica(id, dto, ctx);
 
-describe('SUPER_ADMIN corrige o CRP de um usuário (auditado)', () => {
-  it('UpdateUserDto aceita crp com trim e rejeita vazio/só espaços e tamanho excessivo', async () => {
+describe('SUPER_ADMIN corrige o COREN de um usuário (auditado)', () => {
+  it('UpdateUserDto aceita coren com trim e rejeita vazio/só espaços e tamanho excessivo', async () => {
     const pipe = new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true });
     const meta = { type: 'body' as const, metatype: UpdateUserDto };
 
-    await expect(pipe.transform({ crp: '  06/777  ' }, meta)).resolves.toMatchObject({ crp: '06/777' });
-    await expect(pipe.transform({ crp: '   ' }, meta)).rejects.toBeInstanceOf(BadRequestException);
-    await expect(pipe.transform({ crp: 'x'.repeat(41) }, meta)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(pipe.transform({ coren: '  06/777  ' }, meta)).resolves.toMatchObject({ coren: '06/777' });
+    await expect(pipe.transform({ coren: '   ' }, meta)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(pipe.transform({ coren: 'x'.repeat(41) }, meta)).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('corrige o CRP já preenchido e grava USER_CRP_CORRECTED com valor anterior e novo', async () => {
-    const { service, users, clinicasService } = makeService(usuario({ crp: '06/111' } as Partial<User>));
+  it('corrige o COREN já preenchido e grava USER_COREN_CORRECTED com valor anterior e novo', async () => {
+    const { service, users, clinicasService } = makeService(usuario({ coren: '06/111' } as Partial<User>));
 
-    await updateUsuario(service, 'u1', { crp: '06/777' }, ator);
+    await updateUsuario(service, 'u1', { coren: '06/777' }, ator);
 
-    expect(users.update).toHaveBeenCalledWith('u1', expect.objectContaining({ crp: '06/777' }));
+    expect(users.update).toHaveBeenCalledWith('u1', expect.objectContaining({ coren: '06/777' }));
     expect(clinicasService.registrarAuditoriaAdministrativa).toHaveBeenCalledTimes(1);
     expect(clinicasService.registrarAuditoriaAdministrativa).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: evento('USER_CRP_CORRECTED'),
+        event: evento('USER_COREN_CORRECTED'),
         userId: 'super-1',
         ip: '203.0.113.9',
         userAgent: 'jest',
-        metadata: expect.objectContaining({ alvoUserId: 'u1', crpAnterior: '06/111', crpNovo: '06/777' }),
+        metadata: expect.objectContaining({ alvoUserId: 'u1', corenAnterior: '06/111', corenNovo: '06/777' }),
       }),
     );
   });
 
-  it('também audita quando o CRP estava vazio (anterior ausente)', async () => {
+  it('também audita quando o COREN estava vazio (anterior ausente)', async () => {
     const { service, clinicasService } = makeService(usuario());
 
-    await updateUsuario(service, 'u1', { crp: '06/777' }, ator);
+    await updateUsuario(service, 'u1', { coren: '06/777' }, ator);
 
     const [input] = clinicasService.registrarAuditoriaAdministrativa.mock.calls[0];
-    expect(input.event).toBe(evento('USER_CRP_CORRECTED'));
-    expect(input.metadata.crpNovo).toBe('06/777');
-    expect(input.metadata.crpAnterior).toBeUndefined();
+    expect(input.event).toBe(evento('USER_COREN_CORRECTED'));
+    expect(input.metadata.corenNovo).toBe('06/777');
+    expect(input.metadata.corenAnterior).toBeUndefined();
   });
 
-  it('sem crp no corpo (ou o mesmo valor), não audita CRP', async () => {
-    const { service, clinicasService } = makeService(usuario({ crp: '06/111' } as Partial<User>));
+  it('sem coren no corpo (ou o mesmo valor), não audita COREN', async () => {
+    const { service, clinicasService } = makeService(usuario({ coren: '06/111' } as Partial<User>));
 
     await updateUsuario(service, 'u1', { nome: 'Outro Nome' }, ator);
-    await updateUsuario(service, 'u1', { crp: '06/111' }, ator);
+    await updateUsuario(service, 'u1', { coren: '06/111' }, ator);
 
     expect(clinicasService.registrarAuditoriaAdministrativa).not.toHaveBeenCalled();
   });

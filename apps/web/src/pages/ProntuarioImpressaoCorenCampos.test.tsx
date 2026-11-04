@@ -3,14 +3,14 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// PR 1: a assinatura do PDF mostra o CRP CARIMBADO no registro (não o de quem está logado); um conjunto único de rótulos
+// PR 1: a assinatura do PDF mostra o COREN CARIMBADO no registro (não o de quem está logado); um conjunto único de rótulos
 // (o do formulário); a ordem do formulário; "Não preenchido" nos campos vazios do formulário usado.
 const mocks = vi.hoisted(() => ({ pacienteGet: vi.fn(), prontuariosGet: vi.fn() }));
 
 vi.mock('@/auth/AuthContext', () => ({
-  useAuth: () => ({ user: { id: 'u1', clinicaId: 'c1', papel: 'PSICOLOGO', nome: 'Psi Logada', crp: 'CRP 11/11111' } }),
+  useAuth: () => ({ user: { id: 'u1', clinicaId: 'c1', papel: 'ENFERMEIRO', nome: 'Psi Logada', coren: 'COREN 11/11111' } }),
 }));
-// Setup: consultório com CPF/CNPJ informado (sem isso a psicóloga cai no gate do documento do consultório).
+// Setup: consultório com CPF/CNPJ informado (sem isso a enfermeira cai no gate do documento do consultório).
 vi.mock('@/lib/useClinicaMinha', () => ({ useClinicaMinha: () => ({ isLoading: false, isError: false, data: { nome: 'Clínica', documento: '52998224725', tipoDocumento: 'CPF' } }) }));
 vi.mock('@/api/resources', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/api/resources')>();
@@ -27,7 +27,7 @@ const paciente = { id: 'p1', nome: 'Carla Fictícia', cpf: '12345678909', dataNa
 const registro = (over: Record<string, unknown> = {}) => ({
   id: 'r1', pacienteId: 'p1', tipo: 'psicoterapia', agendamentoId: 'a1', dataAtendimento: '2026-10-25T13:00:00.000Z',
   registroPsicologico: { anotacoesLivres: 'NOTAS-OK', tccPensamentosAutomaticos: 'RPD-OK' },
-  assinado: { medicoId: 'u1', dataAssinatura: '2026-10-26T12:00:00.000Z', hash: 'h', crp: 'CRP 06/12345' },
+  assinado: { medicoId: 'u1', dataAssinatura: '2026-10-26T12:00:00.000Z', hash: 'h', coren: 'COREN 06/12345' },
   ...over,
 });
 
@@ -44,25 +44,25 @@ function renderizar() {
 
 const texto = () => document.body.textContent ?? '';
 
-describe('Impressão do prontuário — CRP, rótulos, ordem e "Não preenchido"', () => {
+describe('Impressão do prontuário — COREN, rótulos, ordem e "Não preenchido"', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.pacienteGet.mockResolvedValue(paciente);
   });
 
-  it('a assinatura mostra o CRP CARIMBADO no registro, não o de quem está logado', async () => {
+  it('a assinatura mostra o COREN CARIMBADO no registro, não o de quem está logado', async () => {
     mocks.prontuariosGet.mockResolvedValue(registro());
     renderizar();
     await screen.findByText(/NOTAS-OK/);
-    expect(texto()).toContain('CRP 06/12345');
-    expect(texto()).not.toContain('CRP 11/11111');
+    expect(texto()).toContain('COREN 06/12345');
+    expect(texto()).not.toContain('COREN 11/11111');
   });
 
-  it('registro antigo (sem CRP carimbado): mantém o comportamento de hoje (CRP de quem está logado)', async () => {
+  it('registro antigo (sem COREN carimbado): mantém o comportamento de hoje (COREN de quem está logado)', async () => {
     mocks.prontuariosGet.mockResolvedValue(registro({ assinado: { medicoId: 'u1', dataAssinatura: '2026-10-26T12:00:00.000Z', hash: 'h' } }));
     renderizar();
     await screen.findByText(/NOTAS-OK/);
-    expect(texto()).toContain('CRP 11/11111');
+    expect(texto()).toContain('COREN 11/11111');
   });
 
   it('usa os rótulos do FORMULÁRIO (um conjunto só), não os antigos do PDF', async () => {

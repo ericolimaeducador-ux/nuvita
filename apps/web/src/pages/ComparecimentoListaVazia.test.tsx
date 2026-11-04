@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// Lista vazia de Declaração/Atestado: manda registrar a sessão em Atendimento Psicológico (o caminho que a psicóloga conhece).
+// Lista vazia de Declaração/Atestado: manda registrar a sessão em Atendimento Psicológico (o caminho que a enfermeira conhece).
 const mocks = vi.hoisted(() => ({ pacienteGet: vi.fn(), agendamentosList: vi.fn(), clinicaMinha: vi.fn() }));
 vi.mock('@/auth/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'u2', clinicaId: 'c1', papel: 'SECRETARIA', nome: 'Maria Secretária' } }),

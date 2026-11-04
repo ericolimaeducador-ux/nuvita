@@ -9,8 +9,8 @@ export interface CreateUserInput {
   clinicaId?: string | null;
   twoFactorSecret?: string;
   registroProfissional?: string;
-  /** CRP do psicólogo, informado na criação da conta (fonte única do carimbo no prontuário). */
-  crp?: string;
+  /** COREN do enfermeiro, informado na criação da conta (fonte única do carimbo no prontuário). */
+  coren?: string;
   /** true = troca de senha obrigatória no 1º login (feature-forced-password-change). */
   deveTrocarSenha?: boolean;
   /** Herdado da clínica (teste beta). */
@@ -26,7 +26,7 @@ export interface UpdateUserInput {
   passwordHash?: string;
   twoFactorSecret?: string;
   registroProfissional?: string;
-  crp?: string;
+  coren?: string;
   modulosConcedidos?: Modulo[];
   modulosRevogados?: Modulo[];
   deveTrocarSenha?: boolean;

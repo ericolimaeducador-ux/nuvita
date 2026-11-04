@@ -34,7 +34,7 @@ export function enderecoEmLinha(e?: Endereco): string | undefined {
   return partes.length ? partes.join(' · ') : undefined;
 }
 
-/** CRP presente = não vazio. Sem validar formato (sem fonte oficial do CFP). */
-export function temCrp(crp?: string | null): boolean {
-  return !!preenchido(crp);
+/** COREN presente = não vazio. Sem validar formato (sem fonte oficial (TODO(legal))). */
+export function temCoren(coren?: string | null): boolean {
+  return !!preenchido(coren);
 }

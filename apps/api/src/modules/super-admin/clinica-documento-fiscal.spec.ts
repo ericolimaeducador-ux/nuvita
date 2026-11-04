@@ -213,9 +213,9 @@ describe('(c) só SUPER_ADMIN alcança esse caminho', () => {
   const ctx = (papel: Papel) =>
     ({ switchToHttp: () => ({ getRequest: () => ({ user: { papel } }) }) }) as unknown as ExecutionContext;
 
-  it('SuperAdminGuard barra ADMIN, PSICOLOGO e SECRETARIA e libera SUPER_ADMIN', () => {
+  it('SuperAdminGuard barra ADMIN, ENFERMEIRO e SECRETARIA e libera SUPER_ADMIN', () => {
     const guard = new SuperAdminGuard();
-    for (const papel of [Papel.ADMIN, Papel.PSICOLOGO, Papel.SECRETARIA]) {
+    for (const papel of [Papel.ADMIN, Papel.ENFERMEIRO, Papel.SECRETARIA]) {
       expect(() => guard.canActivate(ctx(papel))).toThrow(ForbiddenException);
     }
     expect(guard.canActivate(ctx(Papel.SUPER_ADMIN))).toBe(true);
@@ -235,13 +235,13 @@ describe('(c) só SUPER_ADMIN alcança esse caminho', () => {
     expect(fonte).not.toMatch(/@(Patch|Put)[^]*?(documento|tipoDocumento)/);
   });
 
-  it('(i) a única outra rota que grava o documento é PATCH /clinicas/minha/documento, só para PSICOLOGO', () => {
+  it('(i) a única outra rota que grava o documento é PATCH /clinicas/minha/documento, só para ENFERMEIRO', () => {
     const { ClinicaDocumentoController } = jest.requireActual('../clinicas/presentation/clinica-documento.controller');
     expect(Reflect.getMetadata('path', ClinicaDocumentoController)).toBe('clinicas/minha');
     const rota = ClinicaDocumentoController.prototype.preencherDocumento;
     expect(Reflect.getMetadata('path', rota)).toBe('documento');
     expect(Reflect.getMetadata('method', rota)).toBe(RequestMethod.PATCH);
-    expect(Reflect.getMetadata('roles', rota)).toEqual([Papel.PSICOLOGO]);
+    expect(Reflect.getMetadata('roles', rota)).toEqual([Papel.ENFERMEIRO]);
     const fonte = readFileSync(join(__dirname, '../clinicas/presentation/clinica-documento.controller.ts'), 'utf8');
     expect((fonte.match(/@(Patch|Put|Post|Delete)\(/g) ?? []).length).toBe(1);
   });
@@ -264,7 +264,7 @@ describe('(c) só SUPER_ADMIN alcança esse caminho', () => {
       preencherDocumentoSeVazio: preencher,
     };
     const service = new ClinicasService(clinicas as never, {} as never, { create: jest.fn() } as never, { getConfig: jest.fn().mockReturnValue({}) } as never, { getSignedReadUrl: jest.fn() } as never);
-    const usuario = { sub: 'psi-1', email: 'p@x.test', papel: Papel.PSICOLOGO, clinicaId: 'cli-do-token', jti: 'j', typ: 'access' as const };
+    const usuario = { sub: 'psi-1', email: 'p@x.test', papel: Papel.ENFERMEIRO, clinicaId: 'cli-do-token', jti: 'j', typ: 'access' as const };
     await service.preencherDocumento({ tipoDocumento: TipoDocumentoFiscal.CPF, documento: '529.982.247-25' }, { ip: '1', userAgent: 'j', user: usuario });
     expect(preencher.mock.calls[0][0]).toBe('cli-do-token');
   });

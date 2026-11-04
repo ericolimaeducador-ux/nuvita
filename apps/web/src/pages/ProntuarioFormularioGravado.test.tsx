@@ -7,9 +7,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 const mocks = vi.hoisted(() => ({ pacienteGet: vi.fn(), prontuariosGet: vi.fn() }));
 
 vi.mock('@/auth/AuthContext', () => ({
-  useAuth: () => ({ user: { id: 'u1', clinicaId: 'c1', papel: 'PSICOLOGO', nome: 'Psi', crp: 'CRP 11/11111' } }),
+  useAuth: () => ({ user: { id: 'u1', clinicaId: 'c1', papel: 'ENFERMEIRO', nome: 'Psi', coren: 'COREN 11/11111' } }),
 }));
-// Setup: consultório com CPF/CNPJ informado (sem isso a psicóloga cai no gate do documento do consultório).
+// Setup: consultório com CPF/CNPJ informado (sem isso a enfermeira cai no gate do documento do consultório).
 vi.mock('@/lib/useClinicaMinha', () => ({ useClinicaMinha: () => ({ isLoading: false, isError: false, data: { nome: 'Clínica', documento: '52998224725', tipoDocumento: 'CPF' } }) }));
 vi.mock('@/api/resources', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/api/resources')>();
@@ -24,7 +24,7 @@ import { ProntuarioImpressaoPage } from './ProntuarioImpressaoPage';
 
 const registro = (over: Record<string, unknown>) => ({
   id: 'r1', pacienteId: 'p1', tipo: 'psicoterapia', agendamentoId: 'a1', dataAtendimento: '2026-10-25T13:00:00.000Z',
-  assinado: { medicoId: 'u1', dataAssinatura: '2026-10-26T12:00:00.000Z', hash: 'h', crp: 'CRP 06/12345' }, ...over,
+  assinado: { medicoId: 'u1', dataAssinatura: '2026-10-26T12:00:00.000Z', hash: 'h', coren: 'COREN 06/12345' }, ...over,
 });
 
 function renderizar() {

@@ -25,7 +25,7 @@ function criar(documentoInformado: boolean) {
     { obterParaEmissao: jest.fn().mockResolvedValue(ag) } as never,
     { resumoPorIds: jest.fn().mockResolvedValue(new Map([['pac-1', { nome: 'Paciente Fictício' }]])) } as never,
     clinicas as never,
-    { findById: jest.fn().mockResolvedValue({ id: 'psi-1', crp: '06/12345' }) } as never,
+    { findById: jest.fn().mockResolvedValue({ id: 'psi-1', coren: '06/12345' }) } as never,
   );
   return { service, documentos };
 }
@@ -38,7 +38,7 @@ describe('emissão sem o documento do consultório', () => {
   });
   it('atestado: 422 e nada é emitido', async () => {
     const { service, documentos } = criar(false);
-    await expect(service.emitirAtestado(dto, ctx(Papel.PSICOLOGO, 'psi-1'))).rejects.toThrow(new UnprocessableEntityException('Informe o CPF/CNPJ do consultório'));
+    await expect(service.emitirAtestado(dto, ctx(Papel.ENFERMEIRO, 'psi-1'))).rejects.toThrow(new UnprocessableEntityException('Informe o CPF/CNPJ do consultório'));
     expect(documentos.create).not.toHaveBeenCalled();
   });
   it('com documento informado: emite', async () => {

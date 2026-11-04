@@ -18,7 +18,7 @@ export class UserMongoRepository implements UserRepository {
       clinicaId: input.clinicaId,
       '2faSecret': input.twoFactorSecret,
       registroProfissional: input.registroProfissional,
-      crp: input.crp,
+      coren: input.coren,
       deveTrocarSenha: input.deveTrocarSenha,
       faseTeste: input.faseTeste ?? false,
       ativo: true,
@@ -70,7 +70,7 @@ export class UserMongoRepository implements UserRepository {
     if (input.passwordHash !== undefined) set['passwordHash'] = input.passwordHash;
     if (input.twoFactorSecret !== undefined) set['2faSecret'] = input.twoFactorSecret;
     if (input.registroProfissional !== undefined) set['registroProfissional'] = input.registroProfissional;
-    if (input.crp !== undefined) set['crp'] = input.crp;
+    if (input.coren !== undefined) set['coren'] = input.coren;
     if (input.modulosConcedidos !== undefined) set['modulosConcedidos'] = input.modulosConcedidos;
     if (input.modulosRevogados !== undefined) set['modulosRevogados'] = input.modulosRevogados;
     if (input.deveTrocarSenha !== undefined) set['deveTrocarSenha'] = input.deveTrocarSenha;
@@ -138,7 +138,7 @@ export class UserMongoRepository implements UserRepository {
       clinicaId: object.clinicaId,
       twoFactorSecret: object['2faSecret'],
       registroProfissional: object.registroProfissional,
-      crp: object.crp,
+      coren: object.coren,
       ativo: object.ativo,
       criadoEm: object.criadoEm,
       deveTrocarSenha: object.deveTrocarSenha ?? false,

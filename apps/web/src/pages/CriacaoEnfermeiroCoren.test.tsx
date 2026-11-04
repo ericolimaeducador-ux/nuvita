@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// A criação de PSICÓLOGO pede o CRP (só "não vazio"; formato pendente de fonte oficial do CFP).
+// A criação de ENFERMEIRO pede o COREN (só "não vazio"; TODO(legal): formato do COREN pendente de fonte oficial).
 const mocks = vi.hoisted(() => ({ criarUsuario: vi.fn(), createUsuario: vi.fn(), listClinicas: vi.fn(), listUsuarios: vi.fn() }));
 
 vi.mock('@/auth/AuthContext', () => ({
@@ -40,39 +40,39 @@ async function preencherBase() {
   return user;
 }
 
-describe('Admin da clínica — criar psicólogo exige o CRP', () => {
+describe('Admin da clínica — criar enfermeiro exige o COREN', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.criarUsuario.mockResolvedValue({ user: { nome: 'Fulana de Tal', email: 'fulana@clinica.com' } });
   });
 
-  it('psicólogo (perfil padrão): há o campo CRP', () => {
+  it('enfermeiro (perfil padrão): há o campo COREN', () => {
     renderizar();
-    expect(screen.getByLabelText(/^CRP/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^COREN/i)).toBeInTheDocument();
   });
 
-  it('sem CRP: não envia e mostra o erro', async () => {
+  it('sem COREN: não envia e mostra o erro', async () => {
     renderizar();
     const user = await preencherBase();
     await user.click(screen.getByRole('button', { name: /criar usu/i }));
-    expect(await screen.findByText(/informe o crp/i)).toBeInTheDocument();
+    expect(await screen.findByText(/informe o coren/i)).toBeInTheDocument();
     expect(mocks.criarUsuario).not.toHaveBeenCalled();
   });
 
-  it('CRP só com espaços: também não envia', async () => {
+  it('COREN só com espaços: também não envia', async () => {
     renderizar();
     const user = await preencherBase();
-    await user.type(screen.getByLabelText(/^CRP/i), '   ');
+    await user.type(screen.getByLabelText(/^COREN/i), '   ');
     await user.click(screen.getByRole('button', { name: /criar usu/i }));
     expect(mocks.criarUsuario).not.toHaveBeenCalled();
   });
 
-  it('com CRP: envia o CRP no payload', async () => {
+  it('com COREN: envia o COREN no payload', async () => {
     renderizar();
     const user = await preencherBase();
-    await user.type(screen.getByLabelText(/^CRP/i), 'CRP 06/123456');
+    await user.type(screen.getByLabelText(/^COREN/i), 'COREN 06/123456');
     await user.click(screen.getByRole('button', { name: /criar usu/i }));
     await vi.waitFor(() => expect(mocks.criarUsuario).toHaveBeenCalled());
-    expect(mocks.criarUsuario.mock.calls[0][1]).toMatchObject({ papel: 'PSICOLOGO', crp: 'CRP 06/123456' });
+    expect(mocks.criarUsuario.mock.calls[0][1]).toMatchObject({ papel: 'ENFERMEIRO', coren: 'COREN 06/123456' });
   });
 });

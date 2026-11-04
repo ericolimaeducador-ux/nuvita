@@ -229,17 +229,17 @@ export class SuperAdminService {
       clinicaId: dto.clinicaId ?? null,
       twoFactorSecret: twoFactorSetup?.base32,
       registroProfissional: dto.registroProfissional,
-      // O CRP informado na criação do PSICÓLOGO é o do perfil (fonte única do carimbo no prontuário).
-      ...(dto.papel === Papel.PSICOLOGO && dto.crp?.trim() ? { crp: dto.crp.trim() } : {}),
+      // O COREN informado na criação do ENFERMEIRO é o do perfil (fonte única do carimbo no prontuário).
+      ...(dto.papel === Papel.ENFERMEIRO && dto.coren?.trim() ? { coren: dto.coren.trim() } : {}),
       faseTeste: await this.faseTesteDaClinica(dto.clinicaId),
       // Amendment (2026-09-11) em feature-forced-password-change.md: mesma
-      // regra do ClinicasService.createUsuario() — PSICOLOGO criado aqui
+      // regra do ClinicasService.createUsuario() — ENFERMEIRO criado aqui
       // (endpoint genérico do super-admin, qualquer clínica) também nasce
       // com troca obrigatória de senha.
       deveTrocarSenha: true,
     });
 
-    // Quem criou, quando (timestamp do audit log), qual papel, qual CRP. Nunca senha nem segredo do 2FA.
+    // Quem criou, quando (timestamp do audit log), qual papel, qual COREN. Nunca senha nem segredo do 2FA.
     if (context) {
       await this.clinicasService.registrarAuditoriaAdministrativa({
         event: AuditEvent.USER_CREATED_BY_SUPER_ADMIN,
@@ -251,7 +251,7 @@ export class SuperAdminService {
           createdUserId: user.id,
           createdUserEmail: user.email,
           createdUserPapel: user.papel,
-          createdUserCrp: user.crp ?? null,
+          createdUserCoren: user.coren ?? null,
         },
       });
     }
@@ -306,14 +306,14 @@ export class SuperAdminService {
       ...(twoFactorSetup ? { twoFactorSecret: twoFactorSetup.base32 } : {}),
     });
     if (!updated) throw new NotFoundException('Usuário não encontrado.');
-    // Correção do CRP pelo super-admin: sempre permitida, sempre auditada (anterior/novo).
-    if (dto.crp !== undefined && dto.crp !== current.crp && context) {
+    // Correção do COREN pelo super-admin: sempre permitida, sempre auditada (anterior/novo).
+    if (dto.coren !== undefined && dto.coren !== current.coren && context) {
       await this.clinicasService.registrarAuditoriaAdministrativa({
-        event: AuditEvent.USER_CRP_CORRECTED,
+        event: AuditEvent.USER_COREN_CORRECTED,
         userId: context.userId,
         ip: context.ip,
         userAgent: context.userAgent,
-        metadata: { alvoUserId: id, crpAnterior: current.crp, crpNovo: dto.crp },
+        metadata: { alvoUserId: id, corenAnterior: current.coren, corenNovo: dto.coren },
       });
     }
     return { ...toPublicUser(updated), twoFactorSetup };

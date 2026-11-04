@@ -12,7 +12,7 @@ const agendamento = (over: Record<string, unknown> = {}) => ({
 });
 const ctxDe = (sub = 'psi-1') => ({
   ip: '127.0.0.1', userAgent: 'jest',
-  user: { sub, email: 'p@x.test', papel: Papel.PSICOLOGO, clinicaId: 'cli-1', jti: 'j', typ: 'access' as const },
+  user: { sub, email: 'p@x.test', papel: Papel.ENFERMEIRO, clinicaId: 'cli-1', jti: 'j', typ: 'access' as const },
 });
 
 function criar(over: { ag?: unknown | null; existente?: unknown; sessoes?: unknown[] } = {}) {
@@ -31,7 +31,7 @@ function criar(over: { ag?: unknown | null; existente?: unknown; sessoes?: unkno
   const service = new ProntuariosService(
     prontuarios as never, { autocomplete: jest.fn() } as never, { create: jest.fn() } as never,
     { getConfig: () => ({ prontuarioSignatureSecret: 's' }) } as never, agendamentos as never,
-    // Autorizado pelo usuário (2026-10-27): o serviço agora recebe o repositório de usuários (CRP do perfil ao assinar).
+    // Autorizado pelo usuário (2026-10-27): o serviço agora recebe o repositório de usuários (COREN do perfil ao assinar).
     { findById: jest.fn() } as never,
   );
   return { service, prontuarios, agendamentos };
@@ -107,7 +107,7 @@ describe('ProntuariosService.resumoAcompanhamento – fatos do laudo calculados 
     ...over,
   });
 
-  it('"desde" e total contam só sessões ANCORADAS de psicoterapia do próprio psicólogo', async () => {
+  it('"desde" e total contam só sessões ANCORADAS de psicoterapia do próprio enfermeiro', async () => {
     const { service } = criar({
       sessoes: [
         sessao('a', '2026-09-10T12:00:00Z'),

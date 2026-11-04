@@ -8,7 +8,7 @@ import { AgendamentosService } from './agendamentos.service';
 const emMin = (m: number) => new Date(Date.now() + m * 60_000);
 const ctx = {
   ip: '1.1.1.1', userAgent: 'jest',
-  user: { sub: 'psi-A', email: 'a@x.test', papel: Papel.PSICOLOGO, clinicaId: 'cli-1', jti: 'j', typ: 'access' as const },
+  user: { sub: 'psi-A', email: 'a@x.test', papel: Papel.ENFERMEIRO, clinicaId: 'cli-1', jti: 'j', typ: 'access' as const },
 };
 
 function criar(inicio: Date, fim: Date) {

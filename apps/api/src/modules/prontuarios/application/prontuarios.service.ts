@@ -104,7 +104,7 @@ export class ProntuariosService {
 
     const clinicaId = this.resolveClinicaId(context.user, query.clinicaId);
     const todos = await this.prontuarios.listByPaciente(clinicaId, query.pacienteId);
-    // Sigilo profissional: o psicólogo só vê os prontuários que são dele, mesmo do mesmo paciente.
+    // Sigilo profissional: o enfermeiro só vê os prontuários que são dele, mesmo do mesmo paciente.
     const prontuarios = todos.filter((p) => p.medicoId === context.user.sub);
 
     await this.audit(AuditEvent.MEDICAL_RECORD_LISTED, context, {
@@ -118,7 +118,7 @@ export class ProntuariosService {
 
   /**
    * Fatos que o laudo afirma a terceiros ("desde X, N sessões"), calculados aqui, só sobre sessões de
-   * psicoterapia do próprio psicólogo ANCORADAS na agenda (registros legados sem agendamento não contam) e ASSINADAS
+   * psicoterapia do próprio enfermeiro ANCORADAS na agenda (registros legados sem agendamento não contam) e ASSINADAS
    * (rascunho não conta: o laudo não pode afirmar sessão que ainda não foi fechada).
    */
   async resumoAcompanhamento(
@@ -201,19 +201,19 @@ export class ProntuariosService {
       throw new ConflictException('Prontuario ja assinado.');
     }
 
-    // Fonte única do CRP: o perfil do usuário (user.crp). O corpo do registro não carrega CRP.
+    // Fonte única do COREN: o perfil do usuário (user.coren). O corpo do registro não carrega COREN.
     const profissional = await this.users.findById(context.user.sub);
-    const crp = profissional?.crp?.trim();
-    if (!crp) {
-      throw new UnprocessableEntityException('Informe o CRP no seu perfil para assinar o prontuario.');
+    const coren = profissional?.coren?.trim();
+    if (!coren) {
+      throw new UnprocessableEntityException('Informe o COREN no seu perfil para assinar o prontuario.');
     }
 
     const dataAssinatura = new Date();
     const signed = await this.prontuarios.sign(current.clinicaId, prontuarioId, {
       medicoId: context.user.sub,
       dataAssinatura,
-      crp,
-      hash: this.signatureHash(current, context.user.sub, dataAssinatura, crp),
+      coren,
+      hash: this.signatureHash(current, context.user.sub, dataAssinatura, coren),
     });
 
     if (!signed) {
@@ -320,7 +320,7 @@ export class ProntuariosService {
     throw new BadRequestException('clinicaId e obrigatorio para esta operacao.');
   }
 
-  private signatureHash(prontuario: Prontuario, medicoId: string, dataAssinatura: Date, crp: string): string {
+  private signatureHash(prontuario: Prontuario, medicoId: string, dataAssinatura: Date, coren: string): string {
     const secret = this.configService.getConfig().prontuarioSignatureSecret;
     const payload = {
       prontuario: {
@@ -339,8 +339,8 @@ export class ProntuariosService {
         arquivos: prontuario.arquivos,
       },
       medicoId,
-      // CRP carimbado: parte do que a assinatura atesta.
-      crp,
+      // COREN carimbado: parte do que a assinatura atesta.
+      coren,
       dataAssinatura: dataAssinatura.toISOString(),
     };
 

@@ -55,17 +55,17 @@ export class DocumentosEmitidosService {
     });
   }
 
-  /** Clínica: privativa do psicólogo, assinada com nome e CRP. */
+  /** Clínica: privativa do enfermeiro, assinada com nome e COREN. */
   async emitirAtestado(dto: EmitirDocumentoDto, context: EmissaoContext): Promise<DocumentoEmitidoView> {
-    if (context.user.papel !== Papel.PSICOLOGO) {
-      throw new ForbiddenException('Somente o psicologo emite o atestado de comparecimento.');
+    if (context.user.papel !== Papel.ENFERMEIRO) {
+      throw new ForbiddenException('Somente o enfermeiro emite o atestado de comparecimento.');
     }
     const profissional = await this.users.findById(context.user.sub);
-    if (!profissional?.crp) {
-      throw new UnprocessableEntityException('Informe o CRP no seu perfil para emitir documentos clinicos.');
+    if (!profissional?.coren) {
+      throw new UnprocessableEntityException('Informe o COREN no seu perfil para emitir documentos clinicos.');
     }
     return this.emitir(TipoDocumentoEmitido.ATESTADO_COMPARECIMENTO, 'Atestado de Comparecimento', dto, context, {
-      crp: profissional.crp,
+      coren: profissional.coren,
       exige: 'inicio',
       corpo: (nome, a) =>
         `Atesto para os devidos fins que ${nome} compareceu a atendimento psicológico em ${a.data}, às ${a.horaInicio}.`,
@@ -77,14 +77,14 @@ export class DocumentosEmitidosService {
     titulo: string,
     dto: EmitirDocumentoDto,
     context: EmissaoContext,
-    modelo: { crp?: string; exige: 'inicio' | 'fim'; corpo: (nome: string, atendimento: DocumentoEmitidoView['atendimento']) => string },
+    modelo: { coren?: string; exige: 'inicio' | 'fim'; corpo: (nome: string, atendimento: DocumentoEmitidoView['atendimento']) => string },
   ): Promise<DocumentoEmitidoView> {
     const clinicaId = resolveTenantClinicaId(context.user, undefined);
 
     // O documento do consultório sai no cabeçalho: sem ele não há emissão (422).
     await this.clinicas.assertDocumentoInformado(clinicaId);
 
-    // Posse e existência: 404 para o que não é da clínica; 403 para o psicólogo que não é dono do atendimento.
+    // Posse e existência: 404 para o que não é da clínica; 403 para o enfermeiro que não é dono do atendimento.
     const agendamento = await this.agendamentos.obterParaEmissao(clinicaId, dto.agendamentoId, context.user);
     if (agendamento.pacienteId !== dto.pacienteId) {
       throw new NotFoundException('Agendamento nao encontrado.');
@@ -138,7 +138,7 @@ export class DocumentosEmitidosService {
       titulo,
       corpo: modelo.corpo(resumo.nome, atendimento),
       atendimento,
-      emissor: { nome: context.user.nome ?? context.user.email, ...(modelo.crp ? { crp: modelo.crp } : {}) },
+      emissor: { nome: context.user.nome ?? context.user.email, ...(modelo.coren ? { coren: modelo.coren } : {}) },
       clinica: { nome: clinica.nome },
       emitidoEm: emitidoEm.toISOString(),
     };

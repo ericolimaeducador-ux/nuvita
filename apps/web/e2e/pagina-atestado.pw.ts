@@ -3,7 +3,7 @@ import { test, expect, type Page } from '@playwright/test';
 // Página INTEIRA do atestado (rota real, fluxo "Gerar atestado"), não só o DocumentoTimbre.
 // Sessão e API simuladas; nada vai ao backend.
 
-const PSICOLOGO = { id: 'u1', nome: 'Dra. Ana Souza', email: 'ana@mentesa.example', papel: 'PSICOLOGO', clinicaId: 'c1', crp: '06/12345' };
+const ENFERMEIRO = { id: 'u1', nome: 'Dra. Ana Souza', email: 'ana@mentesa.example', papel: 'ENFERMEIRO', clinicaId: 'c1', coren: '06/12345' };
 
 const CLINICA_CNPJ = {
   nome: 'Clínica Mente Sã',
@@ -18,7 +18,7 @@ async function abrirAtestado(page: Page, clinica: Record<string, unknown>) {
   await page.addInitScript((u) => {
     localStorage.setItem('nuvita.accessToken', 'token-de-teste');
     localStorage.setItem('nuvita.user', JSON.stringify(u));
-  }, PSICOLOGO);
+  }, ENFERMEIRO);
   await page.route('**/clinicas/minha', (route) => route.fulfill({ json: clinica }));
   await page.route('**/pacientes/p1', (route) => route.fulfill({ json: { id: 'p1', nome: 'Paciente Fictício' } }));
   // Data/hora vêm da AGENDA (atendimento concluído) e o texto vem do SERVIDOR; a página só renderiza.
@@ -34,7 +34,7 @@ async function abrirAtestado(page: Page, clinica: Record<string, unknown>) {
         id: 'doc-1', protocolo: 'NV-ABC12345', tipo: 'ATESTADO_COMPARECIMENTO', titulo: 'Atestado de Comparecimento',
         corpo: 'Atesto para os devidos fins que Paciente Fictício compareceu a atendimento psicológico em 20/10/2026, às 14:00.',
         atendimento: { data: '20/10/2026', horaInicio: '14:00', horaFim: '15:00' },
-        emissor: { nome: 'Dra. Ana Souza', crp: '06/12345' }, clinica: { nome: 'Clínica Mente Sã' },
+        emissor: { nome: 'Dra. Ana Souza', coren: '06/12345' }, clinica: { nome: 'Clínica Mente Sã' },
         emitidoEm: '2026-10-23T12:00:00.000Z',
       },
     }),
@@ -51,7 +51,7 @@ test.describe('atestado — página inteira', () => {
     await expect(doc.locator('header')).toContainText('Clínica Mente Sã');
     await expect(doc).toContainText('Atestado de Comparecimento');
     await expect(doc).toContainText('Paciente Fictício');
-    await expect(page.getByTestId('assinatura')).toContainText('Dra. Ana Souza — CRP 06/12345');
+    await expect(page.getByTestId('assinatura')).toContainText('Dra. Ana Souza — COREN 06/12345');
     await expect(doc.locator('footer')).toContainText('Clínica Mente Sã');
   });
 

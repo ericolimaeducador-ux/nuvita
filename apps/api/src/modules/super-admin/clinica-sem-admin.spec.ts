@@ -141,15 +141,15 @@ describe('ClinicasService.onboard — sem primeiro admin', () => {
   });
 });
 
-describe('SuperAdminService.createUsuario — psicólogo com CRP em clínica sem admin', () => {
-  it('cria o PSICÓLOGO na clínica e audita USER_CREATED_BY_SUPER_ADMIN com o CRP', async () => {
+describe('SuperAdminService.createUsuario — enfermeiro com COREN em clínica sem admin', () => {
+  it('cria o ENFERMEIRO na clínica e audita USER_CREATED_BY_SUPER_ADMIN com o COREN', async () => {
     const criado = {
       id: 'psi-1',
       nome: 'Psicóloga',
       email: 'psi@clinica.test',
-      papel: Papel.PSICOLOGO,
+      papel: Papel.ENFERMEIRO,
       clinicaId: 'cli-1',
-      crp: '06/12345',
+      coren: '06/12345',
     };
     const users = {
       findByEmail: jest.fn().mockResolvedValue(null),
@@ -166,12 +166,12 @@ describe('SuperAdminService.createUsuario — psicólogo com CRP em clínica sem
     );
 
     const res = await service.createUsuario(
-      { nome: 'Psicóloga', email: 'psi@clinica.test', password: 'senhaTemp123456', papel: Papel.PSICOLOGO, clinicaId: 'cli-1', crp: '06/12345' } as never,
+      { nome: 'Psicóloga', email: 'psi@clinica.test', password: 'senhaTemp123456', papel: Papel.ENFERMEIRO, clinicaId: 'cli-1', coren: '06/12345' } as never,
       { ip: '127.0.0.1', userAgent: 'jest', userId: 'super-1' },
     );
 
     expect(users.create).toHaveBeenCalledWith(
-      expect.objectContaining({ papel: Papel.PSICOLOGO, clinicaId: 'cli-1', crp: '06/12345', deveTrocarSenha: true }),
+      expect.objectContaining({ papel: Papel.ENFERMEIRO, clinicaId: 'cli-1', coren: '06/12345', deveTrocarSenha: true }),
     );
     expect(res.id).toBe('psi-1');
     expect(registrarAuditoriaAdministrativa).toHaveBeenCalledWith(
@@ -179,7 +179,7 @@ describe('SuperAdminService.createUsuario — psicólogo com CRP em clínica sem
         event: AuditEvent.USER_CREATED_BY_SUPER_ADMIN,
         userId: 'super-1',
         clinicaId: 'cli-1',
-        metadata: expect.objectContaining({ createdUserPapel: Papel.PSICOLOGO, createdUserCrp: '06/12345' }),
+        metadata: expect.objectContaining({ createdUserPapel: Papel.ENFERMEIRO, createdUserCoren: '06/12345' }),
       }),
     );
   });

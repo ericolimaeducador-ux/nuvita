@@ -5,7 +5,7 @@
  * - a tela de aceite no frontend (espelhada em apps/web — ver Fase 4 do TDD)
  *
  * Ao publicar uma nova versão do termo (docs/legal/termos-de-uso.md), suba
- * esta string: todo PSICOLOGO passa a ser obrigado a aceitar de novo no
+ * esta string: todo ENFERMEIRO passa a ser obrigado a aceitar de novo no
  * próximo login (reaceite por versão).
  */
 export const TERMOS_DE_USO_VERSAO_ATUAL = '2.0';

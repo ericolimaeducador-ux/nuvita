@@ -2,21 +2,15 @@
  * Seed idempotente de DUAS sondas Cure Dextra (Convatec, ponta reta) na coleção `produtos`.
  * NÃO FOI EXECUTADO contra nenhum banco ao ser criado.
  *
- * Formato: igual ao dos produtos existentes (campos: codigo [número, único], nome, tipo, sexo, embalagem, projeto,
- * french, comprimentoCm, descricaoTecnica, ativo, criadoEm, atualizadoEm). Só nome, calibre, comprimento e código;
+ * Formato: igual ao dos produtos existentes (codigo [inteiro, único], nome, tipo, sexo, embalagem, projeto, french,
+ * descricaoTecnica, ativo, criadoEm, atualizadoEm). Só nome, calibre, código (+ campos obrigatórios do catálogo);
  * NENHUM dado regulatório (ANVISA, esterilização, RT, fabricante) nem ficha técnica é armazenado.
  *
- * CÓDIGO (a confirmar pelo Erico): os produtos existentes usam `codigo` numérico e único do catálogo do fabricante
- * (ex.: 72082 VaPro, 4714598 ACTICOAT). Aqui foi usado o código ICC (510795 / 510796): é numérico, único por produto
- * e vem do catálogo do fabricante. O SAP (1735396) é o MESMO nas duas sondas, então não serve como chave única.
- * Os demais códigos disponíveis ficam só neste comentário (não são gravados): 12 Fr = SAP 1735396, EAN 815947021243,
- * SIMPRO 0000352731; 14 Fr = SAP 1735396, EAN 815947021250, SIMPRO 0000352732.
+ * Valores confirmados pelo Erico: projeto "Sigma"; sexo "universal" (a ficha não traz comprimento, a sonda serve
+ * ambos os sexos); tipo "Cure Dextra"; embalagem "caixa_90" (90 unidades por caixa); código = ICC (510795 / 510796).
+ * Fora do seed (só aqui): SAP 1735396 (igual nas duas), EAN 815947021243 / 815947021250, SIMPRO 0000352731 / 0000352732.
  *
- * COMPRIMENTO: a ficha não informa. `comprimentoCm` NÃO é gravado (campo ausente). PREENCHER depois, pela tela do
- * catálogo (editar produto) — não invente.
- *
- * Campos que a ficha não trouxe e foram preenchidos com o valor neutro do catálogo (revisar): sexo = universal,
- * embalagem = standard, projeto = ALPHA (mesmo das demais linhas de sondas).
+ * COMPRIMENTO: a ficha não informa. `comprimentoCm` fica AUSENTE; o Erico preenche depois pela tela do catálogo.
  *
  * Idempotente: procura por `codigo`; se já existe, NÃO altera nada. Por padrão roda em SIMULAÇÃO (dry-run).
  *
@@ -32,13 +26,13 @@ const SONDAS = [
   { codigo: 510796, french: 14 },
 ].map(({ codigo, french }) => ({
   codigo,
-  nome: `Sonda Cure Dextra ${french}Fr Ponta Reta`,
-  tipo: 'cateter_cure_dextra',
+  nome: `Cure Dextra Universal ${french}Fr Caixa 90`,
+  tipo: 'Cure Dextra',
   sexo: 'universal',
-  embalagem: 'standard',
-  projeto: 'ALPHA',
+  embalagem: 'caixa_90',
+  projeto: 'Sigma',
   french,
-  descricaoTecnica: `Sonda Cure Dextra (Convatec), ponta reta, ${french}Fr, caixa com 90 unidades.`,
+  descricaoTecnica: `Sonda Cure Dextra, ponta reta, calibre ${french} Fr`,
 }));
 
 const apply = process.argv.includes('--apply');

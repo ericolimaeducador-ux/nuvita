@@ -25,6 +25,8 @@ const CATEGORIA_POR_TIPO_PRODUTO: Record<string, CategoriaInsumo> = {
   [TipoProduto.CATETER_VAPRO]: CategoriaInsumo.SONDA,
   [TipoProduto.CATETER_SAMTRONIC]: CategoriaInsumo.SONDA,
   [TipoProduto.COLETOR_ACTICOAT]: CategoriaInsumo.COLETOR,
+  // Linha cadastrada com o nome legível (não snake_case): mapeada explicitamente para sonda.
+  'Cure Dextra': CategoriaInsumo.SONDA,
 };
 
 // `tipo` do produto é texto livre: linha nova (ex.: cateter_cure_dextra) cai na categoria pelo prefixo; sem pista -> OUTRO.

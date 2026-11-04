@@ -945,15 +945,18 @@ export const SEXO_PRODUTO_LABEL: Record<SexoProduto, string> = {
 export enum EmbalagemProduto {
   STANDARD = 'standard',
   POCKET = 'pocket',
+  CAIXA_90 = 'caixa_90',
 }
 export const EMBALAGEM_PRODUTO_LABEL: Record<EmbalagemProduto, string> = {
   [EmbalagemProduto.STANDARD]: 'Standard',
   [EmbalagemProduto.POCKET]: 'Pocket',
+  [EmbalagemProduto.CAIXA_90]: 'Caixa com 90 unidades',
 };
 
 export enum ProjetoCatalogo {
   ALPHA = 'ALPHA',
   BETA = 'BETA',
+  SIGMA = 'Sigma',
 }
 
 export interface Produto {

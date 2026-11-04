@@ -1,20 +1,31 @@
 # Stage 3b — Catalogue: free-form product line + two Cure Dextra catheters
 
 ## Product type / line
-- `produtos.tipo` is no longer a closed enum (VaPro / Acticoat / Samtronic). It is a **string**: required, non-empty, trimmed
-  (DTO `@Transform(trim)` + `@IsString` + `@IsNotEmpty`; Mongoose `required`, `trim`, `minlength: 1`). The same rule applies to
-  the `tipo` filter of `GET /produtos`.
-- The three existing values stay valid (`TipoProduto` is kept as a list of known constants, not as a validator).
-- A new line/brand is registered by an ADMIN through the existing catalogue screen (`Tipo / linha` is now a text input with
-  suggestions) or `POST /produtos` — no code change.
-- Delivery item category: `categoriaDoTipo()` keeps the exact mapping for the known types and falls back by prefix
-  (`cateter_`/`sonda_` → sonda, `coletor_` → coletor, anything else → outro).
-- Authorization matrix: unchanged (same routes, same roles).
+- `produtos.tipo` is no longer a closed enum. It is a **string**: required, non-empty, trimmed (DTO `@Transform(trim)` +
+  `@IsString` + `@IsNotEmpty`; Mongoose `required`, `trim`, `minlength: 1`). Same rule for the `tipo` filter of `GET /produtos`.
+- The three existing values (`cateter_vapro`, `coletor_acticoat`, `cateter_samtronic`) stay valid. A new line is registered by
+  an ADMIN on the catalogue screen (`Tipo / linha` is a text input with suggestions) or `POST /produtos`.
+- Delivery item category (`categoriaDoTipo`): explicit map for the known types and for `Cure Dextra` (sonda); unknown types
+  fall back by prefix (`cateter_`/`sonda_` → sonda, `coletor_` → coletor) and otherwise "outro".
+- Enums extended for the new products: `ProjetoCatalogo.SIGMA = 'Sigma'`, `EmbalagemProduto.CAIXA_90 = 'caixa_90'`.
+- Authorization matrix: unchanged.
 
 ## Seed `scripts/seed-sondas-cure-dextra.mjs`
-- Two products (12 Fr / 14 Fr), idempotent by `codigo`, dry-run by default, writes only with `--apply`. **Not run against any DB.**
-- Stored fields only: name, gauge, code (+ the catalogue's required neutral fields). No regulatory data or datasheet.
-- `codigo` uses the ICC code (510795 / 510796): numeric and unique like the existing catalogue codes. SAP is shared by both
-  catheters, so it cannot be the unique key. **To be confirmed by the owner.**
-- `comprimentoCm` is intentionally absent (the datasheet does not state it) — to be filled in via the catalogue screen.
-- Defaults to review: `sexo=universal`, `embalagem=standard`, `projeto=ALPHA`, `tipo=cateter_cure_dextra`.
+Idempotent by `codigo`, dry-run by default, writes only with `--apply`. **Not run against any DB.**
+
+| field | 12 Fr | 14 Fr |
+|---|---|---|
+| codigo | 510795 | 510796 |
+| nome | Cure Dextra Universal 12Fr Caixa 90 | Cure Dextra Universal 14Fr Caixa 90 |
+| tipo | Cure Dextra | Cure Dextra |
+| sexo | universal | universal |
+| embalagem | caixa_90 | caixa_90 |
+| projeto | Sigma | Sigma |
+| french | 12 | 14 |
+| descricaoTecnica | Sonda Cure Dextra, ponta reta, calibre 12 Fr | Sonda Cure Dextra, ponta reta, calibre 14 Fr |
+| comprimentoCm | absent | absent |
+
+- `comprimentoCm` is **pending**: the datasheet does not state it; the owner fills it in via the catalogue screen.
+- No regulatory data or datasheet is stored. Other codes (SAP, EAN, SIMPRO) live only in the script comment.
+- Note: existing products use snake_case types (`cateter_vapro`) and the `ALPHA`/`BETA` projects; the values above were
+  explicitly confirmed by the owner instead.

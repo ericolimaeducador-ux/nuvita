@@ -5,7 +5,7 @@ import { test, expect, type Page } from '@playwright/test';
 // API simulada pelo Playwright.
 
 const ADMIN = { id: 'u1', nome: 'Admin', email: 'adm@clinica.example', papel: 'ADMIN', clinicaId: 'cli-1' };
-const PSICOLOGO = { id: 'u2', nome: 'Psi', email: 'psi@clinica.example', papel: 'PSICOLOGO', clinicaId: 'cli-1' };
+const ENFERMEIRO = { id: 'u2', nome: 'Psi', email: 'psi@clinica.example', papel: 'ENFERMEIRO', clinicaId: 'cli-1' };
 const PACIENTE = {
   id: 'p1', nome: 'Maria da Silva', cpf: '52998224725', dataNascimento: '1990-01-01T00:00:00.000Z',
   sexo: 'F', telefone: '11999990000', email: 'maria@example.com', ativo: true,
@@ -28,13 +28,13 @@ async function abrirPaciente(page: Page, user: unknown) {
 
 test.describe('Dialog de Secao recolhida (Aplicar teste)', () => {
   test('clicar em "Aplicar teste" com a seção recolhida abre o dialog', async ({ page }) => {
-    await abrirPaciente(page, PSICOLOGO);
+    await abrirPaciente(page, ENFERMEIRO);
     await page.getByRole('button', { name: 'Aplicar teste' }).click();
     await expect(page.getByRole('dialog')).toContainText('Aplicar teste psicológico');
   });
 
   test('recolher a seção com o dialog aberto não o desmonta nem perde o texto', async ({ page }) => {
-    await abrirPaciente(page, PSICOLOGO);
+    await abrirPaciente(page, ENFERMEIRO);
     await page.getByText('Testes Psicológicos').click(); // expande
     await page.getByRole('button', { name: 'Aplicar teste' }).click();
     await page.getByLabel('Resultado (opcional)').fill('escore parcial');

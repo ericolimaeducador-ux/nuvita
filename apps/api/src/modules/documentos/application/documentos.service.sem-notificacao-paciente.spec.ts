@@ -6,12 +6,12 @@ import { DocumentosService } from './documentos.service';
 /**
  * Upload de documento de prontuário é arquivo INTERNO do profissional: o paciente não tem portal, então
  * confirmar o upload NÃO notifica o paciente (nem o responsável). O template RESULTADO_DISPONIVEL e o
- * EmailSender continuam existindo para a futura feature "psicólogo envia documento ao paciente".
+ * EmailSender continuam existindo para a futura feature "enfermeiro envia documento ao paciente".
  */
 const ctx = {
   ip: '127.0.0.1',
   userAgent: 'jest',
-  user: { sub: 'user-1', email: 'psi@clinica.test', papel: Papel.PSICOLOGO, clinicaId: 'cli-1', jti: 'j1', typ: 'access' as const },
+  user: { sub: 'user-1', email: 'psi@clinica.test', papel: Papel.ENFERMEIRO, clinicaId: 'cli-1', jti: 'j1', typ: 'access' as const },
 };
 
 const documento = (mimeType: string, ext: string) => ({

@@ -11,10 +11,10 @@ export enum TipoUsoIA {
 }
 
 /**
- * Decisão humana registrada pelo psicólogo sobre uma sugestão da IA.
+ * Decisão humana registrada pelo enfermeiro sobre uma sugestão da IA.
  *
- * `ACEITA` — o psicólogo optou por usar a sugestão (o texto é copiado para o
- * campo correspondente). `DESCARTADA` — o psicólogo descartou a sugestão da
+ * `ACEITA` — o enfermeiro optou por usar a sugestão (o texto é copiado para o
+ * campo correspondente). `DESCARTADA` — o enfermeiro descartou a sugestão da
  * tela. Uma decisão por registro, imutável.
  */
 export enum DecisaoUsoIA {

@@ -36,7 +36,7 @@ describe('UpdateClinicaDto (super-admin) não regrava o sentinela nem limpa o do
     expect(await erros(UpdateClinicaDto, { tipoDocumento: 'CPF', documento: '529.982.247-25' })).toBe(0));
 });
 
-describe('PreencherDocumentoDto (psicóloga, primeiro uso) não aceita o sentinela', () => {
+describe('PreencherDocumentoDto (enfermeira, primeiro uso) não aceita o sentinela', () => {
   it('o sentinela como documento: recusa', async () =>
     expect(await erros(PreencherDocumentoDto, { tipoDocumento: 'CNPJ', documento: 'SEM-DOCUMENTO-3f2b6c1e-0000-4000-8000-000000000001' })).toBeGreaterThan(0));
   it('documento vazio: recusa', async () =>

@@ -11,7 +11,7 @@ describe('senha provisória: troca obrigatória para todos os papéis', () => {
     user: { sub: 'adm', email: 'a@x.test', papel: Papel.ADMIN, clinicaId: 'cli-1', jti: 'j', typ: 'access' as const },
   };
 
-  it.each([Papel.PSICOLOGO, Papel.SECRETARIA])('admin da clínica cria %s com deveTrocarSenha=true', async (papel) => {
+  it.each([Papel.ENFERMEIRO, Papel.SECRETARIA])('admin da clínica cria %s com deveTrocarSenha=true', async (papel) => {
     const users = {
       findByEmail: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue(usuarioCriado(papel)),
@@ -25,7 +25,7 @@ describe('senha provisória: troca obrigatória para todos os papéis', () => {
     expect(users.create).toHaveBeenCalledWith(expect.objectContaining({ deveTrocarSenha: true }));
   });
 
-  it.each([Papel.ADMIN, Papel.SECRETARIA, Papel.PSICOLOGO])('super-admin cria %s com deveTrocarSenha=true', async (papel) => {
+  it.each([Papel.ADMIN, Papel.SECRETARIA, Papel.ENFERMEIRO])('super-admin cria %s com deveTrocarSenha=true', async (papel) => {
     const users = {
       findByEmail: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue(usuarioCriado(papel)),

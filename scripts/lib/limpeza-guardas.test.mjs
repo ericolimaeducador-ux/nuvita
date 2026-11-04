@@ -9,8 +9,8 @@ const base = () => ({
   lista: lerLista({ clinicas: [C1], usuarios: [U1, U2] }),
   encontrados: {
     clinicas: [{ _id: C1, nome: 'Clinica fictícia' }],
-    usuarios: [{ _id: U1, papel: 'ADMIN', clinicaId: C1 }, { _id: U2, papel: 'PSICOLOGO', clinicaId: C1 }],
-    usuariosDasClinicas: [{ _id: U1, papel: 'ADMIN' }, { _id: U2, papel: 'PSICOLOGO' }],
+    usuarios: [{ _id: U1, papel: 'ADMIN', clinicaId: C1 }, { _id: U2, papel: 'ENFERMEIRO', clinicaId: C1 }],
+    usuariosDasClinicas: [{ _id: U1, papel: 'ADMIN' }, { _id: U2, papel: 'ENFERMEIRO' }],
   },
 });
 
@@ -44,7 +44,7 @@ test('the Gerenciadora clinic is refused', () => {
 });
 test('a user of a listed clinic that is not in the list stops the run', () => {
   const { lista, encontrados } = base();
-  encontrados.usuariosDasClinicas.push({ _id: 'eeeeeeeeeeeeeeeeeeeeeeee', papel: 'PSICOLOGO' });
+  encontrados.usuariosDasClinicas.push({ _id: 'eeeeeeeeeeeeeeeeeeeeeeee', papel: 'ENFERMEIRO' });
   assert.ok(validarLista(lista, encontrados).some((e) => e.includes('NOT in the user list')));
 });
 test('unknown clinic or user is refused', () => {

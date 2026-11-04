@@ -44,13 +44,13 @@ const M = Modulo;
 export const PERMISSOES_PADRAO_POR_PAPEL: Record<Papel, Modulo[]> = {
   [Papel.SUPER_ADMIN]: TODOS_MODULOS,
   [Papel.ADMIN]: [
-    // Sem PRONTUARIOS: dado clínico é do psicólogo (a API nega o prontuário ao admin).
+    // Sem PRONTUARIOS: dado clínico é do enfermeiro (a API nega o prontuário ao admin).
     M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS,
     M.NOTIFICACOES, M.TELEMEDICINA, M.ANALYTICS, M.CLINICA,
   ],
   // O financeiro da psicologia é o único financeiro do produto — é o caixa
-  // do próprio psicólogo (autônomo), por ciclo de sessões.
-  [Papel.PSICOLOGO]: [
+  // do próprio enfermeiro (autônomo), por ciclo de sessões.
+  [Papel.ENFERMEIRO]: [
     M.DASHBOARD, M.PACIENTES, M.AGENDA, M.DOCUMENTOS, M.TELEMEDICINA,
     M.ATENDIMENTO_PSICOLOGICO, M.FINANCEIRO_PSICOLOGIA, M.ANALYTICS,
   ],

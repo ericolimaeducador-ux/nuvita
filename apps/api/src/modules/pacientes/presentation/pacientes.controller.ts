@@ -76,7 +76,7 @@ export class PacientesController {
 
   // Export LGPD é dump completo de dados sensíveis — não abre p/ todos os profissionais.
   @Get(':id/export')
-  @Roles(Papel.PSICOLOGO, Papel.ADMIN)
+  @Roles(Papel.ENFERMEIRO, Papel.ADMIN)
   exportLgpd(
     @Param('id') pacienteId: string,
     @Query('clinicaId') clinicaId: string | undefined,

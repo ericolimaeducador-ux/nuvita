@@ -80,10 +80,10 @@ describe('SuperAdminService.criarClinica (Fase 7)', () => {
   });
 });
 
-// Amendment (2026-09-11) em feature-forced-password-change.md: PSICOLOGO
+// Amendment (2026-09-11) em feature-forced-password-change.md: ENFERMEIRO
 // criado pelo endpoint genérico do super-admin também nasce com
 // deveTrocarSenha=true — mesmo CreateUserInput, segundo ponto de chamada.
-describe('SuperAdminService.createUsuario — deveTrocarSenha para PSICOLOGO (amendment 2026-09-11)', () => {
+describe('SuperAdminService.createUsuario — deveTrocarSenha para ENFERMEIRO (amendment 2026-09-11)', () => {
   function makeCreateUsuarioService(overrides: { users?: Record<string, jest.Mock> } = {}) {
     const users = {
       findByEmail: jest.fn().mockResolvedValue(null),
@@ -91,7 +91,7 @@ describe('SuperAdminService.createUsuario — deveTrocarSenha para PSICOLOGO (am
         id: 'user-1',
         nome: 'Novo Usuário',
         email: 'novo@teste.com',
-        papel: Papel.PSICOLOGO,
+        papel: Papel.ENFERMEIRO,
         ativo: true,
       }),
       ...overrides.users,
@@ -113,10 +113,10 @@ describe('SuperAdminService.createUsuario — deveTrocarSenha para PSICOLOGO (am
     password: 'senhaGerada123',
   };
 
-  it('papel PSICOLOGO → users.create() recebe deveTrocarSenha: true', async () => {
+  it('papel ENFERMEIRO → users.create() recebe deveTrocarSenha: true', async () => {
     const { service, users } = makeCreateUsuarioService();
 
-    await service.createUsuario({ ...dtoBase, papel: Papel.PSICOLOGO } as CreateAdminUserDto);
+    await service.createUsuario({ ...dtoBase, papel: Papel.ENFERMEIRO } as CreateAdminUserDto);
 
     expect(users.create).toHaveBeenCalledWith(expect.objectContaining({ deveTrocarSenha: true }));
   });
@@ -134,9 +134,9 @@ describe('SuperAdminService — fase de teste da clínica (C3, 2026-10-15)', () 
   function montar(clinica: { id: string; faseTeste: boolean } | null) {
     const users = {
       findByEmail: jest.fn().mockResolvedValue(null),
-      findById: jest.fn().mockResolvedValue({ id: 'u1', email: 'a@b.com', papel: Papel.PSICOLOGO, clinicaId: null }),
+      findById: jest.fn().mockResolvedValue({ id: 'u1', email: 'a@b.com', papel: Papel.ENFERMEIRO, clinicaId: null }),
       create: jest.fn().mockImplementation((input) => Promise.resolve({ id: 'u2', ativo: true, ...input })),
-      update: jest.fn().mockImplementation((id, input) => Promise.resolve({ id, email: 'a@b.com', papel: Papel.PSICOLOGO, ativo: true, ...input })),
+      update: jest.fn().mockImplementation((id, input) => Promise.resolve({ id, email: 'a@b.com', papel: Papel.ENFERMEIRO, ativo: true, ...input })),
       definirFaseTesteDaClinica: jest.fn().mockResolvedValue(3),
     };
     const clinicas = {
@@ -162,7 +162,7 @@ describe('SuperAdminService — fase de teste da clínica (C3, 2026-10-15)', () 
 
   it('usuário criado numa clínica em teste herda faseTeste=true', async () => {
     const { service, users } = montar({ id: 'cli-1', faseTeste: true });
-    await service.createUsuario({ nome: 'Ana', email: 'ana@x.com', password: 'SenhaForte123', papel: Papel.PSICOLOGO, clinicaId: 'cli-1' } as never);
+    await service.createUsuario({ nome: 'Ana', email: 'ana@x.com', password: 'SenhaForte123', papel: Papel.ENFERMEIRO, clinicaId: 'cli-1' } as never);
     expect(users.create).toHaveBeenCalledWith(expect.objectContaining({ faseTeste: true }));
   });
 

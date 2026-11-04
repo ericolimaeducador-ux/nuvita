@@ -4,7 +4,7 @@ import { documentosEmitidosApi } from '@/api/resources';
 /**
  * Declaração de comparecimento: documento ADMINISTRATIVO que a secretária emite. Afirma só a PRESENÇA
  * na clínica, sem dizer que houve atendimento psicológico (isso é do atestado clínico, privativo do
- * psicólogo). O SERVIDOR monta o texto e a data/hora a partir de um atendimento concluído na agenda.
+ * enfermeiro). O SERVIDOR monta o texto e a data/hora a partir de um atendimento concluído na agenda.
  */
 export function DeclaracaoComparecimentoPage() {
   return (

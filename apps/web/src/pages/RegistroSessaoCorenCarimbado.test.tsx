@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// CRP carimbado pelo servidor: no formulário ele é SÓ LEITURA (valor do perfil) e nunca vai no payload;
-// sem CRP no perfil, "Salvar e assinar" é bloqueado, "Salvar rascunho" continua permitido.
+// COREN carimbado pelo servidor: no formulário ele é SÓ LEITURA (valor do perfil) e nunca vai no payload;
+// sem COREN no perfil, "Salvar e assinar" é bloqueado, "Salvar rascunho" continua permitido.
 const mocks = vi.hoisted(() => ({
   user: { current: {} as Record<string, unknown> },
   pacienteGet: vi.fn(),
@@ -42,7 +42,7 @@ async function preencherMotivo() {
   return user;
 }
 
-describe('RegistroSessao — CRP vem do perfil, não do formulário', () => {
+describe('RegistroSessao — COREN vem do perfil, não do formulário', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.pacienteGet.mockResolvedValue({ id: 'p1', nome: 'Maria' });
@@ -51,33 +51,33 @@ describe('RegistroSessao — CRP vem do perfil, não do formulário', () => {
     mocks.assinar.mockResolvedValue({});
   });
 
-  it('mostra o CRP do PERFIL, somente leitura; o número de conselho do cadastro (registroProfissional) não entra', async () => {
-    mocks.user.current = { id: 'u1', clinicaId: 'c1', papel: 'PSICOLOGO', nome: 'Psi', crp: 'CRP 06/12345', registroProfissional: '0152482' };
+  it('mostra o COREN do PERFIL, somente leitura; o número de conselho do cadastro (registroProfissional) não entra', async () => {
+    mocks.user.current = { id: 'u1', clinicaId: 'c1', papel: 'ENFERMEIRO', nome: 'Psi', coren: 'COREN 06/12345', registroProfissional: '0152482' };
     renderizar();
-    const campo = await screen.findByLabelText(/CRP do psicólogo responsável/i);
-    expect(campo).toHaveValue('CRP 06/12345');
+    const campo = await screen.findByLabelText(/COREN do enfermeiro responsável/i);
+    expect(campo).toHaveValue('COREN 06/12345');
     expect(campo).toHaveAttribute('readonly');
     expect(screen.queryByDisplayValue('0152482')).not.toBeInTheDocument();
   });
 
-  it('o payload NÃO carrega "crp"', async () => {
-    mocks.user.current = { id: 'u1', clinicaId: 'c1', papel: 'PSICOLOGO', nome: 'Psi', crp: 'CRP 06/12345' };
+  it('o payload NÃO carrega "coren"', async () => {
+    mocks.user.current = { id: 'u1', clinicaId: 'c1', papel: 'ENFERMEIRO', nome: 'Psi', coren: 'COREN 06/12345' };
     renderizar();
     const user = await preencherMotivo();
     await user.click(screen.getByRole('button', { name: /salvar rascunho/i }));
     await vi.waitFor(() => expect(mocks.create).toHaveBeenCalled());
     const registro = mocks.create.mock.calls[0][0].registroPsicologico as Record<string, unknown>;
-    expect(registro).not.toHaveProperty('crp');
+    expect(registro).not.toHaveProperty('coren');
     expect(registro['motivoAtendimento']).toBe('Queixa de teste');
   });
 
-  it('sem CRP no perfil: "Salvar e assinar" não cria nem assina, e explica; o rascunho continua permitido', async () => {
-    mocks.user.current = { id: 'u1', clinicaId: 'c1', papel: 'PSICOLOGO', nome: 'Psi', registroProfissional: '0152482' };
+  it('sem COREN no perfil: "Salvar e assinar" não cria nem assina, e explica; o rascunho continua permitido', async () => {
+    mocks.user.current = { id: 'u1', clinicaId: 'c1', papel: 'ENFERMEIRO', nome: 'Psi', registroProfissional: '0152482' };
     renderizar();
     const user = await preencherMotivo();
 
     // A explicação fica na tela (junto do campo), e o botão de assinar fica indisponível.
-    expect(await screen.findByText(/informe o CRP no seu perfil para assinar/i)).toBeInTheDocument();
+    expect(await screen.findByText(/informe o COREN no seu perfil para assinar/i)).toBeInTheDocument();
     const assinar = screen.getByRole('button', { name: /salvar e assinar/i });
     expect(assinar).toBeDisabled();
     await user.click(assinar);

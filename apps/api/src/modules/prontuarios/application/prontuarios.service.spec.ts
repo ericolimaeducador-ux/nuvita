@@ -33,7 +33,7 @@ describe('ProntuariosService', () => {
     user: {
       sub: 'medico-1',
       email: 'medico@nuvita.test',
-      papel: Papel.PSICOLOGO,
+      papel: Papel.ENFERMEIRO,
       clinicaId: 'clinica-1',
       jti: 'jti',
       typ: 'access' as const,
@@ -81,8 +81,8 @@ describe('ProntuariosService', () => {
       auditLogs as unknown as AuditLogRepository,
       { getConfig: () => ({ prontuarioSignatureSecret: 'signature-secret' }) } as unknown as AppConfigService,
       agendamentosServiceStub,
-      // Autorizado pelo usuário (2026-10-26): assinar agora confere o CRP do perfil.
-      { findById: jest.fn().mockResolvedValue({ id: 'medico-1', crp: 'CRP 06/12345' }) } as never,
+      // Autorizado pelo usuário (2026-10-26): assinar agora confere o COREN do perfil.
+      { findById: jest.fn().mockResolvedValue({ id: 'medico-1', coren: 'COREN 06/12345' }) } as never,
     );
 
     await service.sign('prontuario-1', undefined, context);
@@ -92,7 +92,7 @@ describe('ProntuariosService', () => {
       'prontuario-1',
       expect.objectContaining({
         medicoId: 'medico-1',
-        crp: 'CRP 06/12345',
+        coren: 'COREN 06/12345',
         hash: expect.stringMatching(/^[a-f0-9]{64}$/),
       }),
     );

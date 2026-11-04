@@ -4,7 +4,7 @@ import { test, expect, type Page } from '@playwright/test';
 // digitado, e Cancelar com texto pede "Descartar alterações?". API simulada pelo Playwright.
 
 const ADMIN = { id: 'u1', nome: 'Admin', email: 'adm@clinica.example', papel: 'ADMIN', clinicaId: 'cli-1' };
-const PSICOLOGO = { id: 'u2', nome: 'Psi', email: 'psi@clinica.example', papel: 'PSICOLOGO', clinicaId: 'cli-1' };
+const ENFERMEIRO = { id: 'u2', nome: 'Psi', email: 'psi@clinica.example', papel: 'ENFERMEIRO', clinicaId: 'cli-1' };
 const SUPER = { id: 'sa1', nome: 'Erico', email: 'sa@nuvita.test', papel: 'SUPER_ADMIN', clinicaId: null };
 const PACIENTE = {
   id: 'p1', nome: 'Maria da Silva', cpf: '52998224725', dataNascimento: '1990-01-01T00:00:00.000Z',
@@ -53,7 +53,7 @@ async function tentarFecharSemQuerer(page: Page) {
 
 test.describe('Aplicar teste psicológico (prontuário do paciente)', () => {
   async function abrirTeste(page: Page, envios: Envio[] = []) {
-    await abrirPaciente(page, envios, PSICOLOGO);
+    await abrirPaciente(page, envios, ENFERMEIRO);
     await page.getByText('Testes Psicológicos').click(); // expande a seção (o diálogo vive dentro dela)
     await page.getByRole('button', { name: 'Aplicar teste' }).click();
     await expect(page.getByRole('dialog')).toContainText('Aplicar teste psicológico');

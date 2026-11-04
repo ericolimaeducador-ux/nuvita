@@ -39,13 +39,13 @@ export enum AuditEvent {
   // Documento de comparecimento montado e registrado pelo servidor (declaração / atestado), com protocolo.
   DOCUMENT_ISSUED = 'DOCUMENT_ISSUED',
   CLINIC_CREATED = 'CLINIC_CREATED',
-  // feature-timbre-clinico-dinamico: CRP do profissional (preenchido 1x; correção só pelo super-admin) e contato da clínica
-  USER_CRP_SET = 'USER_CRP_SET',
-  USER_CRP_CORRECTED = 'USER_CRP_CORRECTED',
+  // feature-timbre-clinico-dinamico: COREN do profissional (preenchido 1x; correção só pelo super-admin) e contato da clínica
+  USER_COREN_SET = 'USER_COREN_SET',
+  USER_COREN_CORRECTED = 'USER_COREN_CORRECTED',
   CLINIC_CONTACT_UPDATED = 'CLINIC_CONTACT_UPDATED',
   // identidade fiscal da clínica (documento + tipoDocumento): correção só pelo super-admin, com antes/depois
   CLINIC_FISCAL_DOCUMENT_UPDATED = 'CLINIC_FISCAL_DOCUMENT_UPDATED',
-  // feature-clinic-fiscal-document-first-use: a psicóloga informa o documento do consultório UMA vez (metadata: valor mascarado)
+  // feature-clinic-fiscal-document-first-use: a enfermeira informa o documento do consultório UMA vez (metadata: valor mascarado)
   CLINIC_FISCAL_DOCUMENT_FILLED = 'CLINIC_FISCAL_DOCUMENT_FILLED',
   // feature-logo-clinica: definir/trocar e remover a logo (só a clínica no metadata; nunca chave nem URL)
   CLINIC_LOGO_UPDATED = 'CLINIC_LOGO_UPDATED',

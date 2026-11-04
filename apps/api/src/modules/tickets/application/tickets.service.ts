@@ -26,7 +26,7 @@ export class TicketRequestContext {
   user!: AuthTokenPayload;
 }
 
-const PAPEIS_QUE_ABREM: readonly Papel[] = [Papel.PSICOLOGO, Papel.SECRETARIA, Papel.ADMIN];
+const PAPEIS_QUE_ABREM: readonly Papel[] = [Papel.ENFERMEIRO, Papel.SECRETARIA, Papel.ADMIN];
 
 /**
  * Tickets internos usuário → SUPER_ADMIN (feature-tickets-superadmin). Escopo

@@ -54,7 +54,7 @@ export class DocumentosService {
     @Inject('DOCUMENT_STORAGE') private readonly storage: DocumentStorage,
     @Inject(AUDIT_LOG_REPOSITORY) private readonly auditLogs: AuditLogRepository,
     // Sem uso hoje: upload de prontuário é arquivo interno e não notifica o paciente. Mantidos para a futura
-    // feature "psicólogo envia documento ao paciente" (template RESULTADO_DISPONIVEL e EmailSender seguem existindo).
+    // feature "enfermeiro envia documento ao paciente" (template RESULTADO_DISPONIVEL e EmailSender seguem existindo).
     private readonly pacientesService: PacientesService,
     private readonly notificacoesService: NotificacoesService,
   ) {}
@@ -195,7 +195,7 @@ export class DocumentosService {
 
   async softDelete(documentoId: string, clinicaId: string | undefined, context: DocumentoRequestContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
-    if (context.user.papel === Papel.PSICOLOGO) {
+    if (context.user.papel === Papel.ENFERMEIRO) {
       this.assertPosse(await this.getDocumentoOrThrow(resolvedClinicaId, documentoId), context.user);
     }
     const documento = await this.documentos.softDelete(resolvedClinicaId, documentoId, context.user.sub);
@@ -277,10 +277,10 @@ export class DocumentosService {
 
   /**
    * Abrir e listar: qualquer papel da clínica (documento é do paciente, não de quem enviou).
-   * Excluir é destrutivo: o psicólogo só exclui o que ele mesmo enviou.
+   * Excluir é destrutivo: o enfermeiro só exclui o que ele mesmo enviou.
    */
   private assertPosse(documento: Documento, user: AuthTokenPayload): void {
-    if (user.papel === Papel.PSICOLOGO && documento.uploadPor !== user.sub) {
+    if (user.papel === Papel.ENFERMEIRO && documento.uploadPor !== user.sub) {
       throw new ForbiddenException('Este documento pertence a outro profissional.');
     }
   }

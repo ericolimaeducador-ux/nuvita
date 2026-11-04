@@ -64,7 +64,7 @@ const repoPadrao = () => ({
   corrigirIdentidade: jest.fn().mockResolvedValue({ ...pacienteAtual, cpf: '11144477735' }),
 });
 
-const PAPEIS_NAO_SUPER = [Papel.SECRETARIA, Papel.PSICOLOGO, Papel.ADMIN];
+const PAPEIS_NAO_SUPER = [Papel.SECRETARIA, Papel.ENFERMEIRO, Papel.ADMIN];
 
 describe('Correção de identidade do paciente', () => {
   describe('update() — fluxo normal não altera mais nome/CPF/data de nascimento', () => {

@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   documentosList: vi.fn(),
   observacoesList: vi.fn(),
   testesList: vi.fn(),
-  papel: 'PSICOLOGO',
+  papel: 'ENFERMEIRO',
 }));
 
 vi.mock('@/auth/AuthContext', () => ({
@@ -76,7 +76,7 @@ function renderizar() {
 describe('PacienteDetailPage — falha explícita', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.papel = 'PSICOLOGO';
+    mocks.papel = 'ENFERMEIRO';
     mocks.pacienteGet.mockResolvedValue(paciente);
     mocks.prontuariosList.mockResolvedValue([]);
     mocks.agendaList.mockResolvedValue([]);
@@ -141,10 +141,10 @@ describe('PacienteDetailPage — falha explícita', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  // Estas seções começam fechadas (abre pelo título) e algumas só existem fora do papel de psicólogo.
+  // Estas seções começam fechadas (abre pelo título) e algumas só existem fora do papel de enfermeiro.
   it.each([
-    ['documentos', () => mocks.documentosList, 'Documentos', 'os documentos deste paciente', 'PSICOLOGO'],
-    ['testes psicológicos', () => mocks.testesList, 'Testes Psicológicos', 'os testes psicológicos', 'PSICOLOGO'],
+    ['documentos', () => mocks.documentosList, 'Documentos', 'os documentos deste paciente', 'ENFERMEIRO'],
+    ['testes psicológicos', () => mocks.testesList, 'Testes Psicológicos', 'os testes psicológicos', 'ENFERMEIRO'],
     ['observações', () => mocks.observacoesList, 'Observações', 'as observações', 'ADMIN'],
     ['histórico de agenda', () => mocks.agendaList, 'Histórico de agenda', 'o histórico de agenda', 'ADMIN'],
   ])('erro em %s mostra alerta explícito no lugar de lista vazia', async (_nome, mock, titulo, recurso, papel) => {

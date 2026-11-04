@@ -23,7 +23,7 @@ export class ClinicasController {
   // Declarada antes das rotas com :clinicaId. Sem @Param/@Query: o tenant vem só do token.
   @Get('minha')
   @UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
-  @Roles(Papel.ADMIN, Papel.PSICOLOGO, Papel.SECRETARIA)
+  @Roles(Papel.ADMIN, Papel.ENFERMEIRO, Papel.SECRETARIA)
   minha(@CurrentUser() user: AuthTokenPayload) {
     return this.clinicasService.obterMinha(user);
   }

@@ -5,9 +5,9 @@ import { SuperAdminService } from '../../super-admin/super-admin.service';
 
 jest.mock('bcrypt', () => ({ hash: jest.fn().mockResolvedValue('hash-bcrypt') }));
 
-// 3.3: a criação de usuário registra QUEM criou, QUANDO (timestamp do audit log), QUE PAPEL e o CRP.
+// 3.3: a criação de usuário registra QUEM criou, QUANDO (timestamp do audit log), QUE PAPEL e o COREN.
 const criado = (over: Record<string, unknown> = {}) => ({
-  id: 'novo-1', nome: 'Dra. Ana', email: 'ana@clinica.test', papel: Papel.PSICOLOGO, clinicaId: 'cli-1', ativo: true,
+  id: 'novo-1', nome: 'Dra. Ana', email: 'ana@clinica.test', papel: Papel.ENFERMEIRO, clinicaId: 'cli-1', ativo: true,
   ...over,
 });
 
@@ -27,10 +27,10 @@ describe('ClinicasService.createUsuario – auditoria da criação', () => {
     ip: '10.0.0.1', userAgent: 'jest',
     user: { sub: 'adm-1', email: 'admin@clinica.test', papel: Papel.ADMIN, clinicaId: 'cli-1', jti: 'j', typ: 'access' as const },
   };
-  const dto = { nome: 'Dra. Ana', email: 'ana@clinica.test', password: 'senhaGerada123', papel: Papel.PSICOLOGO as const };
+  const dto = { nome: 'Dra. Ana', email: 'ana@clinica.test', password: 'senhaGerada123', papel: Papel.ENFERMEIRO as const };
 
-  it('grava quem criou (id, e-mail e papel), o papel e o CRP do criado, e a clínica', async () => {
-    const { service, auditLogs } = montar(criado({ crp: '06/123456' }));
+  it('grava quem criou (id, e-mail e papel), o papel e o COREN do criado, e a clínica', async () => {
+    const { service, auditLogs } = montar(criado({ coren: '06/123456' }));
     await service.createUsuario('cli-1', dto, admin);
     expect(auditLogs.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -41,18 +41,18 @@ describe('ClinicasService.createUsuario – auditoria da criação', () => {
         metadata: expect.objectContaining({
           criadorPapel: Papel.ADMIN,
           createdUserId: 'novo-1',
-          createdUserPapel: Papel.PSICOLOGO,
-          createdUserCrp: '06/123456',
+          createdUserPapel: Papel.ENFERMEIRO,
+          createdUserCoren: '06/123456',
         }),
       }),
     );
   });
 
-  it('CRP ainda não informado (o psicólogo o preenche depois): registra null, não omite a chave', async () => {
+  it('COREN ainda não informado (o enfermeiro o preenche depois): registra null, não omite a chave', async () => {
     const { service, auditLogs } = montar();
     await service.createUsuario('cli-1', dto, admin);
     const metadata = (auditLogs.create.mock.calls[0][0] as { metadata: Record<string, unknown> }).metadata;
-    expect(metadata).toHaveProperty('createdUserCrp', null);
+    expect(metadata).toHaveProperty('createdUserCoren', null);
   });
 });
 
@@ -68,10 +68,10 @@ describe('SuperAdminService.createUsuario – auditoria da criação', () => {
     return { service, registrar };
   }
   const contexto = { ip: '10.0.0.2', userAgent: 'jest', userId: 'sa-1' };
-  const dto = { nome: 'Dra. Ana', email: 'ana@clinica.test', password: 'senhaGerada123', papel: Papel.PSICOLOGO, clinicaId: 'cli-9' };
+  const dto = { nome: 'Dra. Ana', email: 'ana@clinica.test', password: 'senhaGerada123', papel: Papel.ENFERMEIRO, clinicaId: 'cli-9' };
 
-  it('a criação pelo super-admin deixa registro: quem, papel, clínica e CRP', async () => {
-    const { service, registrar } = montar(criado({ clinicaId: 'cli-9', crp: '06/999' }));
+  it('a criação pelo super-admin deixa registro: quem, papel, clínica e COREN', async () => {
+    const { service, registrar } = montar(criado({ clinicaId: 'cli-9', coren: '06/999' }));
     await service.createUsuario(dto as never, contexto);
     expect(registrar).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -79,7 +79,7 @@ describe('SuperAdminService.createUsuario – auditoria da criação', () => {
         userId: 'sa-1',
         clinicaId: 'cli-9',
         ip: '10.0.0.2',
-        metadata: expect.objectContaining({ createdUserId: 'novo-1', createdUserPapel: Papel.PSICOLOGO, createdUserCrp: '06/999' }),
+        metadata: expect.objectContaining({ createdUserId: 'novo-1', createdUserPapel: Papel.ENFERMEIRO, createdUserCoren: '06/999' }),
       }),
     );
   });

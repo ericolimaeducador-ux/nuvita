@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
-import { GateCrpEmissao } from '@/components/GateCrpEmissao';
+import { GateCorenEmissao } from '@/components/GateCorenEmissao';
 import { GateDocumentoConsultorio } from '@/components/GateDocumentoConsultorio';
 
 /**
@@ -18,7 +18,7 @@ export function DocumentoClinicoLayout({
   const navigate = useNavigate();
   return (
     <GateDocumentoConsultorio>
-    <GateCrpEmissao>
+    <GateCorenEmissao>
       <div className="print:hidden flex items-center gap-3 p-4 border-b border-border">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4" />
@@ -51,7 +51,7 @@ export function DocumentoClinicoLayout({
           }
         }
       `}</style>
-    </GateCrpEmissao>
+    </GateCorenEmissao>
     </GateDocumentoConsultorio>
   );
 }

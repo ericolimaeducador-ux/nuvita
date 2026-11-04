@@ -1,7 +1,7 @@
 import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { LinhaTerapeutica } from '../../../pacientes/domain/paciente.entity';
 
-// Só conteúdo clínico já digitado pelo psicólogo — nunca nome, CPF,
+// Só conteúdo clínico já digitado pelo enfermeiro — nunca nome, CPF,
 // endereço ou telefone do paciente (dado identificável não vai pra IA).
 export class SugerirAbordagemDto {
   @IsOptional()

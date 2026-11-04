@@ -19,7 +19,7 @@ function criar(inicio: Date, fim: Date) {
     { obterParaEmissao: jest.fn().mockResolvedValue(ag) } as never,
     { resumoPorIds: jest.fn().mockResolvedValue(new Map([['pac-1', { nome: 'Paciente Fictício' }]])) } as never,
     { contextoDeEmissao: jest.fn().mockResolvedValue({ nome: 'Clínica', fusoHorario: 'America/Sao_Paulo' }), assertDocumentoInformado: jest.fn().mockResolvedValue(undefined) } as never,
-    { findById: jest.fn().mockResolvedValue({ id: 'psi-1', crp: '06/12345' }) } as never,
+    { findById: jest.fn().mockResolvedValue({ id: 'psi-1', coren: '06/12345' }) } as never,
   );
   return { service, documentos };
 }
@@ -27,12 +27,12 @@ function criar(inicio: Date, fim: Date) {
 describe('Atestado — atendimento no futuro', () => {
   it('início no futuro: 422 e nada é emitido', async () => {
     const { service, documentos } = criar(emMin(5), emMin(55));
-    await expect(service.emitirAtestado(dto, ctx(Papel.PSICOLOGO, 'psi-1'))).rejects.toThrow(new UnprocessableEntityException('O atendimento ainda não começou.'));
+    await expect(service.emitirAtestado(dto, ctx(Papel.ENFERMEIRO, 'psi-1'))).rejects.toThrow(new UnprocessableEntityException('O atendimento ainda não começou.'));
     expect(documentos.create).not.toHaveBeenCalled();
   });
   it('já começou (ainda não terminou): emite', async () => {
     const { service } = criar(emMin(-5), emMin(45));
-    await expect(service.emitirAtestado(dto, ctx(Papel.PSICOLOGO, 'psi-1'))).resolves.toBeDefined();
+    await expect(service.emitirAtestado(dto, ctx(Papel.ENFERMEIRO, 'psi-1'))).resolves.toBeDefined();
   });
 });
 

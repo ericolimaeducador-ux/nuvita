@@ -17,13 +17,13 @@ export class DocumentosEmitidosController {
   constructor(private readonly service: DocumentosEmitidosService) {}
 
   @Post('declaracao-comparecimento')
-  @Roles(Papel.SECRETARIA, Papel.PSICOLOGO, Papel.ADMIN)
+  @Roles(Papel.SECRETARIA, Papel.ENFERMEIRO, Papel.ADMIN)
   declaracao(@Body() dto: EmitirDocumentoDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
     return this.service.emitirDeclaracao(dto, this.ctx(req, user));
   }
 
   @Post('atestado-comparecimento')
-  @Roles(Papel.PSICOLOGO)
+  @Roles(Papel.ENFERMEIRO)
   atestado(@Body() dto: EmitirDocumentoDto, @CurrentUser() user: AuthTokenPayload, @Req() req: Request) {
     return this.service.emitirAtestado(dto, this.ctx(req, user));
   }

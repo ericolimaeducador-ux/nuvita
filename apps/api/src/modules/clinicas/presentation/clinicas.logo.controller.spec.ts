@@ -54,7 +54,7 @@ describe.each(ROTAS)('rota da logo: $handler', ({ handler, metodo, path }) => {
       expect(guard.canActivate(ctx(papel))).toBe(true);
     });
 
-    it.each([Papel.PSICOLOGO, Papel.SECRETARIA, Papel.PACIENTE])('nega %s', (papel) => {
+    it.each([Papel.ENFERMEIRO, Papel.SECRETARIA, Papel.PACIENTE])('nega %s', (papel) => {
       expect(() => guard.canActivate(ctx(papel))).toThrow(ForbiddenException);
     });
   });

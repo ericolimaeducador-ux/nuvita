@@ -4,7 +4,7 @@ import { HydratedDocument } from 'mongoose';
 export type TestePsicologicoDocument = HydratedDocument<TestePsicologicoMongo>;
 
 // Esqueleto de testes psicológicos aplicados — sem catálogo de testes ainda
-// (nomeTeste é texto livre digitado pelo psicólogo). Estrutura pronta para
+// (nomeTeste é texto livre digitado pelo enfermeiro). Estrutura pronta para
 // receber um catálogo/pontuação padronizados numa fase futura.
 @Schema({ collection: 'testes_psicologicos', versionKey: false })
 export class TestePsicologicoMongo {

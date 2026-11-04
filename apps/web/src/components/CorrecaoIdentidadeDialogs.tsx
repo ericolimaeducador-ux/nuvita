@@ -16,7 +16,7 @@ import { toast } from '@/components/ui/use-toast';
 
 const CPF_RE = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/;
 
-/** Abre o ticket "Correção de dados de identidade" para o SUPER_ADMIN (secretária, psicólogo, admin). */
+/** Abre o ticket "Correção de dados de identidade" para o SUPER_ADMIN (secretária, enfermeiro, admin). */
 export function SolicitarCorrecaoDialog({
   open,
   onOpenChange,

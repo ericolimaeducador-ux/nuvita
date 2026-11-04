@@ -35,7 +35,7 @@ const clinicaBase = (id: string) => ({
 
 const admin = (clinicaId: string) => ({ sub: 'adm-' + clinicaId, email: `adm@${clinicaId}.test`, papel: Papel.ADMIN, clinicaId, jti: 'j', typ: 'access' as const });
 const superAdmin = { sub: 'sa-1', email: 'sa@plataforma.test', papel: Papel.SUPER_ADMIN, clinicaId: undefined, jti: 'j', typ: 'access' as const };
-const psicologo = (clinicaId: string) => ({ ...admin(clinicaId), sub: 'psi-1', papel: Papel.PSICOLOGO });
+const enfermeiro = (clinicaId: string) => ({ ...admin(clinicaId), sub: 'psi-1', papel: Papel.ENFERMEIRO });
 
 function setup() {
   const banco: Record<string, ReturnType<typeof clinicaBase>> = {
@@ -152,11 +152,11 @@ describe('logo da clínica — presign de upload', () => {
     expect(storage.createUploadUrl).not.toHaveBeenCalled();
   });
 
-  it.each([Papel.PSICOLOGO, Papel.SECRETARIA, Papel.PACIENTE])('papel %s é negado (403)', async (papel) => {
+  it.each([Papel.ENFERMEIRO, Papel.SECRETARIA, Papel.PACIENTE])('papel %s é negado (403)', async (papel) => {
     const { logo, storage } = setup();
 
     await expect(
-      logo.solicitarUpload({ ...psicologo('cli-A'), papel }, 'cli-A', pedido(), CTX),
+      logo.solicitarUpload({ ...enfermeiro('cli-A'), papel }, 'cli-A', pedido(), CTX),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(storage.createUploadUrl).not.toHaveBeenCalled();
   });

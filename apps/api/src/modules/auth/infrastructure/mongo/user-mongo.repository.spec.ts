@@ -27,7 +27,7 @@ function makeRawDoc(overrides: Record<string, unknown> = {}) {
     nome: 'Fulana',
     email: 'fulana@nuvita.test',
     passwordHash: 'hash',
-    papel: Papel.PSICOLOGO,
+    papel: Papel.ENFERMEIRO,
     clinicaId: 'c1',
     ativo: true,
     criadoEm: new Date('2026-09-10T00:00:00.000Z'),

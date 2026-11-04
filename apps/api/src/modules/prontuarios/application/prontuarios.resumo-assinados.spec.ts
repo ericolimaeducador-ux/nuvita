@@ -5,9 +5,9 @@ import { ProntuariosService } from './prontuarios.service';
 // O laudo afirma a terceiros "desde X, N sessões": só prontuário ASSINADO conta (mesma decisão do BUG-025).
 const ctx = {
   ip: '127.0.0.1', userAgent: 'jest',
-  user: { sub: 'psi-1', email: 'p@x.test', papel: Papel.PSICOLOGO, clinicaId: 'cli-1', jti: 'j', typ: 'access' as const },
+  user: { sub: 'psi-1', email: 'p@x.test', papel: Papel.ENFERMEIRO, clinicaId: 'cli-1', jti: 'j', typ: 'access' as const },
 };
-const assinado = { medicoId: 'psi-1', dataAssinatura: new Date('2026-10-26T12:00:00Z'), hash: 'h', crp: 'CRP 06/1' };
+const assinado = { medicoId: 'psi-1', dataAssinatura: new Date('2026-10-26T12:00:00Z'), hash: 'h', coren: 'COREN 06/1' };
 const sessao = (id: string, data: string, over: Record<string, unknown> = {}) => ({
   id, pacienteId: 'pac-1', medicoId: 'psi-1', tipo: TipoAtendimento.PSICOTERAPIA, agendamentoId: `ag-${id}`,
   dataAtendimento: new Date(data), assinado, ...over,

@@ -12,7 +12,7 @@ const ctxDe = (sub: string, papel: Papel) => ({
   userAgent: 'jest',
   user: { sub, email: `${sub}@x.test`, papel, clinicaId: 'cli-1', jti: 'j', typ: 'access' as const },
 });
-const psiB = ctxDe('psi-B', Papel.PSICOLOGO);
+const psiB = ctxDe('psi-B', Papel.ENFERMEIRO);
 const secretaria = ctxDe('sec-1', Papel.SECRETARIA);
 
 function criar(over: { medico?: unknown; pacientes?: Map<string, unknown> } = {}) {
@@ -36,12 +36,12 @@ function criar(over: { medico?: unknown; pacientes?: Map<string, unknown> } = {}
 }
 
 describe('AgendamentosService – posse (D2)', () => {
-  it('psicólogo NÃO lê agendamento de colega', async () => {
+  it('enfermeiro NÃO lê agendamento de colega', async () => {
     const { service } = criar();
     await expect(service.findOne('ag-A', undefined, psiB)).rejects.toThrow(ForbiddenException);
   });
 
-  it('psicólogo NÃO edita, conclui nem reatribui agendamento de colega', async () => {
+  it('enfermeiro NÃO edita, conclui nem reatribui agendamento de colega', async () => {
     const { service, agendamentos } = criar();
     await expect(service.update('ag-A', { observacoes: 'x' }, undefined, psiB)).rejects.toThrow(ForbiddenException);
     await expect(service.conclude('ag-A', undefined, psiB)).rejects.toThrow(ForbiddenException);
@@ -49,12 +49,12 @@ describe('AgendamentosService – posse (D2)', () => {
     expect(agendamentos.updateStatus).not.toHaveBeenCalled();
   });
 
-  it('psicólogo NÃO passa o próprio agendamento para outro profissional', async () => {
+  it('enfermeiro NÃO passa o próprio agendamento para outro profissional', async () => {
     const { service } = criar();
     await expect(service.update('ag-B', { medicoId: 'psi-A' }, undefined, psiB)).rejects.toThrow(ForbiddenException);
   });
 
-  it('psicólogo opera o próprio agendamento', async () => {
+  it('enfermeiro opera o próprio agendamento', async () => {
     const { service } = criar();
     await expect(service.findOne('ag-B', undefined, psiB)).resolves.toBeDefined();
     await expect(service.update('ag-B', { observacoes: 'x' }, undefined, psiB)).resolves.toBeDefined();
@@ -81,7 +81,7 @@ describe('AgendamentosService.validarReferencias – ids do payload na clínica 
     await expect(nenhum.service.validarReferencias({ medicoId: 'm' }, undefined, secretaria)).rejects.toThrow(NotFoundException);
   });
 
-  it('agendamento de outra clínica/inexistente → 404; de colega, para psicólogo → 403', async () => {
+  it('agendamento de outra clínica/inexistente → 404; de colega, para enfermeiro → 403', async () => {
     const { service } = criar();
     await expect(service.validarReferencias({ agendamentoId: 'ag-Z' }, undefined, secretaria)).rejects.toThrow(NotFoundException);
     await expect(service.validarReferencias({ agendamentoId: 'ag-A' }, undefined, psiB)).rejects.toThrow(ForbiddenException);

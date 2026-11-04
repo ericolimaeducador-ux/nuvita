@@ -18,7 +18,7 @@ const context = {
   user: {
     sub: 'psi-1',
     email: 'psi@nuvita.test',
-    papel: Papel.PSICOLOGO,
+    papel: Papel.ENFERMEIRO,
     clinicaId: 'clinica-1',
     jti: 'jti',
     typ: 'access' as const,

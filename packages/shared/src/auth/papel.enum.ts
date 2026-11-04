@@ -1,7 +1,7 @@
 export enum Papel {
   SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
-  PSICOLOGO = 'PSICOLOGO',
+  ENFERMEIRO = 'ENFERMEIRO',
   SECRETARIA = 'SECRETARIA',
   PACIENTE = 'PACIENTE',
 }
@@ -11,13 +11,13 @@ export enum Papel {
  * Usado para autorizacao em agenda, prontuario e telemedicina.
  */
 export const PAPEIS_PROFISSIONAIS = [
-  Papel.PSICOLOGO,
+  Papel.ENFERMEIRO,
 ] as const;
 
 export const PAPEIS_COM_2FA_OBRIGATORIO = [
   Papel.SUPER_ADMIN,
   Papel.ADMIN,
-  Papel.PSICOLOGO,
+  Papel.ENFERMEIRO,
 ] as const;
 
 export function exigeTwoFactor(papel: Papel): boolean {

@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 /**
- * A psicóloga de um consultório criado sem CPF/CNPJ informa o dado UMA vez, antes de emitir documentos
+ * A enfermeira de um consultório criado sem CPF/CNPJ informa o dado UMA vez, antes de emitir documentos
  * (o documento sai no cabeçalho). Bloqueio só de tela para laudo, encaminhamento, prescrição e prontuário
  * (dívida registrada: o servidor só recusa declaração e atestado, com 422). Outros papéis passam direto.
  */
@@ -33,7 +33,7 @@ export function GateDocumentoConsultorio({ children }: { children: ReactNode }) 
     },
   });
 
-  if (!user || user.papel !== Papel.PSICOLOGO) return <>{children}</>;
+  if (!user || user.papel !== Papel.ENFERMEIRO) return <>{children}</>;
   if (minhaQ.isLoading) return null;
   // Falha na consulta não trava a emissão pela tela (o servidor continua recusando declaração e atestado sem documento).
   if (minhaQ.isError || minhaQ.data?.documento?.trim()) return <>{children}</>;

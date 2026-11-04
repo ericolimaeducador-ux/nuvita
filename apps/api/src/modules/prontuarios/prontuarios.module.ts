@@ -47,7 +47,7 @@ import { ProntuariosController } from './presentation/prontuarios.controller';
     { provide: AUDIT_LOG_REPOSITORY, useClass: AuditLogMongoRepository },
     { provide: USER_REPOSITORY, useClass: UserMongoRepository },
   ],
-  // O repositório sai do módulo porque o financeiro do psicólogo conta as
+  // O repositório sai do módulo porque o financeiro do enfermeiro conta as
   // sessões pelos prontuários de psicoterapia.
   exports: [ProntuariosService, PRONTUARIO_REPOSITORY],
 })

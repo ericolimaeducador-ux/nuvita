@@ -17,7 +17,7 @@ import {
 // outros pacientes e o financeiro da clínica). Ver authorization-matrix.spec.ts.
 @Controller('analytics')
 @UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
-@Roles(Papel.ADMIN, Papel.PSICOLOGO, Papel.SECRETARIA)
+@Roles(Papel.ADMIN, Papel.ENFERMEIRO, Papel.SECRETARIA)
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 

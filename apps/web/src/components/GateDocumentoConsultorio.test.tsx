@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Papel } from '@/types';
 
-// A psicóloga de um consultório sem CPF/CNPJ informado não vê o documento: o gate pede o dado, confirma e grava UMA vez.
+// A enfermeira de um consultório sem CPF/CNPJ informado não vê o documento: o gate pede o dado, confirma e grava UMA vez.
 // Outros papéis passam direto (o servidor bloqueia declaração e atestado com 422).
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), minha: vi.fn(), preencher: vi.fn() }));
 vi.mock('@/auth/AuthContext', () => ({ useAuth: () => mocks.auth() }));
@@ -29,12 +29,12 @@ function renderizar() {
 describe('GateDocumentoConsultorio', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.auth.mockReturnValue(usuario(Papel.PSICOLOGO));
+    mocks.auth.mockReturnValue(usuario(Papel.ENFERMEIRO));
     mocks.minha.mockReturnValue(minha(''));
     mocks.preencher.mockResolvedValue({});
   });
 
-  it('psicóloga sem documento na clínica: pede o CPF/CNPJ e não mostra o documento', () => {
+  it('enfermeira sem documento na clínica: pede o CPF/CNPJ e não mostra o documento', () => {
     renderizar();
     expect(screen.getByText(/Informe o CPF ou CNPJ do consultório/i)).toBeInTheDocument();
     expect(screen.queryByText('DOCUMENTO LIBERADO')).not.toBeInTheDocument();

@@ -5,7 +5,7 @@ import axios from 'axios';
 import dayjs from 'dayjs';
 import { Brain, CalendarPlus, Check, ClipboardList, Copy, History, Loader2, PenLine, Sparkles, User, Video, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { temCrp } from '@/lib/timbre';
+import { temCoren } from '@/lib/timbre';
 import { ROTULO, ROTULO_ANOTACOES, ROTULO_FORMULARIO, type FormularioRegistro } from '@/lib/registroPsicologico';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,7 +35,7 @@ import {
 } from '@/types';
 
 /**
- * Textarea que cresce conforme o texto — o psicólogo enxerga a anotação
+ * Textarea que cresce conforme o texto — o enfermeiro enxerga a anotação
  * inteira enquanto escreve, sem rolagem interna num campo pequeno.
  */
 function AutoTextarea({
@@ -132,24 +132,24 @@ function CamposLinhaTerapeutica({
 }
 
 /**
- * O CRP é o do PERFIL (o servidor o carimba ao assinar): com CRP, só se mostra; sem CRP, informa-se uma vez
+ * O COREN é o do PERFIL (o servidor o carimba ao assinar): com COREN, só se mostra; sem COREN, informa-se uma vez
  * (mesmo endpoint do portão dos documentos) e o botão de assinar libera. Só "não vazio": o formato fica pendente de
- * fonte oficial do CFP.
+ * fonte oficial (TODO(legal)).
  */
-function CrpDoPerfil({ crp }: { crp?: string }) {
+function CorenDoPerfil({ coren }: { coren?: string }) {
   const { user, atualizarUsuario } = useAuth();
   const [novo, setNovo] = useState('');
   const [salvando, setSalvando] = useState(false);
-  const tem = temCrp(crp);
+  const tem = temCoren(coren);
 
   async function salvar() {
-    if (!user || !temCrp(novo)) return;
+    if (!user || !temCoren(novo)) return;
     setSalvando(true);
     try {
-      const res = await authApi.salvarMeuCrp(novo.trim());
+      const res = await authApi.salvarMeuCoren(novo.trim());
       atualizarUsuario({ ...user, ...res.user });
     } catch (e) {
-      toast({ title: 'Não foi possível salvar o CRP', description: apiErrorMessage(e), variant: 'destructive' });
+      toast({ title: 'Não foi possível salvar o COREN', description: apiErrorMessage(e), variant: 'destructive' });
     } finally {
       setSalvando(false);
     }
@@ -157,16 +157,16 @@ function CrpDoPerfil({ crp }: { crp?: string }) {
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="crpPerfil">CRP do psicólogo responsável</Label>
+      <Label htmlFor="corenPerfil">COREN do enfermeiro responsável</Label>
       {tem ? (
-        <Input id="crpPerfil" readOnly value={crp!} className="max-w-xs" />
+        <Input id="corenPerfil" readOnly value={coren!} className="max-w-xs" />
       ) : (
         <>
           <div className="flex max-w-md gap-2">
-            <Input id="crpPerfil" value={novo} onChange={(e) => setNovo(e.target.value)} placeholder="CRP 00/00000" />
-            <Button type="button" variant="secondary" onClick={salvar} disabled={salvando || !temCrp(novo)}>Salvar CRP</Button>
+            <Input id="corenPerfil" value={novo} onChange={(e) => setNovo(e.target.value)} placeholder="COREN 00/00000" />
+            <Button type="button" variant="secondary" onClick={salvar} disabled={salvando || !temCoren(novo)}>Salvar COREN</Button>
           </div>
-          <p className="text-xs text-destructive">Informe o CRP no seu perfil para assinar o prontuário.</p>
+          <p className="text-xs text-destructive">Informe o COREN no seu perfil para assinar o prontuário.</p>
         </>
       )}
     </div>
@@ -418,7 +418,7 @@ export function RegistroSessao({
         )}
       </div>
 
-      {/* Sugestão de abordagem via IA — apoio ao psicólogo, nunca decide por ele. */}
+      {/* Sugestão de abordagem via IA — apoio ao enfermeiro, nunca decide por ele. */}
       {!carregando && !historicoErro && (
         <div className="rounded-xl border border-dashed bg-muted/20 p-4 space-y-2 text-sm">
           <div className="flex items-center justify-between gap-2">
@@ -550,7 +550,7 @@ export function RegistroSessao({
             />
 
             <div className="flex flex-wrap items-end justify-between gap-4">
-              <CrpDoPerfil crp={user?.crp} />
+              <CorenDoPerfil coren={user?.coren} />
             </div>
           </div>
         ) : (
@@ -607,7 +607,7 @@ export function RegistroSessao({
               minRows={8}
             />
 
-            <CrpDoPerfil crp={user?.crp} />
+            <CorenDoPerfil coren={user?.coren} />
           </div>
         )}
 
@@ -621,7 +621,7 @@ export function RegistroSessao({
         <Button variant="secondary" onClick={() => salvar(false)} disabled={salvarM.isPending || carregando || historicoErro}>
           {salvarM.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Salvar rascunho
         </Button>
-        <Button onClick={() => salvar(true)} disabled={salvarM.isPending || carregando || historicoErro || !temCrp(user?.crp)}>
+        <Button onClick={() => salvar(true)} disabled={salvarM.isPending || carregando || historicoErro || !temCoren(user?.coren)}>
           {salvarM.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PenLine className="h-4 w-4 mr-2" />}
           Salvar e assinar
         </Button>
@@ -674,7 +674,7 @@ function SessaoAtendimento({
   }
 
   // Ocupa a janela inteira: durante a consulta a tela é do atendimento, e o
-  // psicólogo escreve no prontuário sem tirar o paciente da vista.
+  // enfermeiro escreve no prontuário sem tirar o paciente da vista.
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
       <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
@@ -781,13 +781,13 @@ function HistoricoSessoesDialog({
 function NovoAgendamentoDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const ehPsicologo = user?.papel === Papel.PSICOLOGO;
+  const ehEnfermeiro = user?.papel === Papel.ENFERMEIRO;
 
   const [busca, setBusca] = useState('');
   const [pacienteId, setPacienteId] = useState('');
   const [profissionalId, setProfissionalId] = useState('');
   const [tipo, setTipo] = useState<TipoAgendamento>(TipoAgendamento.AVALIACAO_PSICOLOGICA);
-  // Se o psicólogo mexeu no tipo, o padrão calculado não o sobrescreve.
+  // Se o enfermeiro mexeu no tipo, o padrão calculado não o sobrescreve.
   const [tipoManual, setTipoManual] = useState(false);
   const [inicio, setInicio] = useState('');
   const [duracaoMin, setDuracaoMin] = useState('50');
@@ -800,9 +800,9 @@ function NovoAgendamentoDialog({ open, onClose }: { open: boolean; onClose: () =
       setTipoManual(false);
       setInicio(dayjs().add(1, 'hour').startOf('hour').format('YYYY-MM-DDTHH:mm'));
       setDuracaoMin('50');
-      setProfissionalId(ehPsicologo ? (user?.id ?? '') : '');
+      setProfissionalId(ehEnfermeiro ? (user?.id ?? '') : '');
     }
-  }, [open, ehPsicologo, user?.id]);
+  }, [open, ehEnfermeiro, user?.id]);
 
   // Padrão CALCULADO do tipo: paciente sem nenhuma sessão ASSINADA → avaliação; com → sessão de psicoterapia.
   // O tipo do agendamento é o que define qual formulário abre depois (rascunho não conta como sessão).
@@ -875,10 +875,10 @@ function NovoAgendamentoDialog({ open, onClose }: { open: boolean; onClose: () =
               </SelectContent>
             </Select>
           </div>
-          {!ehPsicologo && (
+          {!ehEnfermeiro && (
             <div className="space-y-2">
-              <Label>ID do psicólogo responsável</Label>
-              <Input value={profissionalId} onChange={(e) => setProfissionalId(e.target.value)} placeholder="ID do usuário psicólogo" />
+              <Label>ID do enfermeiro responsável</Label>
+              <Input value={profissionalId} onChange={(e) => setProfissionalId(e.target.value)} placeholder="ID do usuário enfermeiro" />
             </div>
           )}
           <div className="space-y-2">
@@ -929,7 +929,7 @@ const STATUS_BADGE: Partial<Record<StatusAgendamento, string>> = {
 
 export function AtendimentoPsicologicoPage() {
   const { user } = useAuth();
-  const ehPsicologo = user?.papel === Papel.PSICOLOGO;
+  const ehEnfermeiro = user?.papel === Papel.ENFERMEIRO;
 
   const [status, setStatus] = useState<'ativos' | StatusAgendamento>('ativos');
   const [novoAberto, setNovoAberto] = useState(false);
@@ -940,7 +940,7 @@ export function AtendimentoPsicologicoPage() {
 
   // Atendimento é 100% online por ora: "Atender" cria (ou reaproveita) a sala do
   // agendamento e abre a tela de sessão — vídeo e prontuário na mesma janela,
-  // para o psicólogo tomar notas sem perder o paciente de vista.
+  // para o enfermeiro tomar notas sem perder o paciente de vista.
   const atenderMut = useMutation({
     mutationFn: async (a: Agendamento) => {
       let sala: SalaTelemedicina | null = null;
@@ -989,12 +989,12 @@ export function AtendimentoPsicologicoPage() {
   );
 
   const agendamentosQ = useQuery({
-    queryKey: ['agendamentos-psicologia', ehPsicologo ? user?.id : 'todos'],
+    queryKey: ['agendamentos-psicologia', ehEnfermeiro ? user?.id : 'todos'],
     queryFn: () =>
       agendaApi.list({
         modalidade: ModalidadeAtendimento.PSICOLOGIA,
-        // Psicólogo vê a própria agenda; admin/secretária veem todos da clínica.
-        medicoId: ehPsicologo ? user?.id : undefined,
+        // Enfermeiro vê a própria agenda; admin/secretária veem todos da clínica.
+        medicoId: ehEnfermeiro ? user?.id : undefined,
       }),
   });
 
@@ -1077,7 +1077,7 @@ export function AtendimentoPsicologicoPage() {
               aparecem aqui a partir do horário de início. Veja na <Link to="/agenda" className="underline">Agenda</Link>.
             </>
           ) : (
-            'Nenhum paciente agendado para o psicólogo neste filtro.'
+            'Nenhum paciente agendado para o enfermeiro neste filtro.'
           )}
         </div>
       ) : (

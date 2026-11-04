@@ -79,7 +79,7 @@ export function linhaDoRegistro(registro?: RegistroPsicologico | null): LinhaTer
 
 /** Rótulo de QUALQUER chave do registro (conteúdo gravado fora do formulário usado também usa o texto do formulário). */
 export function rotuloDoCampo(key: Chave): string {
-  if (key === 'crp') return 'CRP digitado no registro (não carimbado)';
+  if (key === 'coren') return 'COREN digitado no registro (não carimbado)';
   if (ROTULO[key]) return ROTULO[key];
   for (const linha of Object.values(LinhaTerapeutica) as LinhaTerapeutica[]) {
     const achado = CAMPOS_POR_LINHA[linha].find((c) => c.key === key);

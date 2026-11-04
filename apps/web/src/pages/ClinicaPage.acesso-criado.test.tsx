@@ -32,8 +32,8 @@ async function criarUsuarioNaTela() {
   await userEvent.type(screen.getByLabelText(/nome completo/i), 'Fulana de Tal');
   await userEvent.type(screen.getByLabelText(/^e-mail/i), 'fulana@clinica.com');
   await userEvent.type(screen.getByLabelText(/senha provis/i), 'provisoria-123');
-  // Autorizado pelo usuário (2026-10-27): o perfil padrão é PSICÓLOGO e a criação agora exige o CRP.
-  await userEvent.type(screen.getByLabelText(/^CRP/i), 'CRP 06/123456');
+  // Autorizado pelo usuário (2026-10-27): o perfil padrão é ENFERMEIRO e a criação agora exige o COREN.
+  await userEvent.type(screen.getByLabelText(/^COREN/i), 'COREN 06/123456');
   await userEvent.click(screen.getByRole('button', { name: /criar usu/i }));
 }
 
@@ -48,7 +48,7 @@ describe('ClinicaPage – diálogo "Acesso criado"', () => {
     expect(dialogo.textContent).not.toMatch(/segundo fator|2fa|autenticador/i);
   });
 
-  it('psicólogo (com 2FA): mostra o segredo e o aviso de que ele não aparece de novo', async () => {
+  it('enfermeiro (com 2FA): mostra o segredo e o aviso de que ele não aparece de novo', async () => {
     mocks.criarUsuario.mockResolvedValue({
       user: { nome: 'Fulana de Tal', email: 'fulana@clinica.com' },
       twoFactorSetup: { otpauthUrl: 'otpauth://totp/x', base32: 'ABCDEF' },

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// Super-admin: ao criar PSICÓLOGO o CRP é exigido (não vazio); para os outros perfis não aparece.
+// Super-admin: ao criar ENFERMEIRO o COREN é exigido (não vazio); para os outros perfis não aparece.
 const mocks = vi.hoisted(() => ({ createUsuario: vi.fn(), listClinicas: vi.fn(), listUsuarios: vi.fn() }));
 
 vi.mock('@/auth/AuthContext', () => ({
@@ -39,7 +39,7 @@ async function escolherPerfil(user: ReturnType<typeof userEvent.setup>, dialogo:
   await user.click(await screen.findByRole('option', { name: nome }));
 }
 
-describe('SuperAdmin — Novo usuário e o CRP', () => {
+describe('SuperAdmin — Novo usuário e o COREN', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.listClinicas.mockResolvedValue([]);
@@ -47,21 +47,21 @@ describe('SuperAdmin — Novo usuário e o CRP', () => {
     mocks.createUsuario.mockResolvedValue({ id: 'n1', nome: 'X', email: 'x@y.z' });
   });
 
-  it('psicólogo: aparece o campo CRP e, sem ele, não envia', async () => {
+  it('enfermeiro: aparece o campo COREN e, sem ele, não envia', async () => {
     const { user, dialogo } = await abrirNovoUsuario();
-    await escolherPerfil(user, dialogo, /psic[óo]logo/i);
-    expect(within(dialogo).getByPlaceholderText(/CRP/i)).toBeInTheDocument();
+    await escolherPerfil(user, dialogo, /enfermeiro/i);
+    expect(within(dialogo).getByPlaceholderText(/COREN/i)).toBeInTheDocument();
 
     await user.type(within(dialogo).getByPlaceholderText(/João da Silva/i), 'Fulana');
     await user.type(within(dialogo).getByPlaceholderText(/usuario@nuvita/i), 'fulana@clinica.com');
     await user.type(within(dialogo).getByPlaceholderText(/mín. 10 caracteres/i), 'provisoria-123');
     await user.click(within(dialogo).getByRole('button', { name: /criar usuário/i }));
-    expect(await within(dialogo).findByText(/informe o crp/i)).toBeInTheDocument();
+    expect(await within(dialogo).findByText(/informe o coren/i)).toBeInTheDocument();
     expect(mocks.createUsuario).not.toHaveBeenCalled();
   }, 20000);
 
-  it('outro perfil (ex.: administrador): não pede CRP', async () => {
+  it('outro perfil (ex.: administrador): não pede COREN', async () => {
     const { dialogo } = await abrirNovoUsuario();
-    expect(within(dialogo).queryByPlaceholderText(/^Nº do CRP$|CRP/i)).not.toBeInTheDocument();
+    expect(within(dialogo).queryByPlaceholderText(/^Nº do COREN$|COREN/i)).not.toBeInTheDocument();
   });
 });

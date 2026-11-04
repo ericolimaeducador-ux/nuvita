@@ -31,7 +31,7 @@ const salaCriada = {
 const ctx = {
   ip: '127.0.0.1',
   userAgent: 'jest',
-  user: { sub: 'med-1', email: 'medico@clinica.test', papel: Papel.PSICOLOGO, clinicaId: 'cli-1', jti: 'j1', typ: 'access' as const },
+  user: { sub: 'med-1', email: 'medico@clinica.test', papel: Papel.ENFERMEIRO, clinicaId: 'cli-1', jti: 'j1', typ: 'access' as const },
 };
 
 // Fase única: fecha o gap de wiring de Categoria A (link_teleconsulta). Mesmo

@@ -108,7 +108,7 @@ describe('Declaração de comparecimento (secretária)', () => {
     expect(screen.queryByTestId('declaracao-corpo')).not.toBeInTheDocument();
   });
 
-  it('assina pela clínica e por quem emite, sem CRP', async () => {
+  it('assina pela clínica e por quem emite, sem COREN', async () => {
     mocks.agendamentosList.mockResolvedValue([agenda('a1', 'concluido', local(20, 14), local(20, 15))]);
     renderizar();
     await userEvent.click(await screen.findByRole('radio'));
@@ -116,7 +116,7 @@ describe('Declaração de comparecimento (secretária)', () => {
     const assinatura = await screen.findByTestId('assinatura-declaracao');
     expect(assinatura).toHaveTextContent('Clínica Mente Sã');
     expect(assinatura).toHaveTextContent('Maria Secretária');
-    expect(assinatura.textContent).not.toMatch(/CRP/);
+    expect(assinatura.textContent).not.toMatch(/COREN/);
   });
 
   it('sem atendimento concluído na agenda: recusa emitir (sem botão de gerar)', async () => {

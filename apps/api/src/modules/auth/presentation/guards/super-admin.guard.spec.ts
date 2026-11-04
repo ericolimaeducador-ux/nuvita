@@ -24,8 +24,8 @@ describe('SuperAdminGuard', () => {
     expect(() => guard.canActivate(context({ papel: Papel.ADMIN }))).toThrow(ForbiddenException);
   });
 
-  it('barra PSICOLOGO com 403', () => {
-    expect(() => guard.canActivate(context({ papel: Papel.PSICOLOGO }))).toThrow(ForbiddenException);
+  it('barra ENFERMEIRO com 403', () => {
+    expect(() => guard.canActivate(context({ papel: Papel.ENFERMEIRO }))).toThrow(ForbiddenException);
   });
 
   it('barra requisição sem usuário', () => {

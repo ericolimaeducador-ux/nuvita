@@ -23,8 +23,8 @@ function renderizar() {
 }
 
 describe('AppLayout — sino de notificações', () => {
-  it('psicólogo (sem o módulo Notificações): não há sino no cabeçalho', () => {
-    mocks.auth.mockReturnValue(auth(Papel.PSICOLOGO, [Modulo.DASHBOARD, Modulo.AGENDA]));
+  it('enfermeiro (sem o módulo Notificações): não há sino no cabeçalho', () => {
+    mocks.auth.mockReturnValue(auth(Papel.ENFERMEIRO, [Modulo.DASHBOARD, Modulo.AGENDA]));
     renderizar();
     expect(screen.queryByRole('button', { name: 'Notificações' })).not.toBeInTheDocument();
   });

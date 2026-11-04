@@ -33,7 +33,7 @@ export function PrescricaoCuidadosPage() {
   const [modo, setModo] = useState<'compor' | 'imprimir'>('compor');
   const [checklist, setChecklist] = useState<string[]>([]);
   const [textoLivre, setTextoLivre] = useState('');
-  // Rascunho da IA aguardando decisão do psicólogo (null = sem sugestão pendente).
+  // Rascunho da IA aguardando decisão do enfermeiro (null = sem sugestão pendente).
   const [sugestaoIa, setSugestaoIa] = useState<{ texto: string; registroUsoIaId: string } | null>(null);
 
   const pacienteQ = useQuery({

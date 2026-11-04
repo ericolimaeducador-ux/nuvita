@@ -34,7 +34,7 @@ function renderizar() {
   );
 }
 
-// O formulário "Nova clínica" aceita documento em branco (a psicóloga informa no primeiro uso);
+// O formulário "Nova clínica" aceita documento em branco (a enfermeira informa no primeiro uso);
 // o rótulo precisa dizer isso, senão quem cria acha que o número é obrigatório.
 describe('Super Admin — Nova clínica: rótulo do documento', () => {
   beforeEach(() => {
@@ -51,10 +51,10 @@ describe('Super Admin — Nova clínica: rótulo do documento', () => {
     return screen.findByRole('dialog');
   }
 
-  it('o rótulo diz que o documento do consultório é opcional e que a psicóloga informa no primeiro uso', async () => {
+  it('o rótulo diz que o documento do consultório é opcional e que a enfermeira informa no primeiro uso', async () => {
     const dialogo = await abrirNovaClinica();
     expect(
-      within(dialogo).getByText('Documento do consultório (CPF ou CNPJ) — opcional; a psicóloga informa no primeiro uso'),
+      within(dialogo).getByText('Documento do consultório (CPF ou CNPJ) — opcional; a enfermeira informa no primeiro uso'),
     ).toBeInTheDocument();
   });
 

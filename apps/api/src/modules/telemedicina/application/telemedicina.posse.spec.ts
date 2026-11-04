@@ -2,7 +2,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { Papel } from '../../../../../../packages/shared/src/auth';
 import { TelemedicinaService } from './telemedicina.service';
 
-// Posse por recurso (D2): psicólogo só vê/encerra a sala em que ele é o profissional.
+// Posse por recurso (D2): enfermeiro só vê/encerra a sala em que ele é o profissional.
 const sala = (medicoId: string, id = 's1') => ({
   id, clinicaId: 'cli-1', agendamentoId: 'ag-1', pacienteId: 'pac-1', medicoId, status: 'aguardando',
 });
@@ -26,9 +26,9 @@ function criar(medicoDaSala: string) {
 }
 
 describe('TelemedicinaService – posse (D2)', () => {
-  const psiB = ctxDe('psi-B', Papel.PSICOLOGO);
+  const psiB = ctxDe('psi-B', Papel.ENFERMEIRO);
 
-  it('psicólogo NÃO consulta sala de colega (findById, findByAgendamento, eventos)', async () => {
+  it('enfermeiro NÃO consulta sala de colega (findById, findByAgendamento, eventos)', async () => {
     const { service, eventos } = criar('psi-A');
     await expect(service.findById('s1', undefined, psiB)).rejects.toThrow(ForbiddenException);
     await expect(service.findByAgendamento('ag-1', undefined, psiB)).rejects.toThrow(ForbiddenException);
@@ -36,19 +36,19 @@ describe('TelemedicinaService – posse (D2)', () => {
     expect(eventos.listBySala).not.toHaveBeenCalled();
   });
 
-  it('psicólogo NÃO encerra sala de colega', async () => {
+  it('enfermeiro NÃO encerra sala de colega', async () => {
     const { service, salas } = criar('psi-A');
     await expect(service.encerrarSala('s1', undefined, psiB)).rejects.toThrow(ForbiddenException);
     expect(salas.updateStatus).not.toHaveBeenCalled();
   });
 
-  it('histórico de salas do psicólogo traz só as dele', async () => {
+  it('histórico de salas do enfermeiro traz só as dele', async () => {
     const { service } = criar('psi-A');
     const lista = await service.listar({}, psiB);
     expect(lista.map((s: { id: string }) => s.id)).toEqual(['s2']);
   });
 
-  it('psicólogo opera a própria sala; admin vê a clínica inteira', async () => {
+  it('enfermeiro opera a própria sala; admin vê a clínica inteira', async () => {
     const { service } = criar('psi-B');
     await expect(service.findById('s1', undefined, psiB)).resolves.toBeDefined();
     await expect(service.encerrarSala('s1', undefined, psiB)).resolves.toBeDefined();

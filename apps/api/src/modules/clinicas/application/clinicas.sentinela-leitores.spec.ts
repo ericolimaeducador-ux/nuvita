@@ -35,7 +35,7 @@ function montar() {
   const admin = new SuperAdminService(users as never, repo as never, config as never, clinicasService);
   return { model, repo, auditLogs, clinicasService, users, admin };
 }
-const usuario = { sub: 'psi-1', email: 'p@x.test', papel: Papel.PSICOLOGO, clinicaId: objectId, jti: 'j', typ: 'access' as const };
+const usuario = { sub: 'psi-1', email: 'p@x.test', papel: Papel.ENFERMEIRO, clinicaId: objectId, jti: 'j', typ: 'access' as const };
 
 describe('leitores do documento da clínica com o sentinela gravado', () => {
   it('GET /clinicas/minha (obterMinha): documento vazio', async () => {

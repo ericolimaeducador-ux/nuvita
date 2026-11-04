@@ -21,10 +21,10 @@ describe('AgendamentosService.obterParaEmissao', () => {
     expect(agendamentos.findById).toHaveBeenCalledWith('cli-1', 'ag-1');
   });
 
-  it('inexistente → 404; psicólogo de outro profissional → 403; o dono passa', async () => {
+  it('inexistente → 404; enfermeiro de outro profissional → 403; o dono passa', async () => {
     const { service } = criar();
     await expect(service.obterParaEmissao('cli-1', 'ag-9', userDe('sec', Papel.SECRETARIA))).rejects.toThrow(NotFoundException);
-    await expect(service.obterParaEmissao('cli-1', 'ag-1', userDe('psi-B', Papel.PSICOLOGO))).rejects.toThrow(ForbiddenException);
-    await expect(service.obterParaEmissao('cli-1', 'ag-1', userDe('psi-A', Papel.PSICOLOGO))).resolves.toBeDefined();
+    await expect(service.obterParaEmissao('cli-1', 'ag-1', userDe('psi-B', Papel.ENFERMEIRO))).rejects.toThrow(ForbiddenException);
+    await expect(service.obterParaEmissao('cli-1', 'ag-1', userDe('psi-A', Papel.ENFERMEIRO))).resolves.toBeDefined();
   });
 });

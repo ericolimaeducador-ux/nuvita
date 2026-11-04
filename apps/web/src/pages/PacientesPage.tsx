@@ -101,9 +101,9 @@ export function PacientesPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
-  // Psicólogo só enxerga/cadastra pacientes do Projeto PSI — o backend já
+  // Enfermeiro só enxerga/cadastra pacientes do Projeto PSI — o backend já
   // filtra a lista; aqui só simplificamos a UI (sem seletor de projeto).
-  const ehPsicologo = user?.papel === Papel.PSICOLOGO;
+  const ehEnfermeiro = user?.papel === Papel.ENFERMEIRO;
   const [buscaInput, setBuscaInput] = useState('');
   const [busca, setBusca] = useState('');
   const [nascFiltro, setNascFiltro] = useState('');
@@ -197,7 +197,7 @@ export function PacientesPage() {
       cpf: v.cpf || undefined,
       dataNascimento: dayjs(v.dataNascimento).format('YYYY-MM-DD'),
       sexo: v.sexo || undefined,
-      projeto: ehPsicologo ? ProjetoPaciente.PSI : (v.projeto || undefined),
+      projeto: ehEnfermeiro ? ProjetoPaciente.PSI : (v.projeto || undefined),
       linhaTerapeutica: v.linhaTerapeutica || undefined,
       telefone: v.telefone || undefined,
       email: v.email || undefined,
@@ -273,7 +273,7 @@ export function PacientesPage() {
               </Select>
             </div>
 
-            {!ehPsicologo && (
+            {!ehEnfermeiro && (
               <div className="space-y-1">
                 <Label>Projeto</Label>
                 <Select value={projetoFiltro} onValueChange={(v) => setProjetoFiltro(v as ProjetoPaciente | 'all')}>
@@ -363,7 +363,7 @@ export function PacientesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      {(user?.papel === Papel.PSICOLOGO || user?.papel === Papel.ADMIN) && (
+                      {(user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN) && (
                       <Button
                         variant="ghost" size="icon" title="Exportar dados (LGPD)"
                         onClick={() =>
@@ -497,7 +497,7 @@ export function PacientesPage() {
             )}
 
             <div className="grid grid-cols-2 gap-3">
-              {!ehPsicologo && (
+              {!ehEnfermeiro && (
                 <div className="space-y-2">
                   <Label>Projeto (opcional)</Label>
                   <Select onValueChange={(v) => setValue('projeto', v as ProjetoPaciente)}>
@@ -523,8 +523,8 @@ export function PacientesPage() {
                 <Label htmlFor="telefone">Telefone</Label>
                 <Input id="telefone" placeholder="(00) 00000-0000" {...register('telefone')} />
               </div>
-              {/* Psicólogo não vê "Projeto": sobram 3 campos na grade de 2 colunas, então o e-mail ocupa a linha inteira. */}
-              <div className={ehPsicologo ? "col-span-2 space-y-2" : "space-y-2"}>
+              {/* Enfermeiro não vê "Projeto": sobram 3 campos na grade de 2 colunas, então o e-mail ocupa a linha inteira. */}
+              <div className={ehEnfermeiro ? "col-span-2 space-y-2" : "space-y-2"}>
                 <Label htmlFor="pacEmail">E-mail</Label>
                 <Input id="pacEmail" type="email" placeholder="paciente@email.com" {...register('email')} />
                 {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}

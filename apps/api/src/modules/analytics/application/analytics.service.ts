@@ -322,9 +322,9 @@ export class AnalyticsService {
     return resolveTenantClinicaId(user, requestedId);
   }
 
-  /** PSICOLOGO só enxerga os próprios relatórios de caixa/agenda, mesmo informando outro id. */
+  /** ENFERMEIRO só enxerga os próprios relatórios de caixa/agenda, mesmo informando outro id. */
   resolveProfissionalId(user: AuthTokenPayload, requestedId?: string): string | undefined {
-    if (user.papel === Papel.PSICOLOGO) return user.sub;
+    if (user.papel === Papel.ENFERMEIRO) return user.sub;
     return requestedId;
   }
 }

@@ -21,7 +21,7 @@ function makeGuard(isento: boolean) {
 const gatedUser = {
   sub: 'u1',
   email: 'psi@nuvita.test',
-  papel: Papel.PSICOLOGO,
+  papel: Papel.ENFERMEIRO,
   jti: 'j',
   typ: 'access' as const,
   deveTrocarSenha: false,
@@ -54,7 +54,7 @@ describe('AuthGatesGuard (Fase 2b)', () => {
     expect(guard.canActivate(context({}))).toBe(true);
   });
 
-  it('barra PSICOLOGO com termo defasado', () => {
+  it('barra ENFERMEIRO com termo defasado', () => {
     const guard = makeGuard(false);
     const staleUser = { ...gatedUser, termosAceitos: { versao: '0.9', dataAceite: new Date() } };
     expect(() => guard.canActivate(context({ user: staleUser }))).toThrow(ForbiddenException);

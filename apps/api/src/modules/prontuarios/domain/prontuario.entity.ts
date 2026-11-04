@@ -118,8 +118,8 @@ export interface RegistroPsicologico {
   encaminhamentos?: string;
   /** Anotações livres da sessão. */
   anotacoesLivres?: string;
-  /** CRP do psicólogo responsável. */
-  crp?: string;
+  /** COREN do enfermeiro responsável. */
+  coren?: string;
 
   // Campos específicos por linha terapêutica do paciente (TCC, Psicanálise,
   // Humanista, Gestalt, Junguiana) — preenchidos condicionalmente conforme
@@ -158,8 +158,8 @@ export interface AssinaturaProntuario {
   medicoId: string;
   dataAssinatura: Date;
   hash: string;
-  /** CRP do perfil do psicólogo, carimbado pelo servidor ao assinar. Ausente nos registros anteriores a essa regra. */
-  crp?: string;
+  /** COREN do perfil do enfermeiro, carimbado pelo servidor ao assinar. Ausente nos registros anteriores a essa regra. */
+  coren?: string;
 }
 
 export interface Prontuario {

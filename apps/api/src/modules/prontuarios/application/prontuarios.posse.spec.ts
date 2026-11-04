@@ -7,7 +7,7 @@ import { Cid10Repository, ProntuarioRepository } from './ports/prontuario.reposi
 import { ProntuariosService } from './prontuarios.service';
 import { AgendamentosService } from '../../agendamentos/application/agendamentos.service';
 
-// Posse por recurso: psicólogo só lê/adenda prontuário que é DELE (sigilo profissional).
+// Posse por recurso: enfermeiro só lê/adenda prontuário que é DELE (sigilo profissional).
 describe('ProntuariosService – posse por recurso', () => {
   const assinado = { medicoId: 'medico-A', dataAssinatura: new Date('2026-01-02T12:00:00.000Z'), hash: 'h' };
   const doColega: Prontuario = {
@@ -31,7 +31,7 @@ describe('ProntuariosService – posse por recurso', () => {
   const ctxDe = (sub: string) => ({
     ip: '127.0.0.1',
     userAgent: 'jest',
-    user: { sub, email: `${sub}@nuvita.test`, papel: Papel.PSICOLOGO, clinicaId: 'clinica-1', jti: 'j', typ: 'access' as const },
+    user: { sub, email: `${sub}@nuvita.test`, papel: Papel.ENFERMEIRO, clinicaId: 'clinica-1', jti: 'j', typ: 'access' as const },
   });
   const colegaB = ctxDe('medico-B');
 
@@ -48,13 +48,13 @@ describe('ProntuariosService – posse por recurso', () => {
       { create: jest.fn() } as unknown as AuditLogRepository,
       { getConfig: () => ({ prontuarioSignatureSecret: 's' }) } as unknown as AppConfigService,
       { conclude: jest.fn() } as unknown as AgendamentosService,
-      // Autorizado pelo usuário (2026-10-27): o serviço agora recebe o repositório de usuários (CRP do perfil ao assinar).
+      // Autorizado pelo usuário (2026-10-27): o serviço agora recebe o repositório de usuários (COREN do perfil ao assinar).
       { findById: jest.fn() } as never,
     );
     return { service, repo };
   }
 
-  it('colega NÃO lê prontuário de outro psicólogo (findOne)', async () => {
+  it('colega NÃO lê prontuário de outro enfermeiro (findOne)', async () => {
     const { service } = criar();
     await expect(service.findOne('pront-A', undefined, colegaB)).rejects.toThrow(ForbiddenException);
   });
@@ -71,7 +71,7 @@ describe('ProntuariosService – posse por recurso', () => {
     expect(repo.addAddendum).not.toHaveBeenCalled();
   });
 
-  it('listagem por paciente devolve só os prontuários do próprio psicólogo', async () => {
+  it('listagem por paciente devolve só os prontuários do próprio enfermeiro', async () => {
     const { service } = criar();
     const lista = await service.listByPaciente({ pacienteId: 'paciente-1' }, colegaB);
     expect(lista.map((p) => p.id)).toEqual(['pront-B']);

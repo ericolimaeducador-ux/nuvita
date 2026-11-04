@@ -48,9 +48,9 @@ export const authApi = {
       .post<LoginResponse>('/auth/login', { email, password, totpCode })
       .then((r) => r.data),
   logout: () => api.post('/auth/logout').then((r) => r.data),
-  // O próprio profissional grava o CRP (a API aceita uma única vez; depois só o super-admin corrige).
-  salvarMeuCrp: (crp: string) =>
-    api.patch<{ user: AuthUser }>('/auth/me', { crp }).then((r) => r.data),
+  // O próprio profissional grava o COREN (a API aceita uma única vez; depois só o super-admin corrige).
+  salvarMeuCoren: (coren: string) =>
+    api.patch<{ user: AuthUser }>('/auth/me', { coren }).then((r) => r.data),
   aceitarTermos: (versao: string) =>
     api
       .post<GateResolvidoResponse>('/auth/aceitar-termos', { versao })
@@ -80,12 +80,12 @@ export interface CriarUsuarioPayload {
   email: string;
   password: string;
   papel: Papel;
-  /** Obrigatório para PSICÓLOGO. */
-  crp?: string;
+  /** Obrigatório para ENFERMEIRO. */
+  coren?: string;
 }
 export interface CriarUsuarioResponse {
   user: { id: string; nome: string; email: string; papel: Papel };
-  /** Segundo fator do usuário criado (psicólogo): exibido UMA vez para o ADMIN repassar. */
+  /** Segundo fator do usuário criado (enfermeiro): exibido UMA vez para o ADMIN repassar. */
   twoFactorSetup?: { otpauthUrl: string; base32: string };
 }
 
@@ -102,7 +102,7 @@ export interface MinhaClinica {
 
 export const clinicasApi = {
   minha: () => api.get<MinhaClinica>('/clinicas/minha').then((r) => r.data),
-  // Primeiro uso: a psicóloga informa o CPF/CNPJ do consultório UMA vez (depois só o super-admin corrige).
+  // Primeiro uso: a enfermeira informa o CPF/CNPJ do consultório UMA vez (depois só o super-admin corrige).
   preencherDocumento: (payload: { tipoDocumento: 'CPF' | 'CNPJ'; documento: string }) =>
     api.patch<MinhaClinica>('/clinicas/minha/documento', payload).then((r) => r.data),
   // Cria um usuário (profissional ou secretaria) dentro da clínica do ADMIN.
@@ -412,8 +412,8 @@ export interface CreateAdminUserPayload {
   papel: Papel;
   clinicaId?: string;
   registroProfissional?: string;
-  /** Obrigatório para PSICÓLOGO. */
-  crp?: string;
+  /** Obrigatório para ENFERMEIRO. */
+  coren?: string;
 }
 
 export interface TwoFactorSetup {
@@ -450,7 +450,7 @@ export interface UpdateClinicaPayload {
 export interface CriarClinicaPayload {
   clinica: {
     nome: string;
-    /** Opcional: a psicóloga informa o CPF/CNPJ do consultório no primeiro uso (os dois andam juntos). */
+    /** Opcional: a enfermeira informa o CPF/CNPJ do consultório no primeiro uso (os dois andam juntos). */
     tipoDocumento?: TipoDocumentoClinica;
     documento?: string;
     plano: ClinicaAdmin['plano'];

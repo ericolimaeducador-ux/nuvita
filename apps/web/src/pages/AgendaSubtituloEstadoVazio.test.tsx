@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 const mocks = vi.hoisted(() => ({ agendaList: vi.fn(), painel: vi.fn(), prontuariosList: vi.fn(), pacientesList: vi.fn() }));
 
 vi.mock('@/auth/AuthContext', () => ({
-  useAuth: () => ({ user: { id: 'u1', clinicaId: 'c1', papel: 'PSICOLOGO', nome: 'Psi Teste' }, permissoes: [] }),
+  useAuth: () => ({ user: { id: 'u1', clinicaId: 'c1', papel: 'ENFERMEIRO', nome: 'Psi Teste' }, permissoes: [] }),
 }));
 vi.mock('@/api/resources', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/api/resources')>();
@@ -75,7 +75,7 @@ describe('Atendimento Psicológico — estado vazio com agendamentos futuros', (
   it('cancelado futuro não conta; sem nenhum futuro ativo, mantém a mensagem de sempre', async () => {
     mocks.agendaList.mockResolvedValue([ag('1', 60, 'cancelado')]);
     renderizar(<AtendimentoPsicologicoPage />);
-    expect(await screen.findByText(/Nenhum paciente agendado para o psicólogo neste filtro/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Nenhum paciente agendado para o enfermeiro neste filtro/i)).toBeInTheDocument();
     expect(screen.queryByText(/ainda não começ/i)).not.toBeInTheDocument();
   });
 });

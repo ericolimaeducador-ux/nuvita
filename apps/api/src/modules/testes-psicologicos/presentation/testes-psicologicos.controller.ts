@@ -9,11 +9,11 @@ import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.gua
 import { TestesPsicologicosService } from '../application/testes-psicologicos.service';
 import { CreateTestePsicologicoDto } from '../application/dto/create-teste-psicologico.dto';
 
-// Só o psicólogo aplica/registra testes — mesmo padrão de acesso dos
+// Só o enfermeiro aplica/registra testes — mesmo padrão de acesso dos
 // documentos clínicos (atestado, laudo, encaminhamento, prescrição).
 @Controller('testes-psicologicos')
 @UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
-@Roles(Papel.PSICOLOGO)
+@Roles(Papel.ENFERMEIRO)
 export class TestesPsicologicosController {
   constructor(private readonly service: TestesPsicologicosService) {}
 

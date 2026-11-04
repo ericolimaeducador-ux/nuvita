@@ -22,7 +22,7 @@ export function gateAtivo(user: AuthUser | null): string | null {
   if (!user) return null;
 
   const termosDefasados =
-    (user.papel === Papel.PSICOLOGO || user.papel === Papel.ADMIN) &&
+    (user.papel === Papel.ENFERMEIRO || user.papel === Papel.ADMIN) &&
     user.termosAceitos?.versao !== versaoTermosExigida(user.faseTeste);
   if (termosDefasados) return ROTA_ACEITAR_TERMOS;
 

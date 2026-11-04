@@ -9,7 +9,7 @@ const ids = { clinicaId: '6addf106f1ed2961f5111e68', pacienteId: '6addf5f398eae6
 const context = {
   ip: '127.0.0.1',
   userAgent: 'jest',
-  user: { sub: 'psi-1', email: 'p@x.test', papel: Papel.PSICOLOGO, clinicaId: ids.clinicaId, jti: 'j', typ: 'access' as const },
+  user: { sub: 'psi-1', email: 'p@x.test', papel: Papel.ENFERMEIRO, clinicaId: ids.clinicaId, jti: 'j', typ: 'access' as const },
 };
 const dto = {
   ...ids, tipo: TipoAtendimento.PSICOTERAPIA, formulario: 'seguimento', registroPsicologico: { anotacoesLivres: 'x' },

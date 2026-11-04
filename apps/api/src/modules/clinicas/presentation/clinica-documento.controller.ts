@@ -12,7 +12,7 @@ import { ClinicasService } from '../application/clinicas.service';
 import { PreencherDocumentoDto } from '../application/dto/preencher-documento.dto';
 
 /**
- * Primeiro uso (feature-clinic-fiscal-document-first-use): a psicóloga informa o documento do PRÓPRIO consultório,
+ * Primeiro uso (feature-clinic-fiscal-document-first-use): a enfermeira informa o documento do PRÓPRIO consultório,
  * uma única vez (a trava é o filtro atômico do update). Depois só o super-admin corrige. Fica fora do
  * ClinicasController de propósito: aquele é a rota do ADMIN e não grava documento.
  */
@@ -22,7 +22,7 @@ export class ClinicaDocumentoController {
 
   @Patch('documento')
   @UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
-  @Roles(Papel.PSICOLOGO)
+  @Roles(Papel.ENFERMEIRO)
   preencherDocumento(@Body() dto: PreencherDocumentoDto, @CurrentUser() user: AuthTokenPayload, @Req() request: Request) {
     return this.clinicasService.preencherDocumento(dto, { ...extractRequestMeta(request), user });
   }

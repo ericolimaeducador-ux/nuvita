@@ -26,10 +26,10 @@ export interface GateAvaliavel {
  * Gates:
  * - troca de senha obrigatória: `deveTrocarSenha === true`, qualquer papel
  *   (feature-forced-password-change)
- * - aceite dos Termos de Uso: PSICOLOGO e ADMIN, quando a versão aceita
+ * - aceite dos Termos de Uso: ENFERMEIRO e ADMIN, quando a versão aceita
  *   difere da vigente — inclui "nunca aceitou"
  *   (feature-terms-of-service-acceptance, amendment 2026-09-10: escopo
- *   estendido de "só PSICOLOGO" para "PSICOLOGO e ADMIN"). A versão exigida é
+ *   estendido de "só ENFERMEIRO" para "ENFERMEIRO e ADMIN"). A versão exigida é
  *   a do Termo de Teste quando `faseTeste` (teste beta, 2026-10-15) e a dos
  *   Termos de Uso fora dela — ver versaoTermosExigida().
  */
@@ -38,7 +38,7 @@ export function gatePendente(user: GateAvaliavel): boolean {
     return true;
   }
 
-  if (user.papel === Papel.PSICOLOGO || user.papel === Papel.ADMIN) {
+  if (user.papel === Papel.ENFERMEIRO || user.papel === Papel.ADMIN) {
     return user.termosAceitos?.versao !== versaoTermosExigida(user.faseTeste);
   }
 

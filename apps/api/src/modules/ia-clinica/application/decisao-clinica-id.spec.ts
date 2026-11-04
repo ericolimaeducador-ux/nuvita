@@ -7,7 +7,7 @@ import { IaClinicaService } from './ia-clinica.service';
 const context = {
   ip: '127.0.0.1',
   userAgent: 'jest',
-  user: { sub: 'psi-1', email: 'psi@nuvita.test', papel: Papel.PSICOLOGO, clinicaId: 'clinica-1', jti: 'j', typ: 'access' as const },
+  user: { sub: 'psi-1', email: 'psi@nuvita.test', papel: Papel.ENFERMEIRO, clinicaId: 'clinica-1', jti: 'j', typ: 'access' as const },
 };
 
 describe('decisoes_uso_ia — clinicaId', () => {

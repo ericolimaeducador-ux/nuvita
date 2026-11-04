@@ -9,7 +9,7 @@ export function cicloDaSessao(numeroDaSessao: number): number {
 }
 
 /**
- * Preço de sessão do psicólogo. É por profissional, não por clínica: o módulo
+ * Preço de sessão do enfermeiro. É por profissional, não por clínica: o módulo
  * atende autônomos, e cada um cobra o seu valor.
  */
 export interface ConfigPsicologo {

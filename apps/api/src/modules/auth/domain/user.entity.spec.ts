@@ -6,7 +6,7 @@ const baseUser: User = {
   nome: 'Fulana de Tal',
   email: 'fulana@example.com',
   passwordHash: 'hash-bcrypt',
-  papel: Papel.PSICOLOGO,
+  papel: Papel.ENFERMEIRO,
   clinicaId: 'c1',
   twoFactorSecret: 'BASE32SECRET',
   ativo: true,

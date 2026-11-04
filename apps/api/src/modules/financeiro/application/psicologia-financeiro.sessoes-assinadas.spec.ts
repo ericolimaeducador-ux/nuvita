@@ -6,7 +6,7 @@ import { PsicologiaFinanceiroService } from './psicologia-financeiro.service';
 const context = {
   ip: '127.0.0.1',
   userAgent: 'jest',
-  user: { sub: 'psi-1', email: 'psi@nuvita.test', papel: Papel.PSICOLOGO, clinicaId: 'cli-1', jti: 'j', typ: 'access' as const },
+  user: { sub: 'psi-1', email: 'psi@nuvita.test', papel: Papel.ENFERMEIRO, clinicaId: 'cli-1', jti: 'j', typ: 'access' as const },
 };
 
 const resumo = (pacienteId: string, total: number) => ({

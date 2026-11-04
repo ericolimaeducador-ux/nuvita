@@ -12,7 +12,7 @@ class ClinicaInputDto {
   nome!: string;
 
   /**
-   * CPF para profissional que atende como pessoa física; CNPJ para empresa. OPCIONAL na criação: a psicóloga informa
+   * CPF para profissional que atende como pessoa física; CNPJ para empresa. OPCIONAL na criação: a enfermeira informa
    * o documento do consultório no primeiro uso. Os dois campos andam juntos.
    */
   @ValidateIf((o: ClinicaInputDto) => o.documento !== undefined || o.tipoDocumento !== undefined)
@@ -74,7 +74,7 @@ class PrimeiroAdminInputDto {
 /**
  * Corpo de POST /super-admin/clinicas. Campos mínimos — os mesmos que a CLI
  * bootstrap-admin já usa. A senha do admin NÃO vem aqui: é gerada no backend.
- * O primeiro admin é OPCIONAL: sem ele a clínica nasce sozinha e o super-admin cria o psicólogo depois.
+ * O primeiro admin é OPCIONAL: sem ele a clínica nasce sozinha e o super-admin cria o enfermeiro depois.
  */
 export class CriarClinicaDto {
   @ValidateNested()

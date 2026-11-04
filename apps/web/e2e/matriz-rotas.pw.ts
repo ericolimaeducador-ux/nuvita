@@ -7,36 +7,36 @@ import { resolve } from 'node:path';
 // Roda no CI (job Web — E2E). Rota nova no web sem linha aqui NÃO é detectada por este arquivo: o teste
 // `rotas-declaradas` (no fim do arquivo) compara com o conjunto de rotas reais de routes.tsx e FALHA.
 
-type Papel = 'SUPER_ADMIN' | 'ADMIN' | 'PSICOLOGO' | 'SECRETARIA' | 'PACIENTE';
-const PAPEIS: Papel[] = ['SUPER_ADMIN', 'ADMIN', 'PSICOLOGO', 'SECRETARIA', 'PACIENTE'];
+type Papel = 'SUPER_ADMIN' | 'ADMIN' | 'ENFERMEIRO' | 'SECRETARIA' | 'PACIENTE';
+const PAPEIS: Papel[] = ['SUPER_ADMIN', 'ADMIN', 'ENFERMEIRO', 'SECRETARIA', 'PACIENTE'];
 
 const ROTAS: Array<[string, string, Papel[]]> = [
   ['/dashboard', '/dashboard', PAPEIS],
-  ['/pacientes', '/pacientes', ['SUPER_ADMIN', 'ADMIN', 'PSICOLOGO', 'SECRETARIA']],
-  ['/pacientes/:id', '/pacientes/p1', ['SUPER_ADMIN', 'ADMIN', 'PSICOLOGO', 'SECRETARIA']],
-  // documentos clínicos e impressão do prontuário: PRIVATIVOS do psicólogo
-  ['/pacientes/:id/prontuario/:prontuarioId/imprimir', '/pacientes/p1/prontuario/r1/imprimir', ['PSICOLOGO']],
-  ['/pacientes/:id/documentos/atestado', '/pacientes/p1/documentos/atestado', ['PSICOLOGO']],
-  ['/pacientes/:id/documentos/laudo', '/pacientes/p1/documentos/laudo', ['PSICOLOGO']],
-  ['/pacientes/:id/documentos/encaminhamento', '/pacientes/p1/documentos/encaminhamento', ['PSICOLOGO']],
-  ['/pacientes/:id/documentos/prescricao', '/pacientes/p1/documentos/prescricao', ['PSICOLOGO']],
-  ['/pacientes/:id/documentos/declaracao-comparecimento', '/pacientes/p1/documentos/declaracao-comparecimento', ['ADMIN', 'PSICOLOGO', 'SECRETARIA']],
-  ['/agenda', '/agenda', ['SUPER_ADMIN', 'ADMIN', 'PSICOLOGO', 'SECRETARIA']],
+  ['/pacientes', '/pacientes', ['SUPER_ADMIN', 'ADMIN', 'ENFERMEIRO', 'SECRETARIA']],
+  ['/pacientes/:id', '/pacientes/p1', ['SUPER_ADMIN', 'ADMIN', 'ENFERMEIRO', 'SECRETARIA']],
+  // documentos clínicos e impressão do prontuário: PRIVATIVOS do enfermeiro
+  ['/pacientes/:id/prontuario/:prontuarioId/imprimir', '/pacientes/p1/prontuario/r1/imprimir', ['ENFERMEIRO']],
+  ['/pacientes/:id/documentos/atestado', '/pacientes/p1/documentos/atestado', ['ENFERMEIRO']],
+  ['/pacientes/:id/documentos/laudo', '/pacientes/p1/documentos/laudo', ['ENFERMEIRO']],
+  ['/pacientes/:id/documentos/encaminhamento', '/pacientes/p1/documentos/encaminhamento', ['ENFERMEIRO']],
+  ['/pacientes/:id/documentos/prescricao', '/pacientes/p1/documentos/prescricao', ['ENFERMEIRO']],
+  ['/pacientes/:id/documentos/declaracao-comparecimento', '/pacientes/p1/documentos/declaracao-comparecimento', ['ADMIN', 'ENFERMEIRO', 'SECRETARIA']],
+  ['/agenda', '/agenda', ['SUPER_ADMIN', 'ADMIN', 'ENFERMEIRO', 'SECRETARIA']],
   ['/prontuarios', '/prontuarios', ['SUPER_ADMIN']],
-  ['/documentos', '/documentos', ['SUPER_ADMIN', 'ADMIN', 'PSICOLOGO', 'SECRETARIA']],
+  ['/documentos', '/documentos', ['SUPER_ADMIN', 'ADMIN', 'ENFERMEIRO', 'SECRETARIA']],
   ['/notificacoes', '/notificacoes', ['SUPER_ADMIN', 'ADMIN', 'SECRETARIA']],
-  ['/telemedicina', '/telemedicina', ['SUPER_ADMIN', 'ADMIN', 'PSICOLOGO']],
-  ['/atendimento-psicologico', '/atendimento-psicologico', ['SUPER_ADMIN', 'PSICOLOGO']],
-  ['/financeiro-psicologia', '/financeiro-psicologia', ['SUPER_ADMIN', 'PSICOLOGO']],
+  ['/telemedicina', '/telemedicina', ['SUPER_ADMIN', 'ADMIN', 'ENFERMEIRO']],
+  ['/atendimento-psicologico', '/atendimento-psicologico', ['SUPER_ADMIN', 'ENFERMEIRO']],
+  ['/financeiro-psicologia', '/financeiro-psicologia', ['SUPER_ADMIN', 'ENFERMEIRO']],
   ['/clinica', '/clinica', ['SUPER_ADMIN', 'ADMIN']],
-  ['/relatorios', '/relatorios', ['SUPER_ADMIN', 'ADMIN', 'PSICOLOGO', 'SECRETARIA']],
+  ['/relatorios', '/relatorios', ['SUPER_ADMIN', 'ADMIN', 'ENFERMEIRO', 'SECRETARIA']],
   ['/super-admin', '/super-admin', ['SUPER_ADMIN']],
   ['/tickets', '/tickets', ['SUPER_ADMIN']],
 ];
 
 const USUARIO = (papel: Papel) => ({
   id: 'u1', nome: 'Teste', email: 't@clinica.example', papel, clinicaId: papel === 'SUPER_ADMIN' ? null : 'cli-1',
-  deveTrocarSenha: false, faseTeste: false, termosAceitos: { versao: '2.0', dataAceite: '2026-10-01T00:00:00.000Z' }, crp: '06/123',
+  deveTrocarSenha: false, faseTeste: false, termosAceitos: { versao: '2.0', dataAceite: '2026-10-01T00:00:00.000Z' }, coren: '06/123',
 });
 
 for (const papel of PAPEIS) {

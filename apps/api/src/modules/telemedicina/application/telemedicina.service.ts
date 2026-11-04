@@ -113,8 +113,8 @@ export class TelemedicinaService {
       dataInicio: query.dataInicio ? new Date(query.dataInicio) : undefined,
       dataFim: query.dataFim ? new Date(query.dataFim) : undefined,
     });
-    // Psicólogo vê só as próprias salas; admin segue com o histórico da clínica.
-    return context.user.papel === Papel.PSICOLOGO ? salas.filter((s) => s.medicoId === context.user.sub) : salas;
+    // Enfermeiro vê só as próprias salas; admin segue com o histórico da clínica.
+    return context.user.papel === Papel.ENFERMEIRO ? salas.filter((s) => s.medicoId === context.user.sub) : salas;
   }
 
   async joinSala(id: string, context: RequestAuditContext) {
@@ -152,7 +152,7 @@ export class TelemedicinaService {
 
   async encerrarSala(id: string, clinicaId: string | undefined, context: RequestAuditContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
-    if (context.user.papel === Papel.PSICOLOGO) {
+    if (context.user.papel === Papel.ENFERMEIRO) {
       const atual = await this.salas.findById(resolvedClinicaId, id);
       if (!atual) throw new NotFoundException('Sala nao encontrada.');
       this.assertPosse(atual, context.user);
@@ -326,9 +326,9 @@ export class TelemedicinaService {
     return servers;
   }
 
-  /** Psicólogo só opera a sala em que é o profissional; admin segue com a clínica inteira. */
+  /** Enfermeiro só opera a sala em que é o profissional; admin segue com a clínica inteira. */
   private assertPosse(sala: SalaTelemedicina, user: AuthTokenPayload): void {
-    if (user.papel === Papel.PSICOLOGO && sala.medicoId !== user.sub) {
+    if (user.papel === Papel.ENFERMEIRO && sala.medicoId !== user.sub) {
       throw new ForbiddenException('Esta sala pertence a outro profissional.');
     }
   }

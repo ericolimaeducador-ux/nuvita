@@ -21,18 +21,18 @@ import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { Papel, PAPEL_LABEL } from '@/types';
 
-const PAPEIS_CRIAVEIS = [Papel.PSICOLOGO, Papel.SECRETARIA];
+const PAPEIS_CRIAVEIS = [Papel.ENFERMEIRO, Papel.SECRETARIA];
 
 const usuarioSchema = z.object({
   nome: z.string().min(1, 'Informe o nome.'),
   papel: z.nativeEnum(Papel, { error: 'Selecione o perfil.' }),
   email: z.string().min(1, 'Informe o e-mail.').email('E-mail inválido.'),
   password: z.string().min(10, 'Mínimo de 10 caracteres.'),
-  crp: z.string().optional(),
+  coren: z.string().optional(),
 }).superRefine((v, ctx) => {
-  // O psicólogo precisa de CRP no perfil para assinar. Só "não vazio": o formato depende de fonte oficial do CFP.
-  if (v.papel === Papel.PSICOLOGO && !v.crp?.trim()) {
-    ctx.addIssue({ code: 'custom', path: ['crp'], message: 'Informe o CRP do psicólogo.' });
+  // O enfermeiro precisa de COREN no perfil para assinar. Só "não vazio": TODO(legal): o formato do COREN depende de fonte oficial.
+  if (v.papel === Papel.ENFERMEIRO && !v.coren?.trim()) {
+    ctx.addIssue({ code: 'custom', path: ['coren'], message: 'Informe o COREN do enfermeiro.' });
   }
 });
 type UsuarioForm = z.infer<typeof usuarioSchema>;
@@ -44,11 +44,11 @@ export function ClinicaPage() {
 
   const { register, handleSubmit, setValue, reset, watch, formState: { errors } } = useForm<UsuarioForm>({
     resolver: zodResolver(usuarioSchema),
-    defaultValues: { papel: Papel.PSICOLOGO },
+    defaultValues: { papel: Papel.ENFERMEIRO },
   });
 
   // Dados de acesso do usuário recém-criado, exibidos UMA vez (correção C2 do teste beta):
-  // sem o segundo fator, o psicólogo criado aqui não conseguiria entrar.
+  // sem o segundo fator, o enfermeiro criado aqui não conseguiria entrar.
   const [acessoCriado, setAcessoCriado] = useState<{
     nome: string;
     email: string;
@@ -57,7 +57,7 @@ export function ClinicaPage() {
   } | null>(null);
 
   const mut = useMutation({
-    mutationFn: (payload: { nome: string; email: string; password: string; papel: Papel; crp?: string }) =>
+    mutationFn: (payload: { nome: string; email: string; password: string; papel: Papel; coren?: string }) =>
       clinicasApi.criarUsuario(user?.clinicaId ?? '', payload),
     onSuccess: (res, payload) => {
       // O diálogo "Acesso criado" é a confirmação: sem toast de sucesso por cima (ficava duplicado).
@@ -73,7 +73,7 @@ export function ClinicaPage() {
   });
 
   function onSubmit(v: UsuarioForm) {
-    mut.mutate({ nome: v.nome, email: v.email, password: v.password, papel: v.papel, ...(v.papel === Papel.PSICOLOGO ? { crp: v.crp?.trim() } : {}) });
+    mut.mutate({ nome: v.nome, email: v.email, password: v.password, papel: v.papel, ...(v.papel === Papel.ENFERMEIRO ? { coren: v.coren?.trim() } : {}) });
   }
 
   return (
@@ -96,8 +96,8 @@ export function ClinicaPage() {
         <div>
           <p className="text-sm font-medium text-foreground">Novo usuário da clínica</p>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Crie psicólogos ou secretaria. Todos trocam a senha provisória no primeiro acesso;
-            psicólogos também recebem 2FA obrigatório. Disponível apenas para ADMIN.
+            Crie enfermeiros ou secretaria. Todos trocam a senha provisória no primeiro acesso;
+            enfermeiros também recebem 2FA obrigatório. Disponível apenas para ADMIN.
           </p>
         </div>
       </div>
@@ -113,7 +113,7 @@ export function ClinicaPage() {
               </div>
               <div className="space-y-2">
                 <Label>Perfil</Label>
-                <Select defaultValue={Papel.PSICOLOGO} onValueChange={(v) => setValue('papel', v as Papel)}>
+                <Select defaultValue={Papel.ENFERMEIRO} onValueChange={(v) => setValue('papel', v as Papel)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {PAPEIS_CRIAVEIS.map((p) => <SelectItem key={p} value={p}>{PAPEL_LABEL[p]}</SelectItem>)}
@@ -131,11 +131,11 @@ export function ClinicaPage() {
                 <PasswordInput id="password" placeholder="mínimo 10 caracteres" {...register('password')} />
                 {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
               </div>
-              {watch('papel') === Papel.PSICOLOGO && (
+              {watch('papel') === Papel.ENFERMEIRO && (
                 <div className="space-y-2">
-                  <Label htmlFor="crp">CRP do psicólogo</Label>
-                  <Input id="crp" placeholder="CRP 00/00000" {...register('crp')} />
-                  {errors.crp && <p className="text-sm text-destructive">{errors.crp.message}</p>}
+                  <Label htmlFor="coren">COREN do enfermeiro</Label>
+                  <Input id="coren" placeholder="COREN 00/00000" {...register('coren')} />
+                  {errors.coren && <p className="text-sm text-destructive">{errors.coren.message}</p>}
                 </div>
               )}
             </div>

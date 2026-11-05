@@ -76,6 +76,20 @@ export const MATRIZ_API: Record<string, string> = {
   'GET /entregas': 'AES',
   'GET /entregas/:id': 'AES',
   'POST /entregas/:id/confirmar': 'AE',
+  // checklist de documentos (etapa 3c): equipe da clínica; PACIENTE não tem acesso
+  'POST /checklist-documentos': 'AES',
+  'GET /checklist-documentos': 'AES',
+  'GET /checklist-documentos/resumo-pendentes': 'AES',
+  'POST /checklist-documentos/padrao': 'AES',
+  'PATCH /checklist-documentos/:id': 'AES',
+  'DELETE /checklist-documentos/:id': 'AES',
+  // follow-up (etapa 3c): ler = equipe; decidir elegibilidade (criar/excluir) é clínico: só enfermeiro/admin
+  'POST /followup': 'AE',
+  'PATCH /followup/:id/excluir': 'AE',
+  'GET /followup/resumo': 'AES',
+  'GET /followup': 'AES',
+  'GET /followup/avaliacao/:avaliacaoIuId': 'AES',
+  'GET /followup/:id': 'AES',
 
   // produtos: catálogo operacional global. Leitura da equipe; alteração só admin (SUPER_ADMIN sempre passa)
   'GET /produtos': 'AES',

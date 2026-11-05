@@ -7,6 +7,8 @@ import type {
   Documento,
   Endereco,
   Entrega,
+  ChecklistItem,
+  FollowUp,
   EtapaFluxoClinico,
   Lancamento,
   LinhaTerapeutica,
@@ -650,4 +652,35 @@ export const entregasApi = {
   create: (payload: CreateEntregaPayload) => api.post<Entrega>('/entregas', payload).then((r) => r.data),
   /** Pode levar o paciente elegível para CONCLUIDO no fluxo clínico (decisão do servidor). */
   confirmar: (id: string) => api.post<Entrega>(`/entregas/${id}/confirmar`).then((r) => r.data),
+};
+
+// ---------- Checklist de documentos ----------
+export const checklistApi = {
+  listByPaciente: (pacienteId: string) =>
+    api.get<ChecklistItem[]>('/checklist-documentos', { params: { pacienteId } }).then((r) => comoLista<ChecklistItem>(r.data) as ChecklistItem[]),
+  create: (payload: { pacienteId: string; nome: string; observacao?: string }) =>
+    api.post<ChecklistItem>('/checklist-documentos', payload).then((r) => r.data),
+  criarPadrao: (pacienteId: string) =>
+    api.post<ChecklistItem[]>('/checklist-documentos/padrao', { pacienteId }).then((r) => r.data),
+  /** Marcar o último item como recebido pode levar o paciente elegível à consulta médica (decisão do servidor). */
+  update: (id: string, payload: { status?: string; nome?: string; observacao?: string }) =>
+    api.patch<ChecklistItem>(`/checklist-documentos/${id}`, payload).then((r) => r.data),
+  remove: (id: string) => api.delete<{ ok: true }>(`/checklist-documentos/${id}`).then((r) => r.data),
+};
+
+// ---------- Follow-up de elegibilidade ----------
+export interface CreateFollowUpPayload {
+  pacienteId: string;
+  dataFollowup: string;
+  statusElegibilidade: string;
+  observacoes: string;
+  proximoFollowup?: string;
+}
+
+export const followupApi = {
+  listByPaciente: (pacienteId: string) =>
+    api.get<FollowUp[]>('/followup', { params: { pacienteId } }).then((r) => comoLista<FollowUp>(r.data) as FollowUp[]),
+  /** Elegível/não elegível podem mover a etapa do fluxo clínico do paciente (decisão do servidor). */
+  create: (payload: CreateFollowUpPayload) => api.post<FollowUp>('/followup', payload).then((r) => r.data),
+  excluir: (id: string) => api.patch<FollowUp>(`/followup/${id}/excluir`).then((r) => r.data),
 };

@@ -25,6 +25,8 @@ import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { ObservacoesPacienteModule } from './modules/observacoes-paciente/observacoes-paciente.module';
 import { ProdutosModule } from './modules/produtos/produtos.module';
 import { EntregasModule } from './modules/entregas/entregas.module';
+import { ChecklistDocumentosModule } from './modules/checklist-documentos/checklist-documentos.module';
+import { FollowUpModule } from './modules/followup/followup.module';
 import { TestesPsicologicosModule } from './modules/testes-psicologicos/testes-psicologicos.module';
 import { IaClinicaModule } from './modules/ia-clinica/ia-clinica.module';
 import { InscricoesTesteModule } from './modules/inscricoes-teste/inscricoes-teste.module';
@@ -79,6 +81,8 @@ import { InscricoesTesteModule } from './modules/inscricoes-teste/inscricoes-tes
     ObservacoesPacienteModule,
     ProdutosModule,
     EntregasModule,
+    ChecklistDocumentosModule,
+    FollowUpModule,
     TestesPsicologicosModule,
     IaClinicaModule,
     InscricoesTesteModule,

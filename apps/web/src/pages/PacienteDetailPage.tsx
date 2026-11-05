@@ -32,7 +32,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/use-toast';
 import { ClassificacaoAreaSelector } from '@/components/ClassificacaoAreaSelector';
+import { ChecklistSecao } from '@/components/ChecklistSecao';
 import { EntregasSecao } from '@/components/EntregasSecao';
+import { FollowupSecao } from '@/components/FollowupSecao';
 import { useAuth } from '@/auth/AuthContext';
 import {
   pacientesApi, prontuariosApi, agendaApi, documentosApi,
@@ -314,6 +316,16 @@ export function PacienteDetailPage() {
       {/* Testes psicológicos — placeholder: sem catálogo de testes ainda,
           nome do teste é texto livre. Estrutura pronta pra receber conteúdo depois. */}
       {ehEnfermeiro && <TestesPsicologicosSecao pacienteId={id} />}
+
+      {/* Checklist de documentos (equipe): receber o último item pode levar o paciente elegível à consulta médica. */}
+      <SectionErrorBoundary secao="Checklist de documentos">
+        <ChecklistSecao pacienteId={id} />
+      </SectionErrorBoundary>
+
+      {/* Follow-up de elegibilidade: ler = equipe; registrar (decisão clínica) = enfermeiro/admin. Pode mover a etapa do fluxo. */}
+      <SectionErrorBoundary secao="Follow-up">
+        <FollowupSecao pacienteId={id} podeDecidir={user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN || user?.papel === Papel.SUPER_ADMIN} />
+      </SectionErrorBoundary>
 
       {/* Entregas de insumo: registrar (equipe) e confirmar (enfermeiro/admin). Confirmar pode concluir o fluxo clínico de IU. */}
       <SectionErrorBoundary secao="Entregas">

@@ -86,15 +86,33 @@ describe('CobrancasSecao', () => {
     });
   });
 
-  it('marcar paga chama a API com o id', async () => {
+  it('marcar paga abre o diálogo; sem escolher a forma, ela vai vazia (campo opcional)', async () => {
     const user = userEvent.setup();
     mocks.marcarPaga.mockResolvedValue({ ...aberta, status: 'paga' });
     montar();
     await screen.findByText('Pacote de curativos');
 
     await user.click(screen.getByRole('button', { name: 'Marcar paga Pacote de curativos' }));
+    const dialogo = await screen.findByRole('dialog');
+    expect(mocks.marcarPaga).not.toHaveBeenCalled();
+    await user.click(within(dialogo).getByRole('button', { name: 'Confirmar pagamento' }));
 
-    await waitFor(() => expect(mocks.marcarPaga).toHaveBeenCalledWith('c1'));
+    await waitFor(() => expect(mocks.marcarPaga).toHaveBeenCalledWith('c1', undefined));
+  });
+
+  it('marcar paga com a forma de pagamento escolhida (pix) envia a forma', async () => {
+    const user = userEvent.setup();
+    mocks.marcarPaga.mockResolvedValue({ ...aberta, status: 'paga' });
+    montar();
+    await screen.findByText('Pacote de curativos');
+
+    await user.click(screen.getByRole('button', { name: 'Marcar paga Pacote de curativos' }));
+    const dialogo = await screen.findByRole('dialog');
+    await user.click(within(dialogo).getByRole('combobox', { name: 'Forma de pagamento recebida' }));
+    await user.click(await screen.findByRole('option', { name: 'Pix' }));
+    await user.click(within(dialogo).getByRole('button', { name: 'Confirmar pagamento' }));
+
+    await waitFor(() => expect(mocks.marcarPaga).toHaveBeenCalledWith('c1', 'pix'));
   });
 
   it('cancelar exige o motivo e só então chama a API', async () => {

@@ -26,6 +26,7 @@ import {
   CancelarCobrancaDto,
   ConsultaAvaliacaoDto,
   EnviarAvisoDto,
+  ListCobrancasQueryDto,
   PagarCobrancaDto,
   ResumoQueryDto,
   SalvarConfigFinanceiroDto,
@@ -43,6 +44,12 @@ export interface ResumoMensal {
   recebidoCentavos: number;
   vencidoCentavos: number;
   quantidades: { aReceber: number; recebido: number; vencido: number };
+}
+
+export interface PaginaCobrancasComPaciente {
+  items: Array<Cobranca & { pacienteNome?: string }>;
+  hasMore: boolean;
+  nextCursor?: string;
 }
 
 export interface ResultadoAviso {
@@ -199,6 +206,28 @@ export class CobrancasService {
     if (!pacienteId) throw new BadRequestException('pacienteId e obrigatorio.');
     const lista = await this.repo.listByPaciente(resolveTenantClinicaId(user, clinicaId), pacienteId);
     return lista.map((c) => this.apresentar(c));
+  }
+
+  /**
+   * Lista da CLÍNICA (sem pacienteId), com filtro por status efetivo e o NOME do paciente junto. Sempre na clínica do
+   * token. Paginada por cursor, no padrão do psi (items/hasMore/nextCursor).
+   */
+  async listarPorClinica(query: ListCobrancasQueryDto, user: AuthTokenPayload, hoje: Date = new Date()): Promise<PaginaCobrancasComPaciente> {
+    const clinicaId = resolveTenantClinicaId(user, query.clinicaId);
+    const inicioDeHoje = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), hoje.getUTCDate()));
+    const pagina = await this.repo.listByClinica({
+      clinicaId,
+      status: query.status,
+      hoje: inicioDeHoje,
+      cursor: query.cursor,
+      limit: query.limit,
+    });
+    const nomes = await this.pacientesService.resumoPorIds(clinicaId, pagina.items.map((c) => c.pacienteId));
+    return {
+      items: pagina.items.map((c) => ({ ...this.apresentar(c), pacienteNome: nomes.get(c.pacienteId)?.nome })),
+      hasMore: pagina.hasMore,
+      nextCursor: pagina.nextCursor,
+    };
   }
 
   async obter(id: string, clinicaId: string | undefined, user: AuthTokenPayload): Promise<Cobranca> {

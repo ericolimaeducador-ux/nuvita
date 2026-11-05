@@ -2,12 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 
-const mocks = vi.hoisted(() => ({ resumo: vi.fn(), config: vi.fn(), salvarConfig: vi.fn(), papel: { atual: 'ADMIN' } }));
+const mocks = vi.hoisted(() => ({ resumo: vi.fn(), config: vi.fn(), salvarConfig: vi.fn(), listByClinica: vi.fn(), papel: { atual: 'ADMIN' } }));
 
 vi.mock('@/api/resources', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/api/resources')>();
-  return { ...original, cobrancasApi: { ...original.cobrancasApi, resumo: mocks.resumo, config: mocks.config, salvarConfig: mocks.salvarConfig } };
+  return { ...original, cobrancasApi: { ...original.cobrancasApi, resumo: mocks.resumo, config: mocks.config, salvarConfig: mocks.salvarConfig, listByClinica: mocks.listByClinica } };
 });
 vi.mock('@/auth/AuthContext', () => ({ useAuth: () => ({ user: { papel: mocks.papel.atual } }) }));
 
@@ -17,7 +18,9 @@ function montar() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <FinanceiroPacientesPage />
+      <MemoryRouter>
+        <FinanceiroPacientesPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -31,6 +34,47 @@ describe('FinanceiroPacientesPage', () => {
       quantidades: { aReceber: 2, recebido: 3, vencido: 1 },
     });
     mocks.config.mockResolvedValue({ valorConsultaAvaliacaoCentavos: 22000 });
+    mocks.listByClinica.mockResolvedValue({
+      items: [
+        { id: 'c1', pacienteId: 'p1', pacienteNome: 'Maria da Silva', descricao: 'Pacote A', valorCentavos: 35000, status: 'vencida', vencimento: '2026-05-05T00:00:00.000Z', tipo: 'outro', itens: [] },
+        { id: 'c2', pacienteId: 'p2', pacienteNome: 'João Souza', descricao: 'Consulta', valorCentavos: 22000, status: 'pendente', vencimento: '2099-01-10T00:00:00.000Z', tipo: 'consulta_avaliacao', itens: [] },
+      ],
+      hasMore: false,
+    });
+  });
+
+  it('lista as cobranças pendentes e vencidas com o NOME do paciente (pedindo só os status em aberto)', async () => {
+    montar();
+    expect(await screen.findByText('Maria da Silva')).toBeInTheDocument();
+    expect(screen.getByText('João Souza')).toBeInTheDocument();
+    expect(screen.getByText('Vencida')).toBeInTheDocument();
+    expect(screen.getByText('05/05/2026')).toBeInTheDocument();
+    expect(mocks.listByClinica).toHaveBeenCalledWith(expect.objectContaining({ status: ['pendente', 'enviada', 'vencida'], limit: 20 }));
+  });
+
+  it('"Carregar mais" busca a próxima página pelo cursor', async () => {
+    const user = userEvent.setup();
+    mocks.listByClinica
+      .mockResolvedValueOnce({ items: [{ id: 'c1', pacienteId: 'p1', pacienteNome: 'Maria da Silva', descricao: 'A', valorCentavos: 100, status: 'pendente', vencimento: '2099-01-10T00:00:00.000Z', tipo: 'outro', itens: [] }], hasMore: true, nextCursor: 'cur1' })
+      .mockResolvedValueOnce({ items: [{ id: 'c9', pacienteId: 'p9', pacienteNome: 'Ana Nova', descricao: 'B', valorCentavos: 100, status: 'pendente', vencimento: '2099-02-10T00:00:00.000Z', tipo: 'outro', itens: [] }], hasMore: false });
+    montar();
+    await screen.findByText('Maria da Silva');
+
+    await user.click(screen.getByRole('button', { name: 'Carregar mais' }));
+
+    expect(await screen.findByText('Ana Nova')).toBeInTheDocument();
+    expect(mocks.listByClinica).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 'cur1' }));
+  });
+
+  it('lista vazia mostra a mensagem; falha ao carregar não parece lista vazia', async () => {
+    mocks.listByClinica.mockResolvedValueOnce({ items: [], hasMore: false });
+    const { unmount } = montar();
+    expect(await screen.findByText(/Nenhuma cobrança pendente ou vencida/)).toBeInTheDocument();
+    unmount();
+
+    mocks.listByClinica.mockRejectedValue(new Error('falhou'));
+    montar();
+    expect(await screen.findByTestId('erro-consulta')).toBeInTheDocument();
   });
 
   it('mostra a receber, recebido e vencido do mês', async () => {

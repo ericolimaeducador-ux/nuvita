@@ -25,6 +25,11 @@ subscription) is not ported or touched, and neither are the legacy `financeiro` 
   send window and queue apply). One accepted channel is enough to move the charge to `enviada`; failed channels come back in
   the response. For a minor the notice goes to the legal guardian. New `TipoNotificacao.AVISO_COBRANCA`.
   `ResumoContatoPaciente` gained the effective `telefone` (guardian's phone when the guardian is the recipient).
+- **Clinic-level list** `GET /cobrancas` (no `pacienteId`): charges of the token's clinic, filter by *effective* status
+  (`status=pendente,enviada,vencida`, comma separated; `vencida` = pendente/enviada with a past due date), patient name
+  included, oldest due first, cursor pagination like the patients list (`items`, `hasMore`, `nextCursor`, `limit` up to 100).
+  `clinicaId` always goes in the filter, outside the status `$or`. With `pacienteId` the route keeps returning that patient's charges.
+- **Mark paid** accepts an optional `formaPagamento`; the screen asks for it in a dialog ("Não informar" is the default).
 - **Monthly summary** `GET /cobrancas/resumo?mes=AAAA-MM`: *a receber* and *vencido* by due date within the month, *recebido* by
   payment date within the month.
 
@@ -45,7 +50,7 @@ must be reviewed by the clinic before real patients receive it. Labels of type/p
 
 ## Web
 - `CobrancasSecao` in `PacienteDetailPage`: list, create/edit, "consulta de avaliação" shortcut, send notice, mark paid, cancel (with reason).
-- `/financeiro-pacientes` (module Pacientes): monthly summary and the evaluation-appointment value. The SPA route is not
+- `/financeiro-pacientes` (module Pacientes): monthly summary, the open (pending/sent/overdue) charges list with patient names beside it, and the evaluation-appointment value. The SPA route is not
   `/financeiro` or `/cobrancas` because those prefixes belong to the API proxy (Vite regex gained `cobrancas`). The menu entry
   "Financeiro" now points here; the old psychology route is left untouched in `routes.tsx` but no longer in the menu.
 - Items editing is not exposed in the UI yet (API ready).

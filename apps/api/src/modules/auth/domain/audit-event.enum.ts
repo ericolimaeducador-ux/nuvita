@@ -76,7 +76,7 @@ export enum AuditEvent {
   AVALIACAO_IU_DELETED = 'AVALIACAO_IU_DELETED',
   // Captação de leads (etapa 4a): criação pública (por PIN) e exportação lead -> paciente.
   CAPTACAO_CREATED = 'CAPTACAO_CREATED',
-  // Financeiro de paciente (etapa 4b): cobranças (registro + avisos) e configuração do valor da consulta de avaliação.
+  // Financeiro de paciente (etapa 4b): cobranças (registro + avisos) e configuração do valor padrão da consulta.
   LANCAMENTO_FINANCEIRO_CREATED = 'LANCAMENTO_FINANCEIRO_CREATED',
   LANCAMENTO_FINANCEIRO_UPDATED = 'LANCAMENTO_FINANCEIRO_UPDATED',
   LANCAMENTO_FINANCEIRO_ENVIADO = 'LANCAMENTO_FINANCEIRO_ENVIADO',

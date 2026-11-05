@@ -1176,14 +1176,12 @@ export interface AvaliacaoIU {
 // O sistema NÃO recebe dinheiro de paciente (a clínica recebe por fora). Valores em CENTAVOS.
 // TODO(conteudo): rótulos de tipo/forma/status e textos de cobrança — revisar na etapa de conteúdo.
 export enum TipoCobranca {
-  CONSULTA_AVALIACAO = 'consulta_avaliacao',
   /** Só gerada pela assinatura da consulta de enfermagem. */
   CONSULTA_ENFERMAGEM = 'consulta_enfermagem',
   PACOTE_MENSAL = 'pacote_mensal',
   OUTRO = 'outro',
 }
 export const TIPO_COBRANCA_LABEL: Record<TipoCobranca, string> = {
-  [TipoCobranca.CONSULTA_AVALIACAO]: 'Consulta de avaliação',
   // TODO(conteudo): rótulo da cobrança gerada na assinatura da consulta.
   [TipoCobranca.CONSULTA_ENFERMAGEM]: 'Consulta de enfermagem',
   [TipoCobranca.PACOTE_MENSAL]: 'Pacote mensal',

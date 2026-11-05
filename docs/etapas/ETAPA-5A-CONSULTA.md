@@ -34,6 +34,9 @@ is the nurse's free text. Labels without a source are `TODO(conteudo)`.
 - If the charge fails, the consultation stays signed with `cobranca.status = PENDENTE_GERACAO` (audited);
   `POST /consultas/:id/cobranca` (author ENFERMEIRO or ADMIN; no clinical content returned) generates it with the stored value.
 - The generated charge has type `consulta_enfermagem` (description "Consulta de enfermagem", TODO(conteudo)); this type is refused in manual creation and hidden in the manual form. No charge existed in any real DB and no seed/script creates charges, so no migration was needed.
+- The manual "consulta de avaliação" charge (route, service method, DTO, enum value and web button) was REMOVED: every signed
+  consultation already charges by itself, and the manual shortcut allowed charging the patient twice. The clinic setting is now
+  `valorConsultaCentavos` (default `VALOR_CONSULTA_PADRAO_CENTAVOS` = 22000), shown as "Valor padrão da consulta de enfermagem".
 - Package: no charge, audit `CONSULTA_COBRANCA_INCLUIDA_EM_PACOTE`. Statuses: GERADA | INCLUIDA_EM_PACOTE | PENDENTE_GERACAO.
 - No Mongo transaction (repositories take no session; local Mongo is standalone) — decided by the owner.
 

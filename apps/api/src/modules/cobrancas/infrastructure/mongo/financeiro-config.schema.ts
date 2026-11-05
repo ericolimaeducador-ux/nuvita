@@ -10,7 +10,7 @@ export class FinanceiroConfigMongo {
   clinicaId!: string;
 
   @Prop({ required: true, min: 0 })
-  valorConsultaAvaliacaoCentavos!: number;
+  valorConsultaCentavos!: number;
 
   @Prop()
   atualizadoPor?: string;

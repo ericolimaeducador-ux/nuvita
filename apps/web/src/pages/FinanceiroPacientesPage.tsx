@@ -102,13 +102,13 @@ export function FinanceiroPacientesPage() {
   const configQ = useQuery({ queryKey: ['cobrancas-config'], queryFn: () => cobrancasApi.config() });
 
   useEffect(() => {
-    if (configQ.data) setValor(centavosParaInput(configQ.data.valorConsultaAvaliacaoCentavos));
+    if (configQ.data) setValor(centavosParaInput(configQ.data.valorConsultaCentavos));
   }, [configQ.data]);
 
   const centavos = reaisParaCentavos(valor);
   const salvarMut = useMutation({
     mutationFn: () => cobrancasApi.salvarConfig(centavos),
-    onSuccess: () => { toast.success('Valor da consulta de avaliação atualizado.'); void qc.invalidateQueries({ queryKey: ['cobrancas-config'] }); },
+    onSuccess: () => { toast.success('Valor padrão da consulta de enfermagem atualizado.'); void qc.invalidateQueries({ queryKey: ['cobrancas-config'] }); },
     onError: (e) => toast.error('Erro ao salvar o valor', apiErrorMessage(e)),
   });
 
@@ -156,7 +156,7 @@ export function FinanceiroPacientesPage() {
       )}
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Valor da consulta de avaliação</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Valor padrão da consulta de enfermagem</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {configQ.isError ? (
             <ErroConsulta erro={configQ.error} refetch={configQ.refetch} recurso="a configuração" />

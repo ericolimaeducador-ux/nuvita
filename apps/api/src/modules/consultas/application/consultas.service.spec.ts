@@ -120,7 +120,7 @@ function montar(opts: { coren?: string | null; valorPadrao?: number; modulos?: M
       Promise.resolve(opts.pacienteExiste === false || clinicaId !== CLINICA ? new Map() : new Map(ids.map((id) => [id, { nome: 'Maria' }])))),
   };
   const configRepo = {
-    findByClinica: jest.fn().mockResolvedValue(opts.valorPadrao !== undefined ? { clinicaId: CLINICA, valorConsultaAvaliacaoCentavos: opts.valorPadrao } : null),
+    findByClinica: jest.fn().mockResolvedValue(opts.valorPadrao !== undefined ? { clinicaId: CLINICA, valorConsultaCentavos: opts.valorPadrao } : null),
   };
   const cobrancasService = new CobrancasService(
     cob.repo as unknown as CobrancaRepository,

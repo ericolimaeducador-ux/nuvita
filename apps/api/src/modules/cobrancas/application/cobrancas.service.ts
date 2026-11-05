@@ -16,7 +16,7 @@ import {
   somaItens,
   statusEfetivo,
 } from '../domain/cobranca.entity';
-import { FinanceiroConfig, VALOR_CONSULTA_AVALIACAO_PADRAO_CENTAVOS } from '../domain/financeiro-config.entity';
+import { FinanceiroConfig, VALOR_CONSULTA_PADRAO_CENTAVOS } from '../domain/financeiro-config.entity';
 import { CobrancaRepository } from './ports/cobranca.repository';
 import { FinanceiroConfigRepository } from './ports/financeiro-config.repository';
 import { CreateCobrancaDto } from './dto/create-cobranca.dto';
@@ -24,7 +24,6 @@ import { UpdateCobrancaDto } from './dto/update-cobranca.dto';
 import {
   CanalAviso,
   CancelarCobrancaDto,
-  ConsultaAvaliacaoDto,
   EnviarAvisoDto,
   ListCobrancasQueryDto,
   PagarCobrancaDto,
@@ -57,9 +56,6 @@ export interface ResultadoAviso {
   canais: Array<{ canal: CanalAviso; ok: boolean; erro?: string }>;
 }
 
-// TODO(conteudo): descrição padrão da cobrança de consulta de avaliação (texto livre, editável na criação).
-const DESCRICAO_CONSULTA_AVALIACAO = 'Consulta de avaliação';
-
 // TODO(conteudo): descrição padrão da cobrança gerada na assinatura da consulta de enfermagem.
 const DESCRICAO_CONSULTA_ENFERMAGEM = 'Consulta de enfermagem';
 
@@ -75,7 +71,7 @@ export class CobrancasService {
     private readonly notificacoes: NotificacoesService,
   ) {}
 
-  // ---------------- configuração (valor da consulta de avaliação, por clínica) ----------------
+  // ---------------- configuração (valor padrão da consulta de enfermagem, por clínica) ----------------
 
   async obterConfig(clinicaId: string | undefined, user: AuthTokenPayload): Promise<FinanceiroConfig> {
     return this.configDaClinica(resolveTenantClinicaId(user, clinicaId));
@@ -83,9 +79,9 @@ export class CobrancasService {
 
   async salvarConfig(dto: SalvarConfigFinanceiroDto, context: CobrancaAuditContext): Promise<FinanceiroConfig> {
     const clinicaId = resolveTenantClinicaId(context.user, dto.clinicaId);
-    const config = await this.configRepo.upsert(clinicaId, dto.valorConsultaAvaliacaoCentavos, context.user.sub);
+    const config = await this.configRepo.upsert(clinicaId, dto.valorConsultaCentavos, context.user.sub);
     // Só ids e o NOME do campo (nunca o valor).
-    await this.audit(AuditEvent.FINANCEIRO_CONFIG_UPDATED, context, { clinicaId, campos: ['valorConsultaAvaliacaoCentavos'] });
+    await this.audit(AuditEvent.FINANCEIRO_CONFIG_UPDATED, context, { clinicaId, campos: ['valorConsultaCentavos'] });
     return config;
   }
 
@@ -93,7 +89,7 @@ export class CobrancasService {
     return (
       (await this.configRepo.findByClinica(clinicaId)) ?? {
         clinicaId,
-        valorConsultaAvaliacaoCentavos: VALOR_CONSULTA_AVALIACAO_PADRAO_CENTAVOS,
+        valorConsultaCentavos: VALOR_CONSULTA_PADRAO_CENTAVOS,
       }
     );
   }
@@ -128,28 +124,6 @@ export class CobrancasService {
       tipo: cobranca.tipo,
     });
     return this.apresentar(cobranca);
-  }
-
-  /**
-   * Atalho "consulta de avaliação": o valor vem da configuração da clínica. É também o ponto de entrada para o futuro
-   * gatilho automático ligado à consulta inicial (etapa 5): basta chamar este método com o contexto do evento.
-   */
-  async criarConsultaAvaliacao(dto: ConsultaAvaliacaoDto, context: CobrancaAuditContext): Promise<Cobranca> {
-    const clinicaId = resolveTenantClinicaId(context.user, dto.clinicaId);
-    const config = await this.configDaClinica(clinicaId);
-    const vencimento = dto.vencimento ?? new Date().toISOString().slice(0, 10);
-    return this.criar(
-      {
-        pacienteId: dto.pacienteId,
-        tipo: TipoCobranca.CONSULTA_AVALIACAO,
-        descricao: DESCRICAO_CONSULTA_AVALIACAO,
-        valorCentavos: config.valorConsultaAvaliacaoCentavos,
-        formaPagamento: dto.formaPagamento,
-        parcelas: dto.parcelas,
-        vencimento,
-      },
-      context,
-    );
   }
 
   /**
@@ -197,7 +171,7 @@ export class CobrancasService {
 
   /** Valor padrão da consulta na clínica (configuração, ou o padrão do sistema). */
   async valorConsultaPadrao(clinicaId: string): Promise<number> {
-    return (await this.configDaClinica(clinicaId)).valorConsultaAvaliacaoCentavos;
+    return (await this.configDaClinica(clinicaId)).valorConsultaCentavos;
   }
 
   // ---------------- leitura ----------------

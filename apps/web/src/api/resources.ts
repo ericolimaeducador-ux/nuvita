@@ -754,9 +754,6 @@ export const cobrancasApi = {
     api
       .get<PaginaCobrancas>('/cobrancas', { params: { status: params.status?.join(','), cursor: params.cursor, limit: params.limit } })
       .then((r) => r.data),
-  /** Atalho: o valor vem da configuração da clínica. */
-  criarConsultaAvaliacao: (pacienteId: string, vencimento?: string) =>
-    api.post<Cobranca>('/cobrancas/consulta-avaliacao', { pacienteId, vencimento }).then((r) => r.data),
   update: (id: string, payload: Partial<CobrancaPayload>) => api.patch<Cobranca>(`/cobrancas/${id}`, payload).then((r) => r.data),
   /** Envia aviso por e-mail e/ou WhatsApp; basta um canal aceito para a cobrança ir a "enviada". */
   enviarAviso: (id: string, canais: Array<'email' | 'whatsapp'>) =>
@@ -768,9 +765,9 @@ export const cobrancasApi = {
   cancelar: (id: string, motivo: string) => api.patch<Cobranca>(`/cobrancas/${id}/cancelar`, { motivo }).then((r) => r.data),
   resumo: (mes: string) => api.get<ResumoFinanceiroMensal>('/cobrancas/resumo', { params: { mes } }).then((r) => r.data),
   config: () =>
-    api.get<{ valorConsultaAvaliacaoCentavos: number }>('/cobrancas/configuracao').then((r) => r.data),
-  salvarConfig: (valorConsultaAvaliacaoCentavos: number) =>
-    api.put<{ valorConsultaAvaliacaoCentavos: number }>('/cobrancas/configuracao', { valorConsultaAvaliacaoCentavos }).then((r) => r.data),
+    api.get<{ valorConsultaCentavos: number }>('/cobrancas/configuracao').then((r) => r.data),
+  salvarConfig: (valorConsultaCentavos: number) =>
+    api.put<{ valorConsultaCentavos: number }>('/cobrancas/configuracao', { valorConsultaCentavos }).then((r) => r.data),
 };
 
 // ---------- Consulta de enfermagem (5 etapas) ----------

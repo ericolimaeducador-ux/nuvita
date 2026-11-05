@@ -40,6 +40,7 @@ function montar(repo: Partial<Record<keyof FollowUpRepository, jest.Mock>>, exis
   const pacientes = {
     resumoPorIds: jest.fn().mockResolvedValue(existe ? new Map([[PACIENTE_ID, { nome: 'Maria' }]]) : new Map()),
     avancarEtapaFluxo: jest.fn().mockResolvedValue(undefined),
+    estaNoFluxoClinico: jest.fn().mockResolvedValue(true),
   };
   const service = new FollowUpService(
     repo as unknown as FollowUpRepository,
@@ -61,6 +62,19 @@ describe('FollowUpService.create — gatilhos do fluxo clínico', () => {
       'clinica-1', PACIENTE_ID, EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO,
       { ip: '127.0.0.1', userAgent: 'jest', user: contexto.user },
     );
+  });
+
+  it('ELEGIVEL de paciente fora do fluxo → follow-up registrado, SEM notificação (a etapa fica a cargo do avanço)', async () => {
+    const create = jest.fn().mockResolvedValue(followup(StatusElegibilidade.ELEGIVEL));
+    const { service, pacientes, notificarElegibilidade } = montar({ create });
+    pacientes.estaNoFluxoClinico.mockResolvedValue(false);
+
+    const resultado = await service.create(dto(StatusElegibilidade.ELEGIVEL), contexto);
+
+    expect(resultado.id).toBe('f1');
+    expect(create).toHaveBeenCalled();
+    expect(notificarElegibilidade).not.toHaveBeenCalled();
+    expect(pacientes.avancarEtapaFluxo).toHaveBeenCalledWith('clinica-1', PACIENTE_ID, EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO, expect.anything());
   });
 
   it('NAO_ELEGIVEL → avança para NAO_ELEGIVEL e NÃO notifica', async () => {
@@ -111,13 +125,14 @@ describe('FollowUpService.create — gatilhos do fluxo clínico', () => {
         update: updatePaciente,
       } as unknown as PacienteRepository;
       const pacientesService = new PacientesService(pacienteRepo, { create: jest.fn().mockResolvedValue(undefined) } as unknown as AuditLogRepository);
+      const notificarElegibilidade = jest.fn().mockResolvedValue(undefined);
       const service = new FollowUpService(
         { create: jest.fn().mockResolvedValue(followup(status)) } as unknown as FollowUpRepository,
         { create: jest.fn().mockResolvedValue(undefined) } as unknown as AuditLogRepository,
-        { notificarElegibilidade: jest.fn().mockResolvedValue(undefined) } as unknown as NotificacoesService,
+        { notificarElegibilidade } as unknown as NotificacoesService,
         pacientesService,
       );
-      return { service, updatePaciente };
+      return { service, updatePaciente, notificarElegibilidade };
     }
 
     const base: Paciente = {
@@ -125,13 +140,14 @@ describe('FollowUpService.create — gatilhos do fluxo clínico', () => {
     };
 
     it('paciente elegível ([IU]) em AVALIACAO_IU: ELEGIVEL → APTO_AGUARDANDO_CONTATO', async () => {
-      const { service, updatePaciente } = comPacienteReal(
+      const { service, updatePaciente, notificarElegibilidade } = comPacienteReal(
         { ...base, classificacoes: [ClassificacaoArea.IU], etapaFluxo: EtapaFluxoClinico.AVALIACAO_IU },
         StatusElegibilidade.ELEGIVEL,
       );
 
       await service.create(dto(StatusElegibilidade.ELEGIVEL), contexto);
 
+      expect(notificarElegibilidade).toHaveBeenCalledWith('clinica-1', PACIENTE_ID, 'Maria');
       expect(updatePaciente).toHaveBeenCalledWith(
         'clinica-1', PACIENTE_ID, expect.objectContaining({ etapaFluxo: EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO }),
       );
@@ -154,14 +170,15 @@ describe('FollowUpService.create — gatilhos do fluxo clínico', () => {
       ['[FA]', [ClassificacaoArea.FA], EtapaFluxoClinico.AVALIACAO_IU],
       ['[IU, FA] com etapa gravada', [ClassificacaoArea.IU, ClassificacaoArea.FA], EtapaFluxoClinico.AVALIACAO_IU],
       ['[OT] sem etapa', [ClassificacaoArea.OT], undefined],
-    ])('paciente fora do fluxo %s: o follow-up é registrado, mas a etapa NÃO muda', async (_nome, classificacoes, etapaFluxo) => {
+    ])('paciente fora do fluxo %s: o follow-up é registrado, mas a etapa NÃO muda e NÃO há notificação', async (_nome, classificacoes, etapaFluxo) => {
       for (const status of [StatusElegibilidade.ELEGIVEL, StatusElegibilidade.NAO_ELEGIVEL]) {
-        const { service, updatePaciente } = comPacienteReal({ ...base, classificacoes, etapaFluxo }, status);
+        const { service, updatePaciente, notificarElegibilidade } = comPacienteReal({ ...base, classificacoes, etapaFluxo }, status);
 
         const resultado = await service.create(dto(status), contexto);
 
         expect(resultado.statusElegibilidade).toBe(status);
         expect(updatePaciente).not.toHaveBeenCalled();
+        expect(notificarElegibilidade).not.toHaveBeenCalled();
       }
     });
   });

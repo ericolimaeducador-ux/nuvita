@@ -464,6 +464,21 @@ export class PacientesService {
    * aplicarEtapa(), pelo avanço manual. Só avança (por posição), só para paciente elegível ao fluxo clínico
    * e NUNCA lança: erro vira log e a ação de negócio que o chamou segue normalmente.
    */
+  /**
+   * O paciente está DENTRO do fluxo clínico? Mesmo critério de avancarEtapaFluxo (elegivelFluxoClinico: classificado
+   * exatamente como IU). Usado por quem precisa decidir algo só para o fluxo (ex.: notificação de elegibilidade) sem
+   * duplicar a regra. Nunca lança: paciente inexistente na clínica ou erro de leitura => false.
+   */
+  async estaNoFluxoClinico(clinicaId: string, pacienteId: string): Promise<boolean> {
+    try {
+      const atual = await this.pacientes.findById(clinicaId, pacienteId);
+      return !!atual && elegivelFluxoClinico(atual.classificacoes);
+    } catch (err) {
+      this.logger.error(`estaNoFluxoClinico falhou para paciente ${pacienteId}: ${(err as Error).message}`);
+      return false;
+    }
+  }
+
   async avancarEtapaFluxo(
     clinicaId: string,
     pacienteId: string,

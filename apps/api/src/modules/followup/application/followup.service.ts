@@ -35,7 +35,7 @@ export class FollowUpService {
 
   /**
    * Registra o follow-up e religa o fluxo clínico:
-   *  - ELEGIVEL      -> avisa a equipe (notificação de elegibilidade) e tenta APTO_AGUARDANDO_CONTATO;
+   *  - ELEGIVEL      -> avisa a equipe (notificação de elegibilidade, só paciente do fluxo) e tenta APTO_AGUARDANDO_CONTATO;
    *  - NAO_ELEGIVEL  -> tenta NAO_ELEGIVEL;
    *  - EM_AVALIACAO  -> não mexe na etapa.
    * O avanço é do PacientesService.avancarEtapaFluxo: só para frente, só para paciente ELEGÍVEL ao fluxo (classificado
@@ -70,8 +70,12 @@ export class FollowUpService {
 
     const aoFluxo = { ip: context.ip, userAgent: context.userAgent, user: context.user };
     if (dto.statusElegibilidade === StatusElegibilidade.ELEGIVEL) {
-      // Não lança (a notificação é não crítica). Texto do template: TODO(conteudo) em notificacao-template.service.ts.
-      await this.notificacoes.notificarElegibilidade(clinicaId, dto.pacienteId, paciente.nome);
+      // A notificação de elegibilidade é do fluxo clínico de IU: só para paciente DENTRO do fluxo (mesmo critério do
+      // avanço de etapa). Fora do fluxo o follow-up fica registrado, sem notificação. Não lança (não crítica).
+      // Texto do template: TODO(conteudo) em notificacao-template.service.ts.
+      if (await this.pacientesService.estaNoFluxoClinico(clinicaId, dto.pacienteId)) {
+        await this.notificacoes.notificarElegibilidade(clinicaId, dto.pacienteId, paciente.nome);
+      }
       await this.pacientesService.avancarEtapaFluxo(
         clinicaId, dto.pacienteId, EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO, aoFluxo,
       );

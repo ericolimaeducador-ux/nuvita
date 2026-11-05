@@ -1021,3 +1021,42 @@ export interface Entrega {
   notaFiscal?: string;
   observacoes?: string;
 }
+
+// ---------- Checklist de documentos e Follow-up (etapa 3c) ----------
+// TODO(conteudo): rótulos de elegibilidade/documentos (SUS, laudo) são do fluxo de incontinência urinária — revisar.
+export enum StatusChecklistDocumento {
+  PENDENTE = 'pendente',
+  RECEBIDO = 'recebido',
+}
+
+export interface ChecklistItem {
+  id: string;
+  clinicaId: string;
+  pacienteId: string;
+  nome: string;
+  status: StatusChecklistDocumento;
+  observacao?: string;
+}
+
+export enum StatusElegibilidade {
+  EM_AVALIACAO = 'em_avaliacao',
+  ELEGIVEL = 'elegivel',
+  NAO_ELEGIVEL = 'nao_elegivel',
+}
+export const STATUS_ELEGIBILIDADE_LABEL: Record<StatusElegibilidade, string> = {
+  [StatusElegibilidade.EM_AVALIACAO]: 'Em avaliação',
+  [StatusElegibilidade.ELEGIVEL]: 'Elegível',
+  [StatusElegibilidade.NAO_ELEGIVEL]: 'Não elegível',
+};
+
+export interface FollowUp {
+  id: string;
+  clinicaId: string;
+  pacienteId: string;
+  avaliacaoIuId?: string;
+  enfermeiroId: string;
+  dataFollowup: string;
+  statusElegibilidade: StatusElegibilidade;
+  observacoes: string;
+  proximoFollowup?: string;
+}

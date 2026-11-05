@@ -4,3 +4,4 @@ export * from './termos';
 export * from './paciente';
 export * from './documentos';
 export * from './fluxo-clinico';
+export * from './checklist-documentos';

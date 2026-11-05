@@ -23,6 +23,8 @@ const TEMPLATES: Record<TipoNotificacao, { assunto: string; mensagem: string }> 
     assunto: 'Novo documento disponível',
     mensagem: '',
   },
+  // TODO(conteudo): texto ESPECÍFICO de incontinência urinária (menciona insumo gratuito via SUS e laudo médico).
+  // Mantido como no Nuvita antigo; revisar na etapa de conteúdo (estomaterapia). Não inventar texto clínico novo.
   [TipoNotificacao.ELEGIBILIDADE_CONFIRMADA]: {
     assunto: 'Paciente elegivel para produto gratuito',
     mensagem: 'O paciente {nome} foi confirmado como elegivel para receber o insumo indicado gratuitamente via SUS. Agende o laudo medico.',

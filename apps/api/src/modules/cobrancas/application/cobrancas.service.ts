@@ -53,6 +53,9 @@ export interface ResultadoAviso {
 // TODO(conteudo): descrição padrão da cobrança de consulta de avaliação (texto livre, editável na criação).
 const DESCRICAO_CONSULTA_AVALIACAO = 'Consulta de avaliação';
 
+// TODO(conteudo): descrição padrão da cobrança gerada na assinatura da consulta de enfermagem.
+const DESCRICAO_CONSULTA_ENFERMAGEM = 'Consulta de enfermagem';
+
 const ABERTAS = [StatusCobranca.PENDENTE, StatusCobranca.ENVIADA];
 
 @Injectable()
@@ -140,6 +143,54 @@ export class CobrancasService {
       },
       context,
     );
+  }
+
+  /**
+   * Cobrança da CONSULTA DE ENFERMAGEM (etapa 5a), chamada depois da assinatura. IDEMPOTENTE: no máximo uma por consulta
+   * (índice único parcial em consultaId); se já existe — ou se outra chamada concorrente acabou de criar (E11000) —
+   * devolve a existente. O valor vem decidido pela consulta (gravado na assinatura), não do cliente.
+   */
+  async gerarCobrancaDeConsulta(
+    input: { clinicaId: string; pacienteId: string; consultaId: string; valorCentavos: number },
+    context: CobrancaAuditContext,
+  ): Promise<Cobranca> {
+    const existente = await this.repo.findByConsultaId(input.clinicaId, input.consultaId);
+    if (existente) return this.apresentar(existente);
+
+    let cobranca: Cobranca;
+    try {
+      cobranca = await this.repo.create({
+        clinicaId: input.clinicaId,
+        pacienteId: input.pacienteId,
+        tipo: TipoCobranca.CONSULTA_AVALIACAO,
+        descricao: DESCRICAO_CONSULTA_ENFERMAGEM,
+        valorCentavos: input.valorCentavos,
+        itens: [],
+        vencimento: new Date(new Date().toISOString().slice(0, 10)),
+        status: StatusCobranca.PENDENTE,
+        consultaId: input.consultaId,
+        criadoPor: context.user.sub,
+      });
+    } catch (erro) {
+      if ((erro as { code?: number }).code === 11000) {
+        const corrida = await this.repo.findByConsultaId(input.clinicaId, input.consultaId);
+        if (corrida) return this.apresentar(corrida);
+      }
+      throw erro;
+    }
+    await this.audit(AuditEvent.LANCAMENTO_FINANCEIRO_CREATED, context, {
+      clinicaId: input.clinicaId,
+      cobrancaId: cobranca.id,
+      pacienteId: cobranca.pacienteId,
+      consultaId: input.consultaId,
+      tipo: cobranca.tipo,
+    });
+    return this.apresentar(cobranca);
+  }
+
+  /** Valor padrão da consulta na clínica (configuração, ou o padrão do sistema). */
+  async valorConsultaPadrao(clinicaId: string): Promise<number> {
+    return (await this.configDaClinica(clinicaId)).valorConsultaAvaliacaoCentavos;
   }
 
   // ---------------- leitura ----------------

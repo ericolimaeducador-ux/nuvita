@@ -1,0 +1,1 @@
+export const CONSULTA_REPOSITORY = Symbol('CONSULTA_REPOSITORY');

@@ -52,6 +52,9 @@ export class CobrancaMongo {
   @Prop()
   planoId?: string;
 
+  @Prop()
+  consultaId?: string;
+
   @Prop({ required: true })
   criadoPor!: string;
 
@@ -84,3 +87,8 @@ export const CobrancaSchema = SchemaFactory.createForClass(CobrancaMongo);
 CobrancaSchema.index({ clinicaId: 1, pacienteId: 1, vencimento: -1 });
 CobrancaSchema.index({ clinicaId: 1, vencimento: 1 });
 CobrancaSchema.index({ clinicaId: 1, pagaEm: 1 });
+// Idempotência da cobrança da consulta: no máximo uma por consulta (só cobranças que TÊM consultaId entram no índice).
+CobrancaSchema.index(
+  { consultaId: 1 },
+  { unique: true, partialFilterExpression: { consultaId: { $type: 'string' } } },
+);

@@ -54,6 +54,8 @@ export interface Cobranca {
   /** Vínculo OPCIONAL ao atendimento/plano. Referência SEM validação dura por ora (atendimento/prontuário: etapa 5). */
   atendimentoId?: string;
   planoId?: string;
+  /** Consulta de enfermagem que gerou a cobrança (etapa 5a). No máximo UMA cobrança por consulta (índice único parcial). */
+  consultaId?: string;
   criadoPor: string;
   enviadaEm?: Date;
   pagaEm?: Date;

@@ -1247,3 +1247,70 @@ export interface ResumoFinanceiroMensal {
   vencidoCentavos: number;
   quantidades: { aReceber: number; recebido: number; vencido: number };
 }
+
+// ---------- Consulta de enfermagem (etapa 5a): 5 etapas da Res. Cofen 736/2024 ----------
+// Estrutura apenas: nenhum conteúdo clínico (lista de diagnósticos, escala, taxonomia) vem do sistema.
+// TODO(conteudo): rótulos/orientações de cada etapa.
+export enum StatusConsulta {
+  RASCUNHO = 'RASCUNHO',
+  ASSINADA = 'ASSINADA',
+}
+export enum AreaModuloAvaliacao {
+  IU = 'IU',
+  INCONTINENCIA_ANAL = 'INCONTINENCIA_ANAL',
+  FERIDA = 'FERIDA',
+  OSTOMIA = 'OSTOMIA',
+}
+export enum PadraoImplementacao {
+  AUTONOMO = 'AUTONOMO',
+  INTERPROFISSIONAL = 'INTERPROFISSIONAL',
+  PROGRAMA_SAUDE = 'PROGRAMA_SAUDE',
+}
+export const PADRAO_IMPLEMENTACAO_LABEL: Record<PadraoImplementacao, string> = {
+  [PadraoImplementacao.AUTONOMO]: 'Autônomo',
+  [PadraoImplementacao.INTERPROFISSIONAL]: 'Interprofissional',
+  [PadraoImplementacao.PROGRAMA_SAUDE]: 'Programa de saúde',
+};
+export enum StatusCobrancaConsulta {
+  GERADA = 'GERADA',
+  INCLUIDA_EM_PACOTE = 'INCLUIDA_EM_PACOTE',
+  PENDENTE_GERACAO = 'PENDENTE_GERACAO',
+}
+export const STATUS_COBRANCA_CONSULTA_LABEL: Record<StatusCobrancaConsulta, string> = {
+  [StatusCobrancaConsulta.GERADA]: 'Cobrança gerada',
+  [StatusCobrancaConsulta.INCLUIDA_EM_PACOTE]: 'Incluída em pacote',
+  [StatusCobrancaConsulta.PENDENTE_GERACAO]: 'Cobrança pendente',
+};
+
+export interface ConsultaEnfermagem {
+  id: string;
+  clinicaId: string;
+  pacienteId: string;
+  enfermeiroId: string;
+  status: StatusConsulta;
+  avaliacao: { dadosSubjetivos: string; dadosObjetivos: string; modulos: Array<{ area: AreaModuloAvaliacao; dados: Record<string, unknown> }> };
+  diagnosticos: Array<{ texto: string; origem: 'MANUAL' | 'IA_ACEITA' | 'IA_EDITADA' }>;
+  planejamento: {
+    prioridades: string;
+    resultadosEsperados: string;
+    prescricaoEnfermagem: string[];
+    examesSolicitados: string;
+    encaminhamentos: string;
+  };
+  implementacao: { registros: Array<{ padrao: PadraoImplementacao; descricao: string; registradoEm: string; registradoPor: string }> };
+  evolucao: { texto: string };
+  assinatura?: { enfermeiroId: string; coren: string; dataAssinatura: string };
+  cobranca?: { incluidaEmPacote: boolean; valorCentavos?: number; status: StatusCobrancaConsulta; cobrancaId?: string };
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+export interface AdendoConsulta {
+  id: string;
+  consultaId: string;
+  numero: number;
+  autorId: string;
+  motivo: string;
+  texto: string;
+  criadoEm: string;
+}

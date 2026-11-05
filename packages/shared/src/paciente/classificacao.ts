@@ -1,13 +1,15 @@
 /**
  * Classificação de área do paciente (uma ou mais). Define, por exemplo, quem entra no fluxo clínico
  * de incontinência urinária: só o paciente classificado EXCLUSIVAMENTE como IU.
+ * Significado confirmado pelo Erico (05/11/2026; a etapa 2 tinha gravado FA/OT errado): IU = incontinência urinária e anal,
+ * FA = feridas, OT = ostomias.
  */
 export enum ClassificacaoArea {
-  /** Incontinência urinária. */
+  /** Incontinência (urinária E anal). */
   IU = 'IU',
-  /** Incontinência fecal. */
+  /** Feridas. */
   FA = 'FA',
-  /** Outras áreas de atuação. */
+  /** Ostomias. */
   OT = 'OT',
 }
 

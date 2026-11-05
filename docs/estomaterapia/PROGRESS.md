@@ -1,6 +1,6 @@
 # Nuvita Estomaterapia — Integration Progress & Handoff
 
-Last updated: 2026-11-05 (stage 5a)
+Last updated: 2026-11-05 (stage 5b)
 
 ## What this project is
 Turning the production `nuvita` repo (real patients, GitHub ericolimaeducador-ux/nuvita) into the new Nuvita Estomaterapia, using the nuvita-psi codebase as the FULL base (security, access rules, tenancy, audit, redirects, automatic messages, screen structure). Only clinical/typing screens and clinical content change from Psychology to Stomatherapy. nuvita-psi is the premium reference. Master plan (source of truth) lives in the Claude.ai project doc "Plano mestre"; THIS file is the engineering handoff — read it FIRST.
@@ -28,11 +28,18 @@ Turning the production `nuvita` repo (real patients, GitHub ericolimaeducador-ux
 - PR #25 merged: cobrancas — patient charge REGISTRY + notices (no payment processing; mercado-pago untouched). Per-clinic evaluation value (default R$ 220,00 in one constant), derived `vencida`, manual mark-paid, logical cancel, monthly summary, e-mail/WhatsApp notice (template TODO(conteudo)).
   - NOTE: commit 044deb6 (clinic-level GET /cobrancas list + payment-method dialog on mark-paid) was pushed to `estomaterapia/etapa4b-financeiro` AFTER #25 was merged, so it is NOT in integracao. Needs its own PR if wanted.
 - PR #26 merged by accident: `estomaterapia/integracao` -> `main` (see INCIDENT above).
-- Stage 5a PR (branch `estomaterapia/etapa5a-consulta`): nursing consultation core — see docs/etapas/ETAPA-5A-CONSULTA.md.
+- PR #27 merged: stage 5a — nursing consultation core (docs/etapas/ETAPA-5A-CONSULTA.md).
+- PR #28 merged: commit 044deb6 (clinic-level charge list + payment method on mark-paid), merged with integracao, no conflicts.
+- PR #29 merged: charge type `consulta_enfermagem`; manual "consulta de avaliação" charge REMOVED (double-charge risk); setting renamed
+  to `valorConsultaCentavos` (default `VALOR_CONSULTA_PADRAO_CENTAVOS` = 22000).
+- Stage 5b PR (branch `estomaterapia/etapa5b-iu-anal`): IU and anal-incontinence assessment modules + consultation attachments —
+  see docs/etapas/ETAPA-5B-IU-ANAL.md.
+- CLASSIFICATION MEANING (corrected in 5b, confirmed by Erico): IU = incontinência urinária E anal; FA = feridas; OT = ostomias.
+  Stage 2 had recorded FA = "incontinência fecal" and OT = "outras áreas" (a deduction). Enum values/data unchanged.
 
 ## NEXT ACTIONS (in order)
 1. Review/merge the stage 5a PR into estomaterapia/integracao (merge commit). Decide whether to PR commit 044deb6 (see #25 note).
-2. Stages 5b–5d: assessment modules (IU, incontinência anal, ferida, ostomia) registered in ModulosAvaliacaoRegistry — content only from a cited source; otherwise TODO(conteudo).
+2. Stages 5c–5d: assessment modules FERIDA (classification FA) and OSTOMIA (classification OT) — already mapped in CLASSIFICACAO_DO_MODULO, no module registered yet. Content only from a cited source; otherwise TODO(conteudo). Stage 5e: itemised instruments (ICIQ, Wexner…) — licensing first.
 3. Stage 5f: AI suggestions for diagnoses (origem IA_ACEITA / IA_EDITADA already modelled, not writable yet).
 4. Automatic trigger: evaluation-appointment charge on the first consultation (CobrancasService.criarConsultaAvaliacao is ready).
 5. Stage 6: laudo-medico (decide Gemini vs PSI Anthropic AI infra). Server-side recompute of delivery totals is still open.
@@ -47,5 +54,12 @@ Turning the production `nuvita` repo (real patients, GitHub ericolimaeducador-ux
 - Old ci.yml lint is non-blocking (|| true); PSI CI runs blocking ESLint + npm audit. Consider making lint blocking later.
 - Some jest suites (lembretes-agendamento, documentos R2) flake under load locally — pass isolated; investigate machine performance.
 - Consulta de enfermagem: "assina primeiro, cobra depois" (no Mongo transaction — no repository takes a session and local Mongo is standalone). A failed charge leaves the consultation ASSINADA with cobranca.status=PENDENTE_GERACAO; POST /consultas/:id/cobranca regenerates it idempotently (unique partial index on cobrancas_paciente.consultaId). Indexes are created by autoIndex only in development: create them manually in production (cobrancas_paciente {consultaId} unique partial; consultas_enfermagem_adendos {consultaId, numero} unique).
+- INDEXES TO CREATE BY HAND IN ATLAS AT CUTOVER (autoIndex is development-only):
+  - cobrancas_paciente: { consultaId: 1 } unique, partialFilterExpression { consultaId: { $type: 'string' } } (5a); plus { clinicaId: 1, pacienteId: 1, vencimento: -1 }, { clinicaId: 1, vencimento: 1 }, { clinicaId: 1, pagaEm: 1 } (4b).
+  - financeiro_config: { clinicaId: 1 } unique (4b).
+  - consultas_enfermagem: { clinicaId: 1, pacienteId: 1, criadoEm: -1 }, { clinicaId: 1, 'cobranca.status': 1 } (5a).
+  - consultas_enfermagem_adendos: { consultaId: 1, numero: 1 } unique (5a).
+  - consultas_enfermagem_anexos: { clinicaId: 1, consultaId: 1, criadoEm: 1 } (5b).
+- Documents size limit: `MAX_DOCUMENT_SIZE_BYTES` is 10 MB but the documents module's error message says "50MB". Consultation attachments use the constant (10 MB). Fix the message (documents module) when convenient.
 - Legacy prontuarios (registroPsicologico, relatorioJudicial, old records) stay READ-ONLY in the old `prontuarios` collection; the new consultation lives in `consultas_enfermagem`. Nothing was migrated or deleted.
 - registroPsicologico exists in 1 old prontuario; fichaAvaliacaoIU/registroEnfermagem/relatorioJudicial exist in old data but not in the PSI schema (strict mode ignores, does not delete) — handle in Phase 3.

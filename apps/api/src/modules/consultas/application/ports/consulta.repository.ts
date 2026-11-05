@@ -1,5 +1,6 @@
 import {
   AdendoConsulta,
+  AnexoConsulta,
   AssinaturaConsulta,
   CobrancaConsulta,
   ConsultaEnfermagem,
@@ -31,4 +32,8 @@ export interface ConsultaRepository {
   ultimoNumeroAdendo(clinicaId: string, consultaId: string): Promise<number>;
   /** Insere com o número informado; o índice único (consultaId, numero) faz a corrida falhar com E11000. */
   createAdendo(data: Omit<AdendoConsulta, 'id' | 'criadoEm'>): Promise<AdendoConsulta>;
+  createAnexo(data: Omit<AnexoConsulta, 'id' | 'criadoEm'>): Promise<AnexoConsulta>;
+  findAnexo(clinicaId: string, consultaId: string, anexoId: string): Promise<AnexoConsulta | null>;
+  listAnexos(clinicaId: string, consultaId: string): Promise<AnexoConsulta[]>;
+  confirmarAnexo(clinicaId: string, consultaId: string, anexoId: string, confirmadoEm: Date): Promise<AnexoConsulta | null>;
 }

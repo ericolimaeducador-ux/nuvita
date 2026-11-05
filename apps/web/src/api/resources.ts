@@ -1,5 +1,6 @@
 import { api } from './client';
 import { comoLista, comoObjetoComLista } from '@/lib/consulta';
+import { sha256Hex } from '@/lib/sha256';
 import type {
   Agendamento,
   AuthUser,
@@ -8,6 +9,7 @@ import type {
   Endereco,
   Entrega,
   AdendoConsulta,
+  AnexoConsulta,
   AvaliacaoIU,
   ConsultaEnfermagem,
   ChecklistItem,
@@ -772,7 +774,7 @@ export const cobrancasApi = {
 
 // ---------- Consulta de enfermagem (5 etapas) ----------
 export interface ConteudoConsultaPayload {
-  avaliacao?: { dadosSubjetivos?: string; dadosObjetivos?: string };
+  avaliacao?: { dadosSubjetivos?: string; dadosObjetivos?: string; modulos?: Array<{ area: string; dados: unknown }> };
   diagnosticos?: Array<{ texto: string; origem: 'MANUAL' }>;
   planejamento?: Partial<ConsultaEnfermagem['planejamento']>;
   implementacao?: { registros: Array<{ padrao: string; descricao: string; registradoEm?: string }> };
@@ -793,6 +795,28 @@ export const consultasApi = {
   /** Gera a cobrança que ficou pendente após a assinatura (idempotente). */
   gerarCobranca: (id: string) =>
     api.post<{ consultaId: string; cobranca: NonNullable<ConsultaEnfermagem['cobranca']> }>(`/consultas/${id}/cobranca`).then((r) => r.data),
+  listarAnexos: (id: string) =>
+    api.get<AnexoConsulta[]>(`/consultas/${id}/anexos`).then((r) => comoLista<AnexoConsulta>(r.data) as AnexoConsulta[]),
+  urlAnexo: (id: string, anexoId: string) =>
+    api.get<{ accessUrl: string; mimeType: string; expiresInSeconds: number }>(`/consultas/${id}/anexos/${anexoId}/access-url`).then((r) => r.data),
+  /**
+   * Envia um anexo (PDF/JPG/PNG) da consulta: presign -> PUT direto no R2 (fetch puro, com os headers assinados) -> confirmar.
+   * Só o autor, só em rascunho (regra da API).
+   */
+  enviarAnexo: async (id: string, file: File): Promise<AnexoConsulta> => {
+    const hash = await sha256Hex(file);
+    const presign = await api
+      .post<{ anexo: AnexoConsulta; uploadUrl: string; requiredHeaders: Record<string, string> }>(`/consultas/${id}/anexos/presign-upload`, {
+        mimeType: file.type,
+        tamanho: file.size,
+        hash,
+      })
+      .then((r) => r.data);
+    // NÃO usar a instância `api` (axios) no PUT: ela anexaria Authorization e quebraria a assinatura da URL do R2.
+    const put = await fetch(presign.uploadUrl, { method: 'PUT', headers: presign.requiredHeaders, body: file });
+    if (!put.ok) throw new Error('Falha ao enviar o arquivo para o armazenamento.');
+    return api.post<AnexoConsulta>(`/consultas/${id}/anexos/${presign.anexo.id}/confirmar-upload`).then((r) => r.data);
+  },
   criarAdendo: (id: string, motivo: string, texto: string) =>
     api.post<AdendoConsulta>(`/consultas/${id}/adendos`, { motivo, texto }).then((r) => r.data),
 };

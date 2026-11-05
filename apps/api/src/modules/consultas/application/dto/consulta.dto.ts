@@ -15,6 +15,7 @@ import {
   Max,
   MaxLength,
   Min,
+  Matches,
   MinLength,
   ValidateNested,
 } from 'class-validator';
@@ -120,6 +121,16 @@ export class AssinarConsultaDto {
 export class CreateAdendoConsultaDto {
   @IsString() @MinLength(10, { message: 'Explique o motivo do adendo (mínimo de 10 caracteres).' }) @MaxLength(1000) motivo!: string;
   @IsString() @IsNotEmpty() @MaxLength(TEXTO_LONGO) texto!: string;
+}
+
+export const MIME_ANEXO_CONSULTA = ['application/pdf', 'image/jpeg', 'image/png'] as const;
+
+/** Upload de anexo (foto/PDF do diário em papel): só PDF, JPG e PNG, no limite de tamanho do módulo de documentos. */
+export class PresignAnexoConsultaDto {
+  @IsIn(MIME_ANEXO_CONSULTA) mimeType!: (typeof MIME_ANEXO_CONSULTA)[number];
+  @IsInt() @Min(1) tamanho!: number;
+  // SHA-256 do arquivo (hex), assinado na URL de upload como no módulo de documentos.
+  @Matches(/^[a-f0-9]{64}$/i) hash!: string;
 }
 
 export class ListConsultasQueryDto {

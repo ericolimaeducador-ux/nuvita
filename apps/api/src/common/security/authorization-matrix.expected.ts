@@ -108,6 +108,11 @@ export const MATRIZ_API: Record<string, string> = {
   'POST /consultas/:id/assinar': 'E',
   'POST /consultas/:id/cobranca': 'AE',
   'POST /consultas/:id/adendos': 'E',
+  // anexos da consulta (etapa 5b): conteúdo clínico — enviar/confirmar só o autor em rascunho, ler = quem lê a consulta (regra no serviço)
+  'POST /consultas/:id/anexos/presign-upload': 'E',
+  'POST /consultas/:id/anexos/:anexoId/confirmar-upload': 'E',
+  'GET /consultas/:id/anexos': 'E',
+  'GET /consultas/:id/anexos/:anexoId/access-url': 'E',
   // financeiro de paciente (etapa 4b): registro de cobranças + avisos (sem processar pagamento). Equipe da clínica;
   // o valor padrão da consulta (configuração) só o ADMIN altera. PACIENTE nunca.
   'POST /cobrancas': 'AES',

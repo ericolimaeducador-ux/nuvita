@@ -16,7 +16,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
 import { apiErrorMessage } from '@/api/client';
-import { cobrancasApi, consultasApi, type ConteudoConsultaPayload } from '@/api/resources';
+import { cobrancasApi, consultasApi, pacientesApi, type ConteudoConsultaPayload } from '@/api/resources';
+import { ModulosAvaliacao, type ModuloForm } from '@/components/consulta/ModulosAvaliacao';
 import { useAuth } from '@/auth/AuthContext';
 import { centavosParaInput, reaisParaCentavos } from '@/lib/dinheiro';
 import { formatBRL } from '@/utils';
@@ -38,6 +39,7 @@ export const ETAPAS = ['Avaliação', 'Diagnóstico', 'Planejamento', 'Implement
 interface FormConsulta {
   dadosSubjetivos: string;
   dadosObjetivos: string;
+  modulos: ModuloForm[];
   diagnosticos: string[];
   prioridades: string;
   resultadosEsperados: string;
@@ -52,6 +54,7 @@ function doServidor(c: ConsultaEnfermagem): FormConsulta {
   return {
     dadosSubjetivos: c.avaliacao.dadosSubjetivos ?? '',
     dadosObjetivos: c.avaliacao.dadosObjetivos ?? '',
+    modulos: (c.avaliacao.modulos ?? []).map((m) => ({ area: m.area as unknown as ModuloForm['area'], dados: m.dados ?? {} })),
     diagnosticos: c.diagnosticos.map((d) => d.texto),
     prioridades: c.planejamento.prioridades ?? '',
     resultadosEsperados: c.planejamento.resultadosEsperados ?? '',
@@ -63,9 +66,20 @@ function doServidor(c: ConsultaEnfermagem): FormConsulta {
   };
 }
 
+/** Remove chaves undefined/strings vazias antes de enviar (a API recusa tipos errados, não campos ausentes). */
+function limpar(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(limpar);
+  if (v && typeof v === 'object') {
+    const o: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(v)) if (x !== undefined && x !== '') o[k] = limpar(x);
+    return o;
+  }
+  return v;
+}
+
 export function paraPayload(f: FormConsulta): ConteudoConsultaPayload {
   return {
-    avaliacao: { dadosSubjetivos: f.dadosSubjetivos, dadosObjetivos: f.dadosObjetivos },
+    avaliacao: { dadosSubjetivos: f.dadosSubjetivos, dadosObjetivos: f.dadosObjetivos, modulos: f.modulos.map((m) => ({ area: m.area, dados: limpar(m.dados) })) },
     diagnosticos: f.diagnosticos.map((t) => t.trim()).filter(Boolean).map((texto) => ({ texto, origem: 'MANUAL' as const })),
     planejamento: {
       prioridades: f.prioridades,
@@ -140,6 +154,7 @@ export function ConsultaEnfermagemPage() {
   const consultaQ = useQuery({ queryKey: ['consulta', consultaId], queryFn: () => consultasApi.get(consultaId), enabled: !!consultaId });
   const configQ = useQuery({ queryKey: ['cobrancas-config'], queryFn: () => cobrancasApi.config(), enabled: assinando });
   const consulta = consultaQ.data;
+  const pacienteQ = useQuery({ queryKey: ['paciente', pacienteId], queryFn: () => pacientesApi.get(pacienteId), enabled: !!pacienteId });
 
   useEffect(() => { if (consulta) setForm(doServidor(consulta)); }, [consulta]);
   useEffect(() => { if (configQ.data) setValor(centavosParaInput(configQ.data.valorConsultaCentavos)); }, [configQ.data]);
@@ -243,10 +258,13 @@ export function ConsultaEnfermagemPage() {
           <>
             <CampoTexto id="cSubj" rotulo="Dados subjetivos (entrevista)" valor={form.dadosSubjetivos} editavel={editavel} onChange={(v) => set('dadosSubjetivos', v)} rows={6} />
             <CampoTexto id="cObj" rotulo="Dados objetivos (exame físico)" valor={form.dadosObjetivos} editavel={editavel} onChange={(v) => set('dadosObjetivos', v)} rows={6} />
-            <div className="rounded-lg border border-dashed border-border p-3" data-testid="modulos-avaliacao">
-              <div className="text-sm font-medium">Módulos da avaliação</div>
-              <p className="text-sm text-muted-foreground">Nenhum módulo de avaliação disponível ainda.</p>
-            </div>
+            <ModulosAvaliacao
+              consultaId={consultaId}
+              modulos={form.modulos}
+              editavel={editavel}
+              classificacoes={(pacienteQ.data?.classificacoes ?? []) as string[]}
+              onChange={(m) => set('modulos', m)}
+            />
           </>
         )}
         {etapa === 1 && (

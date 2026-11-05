@@ -6,14 +6,15 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 const mocks = vi.hoisted(() => ({
   get: vi.fn(), salvarRascunho: vi.fn(), assinar: vi.fn(), gerarCobranca: vi.fn(), criarAdendo: vi.fn(),
-  config: vi.fn(), userId: { atual: 'enf-autor' },
+  config: vi.fn(), paciente: vi.fn(), listarAnexos: vi.fn(), userId: { atual: 'enf-autor' },
 }));
 
 vi.mock('@/api/resources', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/api/resources')>();
   return {
     ...original,
-    consultasApi: { ...original.consultasApi, get: mocks.get, salvarRascunho: mocks.salvarRascunho, assinar: mocks.assinar, gerarCobranca: mocks.gerarCobranca, criarAdendo: mocks.criarAdendo },
+    consultasApi: { ...original.consultasApi, get: mocks.get, salvarRascunho: mocks.salvarRascunho, assinar: mocks.assinar, gerarCobranca: mocks.gerarCobranca, criarAdendo: mocks.criarAdendo, listarAnexos: mocks.listarAnexos },
+    pacientesApi: { ...original.pacientesApi, get: mocks.paciente },
     cobrancasApi: { ...original.cobrancasApi, config: mocks.config },
   };
 });
@@ -56,15 +57,17 @@ describe('ConsultaEnfermagemPage', () => {
     mocks.get.mockResolvedValue(rascunho);
     mocks.config.mockResolvedValue({ valorConsultaCentavos: 22000 });
     mocks.salvarRascunho.mockResolvedValue(rascunho);
+    mocks.paciente.mockResolvedValue({ id: 'p1', classificacoes: ['FA'] });
+    mocks.listarAnexos.mockResolvedValue([]);
   });
 
-  it('mostra as 5 etapas em stepper e a área (vazia) dos módulos da Avaliação', async () => {
+  it('mostra as 5 etapas em stepper e a área dos módulos (paciente FA: nenhum módulo disponível ainda)', async () => {
     montar();
     const nav = await screen.findByRole('navigation', { name: 'Etapas da consulta' });
     expect(within(nav).getAllByRole('button').map((b) => b.textContent)).toEqual([
       '1. Avaliação', '2. Diagnóstico', '3. Planejamento', '4. Implementação', '5. Evolução',
     ]);
-    expect(screen.getByTestId('modulos-avaliacao')).toHaveTextContent('Nenhum módulo de avaliação disponível ainda.');
+    expect(await screen.findByText('Nenhum módulo de avaliação disponível para a classificação deste paciente.')).toBeInTheDocument();
   });
 
   it('salvar rascunho envia as 5 etapas (diagnóstico com origem MANUAL)', async () => {

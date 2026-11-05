@@ -9,7 +9,10 @@ import { AreaModuloAvaliacao, ModuloAvaliacao } from './consulta-enfermagem.enti
  */
 export interface DefinicaoModuloAvaliacao {
   area: AreaModuloAvaliacao;
-  dto: new () => object;
+  /** Classe class-validator dos `dados`... */
+  dto?: new () => object;
+  /** ...ou o validador do pacote compartilhado (lista de erros com NOMES de campo; vazia = válido). */
+  validar?: (dados: unknown) => string[];
 }
 
 // Provido por fábrica no módulo (lista de definições vazia nesta etapa).
@@ -33,7 +36,15 @@ export class ModulosAvaliacaoRegistry {
       if (!def) throw new BadRequestException(`Modulo de avaliacao ${m.area} ainda nao disponivel.`);
       if (vistos.has(m.area)) throw new BadRequestException(`Modulo de avaliacao ${m.area} repetido.`);
       vistos.add(m.area);
-      const instancia = plainToInstance(def.dto, m.dados ?? {});
+      if (def.validar) {
+        const errosCompartilhados = def.validar(m.dados ?? {});
+        if (errosCompartilhados.length > 0) {
+          throw new BadRequestException(`Dados invalidos no modulo ${m.area} (${errosCompartilhados.join('; ')}).`);
+        }
+        validados.push({ area: m.area, dados: JSON.parse(JSON.stringify(m.dados ?? {})) as Record<string, unknown> });
+        continue;
+      }
+      const instancia = plainToInstance(def.dto!, m.dados ?? {});
       const erros = await validate(instancia, { whitelist: true, forbidNonWhitelisted: true });
       if (erros.length > 0) {
         throw new BadRequestException(

@@ -5,3 +5,4 @@ export * from './paciente';
 export * from './documentos';
 export * from './fluxo-clinico';
 export * from './checklist-documentos';
+export * from './consulta';

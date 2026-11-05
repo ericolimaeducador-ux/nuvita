@@ -16,7 +16,12 @@ this stage (4b).
   the future, `clinicaId` as ObjectId). A lead that fails stays `pendente` (lock released) and the API answers 400 listing
   only the field NAMES. Minors need a legal guardian, which captation does not collect, so they are refused by
   `PacientesService.create` as well.
-- Audit: `CAPTACAO_CREATED` (public, no user: ip/user-agent, lead id and captor code only) and `CAPTACAO_EXPORTED`.
+- **Complete a lead before exporting**: `PATCH /captacao/:id` (same roles as the queue) saves name, CPF, birth date, address,
+  e-mail and, for minors, the legal guardian plus the guardian authorization (stored encrypted, like the other lead fields).
+  Same rules as `CreatePacienteDto` (valid CPF, birth date not in the future). It only saves: it never exports, and only
+  `pendente` leads can be edited. A minor without guardian data is still refused on export by `PacientesService.create`.
+  The public form stays light (birth date still optional there).
+- Audit: `CAPTACAO_UPDATED` (id and field NAMES only), `CAPTACAO_CREATED` (public, no user: ip/user-agent, lead id and captor code only) and `CAPTACAO_EXPORTED`.
 
 ## avaliacao-iu
 - Collection `avaliacoes_iu` kept; the clinical content (about 33 fields, enums, labels) is kept as is and marked `TODO(conteudo)`.
@@ -33,7 +38,7 @@ this stage (4b).
 | Route | Roles |
 |---|---|
 | `POST /captacao` | public (PIN) |
-| `GET /captacao`, `POST /captacao/:id/exportar` | ADMIN, ENFERMEIRO, SECRETARIA |
+| `GET /captacao`, `PATCH /captacao/:id`, `POST /captacao/:id/exportar` | ADMIN, ENFERMEIRO, SECRETARIA |
 | `POST /avaliacao-iu`, `PATCH /avaliacao-iu/:id`, `PATCH /avaliacao-iu/:id/excluir` | ADMIN, ENFERMEIRO |
 | `GET /avaliacao-iu/minhas` | ENFERMEIRO |
 | `GET /avaliacao-iu`, `/count`, `/:id` | ADMIN, ENFERMEIRO, SECRETARIA |
@@ -42,3 +47,5 @@ this stage (4b).
 - `/captacao_pacientes` (public, PIN screen) and `/captacao-pacientes` (queue management, module Pacientes) — the SPA has no
   `/captacao` route because that prefix belongs to the API proxy. Vite proxy regex gained `captacao|avaliacao-iu`.
 - `AvaliacaoIuSecao` + `AvaliacaoIUDialog` in `PacienteDetailPage` (same pattern as the stage 3 sections). `FluxoPacientePage` is NOT ported.
+- Queue screen: "Completar" action per lead (`CompletarLeadDialog`; guardian block appears for minors). Follow-up form: optional
+  "Avaliação de origem" picker listing the patient's IU assessments (sends `avaliacaoIuId`; the API validates it).

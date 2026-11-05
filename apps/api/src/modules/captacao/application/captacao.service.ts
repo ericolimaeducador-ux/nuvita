@@ -19,6 +19,7 @@ import { PacientesService } from '../../pacientes/application/pacientes.service'
 import { ClassificacaoArea } from '../../pacientes/domain/paciente.entity';
 import { PacienteCryptoService } from '../../pacientes/infrastructure/crypto/paciente-crypto.service';
 import { CreateCaptacaoDto } from './dto/create-captacao.dto';
+import { UpdateCaptacaoDto } from './dto/update-captacao.dto';
 import {
   CapitacaoPacienteDocument,
   CapitacaoPacienteMongo,
@@ -34,6 +35,8 @@ export interface CaptacaoPublica {
   endereco?: string;
   telefone: string;
   email?: string;
+  responsavelLegal?: { nome?: string; cpf?: string; telefone?: string; email?: string; vinculo?: string };
+  autorizacaoResponsavel?: { confirmado: boolean };
   codigoEnfermeiro: string;
   status: string;
   criadoEm: string;
@@ -103,6 +106,68 @@ export class CaptacaoService {
   }
 
   /**
+   * Completa um lead PENDENTE (ex.: data de nascimento, CPF, responsável legal de menor). Só salva — NÃO exporta.
+   * O lead não tem clinicaId até ser exportado, então o acesso segue a gestão da fila (ver controller).
+   * Audita só o id e os NOMES dos campos alterados (nunca os valores).
+   */
+  async atualizar(
+    id: string,
+    dto: UpdateCaptacaoDto,
+    context: RequestAuditContext,
+  ): Promise<{ success: true; data: CaptacaoPublica }> {
+    if (!isValidObjectId(id)) throw new NotFoundException('Registro de captação não encontrado.');
+
+    const set: Record<string, unknown> = {};
+    const nome = dto.nome?.trim();
+    if (nome) set['nome'] = nome;
+    const cpf = dto.cpf?.trim();
+    if (cpf) {
+      set['cpf'] = this.crypto.encryptString(this.crypto.normalizeCpf(cpf));
+      set['cpfHash'] = this.crypto.cpfHash(cpf);
+    }
+    if (dto.dataNascimento) set['dataNascimento'] = new Date(dto.dataNascimento);
+    const endereco = dto.endereco?.trim();
+    if (endereco) set['endereco'] = this.crypto.encryptString(endereco);
+    const email = dto.email?.trim().toLowerCase();
+    if (email) set['email'] = this.crypto.encryptString(email);
+    if (dto.responsavelLegal) {
+      set['responsavelLegal'] = this.crypto.encryptString(JSON.stringify(dto.responsavelLegal));
+    }
+    if (dto.autorizacaoResponsavel) {
+      set['autorizacaoResponsavelConfirmada'] = dto.autorizacaoResponsavel.confirmado;
+    }
+    if (Object.keys(set).length === 0) throw new BadRequestException('Informe ao menos um campo para atualizar.');
+
+    let atualizada: CapitacaoPacienteDocument | null;
+    try {
+      atualizada = await this.captacoes.findOneAndUpdate({ _id: id, status: 'pendente' }, { $set: set }, { new: true }).exec();
+    } catch (error) {
+      if ((error as { code?: number }).code === 11000) {
+        throw new ConflictException('Já existe uma captação pendente com este CPF.');
+      }
+      throw error;
+    }
+
+    if (!atualizada) {
+      const existe = await this.captacoes.findById(id).exec();
+      if (!existe) throw new NotFoundException('Registro de captação não encontrado.');
+      throw new BadRequestException('Este paciente já foi exportado: a captação não pode mais ser editada.');
+    }
+
+    await this.auditLogs.create({
+      event: AuditEvent.CAPTACAO_UPDATED,
+      userId: context.user.sub,
+      email: context.user.email,
+      clinicaId: context.user.clinicaId ?? undefined,
+      ip: context.ip,
+      userAgent: context.userAgent,
+      metadata: { captacaoId: id, campos: Object.keys(set) },
+    });
+
+    return { success: true, data: this.toPublic(atualizada) };
+  }
+
+  /**
    * Exporta o lead para a collection `pacientes` (criptografada, no tenant de quem exporta).
    *
    * A captação é só do programa de IU: o paciente nasce com classificacoes=['IU'] e, por ser elegível ao fluxo
@@ -168,6 +233,10 @@ export class CaptacaoService {
         email: dados.email,
         endereco: dados.endereco ? { logradouro: dados.endereco } : undefined,
         representante: dados.codigoEnfermeiro,
+        // Menor de idade: o responsável completado no lead segue para o cadastro; sem ele (ou sem a autorização) o
+        // PacientesService.create recusa a exportação.
+        responsavelLegal: dados.responsavelLegal,
+        autorizacaoResponsavel: dados.autorizacaoResponsavel,
       });
       const erros = await validate(dtoPaciente, { whitelist: true, forbidNonWhitelisted: true });
       if (erros.length > 0) {
@@ -242,6 +311,9 @@ export class CaptacaoService {
       endereco: doc.endereco ? this.crypto.decryptString(doc.endereco) : undefined,
       telefone: this.crypto.decryptString(doc.telefone),
       email: doc.email ? this.crypto.decryptString(doc.email) : undefined,
+      responsavelLegal: doc.responsavelLegal ? JSON.parse(this.crypto.decryptString(doc.responsavelLegal)) : undefined,
+      autorizacaoResponsavel:
+        doc.autorizacaoResponsavelConfirmada === undefined ? undefined : { confirmado: doc.autorizacaoResponsavelConfirmada },
       codigoEnfermeiro: doc.codigoEnfermeiro,
       status: doc.status,
       criadoEm: doc.criadoEm.toISOString(),

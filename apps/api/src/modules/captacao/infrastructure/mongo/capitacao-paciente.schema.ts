@@ -39,6 +39,14 @@ export class CapitacaoPacienteMongo {
   @Prop()
   email?: string;
 
+  /** Responsável legal (menor de idade), completado depois pela clínica. JSON criptografado (mesma chave de pacientes). */
+  @Prop()
+  responsavelLegal?: string;
+
+  /** Autorização do responsável legal confirmada pela clínica ao completar o lead. */
+  @Prop()
+  autorizacaoResponsavelConfirmada?: boolean;
+
   @Prop({ required: true, enum: [...CODIGOS_ENFERMEIRO_CAPTADOR], index: true })
   codigoEnfermeiro!: string;
 

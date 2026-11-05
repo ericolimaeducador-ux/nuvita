@@ -12,6 +12,7 @@ import { AppConfigService } from '../../../common/security/config.service';
 import { PacienteCryptoService } from '../../pacientes/infrastructure/crypto/paciente-crypto.service';
 import { RequestAuditContext } from '../../pacientes/application/pacientes.service';
 import { CapitacaoPacienteSchema } from '../infrastructure/mongo/capitacao-paciente.schema';
+import { UpdateCaptacaoDto } from './dto/update-captacao.dto';
 import { CreateCaptacaoDto } from './dto/create-captacao.dto';
 import { CaptacaoService } from './captacao.service';
 
@@ -54,7 +55,7 @@ function fakeModel(initial: Doc[] = []) {
     findOneAndUpdate: jest.fn((q: Doc, update: Doc) =>
       exec(() => {
         const d = get(q._id);
-        const lockOk = !d?.exportandoEm || d.exportandoEm < q.$or[2].exportandoEm.$lt;
+        const lockOk = !q.$or || !d?.exportandoEm || d.exportandoEm < q.$or[2].exportandoEm.$lt;
         if (!d || d.status !== q.status || !lockOk) return null;
         Object.assign(d, update.$set);
         return d;
@@ -326,6 +327,143 @@ describe('CaptacaoService — exportação de lead para paciente do fluxo de IU 
     const c2 = pub.auditCreate.mock.calls[0][0];
     expect(c2).toMatchObject({ event: AuditEvent.CAPTACAO_CREATED, ip: '9.9.9.9', userAgent: 'ua' });
     expect(JSON.stringify(c2)).not.toMatch(/Ana|52998224725|11988887777/);
+  });
+});
+
+describe('CaptacaoService.atualizar — completar o lead antes de exportar (etapa 4a)', () => {
+  const ID = '65f000000000000000000c01';
+
+  it('completar a data de nascimento de um lead travado permite exportar (salvar NÃO exporta)', async () => {
+    const { service, pacientes, model } = setup([pendente({ dataNascimento: undefined })]);
+
+    await expect(service.exportar(ID, context)).rejects.toMatchObject({ status: 400 });
+    expect(pacientes.create).not.toHaveBeenCalled();
+
+    const r = await service.atualizar(ID, { dataNascimento: '1985-02-20' }, context);
+
+    expect(r.data.dataNascimento).toBe('1985-02-20T00:00:00.000Z');
+    expect(model.docs[0].status).toBe('pendente'); // só salvou
+    expect(pacientes.create).not.toHaveBeenCalled();
+
+    await expect(service.exportar(ID, context)).resolves.toMatchObject({ success: true, pacienteId: 'pac-1' });
+    expect(pacientes.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('criptografa CPF, endereço, e-mail e responsável legal (nada em claro no documento)', async () => {
+    const { service, model } = setup([pendente()]);
+
+    await service.atualizar(
+      ID,
+      {
+        cpf: '529.982.247-25',
+        email: 'Mae@X.com',
+        endereco: 'Rua Z, 9',
+        responsavelLegal: { nome: 'Mae Silva', cpf: '39053344705', telefone: '11977776666' },
+        autorizacaoResponsavel: { confirmado: true },
+      },
+      context,
+    );
+
+    const raw = JSON.stringify(model.docs[0]);
+    for (const claro of ['52998224725', 'mae@x.com', 'Rua Z', 'Mae Silva', '39053344705', '11977776666']) {
+      expect(raw).not.toContain(claro);
+    }
+    expect(model.docs[0].cpfHash).toBe(crypto.cpfHash('52998224725'));
+    expect(model.docs[0].autorizacaoResponsavelConfirmada).toBe(true);
+  });
+
+  it('audita CAPTACAO_UPDATED só com o id e os NOMES dos campos', async () => {
+    const { service, auditCreate } = setup([pendente()]);
+
+    await service.atualizar(ID, { nome: 'Nome Novo Sigiloso', dataNascimento: '1985-02-20' }, context);
+
+    const chamada = auditCreate.mock.calls[0][0];
+    expect(chamada.event).toBe(AuditEvent.CAPTACAO_UPDATED);
+    expect(chamada.metadata).toEqual({ captacaoId: ID, campos: ['nome', 'dataNascimento'] });
+    expect(JSON.stringify(chamada)).not.toMatch(/Sigiloso|1985/);
+  });
+
+  it('lead já exportado → 400; inexistente → 404; id inválido → 404; payload vazio → 400; CPF duplicado → 409', async () => {
+    await expect(setup([pendente({ status: 'exportado' })]).service.atualizar(ID, { nome: 'x' }, context)).rejects.toMatchObject({ status: 400 });
+    await expect(setup([]).service.atualizar(ID, { nome: 'x' }, context)).rejects.toMatchObject({ status: 404 });
+    await expect(setup([]).service.atualizar('../x', { nome: 'x' }, context)).rejects.toMatchObject({ status: 404 });
+    await expect(setup([pendente()]).service.atualizar(ID, {}, context)).rejects.toMatchObject({ status: 400 });
+
+    const dup = setup([pendente()]);
+    dup.model.findOneAndUpdate.mockImplementationOnce(() => ({ exec: () => Promise.reject({ code: 11000 }) }));
+    await expect(dup.service.atualizar(ID, { cpf: '52998224725' }, context)).rejects.toMatchObject({ status: 409 });
+  });
+
+  describe('menor de idade (PacientesService real)', () => {
+    function comPacienteReal() {
+      const criado: Paciente = {
+        id: 'pac-1', clinicaId: '65f000000000000000000d01', nome: 'Crianca', ativo: true, criadoEm: new Date(), atualizadoEm: new Date(),
+        classificacoes: [ClassificacaoArea.IU], etapaFluxo: EtapaFluxoClinico.AGUARDANDO_ATENDIMENTO,
+      };
+      const repoCreate = jest.fn().mockResolvedValue(criado);
+      const pacienteRepo = {
+        create: repoCreate,
+        findById: jest.fn().mockResolvedValue(criado),
+        update: jest.fn().mockResolvedValue(criado),
+      } as unknown as PacienteRepository;
+      const real = new PacientesService(pacienteRepo, { create: jest.fn().mockResolvedValue(undefined) } as never);
+      const model = fakeModel([pendente({ dataNascimento: undefined })]);
+      const service = new CaptacaoService(model as never, crypto, real, { create: jest.fn().mockResolvedValue(undefined) } as never);
+      return { service, model, repoCreate };
+    }
+    const nascimentoMenor = new Date(Date.now() - 8 * 365 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+
+    it('menor SEM responsável legal continua recusado na exportação; o lead segue pendente e destravado', async () => {
+      const { service, model, repoCreate } = comPacienteReal();
+      await service.atualizar(ID, { dataNascimento: nascimentoMenor }, context);
+
+      await expect(service.exportar(ID, context)).rejects.toMatchObject({ status: 400 });
+
+      expect(repoCreate).not.toHaveBeenCalled();
+      expect(model.docs[0].status).toBe('pendente');
+      expect(model.docs[0].exportandoEm).toBeUndefined();
+    });
+
+    it('menor COM responsável legal e autorização completados no lead é exportado, com o responsável no cadastro', async () => {
+      const { service, repoCreate } = comPacienteReal();
+      await service.atualizar(
+        ID,
+        {
+          dataNascimento: nascimentoMenor,
+          responsavelLegal: { nome: 'Mae Silva', cpf: '39053344705', telefone: '11977776666' },
+          autorizacaoResponsavel: { confirmado: true },
+        },
+        context,
+      );
+
+      await expect(service.exportar(ID, context)).resolves.toMatchObject({ success: true });
+
+      expect(repoCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ responsavelLegal: expect.objectContaining({ nome: 'Mae Silva' }) }),
+      );
+    });
+  });
+});
+
+describe('UpdateCaptacaoDto', () => {
+  const erros = async (obj: object) =>
+    (await validate(plainToInstance(UpdateCaptacaoDto, obj), { whitelist: true, forbidNonWhitelisted: true })).map((e) => e.property);
+
+  it('todos os campos são opcionais; aceita os válidos', async () => {
+    expect(await erros({})).toEqual([]);
+    expect(await erros({ dataNascimento: '1985-02-20', cpf: '529.982.247-25', nome: 'Ana' })).toEqual([]);
+  });
+
+  it('mesmas regras do cadastro de paciente: CPF com dígitos inválidos e data futura são recusados', async () => {
+    expect(await erros({ cpf: '11111111111' })).toContain('cpf');
+    expect(await erros({ dataNascimento: '2999-01-01' })).toContain('dataNascimento');
+    expect(await erros({ dataNascimento: 'ontem' })).toContain('dataNascimento');
+    expect(await erros({ responsavelLegal: { cpf: '123' } })).toContain('responsavelLegal');
+  });
+
+  it('telefone, código do captador e status NÃO são editáveis por esta rota', async () => {
+    const e = await erros({ telefone: '1', codigoEnfermeiro: 'ENF-00126', status: 'exportado' });
+    expect(e).toEqual(expect.arrayContaining(['telefone', 'codigoEnfermeiro', 'status']));
   });
 });
 

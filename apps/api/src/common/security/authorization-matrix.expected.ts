@@ -101,6 +101,7 @@ export const MATRIZ_API: Record<string, string> = {
   // captação (etapa 4a): POST é PÚBLICO (protegido por PIN no CaptadorPinGuard); gestão da fila = equipe da clínica
   'POST /captacao': 'PUBLICO',
   'GET /captacao': 'AES',
+  'PATCH /captacao/:id': 'AES',
   'POST /captacao/:id/exportar': 'AES',
 
   // produtos: catálogo operacional global. Leitura da equipe; alteração só admin (SUPER_ADMIN sempre passa)

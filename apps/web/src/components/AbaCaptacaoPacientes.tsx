@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { RefreshCw } from 'lucide-react';
-import { captacaoApi } from '@/api/resources';
+import { captacaoApi, type CaptacaoPendente } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { PageHeader } from '@/components/PageHeader';
+import { CompletarLeadDialog } from '@/components/CompletarLeadDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -20,6 +21,7 @@ import { formatCpf } from '@/utils';
 export function AbaCaptacaoPacientes() {
   const qc = useQueryClient();
   const [confirmando, setConfirmando] = useState<{ id: string; nome: string } | null>(null);
+  const [completando, setCompletando] = useState<CaptacaoPendente | null>(null);
   const lista = useQuery({
     queryKey: ['captacao', 'pendentes'],
     queryFn: () => captacaoApi.listarPendentes(),
@@ -74,7 +76,7 @@ export function AbaCaptacaoPacientes() {
                     <TableHead className="w-[132px]">CPF</TableHead>
                     <TableHead className="w-[148px]">Contato</TableHead>
                     <TableHead className="w-[92px]">Captação</TableHead>
-                    <TableHead className="w-[104px] text-right">Ação</TableHead>
+                    <TableHead className="w-[200px] text-right">Ação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -95,6 +97,15 @@ export function AbaCaptacaoPacientes() {
                         <TableCell className="text-right">
                           <Button
                             size="sm"
+                            variant="outline"
+                            className="mr-2"
+                            aria-label={`Completar ${p.nome || 'interessado sem nome'}`}
+                            onClick={() => setCompletando(p)}
+                          >
+                            Completar
+                          </Button>
+                          <Button
+                            size="sm"
                             disabled={exportar.isPending}
                             onClick={() => setConfirmando({ id: p.id, nome: p.nome || 'Interessado sem nome' })}
                           >
@@ -110,6 +121,12 @@ export function AbaCaptacaoPacientes() {
           </CardContent>
         </Card>
       </div>
+
+      <CompletarLeadDialog
+        lead={completando}
+        onClose={() => setCompletando(null)}
+        onSalvo={() => void qc.invalidateQueries({ queryKey: ['captacao', 'pendentes'] })}
+      />
 
       <Dialog open={confirmando !== null} onOpenChange={(aberto) => { if (!aberto) setConfirmando(null); }}>
         <DialogContent className="max-w-md">

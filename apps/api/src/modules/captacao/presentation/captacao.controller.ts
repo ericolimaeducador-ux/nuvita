@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { extractRequestMeta } from '../../../common/http/client-ip';
@@ -12,6 +12,7 @@ import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { CaptacaoService } from '../application/captacao.service';
 import { CreateCaptacaoDto } from '../application/dto/create-captacao.dto';
+import { UpdateCaptacaoDto } from '../application/dto/update-captacao.dto';
 import { CaptadorPinGuard } from './captador-pin.guard';
 
 // Gestão da fila de captação: equipe da clínica (enfermeiro, admin, secretaria; SUPER_ADMIN sempre passa). PACIENTE não.
@@ -38,6 +39,19 @@ export class CaptacaoController {
   @Roles(...PAPEIS_CAPTACAO)
   listPending() {
     return this.captacao.listPending();
+  }
+
+  // Completar o lead (ex.: data de nascimento) antes de exportar. Só salva; a exportação é outra ação.
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
+  @Roles(...PAPEIS_CAPTACAO)
+  atualizar(
+    @Param('id') id: string,
+    @Body() dto: UpdateCaptacaoDto,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.captacao.atualizar(id, dto, this.contextFromRequest(request, user));
   }
 
   @Post(':id/exportar')

@@ -3,11 +3,11 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-const mocks = vi.hoisted(() => ({ listarPendentes: vi.fn(), exportar: vi.fn() }));
+const mocks = vi.hoisted(() => ({ listarPendentes: vi.fn(), exportar: vi.fn(), atualizar: vi.fn() }));
 
 vi.mock('@/api/resources', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/api/resources')>();
-  return { ...original, captacaoApi: { listarPendentes: mocks.listarPendentes, exportar: mocks.exportar } };
+  return { ...original, captacaoApi: { listarPendentes: mocks.listarPendentes, exportar: mocks.exportar, atualizar: mocks.atualizar } };
 });
 
 import { AbaCaptacaoPacientes } from './AbaCaptacaoPacientes';
@@ -51,6 +51,47 @@ describe('AbaCaptacaoPacientes', () => {
     await user.click(within(dialogo).getByRole('button', { name: 'Exportar' }));
 
     await waitFor(() => expect(mocks.exportar).toHaveBeenCalledWith('l1'));
+  });
+
+  it('completar: preenche a data de nascimento e salva SEM exportar', async () => {
+    const user = userEvent.setup();
+    mocks.atualizar.mockResolvedValue({ success: true, data: lead });
+    montar();
+    await screen.findByText('Maria Lead');
+
+    await user.click(screen.getByRole('button', { name: /Completar Maria Lead/ }));
+    const dialogo = await screen.findByRole('dialog');
+    await user.type(within(dialogo).getByLabelText('Data de nascimento'), '1985-02-20');
+    await user.click(within(dialogo).getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(mocks.atualizar).toHaveBeenCalled());
+    const [id, payload] = mocks.atualizar.mock.calls[0];
+    expect(id).toBe('l1');
+    expect(payload).toMatchObject({ dataNascimento: '1985-02-20', nome: 'Maria Lead' });
+    expect(payload).not.toHaveProperty('responsavelLegal'); // adulto: sem bloco de responsável
+    expect(mocks.exportar).not.toHaveBeenCalled();
+  });
+
+  it('completar paciente menor de idade mostra o responsável legal e envia a autorização', async () => {
+    const user = userEvent.setup();
+    mocks.atualizar.mockResolvedValue({ success: true, data: lead });
+    montar();
+    await screen.findByText('Maria Lead');
+
+    await user.click(screen.getByRole('button', { name: /Completar Maria Lead/ }));
+    const dialogo = await screen.findByRole('dialog');
+    expect(within(dialogo).queryByLabelText('Nome do responsável')).not.toBeInTheDocument();
+    const ano = new Date().getFullYear() - 8;
+    await user.type(within(dialogo).getByLabelText('Data de nascimento'), `${ano}-01-01`);
+    await user.type(await within(dialogo).findByLabelText('Nome do responsável'), 'Mae Silva');
+    await user.click(within(dialogo).getByLabelText('Autorização do responsável legal confirmada'));
+    await user.click(within(dialogo).getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(mocks.atualizar).toHaveBeenCalled());
+    expect(mocks.atualizar.mock.calls[0][1]).toMatchObject({
+      responsavelLegal: { nome: 'Mae Silva' },
+      autorizacaoResponsavel: { confirmado: true },
+    });
   });
 
   it('fila vazia mostra a orientação', async () => {

@@ -14,6 +14,7 @@ import { FluxoClinicoPage } from '@/pages/FluxoClinicoPage';
 import { ProdutosPage } from '@/pages/ProdutosPage';
 import { CaptacaoPage } from '@/pages/CaptacaoPage';
 import { FinanceiroPacientesPage } from '@/pages/FinanceiroPacientesPage';
+import { ConsultaEnfermagemPage } from '@/pages/ConsultaEnfermagemPage';
 import { CaptacaoPacientesPage } from '@/pages/CaptacaoPacientesPage';
 import { AgendaPage } from '@/pages/AgendaPage';
 import { ProntuariosPage } from '@/pages/ProntuariosPage';
@@ -84,6 +85,11 @@ export function AppRoutes() {
               <Route path="/captacao-pacientes" element={<CaptacaoPacientesPage />} />
               {/* Financeiro de pacientes (cobranças: registro + avisos). Não usa /financeiro: esse prefixo é da API (proxy). */}
               <Route path="/financeiro-pacientes" element={<FinanceiroPacientesPage />} />
+            </Route>
+            {/* Consulta de enfermagem: conteúdo clínico, PRIVATIVO do enfermeiro (ler: qualquer enfermeiro da clínica;
+                escrever: só o autor — regra da API). Ver e2e/matriz-rotas.pw.ts. */}
+            <Route element={<ProtectedRoute roles={[Papel.ENFERMEIRO]} modulo={Modulo.PACIENTES} />}>
+              <Route path="/pacientes/:id/consultas/:consultaId" element={<ConsultaEnfermagemPage />} />
             </Route>
             <Route element={<ProtectedRoute modulo={Modulo.AGENDA} />}>
               <Route path="/agenda" element={<AgendaPage />} />

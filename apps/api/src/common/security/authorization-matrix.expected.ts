@@ -98,6 +98,16 @@ export const MATRIZ_API: Record<string, string> = {
   'GET /avaliacao-iu/count': 'AES',
   'GET /avaliacao-iu': 'AES',
   'GET /avaliacao-iu/:id': 'AES',
+  // consulta de enfermagem (etapa 5a): conteúdo clínico só do ENFERMEIRO (ler: enfermeiros da clínica; escrever/assinar/
+  // adendo: só o autor — regra no serviço). Diverge do prontuário do psi de propósito (cuidado de equipe). Gerar a
+  // cobrança pendente: autor ou ADMIN (sem conteúdo clínico).
+  'POST /consultas': 'E',
+  'GET /consultas': 'E',
+  'GET /consultas/:id': 'E',
+  'PATCH /consultas/:id': 'E',
+  'POST /consultas/:id/assinar': 'E',
+  'POST /consultas/:id/cobranca': 'AE',
+  'POST /consultas/:id/adendos': 'E',
   // financeiro de paciente (etapa 4b): registro de cobranças + avisos (sem processar pagamento). Equipe da clínica;
   // o valor da consulta de avaliação (configuração) só o ADMIN altera. PACIENTE nunca.
   'POST /cobrancas': 'AES',

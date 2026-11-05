@@ -7,7 +7,9 @@ import type {
   Documento,
   Endereco,
   Entrega,
+  AdendoConsulta,
   AvaliacaoIU,
+  ConsultaEnfermagem,
   ChecklistItem,
   Cobranca,
   ResumoFinanceiroMensal,
@@ -769,4 +771,31 @@ export const cobrancasApi = {
     api.get<{ valorConsultaAvaliacaoCentavos: number }>('/cobrancas/configuracao').then((r) => r.data),
   salvarConfig: (valorConsultaAvaliacaoCentavos: number) =>
     api.put<{ valorConsultaAvaliacaoCentavos: number }>('/cobrancas/configuracao', { valorConsultaAvaliacaoCentavos }).then((r) => r.data),
+};
+
+// ---------- Consulta de enfermagem (5 etapas) ----------
+export interface ConteudoConsultaPayload {
+  avaliacao?: { dadosSubjetivos?: string; dadosObjetivos?: string };
+  diagnosticos?: Array<{ texto: string; origem: 'MANUAL' }>;
+  planejamento?: Partial<ConsultaEnfermagem['planejamento']>;
+  implementacao?: { registros: Array<{ padrao: string; descricao: string; registradoEm?: string }> };
+  evolucao?: { texto: string };
+}
+
+export const consultasApi = {
+  listByPaciente: (pacienteId: string) =>
+    api.get<ConsultaEnfermagem[]>('/consultas', { params: { pacienteId } }).then((r) => comoLista<ConsultaEnfermagem>(r.data) as ConsultaEnfermagem[]),
+  get: (id: string) => api.get<ConsultaEnfermagem & { adendos: AdendoConsulta[] }>(`/consultas/${id}`).then((r) => r.data),
+  create: (pacienteId: string, conteudo: ConteudoConsultaPayload = {}) =>
+    api.post<ConsultaEnfermagem>('/consultas', { pacienteId, ...conteudo }).then((r) => r.data),
+  salvarRascunho: (id: string, conteudo: ConteudoConsultaPayload) =>
+    api.patch<ConsultaEnfermagem>(`/consultas/${id}`, conteudo).then((r) => r.data),
+  /** Assina (trava) e decide a cobrança: pacote (não cobra) ou valor em centavos. */
+  assinar: (id: string, cobranca: { incluidaEmPacote: boolean; valorCentavos?: number }) =>
+    api.post<ConsultaEnfermagem>(`/consultas/${id}/assinar`, { cobranca }).then((r) => r.data),
+  /** Gera a cobrança que ficou pendente após a assinatura (idempotente). */
+  gerarCobranca: (id: string) =>
+    api.post<{ consultaId: string; cobranca: NonNullable<ConsultaEnfermagem['cobranca']> }>(`/consultas/${id}/cobranca`).then((r) => r.data),
+  criarAdendo: (id: string, motivo: string, texto: string) =>
+    api.post<AdendoConsulta>(`/consultas/${id}/adendos`, { motivo, texto }).then((r) => r.data),
 };

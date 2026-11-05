@@ -21,6 +21,7 @@ export interface PaginaCobrancas {
 export interface CobrancaRepository {
   create(data: NovaCobranca): Promise<Cobranca>;
   findById(clinicaId: string, id: string): Promise<Cobranca | null>;
+  findByConsultaId(clinicaId: string, consultaId: string): Promise<Cobranca | null>;
   listByPaciente(clinicaId: string, pacienteId: string): Promise<Cobranca[]>;
   /** Lista da CLÍNICA, mais antigas por vencer primeiro, paginada por cursor (padrão do psi: items/hasMore/nextCursor). */
   listByClinica(input: ListCobrancasClinicaInput): Promise<PaginaCobrancas>;

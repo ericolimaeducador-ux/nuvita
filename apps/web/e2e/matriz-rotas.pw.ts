@@ -23,6 +23,8 @@ const ROTAS: Array<[string, string, Papel[]]> = [
   ['/pacientes/:id/documentos/laudo', '/pacientes/p1/documentos/laudo', ['ENFERMEIRO']],
   ['/pacientes/:id/documentos/encaminhamento', '/pacientes/p1/documentos/encaminhamento', ['ENFERMEIRO']],
   ['/pacientes/:id/documentos/prescricao', '/pacientes/p1/documentos/prescricao', ['ENFERMEIRO']],
+  // consulta de enfermagem (etapa 5a): conteúdo clínico, só ENFERMEIRO
+  ['/pacientes/:id/consultas/:consultaId', '/pacientes/p1/consultas/c1', ['ENFERMEIRO']],
   ['/pacientes/:id/documentos/declaracao-comparecimento', '/pacientes/p1/documentos/declaracao-comparecimento', ['ADMIN', 'ENFERMEIRO', 'SECRETARIA']],
   ['/agenda', '/agenda', ['SUPER_ADMIN', 'ADMIN', 'ENFERMEIRO', 'SECRETARIA']],
   ['/prontuarios', '/prontuarios', ['SUPER_ADMIN']],

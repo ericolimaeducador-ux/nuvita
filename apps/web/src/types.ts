@@ -289,9 +289,9 @@ export enum ClassificacaoArea {
 }
 
 export const CLASSIFICACAO_AREA_LABEL: Record<ClassificacaoArea, string> = {
-  [ClassificacaoArea.IU]: 'IU — Incontinência urinária',
-  [ClassificacaoArea.FA]: 'FA — Incontinência fecal',
-  [ClassificacaoArea.OT]: 'OT — Outras áreas',
+  [ClassificacaoArea.IU]: 'IU — Incontinência urinária e anal',
+  [ClassificacaoArea.FA]: 'FA — Feridas',
+  [ClassificacaoArea.OT]: 'OT — Ostomias',
 };
 
 /** Elegibilidade ao fluxo clínico (DERIVADA): classificado exatamente como IU. Espelha o shared/backend. */
@@ -1305,6 +1305,17 @@ export interface ConsultaEnfermagem {
   cobranca?: { incluidaEmPacote: boolean; valorCentavos?: number; status: StatusCobrancaConsulta; cobrancaId?: string };
   criadoEm: string;
   atualizadoEm: string;
+}
+
+/** Anexo da consulta (foto/PDF do diário). A URL privada do storage nunca vem ao cliente. */
+export interface AnexoConsulta {
+  id: string;
+  consultaId: string;
+  mimeType: 'application/pdf' | 'image/jpeg' | 'image/png';
+  tamanho: number;
+  enviadoPor: string;
+  confirmadoEm: string | null;
+  criadoEm: string;
 }
 
 export interface AdendoConsulta {

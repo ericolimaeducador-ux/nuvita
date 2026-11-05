@@ -12,11 +12,16 @@ import { CobrancasModule } from '../cobrancas/cobrancas.module';
 import { PacientesModule } from '../pacientes/pacientes.module';
 import { ConsultasService } from './application/consultas.service';
 import { CONSULTA_REPOSITORY } from './consultas.constants';
+import { AreaModuloAvaliacao, VALIDADORES_MODULO } from '../../../../../packages/shared/src/consulta';
+import { S3DocumentStorageService } from '../documentos/infrastructure/storage/s3-document-storage.service';
 import { ModulosAvaliacaoRegistry } from './domain/modulos-avaliacao.registry';
+import { CONSULTA_ANEXO_STORAGE } from './consultas.constants';
 import { ConsultaMongoRepository } from './infrastructure/mongo/consulta-mongo.repository';
 import {
   AdendoConsultaMongo,
   AdendoConsultaSchema,
+  AnexoConsultaMongo,
+  AnexoConsultaSchema,
   ConsultaMongo,
   ConsultaSchema,
 } from './infrastructure/mongo/consulta.schema';
@@ -28,6 +33,7 @@ import { ConsultasController } from './presentation/consultas.controller';
     MongooseModule.forFeature([
       { name: ConsultaMongo.name, schema: ConsultaSchema },
       { name: AdendoConsultaMongo.name, schema: AdendoConsultaSchema },
+      { name: AnexoConsultaMongo.name, schema: AnexoConsultaSchema },
       { name: AuditLogMongo.name, schema: AuditLogSchema },
       { name: UserMongo.name, schema: UserSchema },
     ]),
@@ -39,8 +45,17 @@ import { ConsultasController } from './presentation/consultas.controller';
     ConsultasService,
     JwtAuthGuard,
     RolesGuard,
-    // Módulos da Avaliação (IU, incontinência anal, ferida, ostomia) entram nas etapas 5b–5d; nesta etapa, nenhum.
-    { provide: ModulosAvaliacaoRegistry, useFactory: () => new ModulosAvaliacaoRegistry([]) },
+    // Módulos da Avaliação com conteúdo: IU e incontinência anal (5b). Ferida (5c) e ostomia (5d) ainda sem módulo.
+    {
+      provide: ModulosAvaliacaoRegistry,
+      useFactory: () =>
+        new ModulosAvaliacaoRegistry(
+          (Object.entries(VALIDADORES_MODULO) as Array<[AreaModuloAvaliacao, (d: unknown) => string[]]>).map(([area, validar]) => ({ area, validar })),
+        ),
+    },
+    // Anexos da consulta: SÓ o storage R2 do módulo documentos é reaproveitado (o módulo documentos não é alterado).
+    S3DocumentStorageService,
+    { provide: CONSULTA_ANEXO_STORAGE, useExisting: S3DocumentStorageService },
     { provide: CONSULTA_REPOSITORY, useClass: ConsultaMongoRepository },
     { provide: AUDIT_LOG_REPOSITORY, useClass: AuditLogMongoRepository },
     { provide: USER_REPOSITORY, useClass: UserMongoRepository },

@@ -27,7 +27,7 @@ import { AutorizacaoResponsavelDto } from './dto/responsavel-legal.dto';
 import { UpdatePacienteDto } from './dto/update-paciente.dto';
 import { UpdateObservacoesPacienteDto } from './dto/update-observacoes-paciente.dto';
 import { PACIENTE_REPOSITORY } from '../pacientes.constants';
-import { AutorizacaoResponsavel, Paciente, ProjetoPaciente } from '../domain/paciente.entity';
+import { AutorizacaoResponsavel, ClassificacaoArea, Paciente, ProjetoPaciente } from '../domain/paciente.entity';
 import { PacienteRepository } from './ports/paciente.repository';
 
 /**
@@ -472,6 +472,12 @@ export class PacientesService {
    * exatamente como IU). Usado por quem precisa decidir algo só para o fluxo (ex.: notificação de elegibilidade) sem
    * duplicar a regra. Nunca lança: paciente inexistente na clínica ou erro de leitura => false.
    */
+  /** Classificações do paciente na clínica (null se não existe nela). Usado para liberar módulos da consulta. */
+  async classificacoesDoPaciente(clinicaId: string, pacienteId: string): Promise<ClassificacaoArea[] | null> {
+    const p = await this.pacientes.findById(clinicaId, pacienteId);
+    return p ? p.classificacoes ?? [] : null;
+  }
+
   async estaNoFluxoClinico(clinicaId: string, pacienteId: string): Promise<boolean> {
     try {
       const atual = await this.pacientes.findById(clinicaId, pacienteId);

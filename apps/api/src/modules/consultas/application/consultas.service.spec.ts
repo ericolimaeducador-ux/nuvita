@@ -16,6 +16,7 @@ import { NotificacoesService } from '../../notificacoes/application/notificacoes
 import { PacientesService } from '../../pacientes/application/pacientes.service';
 import {
   AdendoConsulta,
+  AnexoConsulta,
   AreaModuloAvaliacao,
   ConsultaEnfermagem,
   OrigemDiagnostico,
@@ -24,9 +25,21 @@ import {
   StatusConsulta,
 } from '../domain/consulta-enfermagem.entity';
 import { ModulosAvaliacaoRegistry } from '../domain/modulos-avaliacao.registry';
+import {
+  VALIDADORES_MODULO,
+  alertasModuloIU,
+  alertasModuloIncontinenciaAnal,
+  modulosDisponiveis,
+  validarModuloIU,
+  validarModuloIncontinenciaAnal,
+} from '../../../../../../packages/shared/src/consulta';
+import { ClassificacaoArea } from '../../../../../../packages/shared/src/paciente';
+import { MAX_DOCUMENT_SIZE_BYTES } from '../../documentos/documentos.constants';
+import { ConsultaMongoRepository } from '../infrastructure/mongo/consulta-mongo.repository';
+import { ConsultasController } from '../presentation/consultas.controller';
 import { ConsultaRequestContext, ConsultasService } from './consultas.service';
 import { ConsultaRepository } from './ports/consulta.repository';
-import { CreateAdendoConsultaDto, CreateConsultaDto, DiagnosticoDto } from './dto/consulta.dto';
+import { CreateAdendoConsultaDto, CreateConsultaDto, DiagnosticoDto, PresignAnexoConsultaDto } from './dto/consulta.dto';
 
 const PACIENTE = '65f000000000000000000001';
 const CLINICA = 'clinica-1';
@@ -42,6 +55,7 @@ const COLEGA = ctx(usuario(Papel.ENFERMEIRO, 'enf-colega'));
 function consultasEmMemoria() {
   const consultas: ConsultaEnfermagem[] = [];
   const adendos: AdendoConsulta[] = [];
+  const anexos: AnexoConsulta[] = [];
   let seq = 0;
   const repo: ConsultaRepository & { forcarCorridaAdendo?: number } = {
     async create(data) {
@@ -82,6 +96,24 @@ function consultasEmMemoria() {
       if (repo.forcarCorridaAdendo && repo.forcarCorridaAdendo-- > 0) return 0;
       return Math.max(0, ...adendos.filter((a) => a.clinicaId === clinicaId && a.consultaId === consultaId).map((a) => a.numero));
     },
+    async createAnexo(data) {
+      const a = { ...data, id: `65f0000000000000000a${String(anexos.length + 1).padStart(4, '0')}`, criadoEm: new Date() } as AnexoConsulta;
+      anexos.push(a);
+      return { ...a };
+    },
+    async findAnexo(clinicaId, consultaId, anexoId) {
+      const a = anexos.find((x) => x.id === anexoId && x.clinicaId === clinicaId && x.consultaId === consultaId);
+      return a ? { ...a } : null;
+    },
+    async listAnexos(clinicaId, consultaId) {
+      return anexos.filter((x) => x.clinicaId === clinicaId && x.consultaId === consultaId).map((x) => ({ ...x }));
+    },
+    async confirmarAnexo(clinicaId, consultaId, anexoId, confirmadoEm) {
+      const a = anexos.find((x) => x.id === anexoId && x.clinicaId === clinicaId && x.consultaId === consultaId);
+      if (!a) return null;
+      a.confirmadoEm = confirmadoEm;
+      return { ...a };
+    },
     async createAdendo(data) {
       if (adendos.some((a) => a.consultaId === data.consultaId && a.numero === data.numero)) throw Object.assign(new Error('dup'), { code: 11000 });
       const a = { ...data, id: `a${adendos.length + 1}`, criadoEm: new Date() };
@@ -89,7 +121,7 @@ function consultasEmMemoria() {
       return a;
     },
   };
-  return { repo, consultas, adendos };
+  return { repo, consultas, adendos, anexos };
 }
 
 /** Cobranças em memória com o índice único parcial de consultaId. */
@@ -111,13 +143,14 @@ function cobrancasEmMemoria() {
   return { repo, cobrancas };
 }
 
-function montar(opts: { coren?: string | null; valorPadrao?: number; modulos?: ModulosAvaliacaoRegistry; pacienteExiste?: boolean } = {}) {
+function montar(opts: { coren?: string | null; valorPadrao?: number; modulos?: ModulosAvaliacaoRegistry; pacienteExiste?: boolean; classificacoes?: string[]; storage?: Record<string, jest.Mock> } = {}) {
   const c = consultasEmMemoria();
   const cob = cobrancasEmMemoria();
   const auditCreate = jest.fn().mockResolvedValue(undefined);
   const pacientes = {
     resumoPorIds: jest.fn().mockImplementation((clinicaId: string, ids: string[]) =>
       Promise.resolve(opts.pacienteExiste === false || clinicaId !== CLINICA ? new Map() : new Map(ids.map((id) => [id, { nome: 'Maria' }])))),
+    classificacoesDoPaciente: jest.fn().mockImplementation((clinicaId: string) => Promise.resolve(clinicaId === CLINICA ? opts.classificacoes ?? ['IU'] : null)),
   };
   const configRepo = {
     findByClinica: jest.fn().mockResolvedValue(opts.valorPadrao !== undefined ? { clinicaId: CLINICA, valorConsultaCentavos: opts.valorPadrao } : null),
@@ -138,9 +171,18 @@ function montar(opts: { coren?: string | null; valorPadrao?: number; modulos?: M
     pacientes as unknown as PacientesService,
     cobrancasService,
     opts.modulos ?? new ModulosAvaliacaoRegistry([]),
+    (opts.storage ?? storageFake()) as never,
   );
   const eventos = () => auditCreate.mock.calls.map((x) => x[0].event);
   return { service, c, cob, auditCreate, eventos };
+}
+
+function storageFake() {
+  return {
+    createUploadUrl: jest.fn().mockImplementation(({ key }: { key: string }) => Promise.resolve({ uploadUrl: `https://r2/put/${key}`, privateUrl: `s3://bucket/${key}`, expiresInSeconds: 600 })),
+    headObject: jest.fn().mockResolvedValue({ tamanho: 1234, mimeType: 'image/png' }),
+    createReadUrl: jest.fn().mockResolvedValue('https://r2/get/assinada'),
+  };
 }
 
 const dtoBase = (over: Partial<CreateConsultaDto> = {}): CreateConsultaDto => ({
@@ -381,7 +423,7 @@ describe('Slot de módulos da Avaliação', () => {
 
   it('com um módulo FAKE registrado: aceita dados válidos e recusa inválidos/extras/repetidos', async () => {
     const registry = new ModulosAvaliacaoRegistry([{ area: AreaModuloAvaliacao.FERIDA, dto: ModuloFakeDto }]);
-    const m = montar({ modulos: registry });
+    const m = montar({ modulos: registry, classificacoes: ['FA'] });
 
     const ok = await m.service.criar(
       dtoBase({ avaliacao: { modulos: [{ area: AreaModuloAvaliacao.FERIDA, dados: { campoTexto: 'a', campoNumero: 2 } }] } }),
@@ -427,5 +469,245 @@ describe('DTOs da consulta', () => {
       .map((p) => fs.readFileSync(p, 'utf8'))
       .join('\n');
     expect(fontes).not.toMatch(/deleteOne|deleteMany|findOneAndDelete|findByIdAndDelete|\.remove\(/);
+  });
+});
+
+// ============================== ETAPA 5b: módulos IU e incontinência anal + anexos ==============================
+
+const MODULO_IU_VALIDO = {
+  anamnese: { sintomas: 's', comorbidades: 'c', fatoresPredisponentesPrecipitantes: 'f' },
+  classificacaoInicial: { tipo: 'MISTA', predominante: 'URGENCIA' },
+  exameFisico: { abdominal: { realizado: true, achado: 'sem alteracoes' }, testeEsforcoTosse: { realizado: false } },
+  residuoPosMiccional: { realizado: true, volumeMl: 80, metodo: 'ULTRASSOM' },
+  testeAbsorvente: { realizado: false },
+  urinaliseFita: { sangue: 'NEGATIVO', glicose: 'NAO_REALIZADO', nitritos: 'POSITIVO' },
+  urodinamica: { encaminhamentoIndicado: false },
+  diarioMiccional: { dataInicio: '2026-11-01', dataFim: '2026-11-03', anexos: [], resumo: 'resumo' },
+};
+const MODULO_ANAL_VALIDO = {
+  historia: { causa: 'c', fatoresRisco: 'f', duracao: 'd', gravidade: 'g' },
+  tipoPerda: ['LIQUIDAS', 'GASES'],
+  subtipo: ['URGENCIA'],
+  consistenciaFezes: { consistencia: 'PASTOSA', origemInformacao: 'PACIENTE' },
+  exameFisico: { inspecaoPerianal: { realizado: true }, retalDigital: { realizado: false } },
+  sinaisAlarme: [],
+  diarioIntestinal: { dataInicio: '2026-11-01', dataFim: '2026-11-01', anexos: [], resumo: 'r' },
+};
+
+describe('5b — validação compartilhada do módulo IU', () => {
+  it('payload completo e válido não tem erros; vaginal/retal nunca são obrigatórios', () => {
+    expect(validarModuloIU(MODULO_IU_VALIDO)).toEqual([]);
+    expect(validarModuloIU({})).toEqual([]);
+  });
+
+  it('MISTA sem predominante -> erro; predominante sem MISTA -> erro', () => {
+    expect(validarModuloIU({ classificacaoInicial: { tipo: 'MISTA' } }).join()).toMatch(/classificacaoInicial\.predominante: obrigatorio/);
+    expect(validarModuloIU({ classificacaoInicial: { tipo: 'ESFORCO', predominante: 'URGENCIA' } }).join()).toMatch(/classificacaoInicial\.predominante/);
+    expect(validarModuloIU({ classificacaoInicial: { tipo: 'MISTA', predominante: 'ESFORCO' } })).toEqual([]);
+  });
+
+  it.each([
+    ['tipo inválido', { classificacaoInicial: { tipo: 'NOCTURIA' } }, 'classificacaoInicial.tipo'],
+    ['método de RPM inválido', { residuoPosMiccional: { realizado: true, metodo: 'OLHOMETRO' } }, 'residuoPosMiccional.metodo'],
+    ['resultado da fita inválido', { urinaliseFita: { sangue: 'TRACOS' } }, 'urinaliseFita.sangue'],
+    ['item da fita desconhecido', { urinaliseFita: { cetonas: 'NEGATIVO' } }, 'urinaliseFita.cetonas'],
+    ['volume negativo', { residuoPosMiccional: { realizado: true, volumeMl: -5 } }, 'residuoPosMiccional.volumeMl'],
+    ['item de exame sem "realizado"', { exameFisico: { abdominal: { achado: 'x' } } }, 'exameFisico.abdominal.realizado'],
+    ['campo inventado no módulo', { escalaQualquer: 3 }, 'IU.escalaQualquer'],
+    ['urodinâmica sem encaminhamentoIndicado', { urodinamica: { motivo: 'x' } }, 'urodinamica.encaminhamentoIndicado'],
+    ['data inválida no diário', { diarioMiccional: { dataInicio: '01/11/2026' } }, 'diarioMiccional.dataInicio'],
+    ['fim antes do início', { diarioMiccional: { dataInicio: '2026-11-05', dataFim: '2026-11-01' } }, 'diarioMiccional.dataFim'],
+    ['anexo com id inválido', { diarioMiccional: { anexos: ['nao-e-id'] } }, 'diarioMiccional.anexos[0]'],
+  ])('%s -> erro', (_n, dados, campo) => {
+    expect(validarModuloIU(dados).join()).toContain(campo);
+  });
+
+  it('os erros trazem só o NOME do campo, nunca o valor digitado', () => {
+    expect(validarModuloIU({ classificacaoInicial: { tipo: 'VALOR-SIGILOSO' } }).join()).not.toMatch(/SIGILOSO/);
+  });
+
+  it('alerta (não bloqueia) com diário miccional de menos de 3 dias', () => {
+    const doisDias = { diarioMiccional: { dataInicio: '2026-11-01', dataFim: '2026-11-02' } };
+    expect(validarModuloIU(doisDias)).toEqual([]);
+    expect(alertasModuloIU(doisDias as never)).toEqual(['O diário miccional deve cobrir no mínimo 3 dias.']);
+    expect(alertasModuloIU({ diarioMiccional: { dataInicio: '2026-11-01', dataFim: '2026-11-03' } })).toEqual([]);
+    expect(alertasModuloIU({ diarioMiccional: { dataInicio: '2026-11-01' } })).toEqual([]);
+  });
+});
+
+describe('5b — validação compartilhada do módulo de incontinência anal', () => {
+  it('payload válido não tem erros', () => {
+    expect(validarModuloIncontinenciaAnal(MODULO_ANAL_VALIDO)).toEqual([]);
+  });
+
+  it('consistência sem origem da informação -> erro', () => {
+    expect(validarModuloIncontinenciaAnal({ consistenciaFezes: { consistencia: 'SOLIDA' } }).join()).toMatch(/consistenciaFezes\.origemInformacao: obrigatorio/);
+    expect(validarModuloIncontinenciaAnal({ consistenciaFezes: {} })).toEqual([]);
+  });
+
+  it.each([
+    ['tipo de perda inválido', { tipoPerda: ['MUCO'] }, 'tipoPerda[0]'],
+    ['tipo de perda repetido', { tipoPerda: ['GASES', 'GASES'] }, 'tipoPerda'],
+    ['subtipo inválido', { subtipo: ['NOTURNA'] }, 'subtipo[0]'],
+    ['consistência inválida (nada de escala de 7 tipos)', { consistenciaFezes: { consistencia: 'TIPO_4', origemInformacao: 'PACIENTE' } }, 'consistenciaFezes.consistencia'],
+    ['origem inválida', { consistenciaFezes: { consistencia: 'SOLIDA', origemInformacao: 'FAMILIA' } }, 'consistenciaFezes.origemInformacao'],
+    ['sinal de alarme inválido', { sinaisAlarme: ['FEBRE'] }, 'sinaisAlarme[0]'],
+    ['campo de escala não permitido', { bristol: 4 }, 'INCONTINENCIA_ANAL.bristol'],
+    ['exame físico com item desconhecido', { exameFisico: { anuscopia: { realizado: true } } }, 'exameFisico.anuscopia'],
+  ])('%s -> erro', (_n, dados, campo) => {
+    expect(validarModuloIncontinenciaAnal(dados).join()).toContain(campo);
+  });
+
+  it('sinal de alarme gera aviso (sem decisão automática); diário intestinal NÃO tem alerta de período', () => {
+    expect(alertasModuloIncontinenciaAnal({ sinaisAlarme: ['SANGRAMENTO'] })).toEqual(['Sinal de alarme registrado — avalie encaminhamento.']);
+    expect(alertasModuloIncontinenciaAnal({ diarioIntestinal: { dataInicio: '2026-11-01', dataFim: '2026-11-01' } })).toEqual([]);
+  });
+});
+
+describe('5b — disponibilidade por classificação do paciente (IU = incontinência urinária e anal)', () => {
+  it('a tela oferece IU e incontinência anal só para paciente com IU; ferida/ostomia ainda sem módulo', () => {
+    expect(modulosDisponiveis([ClassificacaoArea.IU])).toEqual(['IU', 'INCONTINENCIA_ANAL']);
+    expect(modulosDisponiveis([ClassificacaoArea.FA, ClassificacaoArea.OT])).toEqual([]);
+    expect(modulosDisponiveis([ClassificacaoArea.IU, ClassificacaoArea.FA])).toEqual(['IU', 'INCONTINENCIA_ANAL']);
+  });
+
+  const registroReal = () =>
+    new ModulosAvaliacaoRegistry(
+      (Object.entries(VALIDADORES_MODULO) as Array<[AreaModuloAvaliacao, (d: unknown) => string[]]>).map(([area, validar]) => ({ area, validar })),
+    );
+
+  it('API aceita os dois módulos para paciente [IU] e recusa para [FA]/[OT] (classificação errada)', async () => {
+    const ok = montar({ modulos: registroReal(), classificacoes: ['IU'] });
+    const c = await ok.service.criar(
+      dtoBase({ avaliacao: { modulos: [{ area: AreaModuloAvaliacao.IU, dados: MODULO_IU_VALIDO }, { area: AreaModuloAvaliacao.INCONTINENCIA_ANAL, dados: MODULO_ANAL_VALIDO }] } }),
+      AUTOR,
+    );
+    expect(c.avaliacao.modulos.map((m) => m.area)).toEqual(['IU', 'INCONTINENCIA_ANAL']);
+    const evento = ok.auditCreate.mock.calls.find((x) => x[0].event === AuditEvent.CONSULTA_ENFERMAGEM_CREATED)![0];
+    expect(evento.metadata.modulos).toEqual(['IU', 'INCONTINENCIA_ANAL']);
+    expect(JSON.stringify(evento.metadata)).not.toMatch(/URGENCIA|PASTOSA|sem alteracoes/);
+
+    for (const cls of [['FA'], ['OT']]) {
+      const errado = montar({ modulos: registroReal(), classificacoes: cls });
+      await expect(
+        errado.service.criar(dtoBase({ avaliacao: { modulos: [{ area: AreaModuloAvaliacao.IU, dados: {} }] } }), AUTOR),
+      ).rejects.toThrow(/nao disponivel para a classificacao/);
+      await expect(
+        errado.service.criar(dtoBase({ avaliacao: { modulos: [{ area: AreaModuloAvaliacao.INCONTINENCIA_ANAL, dados: {} }] } }), AUTOR),
+      ).rejects.toThrow(/nao disponivel para a classificacao/);
+    }
+  });
+
+  it('dados inválidos do módulo -> 400 com o NOME do campo', async () => {
+    const m = montar({ modulos: registroReal() });
+    await expect(
+      m.service.criar(dtoBase({ avaliacao: { modulos: [{ area: AreaModuloAvaliacao.IU, dados: { classificacaoInicial: { tipo: 'MISTA' } } }] } }), AUTOR),
+    ).rejects.toThrow(/classificacaoInicial\.predominante/);
+  });
+
+  it('o CONTEÚDO DOS MÓDULOS é coberto pela assinatura: alterar depois de assinar -> 409; o hash muda se o módulo muda', async () => {
+    const m = montar({ modulos: registroReal() });
+    const c = await m.service.criar(dtoBase({ avaliacao: { modulos: [{ area: AreaModuloAvaliacao.IU, dados: MODULO_IU_VALIDO }] } }), AUTOR);
+    await m.service.assinar(c.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
+
+    await expect(
+      m.service.atualizarRascunho(c.id, { avaliacao: { modulos: [{ area: AreaModuloAvaliacao.IU, dados: {} }] } }, AUTOR),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(m.c.consultas[0].avaliacao.modulos[0].dados).toEqual(MODULO_IU_VALIDO);
+
+    const data = new Date('2026-11-05T12:00:00Z');
+    const base = m.c.consultas[0];
+    const outra = { ...base, avaliacao: { ...base.avaliacao, modulos: [{ area: AreaModuloAvaliacao.IU, dados: { ...MODULO_IU_VALIDO, urodinamica: { encaminhamentoIndicado: true } } }] } };
+    expect(m.service.hashAssinatura(base, 'COREN', data)).not.toBe(m.service.hashAssinatura(outra, 'COREN', data));
+  });
+});
+
+describe('5b — anexos da consulta (diário em papel)', () => {
+  const presign = { mimeType: 'image/png' as const, tamanho: 1234, hash: 'a'.repeat(64) };
+
+  async function rascunhoComAnexo(m: ReturnType<typeof montar>) {
+    const c = await m.service.criar(dtoBase(), AUTOR);
+    const up = await m.service.criarUploadAnexo(c.id, presign, undefined, AUTOR);
+    await m.service.confirmarUploadAnexo(c.id, up.anexo.id, undefined, AUTOR);
+    return { c, anexoId: up.anexo.id, up };
+  }
+
+  it('autor envia em rascunho: chave sem dado pessoal, headers assinados, URL privada não volta ao cliente; auditado sem valor', async () => {
+    const storage = storageFake();
+    const m = montar({ storage });
+    const { c, up } = await rascunhoComAnexo(m);
+
+    const key = storage.createUploadUrl.mock.calls[0][0].key as string;
+    expect(key).toMatch(new RegExp(`^${CLINICA}/consultas/${c.id}/[0-9a-f-]{36}\\.png$`));
+    expect(up.requiredHeaders).toEqual({ 'Content-Type': 'image/png', 'x-amz-meta-sha256': 'a'.repeat(64) });
+    expect(up.anexo).not.toHaveProperty('url');
+    expect(storage.headObject).toHaveBeenCalled();
+    expect(m.eventos()).toEqual(expect.arrayContaining([AuditEvent.CONSULTA_ANEXO_UPLOAD_URL_CREATED, AuditEvent.CONSULTA_ANEXO_CONFIRMED]));
+  });
+
+  it('só PDF/JPG/PNG (DICOM recusado pelo DTO) e no limite de tamanho do módulo de documentos', async () => {
+    const erros = async (d: object) => (await validate(plainToInstance(PresignAnexoConsultaDto, d))).map((e) => e.property);
+    expect(await erros(presign)).toEqual([]);
+    expect(await erros({ ...presign, mimeType: 'application/dicom' })).toContain('mimeType');
+    expect(await erros({ ...presign, mimeType: 'video/mp4' })).toContain('mimeType');
+
+    const m = montar();
+    const c = await m.service.criar(dtoBase(), AUTOR);
+    await expect(m.service.criarUploadAnexo(c.id, { ...presign, tamanho: MAX_DOCUMENT_SIZE_BYTES + 1 }, undefined, AUTOR)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('confirmação exige o objeto no storage com o tamanho declarado', async () => {
+    const storage = storageFake();
+    storage.headObject.mockResolvedValueOnce(undefined).mockResolvedValueOnce({ tamanho: 1 });
+    const m = montar({ storage });
+    const c = await m.service.criar(dtoBase(), AUTOR);
+    const up = await m.service.criarUploadAnexo(c.id, presign, undefined, AUTOR);
+    await expect(m.service.confirmarUploadAnexo(c.id, up.anexo.id, undefined, AUTOR)).rejects.toBeInstanceOf(UnprocessableEntityException);
+    await expect(m.service.confirmarUploadAnexo(c.id, up.anexo.id, undefined, AUTOR)).rejects.toBeInstanceOf(UnprocessableEntityException);
+    expect(await m.service.listarAnexos(c.id, undefined, AUTOR)).toEqual([]); // não confirmado não aparece
+  });
+
+  it('enviar: não autor 403; depois de assinada 409 (sem anexo novo)', async () => {
+    const m = montar();
+    const c = await m.service.criar(dtoBase(), AUTOR);
+    await expect(m.service.criarUploadAnexo(c.id, presign, undefined, COLEGA)).rejects.toBeInstanceOf(ForbiddenException);
+    await m.service.assinar(c.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
+    await expect(m.service.criarUploadAnexo(c.id, presign, undefined, AUTOR)).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('diário só pode citar anexo CONFIRMADO desta consulta; na criação não há anexos', async () => {
+    const m = montar({ modulos: new ModulosAvaliacaoRegistry([{ area: AreaModuloAvaliacao.IU, validar: validarModuloIU }]) });
+    const { c, anexoId } = await rascunhoComAnexo(m);
+
+    const comAnexo = (ids: string[]) => ({ avaliacao: { modulos: [{ area: AreaModuloAvaliacao.IU, dados: { diarioMiccional: { anexos: ids } } }] } });
+    await expect(m.service.atualizarRascunho(c.id, comAnexo([anexoId]), AUTOR)).resolves.toBeDefined();
+    await expect(m.service.atualizarRascunho(c.id, comAnexo(['65f00000000000000000ffff']), AUTOR)).rejects.toThrow(/nao pertence a esta consulta/);
+    await expect(m.service.criar(dtoBase(comAnexo([anexoId])), AUTOR)).rejects.toThrow(/nao pertence a esta consulta/);
+  });
+
+  it('LER o anexo: enfermeiro da clínica sim (auditado, marca não autor); SECRETARIA/ADMIN/SUPER_ADMIN não; outra clínica 404', async () => {
+    const m = montar();
+    const { c, anexoId } = await rascunhoComAnexo(m);
+
+    const r = await m.service.urlAcessoAnexo(c.id, anexoId, undefined, COLEGA);
+    expect(r.accessUrl).toBe('https://r2/get/assinada');
+    const evento = m.auditCreate.mock.calls.find((x) => x[0].event === AuditEvent.CONSULTA_ANEXO_VIEW_URL_CREATED)![0];
+    expect(evento.metadata).toEqual({ clinicaId: CLINICA, consultaId: c.id, anexoId, autor: false });
+    expect(await m.service.listarAnexos(c.id, undefined, COLEGA)).toHaveLength(1);
+
+    for (const papel of [Papel.SECRETARIA, Papel.ADMIN, Papel.SUPER_ADMIN]) {
+      const outro = ctx(usuario(papel, 'x'));
+      await expect(m.service.urlAcessoAnexo(c.id, anexoId, undefined, outro)).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(m.service.listarAnexos(c.id, undefined, outro)).rejects.toBeInstanceOf(ForbiddenException);
+    }
+    const deOutraClinica = ctx(usuario(Papel.ENFERMEIRO, 'enf-x', 'clinica-2'));
+    await expect(m.service.urlAcessoAnexo(c.id, anexoId, undefined, deOutraClinica)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('anexo nunca é apagado: não há rota nem método de exclusão de anexo', () => {
+    const metodos = Object.getOwnPropertyNames(ConsultasController.prototype).join(',');
+    expect(metodos).not.toMatch(/excluir|delete|remover/i);
+    const repoMetodos = Object.getOwnPropertyNames(ConsultaMongoRepository.prototype).join(',');
+    expect(repoMetodos).not.toMatch(/delete|remove|excluir/i);
   });
 });

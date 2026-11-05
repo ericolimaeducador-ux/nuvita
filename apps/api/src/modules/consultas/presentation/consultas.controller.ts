@@ -14,6 +14,7 @@ import {
   CreateAdendoConsultaDto,
   CreateConsultaDto,
   ListConsultasQueryDto,
+  PresignAnexoConsultaDto,
   UpdateConsultaDto,
 } from '../application/dto/consulta.dto';
 
@@ -82,6 +83,50 @@ export class ConsultasController {
     @Req() request: Request,
   ) {
     return this.service.criarAdendo(id, dto, clinicaId, this.contexto(request, user));
+  }
+
+  // Anexos (foto/PDF do diário). Regras de autor/rascunho e de leitura no serviço.
+  @Post(':id/anexos/presign-upload')
+  criarUploadAnexo(
+    @Param('id') id: string,
+    @Body() dto: PresignAnexoConsultaDto,
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.service.criarUploadAnexo(id, dto, clinicaId, this.contexto(request, user));
+  }
+
+  @Post(':id/anexos/:anexoId/confirmar-upload')
+  confirmarUploadAnexo(
+    @Param('id') id: string,
+    @Param('anexoId') anexoId: string,
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.service.confirmarUploadAnexo(id, anexoId, clinicaId, this.contexto(request, user));
+  }
+
+  @Get(':id/anexos')
+  listarAnexos(
+    @Param('id') id: string,
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.service.listarAnexos(id, clinicaId, this.contexto(request, user));
+  }
+
+  @Get(':id/anexos/:anexoId/access-url')
+  urlAcessoAnexo(
+    @Param('id') id: string,
+    @Param('anexoId') anexoId: string,
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.service.urlAcessoAnexo(id, anexoId, clinicaId, this.contexto(request, user));
   }
 
   private contexto(request: Request, user: AuthTokenPayload): ConsultaRequestContext {

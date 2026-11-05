@@ -82,3 +82,43 @@ export class AdendoConsultaMongo {
 export const AdendoConsultaSchema = SchemaFactory.createForClass(AdendoConsultaMongo);
 // Número sequencial por consulta, sem corrida: duas inserções com o mesmo número -> E11000 (o serviço tenta o próximo).
 AdendoConsultaSchema.index({ consultaId: 1, numero: 1 }, { unique: true });
+
+export type AnexoConsultaDocument = HydratedDocument<AnexoConsultaMongo>;
+
+// Anexos da consulta (ex.: foto/PDF do diário em papel). Coleção própria: NÃO aparecem em GET /documentos e não têm rota de
+// exclusão (anexo de consulta assinada nunca é apagado). Reaproveita só o storage R2 do módulo documentos.
+@Schema({ collection: 'consultas_enfermagem_anexos', versionKey: false })
+export class AnexoConsultaMongo {
+  @Prop({ required: true, index: true })
+  clinicaId!: string;
+
+  @Prop({ required: true, index: true })
+  consultaId!: string;
+
+  @Prop({ required: true })
+  pacienteId!: string;
+
+  @Prop({ required: true, enum: ['application/pdf', 'image/jpeg', 'image/png'] })
+  mimeType!: string;
+
+  @Prop({ required: true, min: 1 })
+  tamanho!: number;
+
+  @Prop({ required: true })
+  hash!: string;
+
+  @Prop({ required: true })
+  url!: string;
+
+  @Prop({ required: true })
+  enviadoPor!: string;
+
+  @Prop({ type: Date, default: null })
+  confirmadoEm!: Date | null;
+
+  @Prop({ default: Date.now, immutable: true })
+  criadoEm!: Date;
+}
+
+export const AnexoConsultaSchema = SchemaFactory.createForClass(AnexoConsultaMongo);
+AnexoConsultaSchema.index({ clinicaId: 1, consultaId: 1, criadoEm: 1 });

@@ -29,6 +29,8 @@ export default defineConfig(({ command }) => ({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // Tipos e validação compartilhados com a API (sem dependências), ex.: módulos da consulta de enfermagem.
+      '@shared': fileURLToPath(new URL('../../packages/shared/src', import.meta.url)),
     },
   },
   server: {

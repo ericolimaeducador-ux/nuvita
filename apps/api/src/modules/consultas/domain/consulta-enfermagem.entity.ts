@@ -10,13 +10,9 @@ export enum StatusConsulta {
   ASSINADA = 'ASSINADA',
 }
 
-/** Áreas dos módulos da Avaliação. Os conteúdos de cada módulo entram nas etapas 5b–5d. */
-export enum AreaModuloAvaliacao {
-  IU = 'IU',
-  INCONTINENCIA_ANAL = 'INCONTINENCIA_ANAL',
-  FERIDA = 'FERIDA',
-  OSTOMIA = 'OSTOMIA',
-}
+/** Áreas dos módulos da Avaliação: definidas no pacote compartilhado (API e web usam o mesmo). */
+import { AreaModuloAvaliacao } from '../../../../../../packages/shared/src/consulta';
+export { AreaModuloAvaliacao };
 
 /** Módulo da Avaliação: união discriminada por `area`; `dados` é validado pela definição registrada para a área. */
 export interface ModuloAvaliacao {
@@ -135,4 +131,21 @@ export function avaliacaoVazia(): Avaliacao {
 
 export function planejamentoVazio(): Planejamento {
   return { prioridades: '', resultadosEsperados: '', prescricaoEnfermagem: [], examesSolicitados: '', encaminhamentos: '' };
+}
+
+/** Anexo da consulta (ex.: foto/PDF do diário em papel). Conteúdo clínico: lê quem lê a consulta. Nunca é apagado. */
+export interface AnexoConsulta {
+  id: string;
+  clinicaId: string;
+  consultaId: string;
+  pacienteId: string;
+  mimeType: 'application/pdf' | 'image/jpeg' | 'image/png';
+  tamanho: number;
+  hash: string;
+  /** URL privada no storage (s3://bucket/chave); a chave não tem dado pessoal. */
+  url: string;
+  enviadoPor: string;
+  /** null = upload ainda não confirmado (HeadObject). */
+  confirmadoEm: Date | null;
+  criadoEm: Date;
 }

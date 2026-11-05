@@ -5,9 +5,11 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
+  BadRequestException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { createHmac } from 'crypto';
+import { createHmac, randomUUID } from 'crypto';
 import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
 import { AppConfigService } from '../../../common/security/config.service';
 import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
@@ -17,9 +19,13 @@ import { UserRepository } from '../../auth/application/ports/user.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
 import { CobrancasService } from '../../cobrancas/application/cobrancas.service';
 import { PacientesService } from '../../pacientes/application/pacientes.service';
-import { CONSULTA_REPOSITORY } from '../consultas.constants';
+import { anexosReferenciados, classificacaoLiberaModulo } from '../../../../../../packages/shared/src/consulta';
+import { DocumentStorage } from '../../documentos/application/ports/document-storage';
+import { DOCUMENT_ACCESS_URL_TTL_SECONDS, MAX_DOCUMENT_SIZE_BYTES } from '../../documentos/documentos.constants';
+import { CONSULTA_ANEXO_STORAGE, CONSULTA_REPOSITORY } from '../consultas.constants';
 import {
   AdendoConsulta,
+  AnexoConsulta,
   CobrancaConsulta,
   ConsultaEnfermagem,
   StatusCobrancaConsulta,
@@ -35,6 +41,7 @@ import {
   CreateAdendoConsultaDto,
   CreateConsultaDto,
   ListConsultasQueryDto,
+  PresignAnexoConsultaDto,
   UpdateConsultaDto,
 } from './dto/consulta.dto';
 
@@ -50,6 +57,11 @@ export interface ResultadoCobrancaConsulta {
 }
 
 const TENTATIVAS_ADENDO = 5;
+
+const EXTENSAO_ANEXO: Record<string, string> = { 'application/pdf': '.pdf', 'image/jpeg': '.jpg', 'image/png': '.png' };
+
+/** Anexo devolvido ao cliente: sem a URL privada do storage. */
+export type AnexoPublico = Omit<AnexoConsulta, 'url'>;
 
 /**
  * Consulta de enfermagem (Res. Cofen 736/2024, 5 etapas). Reusa a infraestrutura do prontuário herdado: assinatura HMAC
@@ -77,6 +89,7 @@ export class ConsultasService {
     private readonly pacientesService: PacientesService,
     private readonly cobrancasService: CobrancasService,
     private readonly modulos: ModulosAvaliacaoRegistry,
+    @Inject(CONSULTA_ANEXO_STORAGE) private readonly storage: DocumentStorage,
   ) {}
 
   // ---------------- criação e rascunho (só o enfermeiro autor) ----------------
@@ -88,7 +101,7 @@ export class ConsultasService {
     const resumo = await this.pacientesService.resumoPorIds(clinicaId, [dto.pacienteId]);
     if (!resumo.has(dto.pacienteId)) throw new NotFoundException('Paciente nao encontrado.');
 
-    const conteudo = await this.montarConteudo(dto, context.user);
+    const conteudo = await this.montarConteudo(dto, context.user, { clinicaId, pacienteId: dto.pacienteId });
     const consulta = await this.repo.create({
       clinicaId,
       pacienteId: dto.pacienteId,
@@ -105,6 +118,7 @@ export class ConsultasService {
       consultaId: consulta.id,
       pacienteId: consulta.pacienteId,
       etapas: Object.keys(conteudo),
+      modulos: (conteudo.avaliacao?.modulos ?? []).map((m) => m.area),
     });
     return consulta;
   }
@@ -118,7 +132,7 @@ export class ConsultasService {
       throw new ConflictException('Consulta assinada: nao pode ser alterada. Use um adendo.');
     }
 
-    const conteudo = await this.montarConteudo(dto, context.user, atual);
+    const conteudo = await this.montarConteudo(dto, context.user, { clinicaId, pacienteId: atual.pacienteId, consultaId: id }, atual);
     const atualizada = await this.repo.updateRascunho(clinicaId, id, context.user.sub, conteudo);
     if (!atualizada) throw new ConflictException('Consulta assinada: nao pode ser alterada. Use um adendo.');
     await this.audit(AuditEvent.CONSULTA_ENFERMAGEM_UPDATED, context, {
@@ -126,6 +140,7 @@ export class ConsultasService {
       consultaId: id,
       pacienteId: atual.pacienteId,
       etapas: Object.keys(conteudo),
+      modulos: (conteudo.avaliacao?.modulos ?? []).map((m) => m.area),
     });
     return atualizada;
   }
@@ -302,14 +317,19 @@ export class ConsultasService {
   // ---------------- internos ----------------
 
   /** Monta só as etapas enviadas; os módulos da Avaliação passam pela definição registrada da área. */
-  private async montarConteudo(dto: ConteudoConsultaDto, user: AuthTokenPayload, atual?: ConsultaEnfermagem): Promise<ConteudoConsulta> {
+  private async montarConteudo(
+    dto: ConteudoConsultaDto,
+    user: AuthTokenPayload,
+    alvo: { clinicaId: string; pacienteId: string; consultaId?: string },
+    atual?: ConsultaEnfermagem,
+  ): Promise<ConteudoConsulta> {
     const conteudo: ConteudoConsulta = {};
     if (dto.avaliacao) {
       const base = atual?.avaliacao ?? avaliacaoVazia();
       conteudo.avaliacao = {
         dadosSubjetivos: dto.avaliacao.dadosSubjetivos ?? base.dadosSubjetivos,
         dadosObjetivos: dto.avaliacao.dadosObjetivos ?? base.dadosObjetivos,
-        modulos: dto.avaliacao.modulos ? await this.modulos.validar(dto.avaliacao.modulos) : base.modulos,
+        modulos: dto.avaliacao.modulos ? await this.validarModulos(dto.avaliacao.modulos, alvo) : base.modulos,
       };
     }
     if (dto.diagnosticos) conteudo.diagnosticos = dto.diagnosticos.map((d) => ({ texto: d.texto.trim(), origem: d.origem }));
@@ -326,6 +346,142 @@ export class ConsultasService {
     }
     if (dto.evolucao) conteudo.evolucao = { texto: dto.evolucao.texto };
     return conteudo;
+  }
+
+  /**
+   * Módulos da Avaliação: (1) só os liberados para a classificação do paciente (IU e incontinência anal -> IU);
+   * (2) dados validados pelo pacote compartilhado; (3) anexos citados nos diários têm de ser anexos CONFIRMADOS desta
+   * consulta (na criação ainda não há anexos).
+   */
+  private async validarModulos(
+    modulos: NonNullable<ConteudoConsultaDto['avaliacao']>['modulos'] & object,
+    alvo: { clinicaId: string; pacienteId: string; consultaId?: string },
+  ) {
+    if (modulos.length > 0) {
+      const classificacoes = await this.pacientesService.classificacoesDoPaciente(alvo.clinicaId, alvo.pacienteId);
+      for (const m of modulos) {
+        if (!classificacaoLiberaModulo(m.area, classificacoes)) {
+          throw new BadRequestException(`Modulo de avaliacao ${m.area} nao disponivel para a classificacao deste paciente.`);
+        }
+      }
+    }
+    const validados = await this.modulos.validar(modulos);
+    const citados = new Set(validados.flatMap((m) => anexosReferenciados(m)));
+    if (citados.size > 0) {
+      const existentes = alvo.consultaId ? await this.repo.listAnexos(alvo.clinicaId, alvo.consultaId) : [];
+      const confirmados = new Set(existentes.filter((a) => a.confirmadoEm != null).map((a) => a.id));
+      for (const idAnexo of citados) {
+        if (!confirmados.has(idAnexo)) throw new BadRequestException('Anexo citado no diario nao pertence a esta consulta.');
+      }
+    }
+    return validados;
+  }
+
+  // ---------------- anexos (diário em papel etc.) ----------------
+
+  /** Envio: só o AUTOR, só em RASCUNHO; PDF/JPG/PNG no limite do módulo de documentos. Chave sem dado pessoal. */
+  async criarUploadAnexo(id: string, dto: PresignAnexoConsultaDto, clinicaIdQuery: string | undefined, context: ConsultaRequestContext) {
+    const { clinicaId, consulta } = await this.consultaDoAutorEmRascunho(id, clinicaIdQuery, context);
+    if (dto.tamanho > MAX_DOCUMENT_SIZE_BYTES) {
+      throw new BadRequestException(`Arquivo acima do limite de ${Math.round(MAX_DOCUMENT_SIZE_BYTES / 1024 / 1024)}MB.`);
+    }
+    const hash = dto.hash.toLowerCase();
+    const key = `${clinicaId}/consultas/${id}/${randomUUID()}${EXTENSAO_ANEXO[dto.mimeType] ?? ''}`;
+    const presigned = await this.storage.createUploadUrl({ key, mimeType: dto.mimeType, tamanho: dto.tamanho, hash });
+    const anexo = await this.repo.createAnexo({
+      clinicaId,
+      consultaId: id,
+      pacienteId: consulta.pacienteId,
+      mimeType: dto.mimeType,
+      tamanho: dto.tamanho,
+      hash,
+      url: presigned.privateUrl,
+      enviadoPor: context.user.sub,
+      confirmadoEm: null,
+    });
+    await this.audit(AuditEvent.CONSULTA_ANEXO_UPLOAD_URL_CREATED, context, {
+      clinicaId,
+      consultaId: id,
+      anexoId: anexo.id,
+      mimeType: dto.mimeType,
+      tamanho: dto.tamanho,
+    });
+    return {
+      anexo: this.anexoPublico(anexo),
+      uploadUrl: presigned.uploadUrl,
+      expiresInSeconds: presigned.expiresInSeconds,
+      // Headers que o navegador DEVE enviar no PUT (a URL assina os dois), como no módulo de documentos.
+      requiredHeaders: { 'Content-Type': dto.mimeType, 'x-amz-meta-sha256': hash },
+    };
+  }
+
+  /** Confirma que o objeto existe no storage com o tamanho declarado (HeadObject), como no módulo de documentos. */
+  async confirmarUploadAnexo(id: string, anexoId: string, clinicaIdQuery: string | undefined, context: ConsultaRequestContext): Promise<AnexoPublico> {
+    const { clinicaId } = await this.consultaDoAutorEmRascunho(id, clinicaIdQuery, context);
+    const anexo = await this.repo.findAnexo(clinicaId, id, anexoId);
+    if (!anexo) throw new NotFoundException('Anexo nao encontrado.');
+    if (anexo.confirmadoEm) return this.anexoPublico(anexo);
+
+    let head: { tamanho: number } | undefined;
+    try {
+      head = await this.storage.headObject(anexo.url);
+    } catch (erro) {
+      this.logger.warn(`HeadObject falhou para o anexo ${anexo.id}: ${(erro as Error).message}`);
+      throw new ServiceUnavailableException('Nao foi possivel verificar o arquivo enviado. Tente novamente.');
+    }
+    if (!head) throw new UnprocessableEntityException('Arquivo nao encontrado no armazenamento. Envie o arquivo novamente.');
+    if (head.tamanho !== anexo.tamanho) {
+      throw new UnprocessableEntityException('O tamanho do arquivo enviado difere do declarado. Envie o arquivo novamente.');
+    }
+    const confirmado = await this.repo.confirmarAnexo(clinicaId, id, anexoId, new Date());
+    await this.audit(AuditEvent.CONSULTA_ANEXO_CONFIRMED, context, { clinicaId, consultaId: id, anexoId });
+    return this.anexoPublico(confirmado ?? anexo);
+  }
+
+  /** Lista: quem lê a consulta (enfermeiros da clínica). Só anexos confirmados. */
+  async listarAnexos(id: string, clinicaIdQuery: string | undefined, context: ConsultaRequestContext): Promise<AnexoPublico[]> {
+    this.assertEnfermeiro(context.user);
+    const clinicaId = resolveTenantClinicaId(context.user, clinicaIdQuery);
+    await this.obterOuFalhar(clinicaId, id);
+    const anexos = await this.repo.listAnexos(clinicaId, id);
+    return anexos.filter((a) => a.confirmadoEm != null).map((a) => this.anexoPublico(a));
+  }
+
+  /** URL temporária de leitura: quem lê a consulta. Sempre auditada (marca se quem abriu não é o autor da consulta). */
+  async urlAcessoAnexo(id: string, anexoId: string, clinicaIdQuery: string | undefined, context: ConsultaRequestContext) {
+    this.assertEnfermeiro(context.user);
+    const clinicaId = resolveTenantClinicaId(context.user, clinicaIdQuery);
+    const consulta = await this.obterOuFalhar(clinicaId, id);
+    const anexo = await this.repo.findAnexo(clinicaId, id, anexoId);
+    if (!anexo || anexo.confirmadoEm == null) throw new NotFoundException('Anexo nao encontrado.');
+    const accessUrl = await this.storage.createReadUrl(
+      anexo.url,
+      DOCUMENT_ACCESS_URL_TTL_SECONDS,
+      `anexo-consulta${EXTENSAO_ANEXO[anexo.mimeType] ?? ''}`,
+    );
+    await this.audit(AuditEvent.CONSULTA_ANEXO_VIEW_URL_CREATED, context, {
+      clinicaId,
+      consultaId: id,
+      anexoId,
+      autor: consulta.enfermeiroId === context.user.sub,
+    });
+    return { accessUrl, mimeType: anexo.mimeType, expiresInSeconds: DOCUMENT_ACCESS_URL_TTL_SECONDS };
+  }
+
+  private async consultaDoAutorEmRascunho(id: string, clinicaIdQuery: string | undefined, context: ConsultaRequestContext) {
+    this.assertEnfermeiro(context.user);
+    const clinicaId = resolveTenantClinicaId(context.user, clinicaIdQuery);
+    const consulta = await this.obterOuFalhar(clinicaId, id);
+    this.assertAutor(consulta, context.user);
+    if (consulta.status !== StatusConsulta.RASCUNHO) {
+      throw new ConflictException('Consulta assinada: nao recebe anexos novos. Use um adendo.');
+    }
+    return { clinicaId, consulta };
+  }
+
+  private anexoPublico(a: AnexoConsulta): AnexoPublico {
+    const { url: _privada, ...resto } = a;
+    return resto;
   }
 
   private async obterOuFalhar(clinicaId: string, id: string): Promise<ConsultaEnfermagem> {

@@ -12,7 +12,6 @@ import { CobrancaAuditContext, CobrancasService } from '../application/cobrancas
 import { CreateCobrancaDto } from '../application/dto/create-cobranca.dto';
 import {
   CancelarCobrancaDto,
-  ConsultaAvaliacaoDto,
   EnviarAvisoDto,
   ListCobrancasQueryDto,
   PagarCobrancaDto,
@@ -22,7 +21,7 @@ import {
 import { UpdateCobrancaDto } from '../application/dto/update-cobranca.dto';
 
 // Financeiro de paciente (REGISTRO de cobranças + AVISOS; sem processar pagamento): operado pela equipe da clínica
-// (enfermeiro, secretaria, admin; SUPER_ADMIN sempre passa). PACIENTE não tem acesso. O valor da consulta de avaliação
+// (enfermeiro, secretaria, admin; SUPER_ADMIN sempre passa). PACIENTE não tem acesso. O valor padrão da consulta
 // (configuração) só o ADMIN altera.
 const EQUIPE_CLINICA = [...PAPEIS_PROFISSIONAIS, Papel.ADMIN, Papel.SECRETARIA];
 
@@ -37,13 +36,6 @@ export class CobrancasController {
     return this.service.criar(dto, this.contexto(request, user));
   }
 
-  // Atalho: o valor vem da configuração da clínica.
-  @Post('consulta-avaliacao')
-  criarConsultaAvaliacao(@Body() dto: ConsultaAvaliacaoDto, @CurrentUser() user: AuthTokenPayload, @Req() request: Request) {
-    return this.service.criarConsultaAvaliacao(dto, this.contexto(request, user));
-  }
-
-  // Com pacienteId: cobranças do paciente. Sem ele: lista da clínica (filtro por status, nome do paciente, paginada).
   @Get()
   listar(@Query() query: ListCobrancasQueryDto, @CurrentUser() user: AuthTokenPayload) {
     return query.pacienteId

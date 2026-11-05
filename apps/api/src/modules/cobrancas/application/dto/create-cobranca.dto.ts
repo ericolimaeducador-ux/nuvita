@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   IsArray,
   IsEnum,
+  IsIn,
   IsInt,
   IsISO8601,
   IsMongoId,
@@ -16,6 +17,8 @@ import {
 } from 'class-validator';
 import { FormaPagamentoCobranca, TipoCobranca } from '../../domain/cobranca.entity';
 
+export const TIPOS_COBRANCA_MANUAL = Object.values(TipoCobranca).filter((t) => t !== TipoCobranca.CONSULTA_ENFERMAGEM);
+
 // Teto defensivo (R$ 1.000.000,00) contra valor digitado com zeros a mais.
 export const VALOR_MAXIMO_CENTAVOS = 100_000_000;
 
@@ -27,7 +30,8 @@ export class ItemCobrancaDto {
 export class CreateCobrancaDto {
   @IsOptional() @IsString() clinicaId?: string;
   @IsMongoId() pacienteId!: string;
-  @IsEnum(TipoCobranca) tipo!: TipoCobranca;
+  // consulta_enfermagem só nasce da assinatura da consulta (com vínculo consultaId): não é aceito na criação manual.
+  @IsIn(TIPOS_COBRANCA_MANUAL) tipo!: TipoCobranca;
   // Texto livre: o que o pacote/cobrança inclui.
   @IsString() @IsNotEmpty() @MaxLength(500) descricao!: string;
 

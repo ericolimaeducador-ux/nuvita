@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const mocks = vi.hoisted(() => ({
-  listByPaciente: vi.fn(), create: vi.fn(), criarConsultaAvaliacao: vi.fn(), update: vi.fn(),
+  listByPaciente: vi.fn(), create: vi.fn(), update: vi.fn(),
   enviarAviso: vi.fn(), marcarPaga: vi.fn(), cancelar: vi.fn(),
 }));
 
@@ -53,17 +53,6 @@ describe('CobrancasSecao', () => {
     expect(screen.getByRole('button', { name: 'Marcar paga Pacote de curativos' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Marcar paga Consulta antiga/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Cancelar cobrança Consulta antiga/ })).not.toBeInTheDocument();
-  });
-
-  it('atalho "Consulta de avaliação" chama a API (o valor vem da configuração, no servidor)', async () => {
-    const user = userEvent.setup();
-    mocks.criarConsultaAvaliacao.mockResolvedValue(aberta);
-    montar();
-    await screen.findByText('Pacote de curativos');
-
-    await user.click(screen.getByRole('button', { name: 'Consulta de avaliação' }));
-
-    await waitFor(() => expect(mocks.criarConsultaAvaliacao).toHaveBeenCalledWith('p1'));
   });
 
   it('nova cobrança: envia o valor em CENTAVOS (R$ 350,50 -> 35050)', async () => {
@@ -143,6 +132,19 @@ describe('CobrancasSecao', () => {
     await user.click(within(dialogo).getByRole('button', { name: 'Enviar aviso' }));
 
     await waitFor(() => expect(mocks.enviarAviso).toHaveBeenCalledWith('c1', ['email', 'whatsapp']));
+  });
+
+  it('cobrança de consulta de enfermagem aparece com o rótulo, mas o tipo não é oferecido na criação manual', async () => {
+    const user = userEvent.setup();
+    mocks.listByPaciente.mockResolvedValue([{ ...aberta, id: 'c7', tipo: 'consulta_enfermagem', descricao: 'Consulta de enfermagem' }]);
+    montar();
+    expect(await screen.findAllByText('Consulta de enfermagem')).toHaveLength(2); // descrição + rótulo do tipo
+
+    await user.click(screen.getByRole('button', { name: /Nova cobrança/ }));
+    const dialogo = await screen.findByRole('dialog');
+    await user.click(within(dialogo).getByRole('combobox', { name: 'Tipo' }));
+    const opcoes = (await screen.findAllByRole('option')).map((o) => o.textContent);
+    expect(opcoes).toEqual(['Pacote mensal', 'Outro']);
   });
 
   it('falha ao carregar não parece "sem cobranças"', async () => {

@@ -142,7 +142,7 @@ export function ConsultaEnfermagemPage() {
   const consulta = consultaQ.data;
 
   useEffect(() => { if (consulta) setForm(doServidor(consulta)); }, [consulta]);
-  useEffect(() => { if (configQ.data) setValor(centavosParaInput(configQ.data.valorConsultaAvaliacaoCentavos)); }, [configQ.data]);
+  useEffect(() => { if (configQ.data) setValor(centavosParaInput(configQ.data.valorConsultaCentavos)); }, [configQ.data]);
 
   const ehAutor = !!consulta && consulta.enfermeiroId === user?.id;
   const assinada = consulta?.status === StatusConsulta.ASSINADA;

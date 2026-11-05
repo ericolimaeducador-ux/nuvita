@@ -5,7 +5,8 @@
 // Valores em CENTAVOS (inteiros), como nas entregas. Nada é apagado fisicamente: cancelar é lógico (status + motivo).
 
 export enum TipoCobranca {
-  CONSULTA_AVALIACAO = 'consulta_avaliacao',
+  // Gerada SÓ pela assinatura da consulta de enfermagem (etapa 5a); não é criada manualmente.
+  CONSULTA_ENFERMAGEM = 'consulta_enfermagem',
   PACOTE_MENSAL = 'pacote_mensal',
   OUTRO = 'outro',
 }

@@ -33,11 +33,11 @@ describe('FinanceiroPacientesPage', () => {
       mes: '2026-06', aReceberCentavos: 300000, recebidoCentavos: 800000, vencidoCentavos: 400000,
       quantidades: { aReceber: 2, recebido: 3, vencido: 1 },
     });
-    mocks.config.mockResolvedValue({ valorConsultaAvaliacaoCentavos: 22000 });
+    mocks.config.mockResolvedValue({ valorConsultaCentavos: 22000 });
     mocks.listByClinica.mockResolvedValue({
       items: [
         { id: 'c1', pacienteId: 'p1', pacienteNome: 'Maria da Silva', descricao: 'Pacote A', valorCentavos: 35000, status: 'vencida', vencimento: '2026-05-05T00:00:00.000Z', tipo: 'outro', itens: [] },
-        { id: 'c2', pacienteId: 'p2', pacienteNome: 'João Souza', descricao: 'Consulta', valorCentavos: 22000, status: 'pendente', vencimento: '2099-01-10T00:00:00.000Z', tipo: 'consulta_avaliacao', itens: [] },
+        { id: 'c2', pacienteId: 'p2', pacienteNome: 'João Souza', descricao: 'Consulta', valorCentavos: 22000, status: 'pendente', vencimento: '2099-01-10T00:00:00.000Z', tipo: 'consulta_enfermagem', itens: [] },
       ],
       hasMore: false,
     });
@@ -84,9 +84,9 @@ describe('FinanceiroPacientesPage', () => {
     expect(screen.getByTestId('resumo-Vencido')).toHaveTextContent('4.000,00');
   });
 
-  it('o ADMIN edita o valor da consulta de avaliação (salvo em centavos)', async () => {
+  it('o ADMIN edita o valor padrão da consulta de enfermagem (salvo em centavos)', async () => {
     const user = userEvent.setup();
-    mocks.salvarConfig.mockResolvedValue({ valorConsultaAvaliacaoCentavos: 25050 });
+    mocks.salvarConfig.mockResolvedValue({ valorConsultaCentavos: 25050 });
     montar();
     const campo = await screen.findByLabelText('Valor (R$)');
     await waitFor(() => expect(campo).toHaveValue('220,00'));

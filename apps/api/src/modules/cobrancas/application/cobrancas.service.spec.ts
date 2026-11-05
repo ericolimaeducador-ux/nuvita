@@ -16,7 +16,7 @@ import {
   somaItens,
   statusEfetivo,
 } from '../domain/cobranca.entity';
-import { VALOR_CONSULTA_AVALIACAO_PADRAO_CENTAVOS } from '../domain/financeiro-config.entity';
+import { VALOR_CONSULTA_PADRAO_CENTAVOS } from '../domain/financeiro-config.entity';
 import { CobrancaAuditContext, CobrancasService, formatarData, formatarReais } from './cobrancas.service';
 import { CobrancaRepository } from './ports/cobranca.repository';
 import { FinanceiroConfigRepository } from './ports/financeiro-config.repository';
@@ -52,7 +52,7 @@ function montar(
   };
   const configRepo = {
     findByClinica: jest.fn().mockResolvedValue(opts.config ?? null),
-    upsert: jest.fn().mockImplementation((clinicaId, valor) => Promise.resolve({ clinicaId, valorConsultaAvaliacaoCentavos: valor })),
+    upsert: jest.fn().mockImplementation((clinicaId, valor) => Promise.resolve({ clinicaId, valorConsultaCentavos: valor })),
   };
   const service = new CobrancasService(
     repo as unknown as CobrancaRepository,
@@ -123,28 +123,16 @@ describe('CobrancasService — criação', () => {
     });
   });
 
-  describe('atalho consulta de avaliação', () => {
-    it('traz o valor da CONFIGURAÇÃO da clínica (nada fixo no fluxo)', async () => {
-      const create = criarRepo();
-      const { service } = montar({ create }, { config: { clinicaId: 'clinica-1', valorConsultaAvaliacaoCentavos: 31000 } });
-
-      await service.criarConsultaAvaliacao({ pacienteId: PACIENTE_ID, vencimento: '2099-03-01' }, contexto);
-
-      expect(create).toHaveBeenCalledWith(
-        expect.objectContaining({ tipo: TipoCobranca.CONSULTA_AVALIACAO, valorCentavos: 31000, status: StatusCobranca.PENDENTE }),
-      );
+  describe('valor padrão da consulta (usado na assinatura da consulta de enfermagem)', () => {
+    it('vem da CONFIGURAÇÃO da clínica quando gravada', async () => {
+      const { service } = montar({}, { config: { clinicaId: 'clinica-1', valorConsultaCentavos: 31000 } });
+      await expect(service.valorConsultaPadrao('clinica-1')).resolves.toBe(31000);
     });
 
-    it('sem configuração gravada, usa o padrão (R$ 220,00 = 22000) e vencimento hoje por omissão', async () => {
-      const create = criarRepo();
-      const { service } = montar({ create });
-
-      await service.criarConsultaAvaliacao({ pacienteId: PACIENTE_ID }, contexto);
-
-      expect(VALOR_CONSULTA_AVALIACAO_PADRAO_CENTAVOS).toBe(22000);
-      const gravado = create.mock.calls[0][0];
-      expect(gravado.valorCentavos).toBe(22000);
-      expect(gravado.vencimento.toISOString().slice(0, 10)).toBe(new Date().toISOString().slice(0, 10));
+    it('sem configuração gravada, usa o padrão do sistema (R$ 220,00 = 22000)', async () => {
+      const { service } = montar();
+      expect(VALOR_CONSULTA_PADRAO_CENTAVOS).toBe(22000);
+      await expect(service.valorConsultaPadrao('clinica-1')).resolves.toBe(22000);
     });
   });
 });
@@ -154,10 +142,10 @@ describe('CobrancasService — configuração do valor', () => {
     const { service, configRepo, auditCreate } = montar();
     const adm = { ...contexto, user: { ...contexto.user, papel: Papel.ADMIN } };
 
-    const r = await service.salvarConfig({ valorConsultaAvaliacaoCentavos: 25000 }, adm);
+    const r = await service.salvarConfig({ valorConsultaCentavos: 25000 }, adm);
 
     expect(configRepo.upsert).toHaveBeenCalledWith('clinica-1', 25000, 'sec-1');
-    expect(r.valorConsultaAvaliacaoCentavos).toBe(25000);
+    expect(r.valorConsultaCentavos).toBe(25000);
     const chamada = auditCreate.mock.calls[0][0];
     expect(chamada.event).toBe(AuditEvent.FINANCEIRO_CONFIG_UPDATED);
     expect(JSON.stringify(chamada.metadata)).not.toMatch(/25000/);
@@ -167,7 +155,7 @@ describe('CobrancasService — configuração do valor', () => {
     const { service } = montar();
     await expect(service.obterConfig(undefined, contexto.user)).resolves.toEqual({
       clinicaId: 'clinica-1',
-      valorConsultaAvaliacaoCentavos: 22000,
+      valorConsultaCentavos: 22000,
     });
   });
 });
@@ -386,8 +374,8 @@ describe('formatação e DTOs', () => {
     expect(await erros(CancelarCobrancaDto, { motivo: '' })).toContain('motivo');
     expect(await erros(ResumoQueryDto, { mes: '2026-13' })).toContain('mes');
     expect(await erros(ResumoQueryDto, { mes: '2026-06' })).toEqual([]);
-    expect(await erros(SalvarConfigFinanceiroDto, { valorConsultaAvaliacaoCentavos: -1 })).toContain('valorConsultaAvaliacaoCentavos');
-    expect(await erros(SalvarConfigFinanceiroDto, { valorConsultaAvaliacaoCentavos: 22000 })).toEqual([]);
+    expect(await erros(SalvarConfigFinanceiroDto, { valorConsultaCentavos: -1 })).toContain('valorConsultaCentavos');
+    expect(await erros(SalvarConfigFinanceiroDto, { valorConsultaCentavos: 22000 })).toEqual([]);
   });
 });
 
@@ -515,5 +503,36 @@ describe('marcar paga — forma de pagamento OPCIONAL', () => {
     expect(await e({ formaPagamento: 'pix' })).toEqual([]);
     expect(await e({ formaPagamento: 'cheque' })).toContain('formaPagamento');
     expect(await e({ pagaEm: '2020-01-01' })).toContain('pagaEm');
+  });
+});
+
+describe('tipo consulta_enfermagem (etapa 5a)', () => {
+  it('não é aceito na criação manual (só nasce da assinatura da consulta); os demais tipos seguem válidos', async () => {
+    const op = { whitelist: true, forbidNonWhitelisted: true };
+    const base = { pacienteId: PACIENTE_ID, descricao: 'x', valorCentavos: 100, vencimento: '2099-01-01' };
+    const erros = async (tipo: string) => (await validate(plainToInstance(CreateCobrancaDto, { ...base, tipo }), op)).map((e) => e.property);
+    expect(await erros('consulta_enfermagem')).toContain('tipo');
+    for (const tipo of ['pacote_mensal', 'outro']) expect(await erros(tipo)).toEqual([]);
+  });
+
+  it('gerarCobrancaDeConsulta grava o tipo consulta_enfermagem com o vínculo consultaId', async () => {
+    const create = jest.fn().mockImplementation((d) => Promise.resolve(cobranca({ ...d, id: 'c9' })));
+    const { service } = montar({ create, findByConsultaId: jest.fn().mockResolvedValue(null) });
+    const c = await service.gerarCobrancaDeConsulta({ clinicaId: 'clinica-1', pacienteId: PACIENTE_ID, consultaId: 'cons-1', valorCentavos: 22000 }, contexto);
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ tipo: TipoCobranca.CONSULTA_ENFERMAGEM, consultaId: 'cons-1', valorCentavos: 22000 }));
+    expect(c.tipo).toBe('consulta_enfermagem');
+  });
+
+  it('o resumo mensal conta a cobrança de consulta_enfermagem como qualquer outra (a receber / recebido / vencido)', async () => {
+    const hoje = new Date('2026-06-15T12:00:00Z');
+    const lista = [
+      cobranca({ id: '1', tipo: TipoCobranca.CONSULTA_ENFERMAGEM, valorCentavos: 22000, vencimento: new Date('2026-06-20T00:00:00Z') }),
+      cobranca({ id: '2', tipo: TipoCobranca.CONSULTA_ENFERMAGEM, valorCentavos: 22000, vencimento: new Date('2026-06-02T00:00:00Z') }),
+      cobranca({ id: '3', tipo: TipoCobranca.CONSULTA_ENFERMAGEM, valorCentavos: 15000, status: StatusCobranca.PAGA, vencimento: new Date('2026-06-01T00:00:00Z'), pagaEm: new Date('2026-06-05T00:00:00Z') }),
+      cobranca({ id: '4', tipo: TipoCobranca.PACOTE_MENSAL, valorCentavos: 50000, vencimento: new Date('2026-06-25T00:00:00Z') }),
+    ];
+    const { service } = montar({ listParaResumo: jest.fn().mockResolvedValue(lista) });
+    const r = await service.resumo({ mes: '2026-06' }, contexto.user, hoje);
+    expect(r).toMatchObject({ aReceberCentavos: 72000, vencidoCentavos: 22000, recebidoCentavos: 15000 });
   });
 });

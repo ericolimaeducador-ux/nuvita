@@ -109,9 +109,8 @@ export const MATRIZ_API: Record<string, string> = {
   'POST /consultas/:id/cobranca': 'AE',
   'POST /consultas/:id/adendos': 'E',
   // financeiro de paciente (etapa 4b): registro de cobranças + avisos (sem processar pagamento). Equipe da clínica;
-  // o valor da consulta de avaliação (configuração) só o ADMIN altera. PACIENTE nunca.
+  // o valor padrão da consulta (configuração) só o ADMIN altera. PACIENTE nunca.
   'POST /cobrancas': 'AES',
-  'POST /cobrancas/consulta-avaliacao': 'AES',
   'GET /cobrancas': 'AES',
   'GET /cobrancas/resumo': 'AES',
   'GET /cobrancas/configuracao': 'AES',

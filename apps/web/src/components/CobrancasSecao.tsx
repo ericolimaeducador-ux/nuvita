@@ -87,11 +87,6 @@ export function CobrancasSecao({ pacienteId }: { pacienteId: string }) {
     onSuccess: () => { toast.success('Cobrança salva.'); fechar(); revalidar(); },
     onError: (e) => toast.error('Erro ao salvar a cobrança', apiErrorMessage(e)),
   });
-  const atalhoMut = useMutation({
-    mutationFn: () => cobrancasApi.criarConsultaAvaliacao(pacienteId),
-    onSuccess: () => { toast.success('Cobrança da consulta de avaliação registrada.'); revalidar(); },
-    onError: (e) => toast.error('Erro ao registrar a consulta de avaliação', apiErrorMessage(e)),
-  });
   const pagaMut = useMutation({
     mutationFn: (c: Cobranca) => cobrancasApi.marcarPaga(c.id, formaPaga === SEM_FORMA ? undefined : formaPaga),
     onSuccess: () => { toast.success('Cobrança marcada como paga.'); setPagando(null); setFormaPaga(SEM_FORMA); revalidar(); },
@@ -133,9 +128,6 @@ export function CobrancasSecao({ pacienteId }: { pacienteId: string }) {
         <span className="font-semibold text-foreground">Financeiro</span>
         {!listQ.isError && <Badge variant="secondary">{cobrancas.length}</Badge>}
         <div className="flex-1" />
-        <Button size="sm" variant="outline" onClick={() => atalhoMut.mutate()} disabled={atalhoMut.isPending}>
-          Consulta de avaliação
-        </Button>
         <Button size="sm" variant="outline" onClick={() => { setForm(VAZIO()); setEditando('nova'); }}>
           <Plus className="mr-2 h-4 w-4" /> Nova cobrança
         </Button>
@@ -213,7 +205,7 @@ export function CobrancasSecao({ pacienteId }: { pacienteId: string }) {
               <Select value={form.tipo || undefined} onValueChange={(v) => setForm((f) => ({ ...f, tipo: v as TipoCobranca }))}>
                 <SelectTrigger aria-label="Tipo"><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {Object.values(TipoCobranca).map((t) => <SelectItem key={t} value={t}>{TIPO_COBRANCA_LABEL[t]}</SelectItem>)}
+                  {Object.values(TipoCobranca).filter((t) => t !== TipoCobranca.CONSULTA_ENFERMAGEM).map((t) => <SelectItem key={t} value={t}>{TIPO_COBRANCA_LABEL[t]}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

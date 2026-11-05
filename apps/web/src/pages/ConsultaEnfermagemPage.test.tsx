@@ -54,7 +54,7 @@ describe('ConsultaEnfermagemPage', () => {
     Object.values(mocks).forEach((m) => typeof m === 'function' && m.mockReset());
     mocks.userId.atual = 'enf-autor';
     mocks.get.mockResolvedValue(rascunho);
-    mocks.config.mockResolvedValue({ valorConsultaAvaliacaoCentavos: 22000 });
+    mocks.config.mockResolvedValue({ valorConsultaCentavos: 22000 });
     mocks.salvarRascunho.mockResolvedValue(rascunho);
   });
 

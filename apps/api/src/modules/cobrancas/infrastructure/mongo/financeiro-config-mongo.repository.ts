@@ -14,11 +14,11 @@ export class FinanceiroConfigMongoRepository implements FinanceiroConfigReposito
     return doc ? this.toEntity(doc) : null;
   }
 
-  async upsert(clinicaId: string, valorConsultaAvaliacaoCentavos: number, atualizadoPor: string): Promise<FinanceiroConfig> {
+  async upsert(clinicaId: string, valorConsultaCentavos: number, atualizadoPor: string): Promise<FinanceiroConfig> {
     const doc = await this.model
       .findOneAndUpdate(
         { clinicaId },
-        { $set: { valorConsultaAvaliacaoCentavos, atualizadoPor, atualizadoEm: new Date() }, $setOnInsert: { clinicaId } },
+        { $set: { valorConsultaCentavos, atualizadoPor, atualizadoEm: new Date() }, $setOnInsert: { clinicaId } },
         { new: true, upsert: true },
       )
       .lean();

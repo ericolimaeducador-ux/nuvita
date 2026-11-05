@@ -25,7 +25,7 @@ export class CreateEntregaDto {
   @IsOptional() @IsMongoId() clinicaId?: string;
   @IsMongoId() pacienteId!: string;
   // Referência à avaliação de IU (módulo ainda não portado). Sem validação de existência por enquanto.
-  @IsOptional() @IsString() avaliacaoIuId?: string;
+  @IsOptional() @IsMongoId() avaliacaoIuId?: string;
   @IsDateString() dataEntrega!: string;
   @IsEnum(OrigemEntrega) origem!: OrigemEntrega;
   @IsArray()

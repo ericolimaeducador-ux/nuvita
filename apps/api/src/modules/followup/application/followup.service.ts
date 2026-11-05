@@ -5,6 +5,7 @@ import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-
 import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
+import { AvaliacaoIUService } from '../../avaliacao-iu/application/avaliacao-iu.service';
 import { NotificacoesService } from '../../notificacoes/application/notificacoes.service';
 import { PacientesService } from '../../pacientes/application/pacientes.service';
 import { FOLLOWUP_REPOSITORY } from '../followup.constants';
@@ -31,6 +32,7 @@ export class FollowUpService {
     @Inject(AUDIT_LOG_REPOSITORY) private readonly auditLogs: AuditLogRepository,
     private readonly notificacoes: NotificacoesService,
     private readonly pacientesService: PacientesService,
+    private readonly avaliacaoIU: AvaliacaoIUService,
   ) {}
 
   /**
@@ -48,6 +50,11 @@ export class FollowUpService {
     const resumo = await this.pacientesService.resumoPorIds(clinicaId, [dto.pacienteId]);
     const paciente = resumo.get(dto.pacienteId);
     if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+
+    // Referência à avaliação: precisa existir, ser desta clínica e deste paciente (nunca um id solto).
+    if (dto.avaliacaoIuId && !(await this.avaliacaoIU.pertenceAoPaciente(clinicaId, dto.avaliacaoIuId, dto.pacienteId))) {
+      throw new NotFoundException('Avaliacao de IU nao encontrada.');
+    }
 
     const followup = await this.repo.create({
       clinicaId,

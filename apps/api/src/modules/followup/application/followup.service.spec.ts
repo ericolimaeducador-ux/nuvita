@@ -6,6 +6,7 @@ import { Papel } from '../../../../../../packages/shared/src/auth';
 import { EtapaFluxoClinico } from '../../../../../../packages/shared/src/fluxo-clinico';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
+import { AvaliacaoIUService } from '../../avaliacao-iu/application/avaliacao-iu.service';
 import { NotificacoesService } from '../../notificacoes/application/notificacoes.service';
 import { PacientesService } from '../../pacientes/application/pacientes.service';
 import { PacienteRepository } from '../../pacientes/application/ports/paciente.repository';
@@ -34,7 +35,11 @@ function followup(status: StatusElegibilidade): FollowUp {
   };
 }
 
-function montar(repo: Partial<Record<keyof FollowUpRepository, jest.Mock>>, existe = true) {
+function montar(
+  repo: Partial<Record<keyof FollowUpRepository, jest.Mock>>,
+  existe = true,
+  pertenceAoPaciente = jest.fn().mockResolvedValue(true),
+) {
   const auditCreate = jest.fn().mockResolvedValue(undefined);
   const notificarElegibilidade = jest.fn().mockResolvedValue(undefined);
   const pacientes = {
@@ -47,8 +52,9 @@ function montar(repo: Partial<Record<keyof FollowUpRepository, jest.Mock>>, exis
     { create: auditCreate } as unknown as AuditLogRepository,
     { notificarElegibilidade } as unknown as NotificacoesService,
     pacientes as unknown as PacientesService,
+    { pertenceAoPaciente } as unknown as AvaliacaoIUService,
   );
-  return { service, auditCreate, notificarElegibilidade, pacientes };
+  return { service, auditCreate, notificarElegibilidade, pacientes, pertenceAoPaciente };
 }
 
 describe('FollowUpService.create — gatilhos do fluxo clínico', () => {
@@ -62,6 +68,36 @@ describe('FollowUpService.create — gatilhos do fluxo clínico', () => {
       'clinica-1', PACIENTE_ID, EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO,
       { ip: '127.0.0.1', userAgent: 'jest', user: contexto.user },
     );
+  });
+
+  it('avaliacaoIuId do paciente/clínica é aceito e validado contra a avaliação', async () => {
+    const create = jest.fn().mockResolvedValue(followup(StatusElegibilidade.EM_AVALIACAO));
+    const { service, pertenceAoPaciente } = montar({ create });
+
+    await service.create(dto(StatusElegibilidade.EM_AVALIACAO, { avaliacaoIuId: '65f0000000000000000000aa' }), contexto);
+
+    expect(pertenceAoPaciente).toHaveBeenCalledWith('clinica-1', '65f0000000000000000000aa', PACIENTE_ID);
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ avaliacaoIuId: '65f0000000000000000000aa' }));
+  });
+
+  it('avaliacaoIuId que não existe, é de outra clínica ou de outro paciente → 404; nada gravado, notificado nem avançado', async () => {
+    const create = jest.fn();
+    const { service, pacientes, notificarElegibilidade, auditCreate } = montar({ create }, true, jest.fn().mockResolvedValue(false));
+
+    await expect(
+      service.create(dto(StatusElegibilidade.ELEGIVEL, { avaliacaoIuId: '65f0000000000000000000aa' }), contexto),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(create).not.toHaveBeenCalled();
+    expect(pacientes.avancarEtapaFluxo).not.toHaveBeenCalled();
+    expect(notificarElegibilidade).not.toHaveBeenCalled();
+    expect(auditCreate).not.toHaveBeenCalled();
+  });
+
+  it('sem avaliacaoIuId não consulta a avaliação', async () => {
+    const { service, pertenceAoPaciente } = montar({ create: jest.fn().mockResolvedValue(followup(StatusElegibilidade.EM_AVALIACAO)) });
+    await service.create(dto(StatusElegibilidade.EM_AVALIACAO), contexto);
+    expect(pertenceAoPaciente).not.toHaveBeenCalled();
   });
 
   it('ELEGIVEL de paciente fora do fluxo → follow-up registrado, SEM notificação (a etapa fica a cargo do avanço)', async () => {
@@ -131,6 +167,7 @@ describe('FollowUpService.create — gatilhos do fluxo clínico', () => {
         { create: jest.fn().mockResolvedValue(undefined) } as unknown as AuditLogRepository,
         { notificarElegibilidade } as unknown as NotificacoesService,
         pacientesService,
+        { pertenceAoPaciente: jest.fn().mockResolvedValue(true) } as unknown as AvaliacaoIUService,
       );
       return { service, updatePaciente, notificarElegibilidade };
     }
@@ -223,6 +260,7 @@ describe('CreateFollowUpDto', () => {
 
   it.each([
     ['pacienteId que não é ObjectId', { pacienteId: 'abc' }, 'pacienteId'],
+    ['avaliacaoIuId que não é ObjectId', { avaliacaoIuId: 'abc' }, 'avaliacaoIuId'],
     ['status fora do enum', { statusElegibilidade: 'talvez' }, 'statusElegibilidade'],
     ['observações vazias', { observacoes: '' }, 'observacoes'],
     ['data inválida', { dataFollowup: 'ontem' }, 'dataFollowup'],

@@ -14,10 +14,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
 import { apiErrorMessage } from '@/api/client';
-import { followupApi } from '@/api/resources';
+import { avaliacaoIUApi, followupApi } from '@/api/resources';
 import { useSaidaProtegida } from '@/lib/saida-protegida';
 import { toItems } from '@/utils';
-import { STATUS_ELEGIBILIDADE_LABEL, StatusElegibilidade, type FollowUp } from '@/types';
+import { LOCAL_LABEL, STATUS_ELEGIBILIDADE_LABEL, StatusElegibilidade, type AvaliacaoIU, type FollowUp } from '@/types';
+
+const SEM_AVALIACAO = 'nenhuma';
 
 /**
  * Follow-up de elegibilidade. Registrar (enfermeiro/admin) pode mover a etapa do fluxo clínico de um paciente elegível:
@@ -31,19 +33,28 @@ export function FollowupSecao({ pacienteId, podeDecidir }: { pacienteId: string;
   const [status, setStatus] = useState<StatusElegibilidade | ''>('');
   const [observacoes, setObservacoes] = useState('');
   const [proximo, setProximo] = useState('');
+  const [avaliacaoId, setAvaliacaoId] = useState(SEM_AVALIACAO);
 
-  const sujo = !!status || !!observacoes.trim() || !!proximo;
+  const sujo = !!status || !!observacoes.trim() || !!proximo || avaliacaoId !== SEM_AVALIACAO;
   const reset = () => {
     setOpen(false);
     setData(dayjs().format('YYYY-MM-DD'));
     setStatus('');
     setObservacoes('');
     setProximo('');
+    setAvaliacaoId(SEM_AVALIACAO);
   };
   const saida = useSaidaProtegida(sujo, reset);
 
   const listQ = useQuery({ queryKey: ['followup', pacienteId], queryFn: () => followupApi.listByPaciente(pacienteId) });
   const registros = toItems<FollowUp>(listQ.data as never);
+  // Avaliações do paciente para escolher a de origem (opcional; o servidor valida que é deste paciente/clínica).
+  const avaliacoesQ = useQuery({
+    queryKey: ['avaliacao-iu', pacienteId],
+    queryFn: () => avaliacaoIUApi.listByPaciente(pacienteId),
+    enabled: open,
+  });
+  const avaliacoes = toItems<AvaliacaoIU>(avaliacoesQ.data as never);
 
   const criarMut = useMutation({
     mutationFn: () =>
@@ -53,6 +64,7 @@ export function FollowupSecao({ pacienteId, podeDecidir }: { pacienteId: string;
         statusElegibilidade: status as string,
         observacoes: observacoes.trim(),
         proximoFollowup: proximo || undefined,
+        avaliacaoIuId: avaliacaoId !== SEM_AVALIACAO ? avaliacaoId : undefined,
       }),
     onSuccess: () => {
       toast.success('Follow-up registrado.');
@@ -137,6 +149,20 @@ export function FollowupSecao({ pacienteId, podeDecidir }: { pacienteId: string;
             <div className="space-y-2">
               <Label htmlFor="fuObs">Observações *</Label>
               <Textarea id="fuObs" rows={3} value={observacoes} onChange={(e) => setObservacoes(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Avaliação de origem (opcional)</Label>
+              <Select value={avaliacaoId} onValueChange={setAvaliacaoId}>
+                <SelectTrigger aria-label="Avaliação de origem"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SEM_AVALIACAO}>Nenhuma</SelectItem>
+                  {avaliacoes.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {dayjs(a.dataAtendimento).format('DD/MM/YYYY')} — {LOCAL_LABEL[a.local] ?? a.local}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="fuProx">Próximo follow-up (opcional)</Label>

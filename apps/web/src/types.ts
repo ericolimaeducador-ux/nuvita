@@ -1060,3 +1060,114 @@ export interface FollowUp {
   observacoes: string;
   proximoFollowup?: string;
 }
+
+// ---------- Avaliação de IU (etapa 4a) ----------
+// TODO(conteudo): enums, rótulos e campos da ficha são do fluxo de incontinência urinária — mantidos como no Nuvita
+// antigo; revisar na etapa de conteúdo (estomaterapia).
+export enum LocalAtendimento {
+  RESIDENCIA = 'residencia',
+  HOSPITAL = 'hospital',
+  INST_LONGA_PERMANENCIA = 'inst_longa_permanencia',
+}
+export const LOCAL_LABEL: Record<LocalAtendimento, string> = {
+  [LocalAtendimento.RESIDENCIA]: 'Residência',
+  [LocalAtendimento.HOSPITAL]: 'Hospital',
+  [LocalAtendimento.INST_LONGA_PERMANENCIA]: 'Inst. Longa Permanência',
+};
+
+export enum PerfilCliente {
+  ATIVO = 'ativo',
+  MODERADO = 'moderado',
+  ACAMADO = 'acamado',
+  CADEIRANTE = 'cadeirante',
+}
+export const PERFIL_LABEL: Record<PerfilCliente, string> = {
+  [PerfilCliente.ATIVO]: 'Ativo',
+  [PerfilCliente.MODERADO]: 'Moderado',
+  [PerfilCliente.ACAMADO]: 'Acamado',
+  [PerfilCliente.CADEIRANTE]: 'Cadeirante',
+};
+
+export enum Destreza {
+  PRESERVADA = 'preservada',
+  REDUZIDA = 'reduzida',
+  MUITO_REDUZIDA = 'muito_reduzida',
+}
+export const DESTREZA_LABEL: Record<Destreza, string> = {
+  [Destreza.PRESERVADA]: 'Preservada',
+  [Destreza.REDUZIDA]: 'Reduzida',
+  [Destreza.MUITO_REDUZIDA]: 'Muito reduzida',
+};
+
+export enum TipoIU {
+  ESFORCO = 'esforco',
+  URGENCIA = 'urgencia',
+  MISTA = 'mista',
+  RETENCAO_TRANSBORDAMENTO = 'retencao_transbordamento',
+  CONTINUA = 'continua',
+  INSENSIVEL = 'insensivel',
+  ENURESE_NOTURNA = 'enurese_noturna',
+  COITO = 'coito',
+}
+export const TIPO_IU_LABEL: Record<TipoIU, string> = {
+  [TipoIU.ESFORCO]: 'Esforço',
+  [TipoIU.URGENCIA]: 'Urgência',
+  [TipoIU.MISTA]: 'Mista',
+  [TipoIU.RETENCAO_TRANSBORDAMENTO]: 'Retenção/Transbordamento',
+  [TipoIU.CONTINUA]: 'Contínua',
+  [TipoIU.INSENSIVEL]: 'Insensível',
+  [TipoIU.ENURESE_NOTURNA]: 'Enurese Noturna',
+  [TipoIU.COITO]: 'Coito',
+};
+
+export enum EncaminhamentoIU {
+  POLO_SUS = 'polo_sus',
+  PLANO_SAUDE = 'plano_saude',
+  VAREJO = 'varejo',
+}
+export const ENCAMINHAMENTO_LABEL: Record<EncaminhamentoIU, string> = {
+  [EncaminhamentoIU.POLO_SUS]: 'Pólo SUS',
+  [EncaminhamentoIU.PLANO_SAUDE]: 'Plano de Saúde',
+  [EncaminhamentoIU.VAREJO]: 'Varejo',
+};
+
+export interface AvaliacaoIU {
+  id: string;
+  clinicaId: string;
+  pacienteId: string;
+  enfermeiroId: string;
+  enfermeiroNome?: string;
+  agendamentoId?: string;
+  dataAtendimento: string;
+  local: LocalAtendimento;
+  prescritor?: string;
+  planoSaude?: string;
+  hospitalReferencia?: string;
+  motivoIU: string;
+  inicioSintomas?: string;
+  perfilCliente: PerfilCliente;
+  destreza: Destreza;
+  dntui: boolean;
+  tiposIU: TipoIU[];
+  miccaoEspontanea: boolean;
+  volumeAproximadoMl?: number;
+  realizaCateterismo: boolean;
+  cateterismosDia?: number;
+  cateterUtilizado?: string;
+  ultimaInfeccaoUrinaria?: string;
+  emTratamento: boolean;
+  tratamento?: string;
+  volumeDrenadoMl?: string;
+  outrasIntercorrencias?: string;
+  produtoIndicado?: { codigo: number; sexo: 'feminino' | 'masculino' | 'universal'; french: number };
+  responsavelCateterismo?: string;
+  autorizaPesquisa: boolean;
+  aceitaInformacoes: boolean;
+  emailContato?: string;
+  whatsappContato?: string;
+  coren?: string;
+  encaminhamento?: EncaminhamentoIU;
+  localEncaminhamento?: string;
+  respCuidador?: string;
+  criadoEm: string;
+}

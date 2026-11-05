@@ -5,6 +5,7 @@ import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-
 import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
+import { AvaliacaoIUService } from '../../avaliacao-iu/application/avaliacao-iu.service';
 import { PacientesService } from '../../pacientes/application/pacientes.service';
 import { ProdutosService } from '../../produtos/application/produtos.service';
 import { TipoProduto } from '../../produtos/domain/produto.entity';
@@ -43,6 +44,7 @@ export class EntregasService {
     @Inject(AUDIT_LOG_REPOSITORY) private readonly auditLogs: AuditLogRepository,
     private readonly pacientesService: PacientesService,
     private readonly produtosService: ProdutosService,
+    private readonly avaliacaoIU: AvaliacaoIUService,
   ) {}
 
   async create(dto: CreateEntregaDto, context: EntregaAuditContext): Promise<Entrega> {
@@ -51,6 +53,10 @@ export class EntregasService {
     // O paciente precisa ser da clínica do token (nunca confiar no id do payload).
     const resumo = await this.pacientesService.resumoPorIds(clinicaId, [dto.pacienteId]);
     if (!resumo.has(dto.pacienteId)) throw new NotFoundException('Paciente nao encontrado.');
+    // Referência à avaliação (quando vem): existe, é desta clínica e deste paciente.
+    if (dto.avaliacaoIuId && !(await this.avaliacaoIU.pertenceAoPaciente(clinicaId, dto.avaliacaoIuId, dto.pacienteId))) {
+      throw new NotFoundException('Avaliacao de IU nao encontrada.');
+    }
 
     const itens = await this.categorizarItens(dto.itens);
     const entrega = await this.repo.create({

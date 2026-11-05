@@ -27,6 +27,8 @@ import { ProdutosModule } from './modules/produtos/produtos.module';
 import { EntregasModule } from './modules/entregas/entregas.module';
 import { ChecklistDocumentosModule } from './modules/checklist-documentos/checklist-documentos.module';
 import { FollowUpModule } from './modules/followup/followup.module';
+import { CaptacaoModule } from './modules/captacao/captacao.module';
+import { AvaliacaoIUModule } from './modules/avaliacao-iu/avaliacao-iu.module';
 import { TestesPsicologicosModule } from './modules/testes-psicologicos/testes-psicologicos.module';
 import { IaClinicaModule } from './modules/ia-clinica/ia-clinica.module';
 import { InscricoesTesteModule } from './modules/inscricoes-teste/inscricoes-teste.module';
@@ -83,6 +85,8 @@ import { InscricoesTesteModule } from './modules/inscricoes-teste/inscricoes-tes
     EntregasModule,
     ChecklistDocumentosModule,
     FollowUpModule,
+    CaptacaoModule,
+    AvaliacaoIUModule,
     TestesPsicologicosModule,
     IaClinicaModule,
     InscricoesTesteModule,

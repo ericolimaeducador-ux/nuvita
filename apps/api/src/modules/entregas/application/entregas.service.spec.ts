@@ -3,6 +3,7 @@ import { Papel } from '../../../../../../packages/shared/src/auth';
 import { EtapaFluxoClinico } from '../../../../../../packages/shared/src/fluxo-clinico';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
+import { AvaliacaoIUService } from '../../avaliacao-iu/application/avaliacao-iu.service';
 import { PacientesService } from '../../pacientes/application/pacientes.service';
 import { PacienteRepository } from '../../pacientes/application/ports/paciente.repository';
 import { ClassificacaoArea, Paciente } from '../../pacientes/domain/paciente.entity';
@@ -61,15 +62,21 @@ function pacientesFake(existe = true) {
   };
 }
 
-function montar(repo: Record<string, jest.Mock>, buscarPorCodigo: jest.Mock, pacientes = pacientesFake()) {
+function montar(
+  repo: Record<string, jest.Mock>,
+  buscarPorCodigo: jest.Mock,
+  pacientes = pacientesFake(),
+  pertenceAoPaciente = jest.fn().mockResolvedValue(true),
+) {
   const auditCreate = jest.fn().mockResolvedValue(undefined);
   const service = new EntregasService(
     repo as unknown as EntregaRepository,
     { create: auditCreate } as unknown as AuditLogRepository,
     pacientes as unknown as PacientesService,
     { buscarPorCodigo } as unknown as ProdutosService,
+    { pertenceAoPaciente } as unknown as AvaliacaoIUService,
   );
-  return { service, auditCreate, pacientes };
+  return { service, auditCreate, pacientes, pertenceAoPaciente };
 }
 
 describe('EntregasService.create', () => {
@@ -80,6 +87,25 @@ describe('EntregasService.create', () => {
     const entrega = await service.create(baseDto(100), contexto);
 
     expect(entrega.itens[0].categoria).toBe('sonda');
+  });
+
+  it('avaliacaoIuId que não é deste paciente/clínica → 404 e nada é gravado', async () => {
+    const create = jest.fn();
+    const { service, pertenceAoPaciente } = montar({ create }, jest.fn(), pacientesFake(), jest.fn().mockResolvedValue(false));
+
+    await expect(service.create({ ...baseDto(100), avaliacaoIuId: '65f0000000000000000000aa' }, contexto)).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(pertenceAoPaciente).toHaveBeenCalledWith('clinica-1', '65f0000000000000000000aa', 'paciente-1');
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('sem avaliacaoIuId não consulta a avaliação', async () => {
+    const create = jest.fn().mockImplementation((data) => ({ id: 'e1', ...data }));
+    const { service, pertenceAoPaciente } = montar({ create }, jest.fn().mockResolvedValue(null));
+
+    await service.create(baseDto(100), contexto);
+
+    expect(pertenceAoPaciente).not.toHaveBeenCalled();
   });
 
   it('categoriza item de coletor (ACTICOAT) como coletor', async () => {
@@ -181,6 +207,7 @@ describe('EntregasService.confirmarEntrega — gatilho do fluxo clínico', () =>
         { create: auditCreate } as unknown as AuditLogRepository,
         pacientesService,
         {} as unknown as ProdutosService,
+        {} as unknown as AvaliacaoIUService,
       );
       return { service, update };
     }

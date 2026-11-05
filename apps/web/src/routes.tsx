@@ -12,6 +12,8 @@ import { PacientesPage } from '@/pages/PacientesPage';
 import { PacienteDetailPage } from '@/pages/PacienteDetailPage';
 import { FluxoClinicoPage } from '@/pages/FluxoClinicoPage';
 import { ProdutosPage } from '@/pages/ProdutosPage';
+import { CaptacaoPage } from '@/pages/CaptacaoPage';
+import { CaptacaoPacientesPage } from '@/pages/CaptacaoPacientesPage';
 import { AgendaPage } from '@/pages/AgendaPage';
 import { ProntuariosPage } from '@/pages/ProntuariosPage';
 import { DocumentosPage } from '@/pages/DocumentosPage';
@@ -44,6 +46,9 @@ export function AppRoutes() {
       {/* Sala de teleatendimento é PÚBLICA: o paciente entra pelo link com o
           token da sala, sem conta no sistema. O token UUID é a credencial. */}
       <Route path="/tele/:token" element={<AtendimentoTelemedicinaPage />} />
+      {/* Captação em campo é PÚBLICA: o enfermeiro captador entra com o PIN (validado pela API), sem conta no sistema.
+          Não existe rota /captacao no SPA: esse prefixo é da API (proxy do Vite). */}
+      <Route path="/captacao_pacientes" element={<CaptacaoPage />} />
       <Route element={<ProtectedRoute />}>
         {/* Cadeia de gates pós-login: enquanto houver termos a aceitar ou
             senha temporária a trocar, só a tela do gate ativo é acessível. */}
@@ -74,6 +79,8 @@ export function AppRoutes() {
               <Route path="/pacientes/:id" element={<PacienteDetailPage />} />
               {/* Lista do fluxo clínico de IU: só pacientes elegíveis (classificados exatamente como IU). */}
               <Route path="/fluxo-clinico" element={<FluxoClinicoPage />} />
+              {/* Fila de captação (gestão): exporta lead -> paciente [IU]. */}
+              <Route path="/captacao-pacientes" element={<CaptacaoPacientesPage />} />
             </Route>
             <Route element={<ProtectedRoute modulo={Modulo.AGENDA} />}>
               <Route path="/agenda" element={<AgendaPage />} />

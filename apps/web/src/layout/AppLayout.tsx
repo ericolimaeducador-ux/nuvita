@@ -24,7 +24,7 @@ const navItems: { to: string; icon: React.ElementType; label: string; modulo: Mo
   { to: '/fluxo-clinico', icon: Workflow, label: 'Fluxo Clínico', modulo: Modulo.PACIENTES },
   { to: '/captacao-pacientes', icon: UserPlus, label: 'Captação', modulo: Modulo.PACIENTES },
   { to: '/atendimento-psicologico', icon: Brain, label: 'Atend. Psicológico', modulo: Modulo.ATENDIMENTO_PSICOLOGICO },
-  { to: '/financeiro-psicologia', icon: Wallet, label: 'Financeiro (Psi)', modulo: Modulo.FINANCEIRO_PSICOLOGIA },
+  { to: '/financeiro-pacientes', icon: Wallet, label: 'Financeiro', modulo: Modulo.PACIENTES },
   { to: '/agenda', icon: Calendar, label: 'Agenda', modulo: Modulo.AGENDA },
   { to: '/notificacoes', icon: Bell, label: 'Notificações', modulo: Modulo.NOTIFICACOES },
   { to: '/telemedicina', icon: Video, label: 'Telemedicina', modulo: Modulo.TELEMEDICINA },

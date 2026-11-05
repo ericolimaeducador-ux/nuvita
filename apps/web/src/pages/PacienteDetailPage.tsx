@@ -33,6 +33,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/use-toast';
 import { ClassificacaoAreaSelector } from '@/components/ClassificacaoAreaSelector';
 import { AvaliacaoIuSecao } from '@/components/AvaliacaoIuSecao';
+import { CobrancasSecao } from '@/components/CobrancasSecao';
 import { ChecklistSecao } from '@/components/ChecklistSecao';
 import { EntregasSecao } from '@/components/EntregasSecao';
 import { FollowupSecao } from '@/components/FollowupSecao';
@@ -335,6 +336,11 @@ export function PacienteDetailPage() {
       {/* Follow-up de elegibilidade: ler = equipe; registrar (decisão clínica) = enfermeiro/admin. Pode mover a etapa do fluxo. */}
       <SectionErrorBoundary secao="Follow-up">
         <FollowupSecao pacienteId={id} podeDecidir={user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN || user?.papel === Papel.SUPER_ADMIN} />
+      </SectionErrorBoundary>
+
+      {/* Financeiro do paciente: registro de cobranças + avisos (a clínica recebe por fora). */}
+      <SectionErrorBoundary secao="Financeiro">
+        <CobrancasSecao pacienteId={id} />
       </SectionErrorBoundary>
 
       {/* Entregas de insumo: registrar (equipe) e confirmar (enfermeiro/admin). Confirmar pode concluir o fluxo clínico de IU. */}

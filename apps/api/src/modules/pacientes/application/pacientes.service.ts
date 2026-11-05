@@ -39,6 +39,8 @@ export interface ResumoContatoPaciente {
   nome: string;
   cpf?: string;
   email?: string;
+  /** Telefone efetivo (WhatsApp): o do responsável legal quando ele é o destinatário, senão o do próprio paciente. */
+  telefone?: string;
   /** A quem a mensagem deve se dirigir ("Olá {nomeDestinatario}") — o responsável ou o próprio paciente. */
   nomeDestinatario: string;
   /** true quando `email`/`nomeDestinatario` acima são do responsável legal, não do paciente. */
@@ -259,6 +261,7 @@ export class PacientesService {
       nome: paciente.nome,
       cpf: paciente.cpf,
       email: usaResponsavel ? paciente.responsavelLegal!.email : paciente.email,
+      telefone: usaResponsavel ? paciente.responsavelLegal!.telefone ?? paciente.telefone : paciente.telefone,
       nomeDestinatario: usaResponsavel ? paciente.responsavelLegal!.nome! : paciente.nome,
       ehResponsavel: usaResponsavel,
     };

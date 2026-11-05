@@ -25,6 +25,12 @@ const TEMPLATES: Record<TipoNotificacao, { assunto: string; mensagem: string }> 
   },
   // TODO(conteudo): texto ESPECÍFICO de incontinência urinária (menciona insumo gratuito via SUS e laudo médico).
   // Mantido como no Nuvita antigo; revisar na etapa de conteúdo (estomaterapia). Não inventar texto clínico novo.
+  // TODO(conteudo): texto de cobrança a definir pela clínica. Este é só o mínimo factual (valor e vencimento), usado nos
+  // dois canais (e-mail e WhatsApp). NÃO é texto final: revisar antes de enviar a pacientes reais.
+  [TipoNotificacao.AVISO_COBRANCA]: {
+    assunto: 'Aviso de cobrança',
+    mensagem: 'Olá {nome}, há uma cobrança registrada no valor de {valor}, com vencimento em {vencimento}.',
+  },
   [TipoNotificacao.ELEGIBILIDADE_CONFIRMADA]: {
     assunto: 'Paciente elegivel para produto gratuito',
     mensagem: 'O paciente {nome} foi confirmado como elegivel para receber o insumo indicado gratuitamente via SUS. Agende o laudo medico.',
@@ -59,6 +65,11 @@ const TEMPLATES_RESPONSAVEL: Partial<Record<TipoNotificacao, { assunto: string; 
   [TipoNotificacao.RESULTADO_DISPONIVEL]: {
     assunto: 'Novo documento disponível',
     mensagem: '',
+  },
+  // TODO(conteudo): ver o template de AVISO_COBRANCA acima.
+  [TipoNotificacao.AVISO_COBRANCA]: {
+    assunto: 'Aviso de cobrança',
+    mensagem: 'Olá {nome}, há uma cobrança registrada para {nomePaciente} no valor de {valor}, com vencimento em {vencimento}.',
   },
 };
 

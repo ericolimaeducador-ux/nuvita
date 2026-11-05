@@ -98,6 +98,19 @@ export const MATRIZ_API: Record<string, string> = {
   'GET /avaliacao-iu/count': 'AES',
   'GET /avaliacao-iu': 'AES',
   'GET /avaliacao-iu/:id': 'AES',
+  // financeiro de paciente (etapa 4b): registro de cobranças + avisos (sem processar pagamento). Equipe da clínica;
+  // o valor da consulta de avaliação (configuração) só o ADMIN altera. PACIENTE nunca.
+  'POST /cobrancas': 'AES',
+  'POST /cobrancas/consulta-avaliacao': 'AES',
+  'GET /cobrancas': 'AES',
+  'GET /cobrancas/resumo': 'AES',
+  'GET /cobrancas/configuracao': 'AES',
+  'PUT /cobrancas/configuracao': 'A',
+  'GET /cobrancas/:id': 'AES',
+  'PATCH /cobrancas/:id': 'AES',
+  'POST /cobrancas/:id/aviso': 'AES',
+  'PATCH /cobrancas/:id/pagar': 'AES',
+  'PATCH /cobrancas/:id/cancelar': 'AES',
   // captação (etapa 4a): POST é PÚBLICO (protegido por PIN no CaptadorPinGuard); gestão da fila = equipe da clínica
   'POST /captacao': 'PUBLICO',
   'GET /captacao': 'AES',

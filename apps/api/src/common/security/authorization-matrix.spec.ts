@@ -29,6 +29,7 @@ import { ChecklistDocumentosController } from '../../modules/checklist-documento
 import { FollowUpController } from '../../modules/followup/presentation/followup.controller';
 import { CaptacaoController } from '../../modules/captacao/presentation/captacao.controller';
 import { AvaliacaoIUController } from '../../modules/avaliacao-iu/presentation/avaliacao-iu.controller';
+import { CobrancasController } from '../../modules/cobrancas/presentation/cobrancas.controller';
 import { SuperAdminController } from '../../modules/super-admin/super-admin.controller';
 import { TelemedicinaController } from '../../modules/telemedicina/presentation/telemedicina.controller';
 import { TelemedicinaAcessoController } from '../../modules/telemedicina/presentation/telemedicina-acesso.controller';
@@ -49,7 +50,7 @@ const CONTROLLERS = [
   FinanceiroController, PsicologiaFinanceiroController, HealthController, IaClinicaController,
   InscricoesTesteController, LembretesAgendamentoController, NotificacoesController,
   ObservacoesPacienteController, PacientesController, ProntuariosController, SuperAdminController,
-  EntregasController, ProdutosController, ChecklistDocumentosController, FollowUpController, CaptacaoController, AvaliacaoIUController,
+  EntregasController, ProdutosController, ChecklistDocumentosController, FollowUpController, CaptacaoController, AvaliacaoIUController, CobrancasController,
   TelemedicinaController, TelemedicinaAcessoController, TestesPsicologicosController, TicketsController,
 ];
 

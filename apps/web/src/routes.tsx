@@ -13,6 +13,7 @@ import { PacienteDetailPage } from '@/pages/PacienteDetailPage';
 import { FluxoClinicoPage } from '@/pages/FluxoClinicoPage';
 import { ProdutosPage } from '@/pages/ProdutosPage';
 import { CaptacaoPage } from '@/pages/CaptacaoPage';
+import { FinanceiroPacientesPage } from '@/pages/FinanceiroPacientesPage';
 import { CaptacaoPacientesPage } from '@/pages/CaptacaoPacientesPage';
 import { AgendaPage } from '@/pages/AgendaPage';
 import { ProntuariosPage } from '@/pages/ProntuariosPage';
@@ -81,6 +82,8 @@ export function AppRoutes() {
               <Route path="/fluxo-clinico" element={<FluxoClinicoPage />} />
               {/* Fila de captação (gestão): exporta lead -> paciente [IU]. */}
               <Route path="/captacao-pacientes" element={<CaptacaoPacientesPage />} />
+              {/* Financeiro de pacientes (cobranças: registro + avisos). Não usa /financeiro: esse prefixo é da API (proxy). */}
+              <Route path="/financeiro-pacientes" element={<FinanceiroPacientesPage />} />
             </Route>
             <Route element={<ProtectedRoute modulo={Modulo.AGENDA} />}>
               <Route path="/agenda" element={<AgendaPage />} />

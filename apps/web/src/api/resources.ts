@@ -9,6 +9,8 @@ import type {
   Entrega,
   AvaliacaoIU,
   ChecklistItem,
+  Cobranca,
+  ResumoFinanceiroMensal,
   FollowUp,
   EtapaFluxoClinico,
   Lancamento,
@@ -722,4 +724,38 @@ export const captacaoApi = {
   /** Exporta o lead como paciente [IU] na etapa inicial do fluxo. 400 se o lead não atende o cadastro de paciente. */
   exportar: (id: string) =>
     api.post<{ success: true; message: string; pacienteId: string }>(`/captacao/${id}/exportar`).then((r) => r.data),
+};
+
+// ---------- Financeiro de paciente (cobranças: registro + avisos; sem processar pagamento) ----------
+export interface CobrancaPayload {
+  pacienteId?: string;
+  tipo: string;
+  descricao: string;
+  valorCentavos?: number;
+  formaPagamento?: string;
+  parcelas?: number;
+  vencimento: string;
+}
+
+export const cobrancasApi = {
+  listByPaciente: (pacienteId: string) =>
+    api.get<Cobranca[]>('/cobrancas', { params: { pacienteId } }).then((r) => comoLista<Cobranca>(r.data) as Cobranca[]),
+  create: (payload: CobrancaPayload) => api.post<Cobranca>('/cobrancas', payload).then((r) => r.data),
+  /** Atalho: o valor vem da configuração da clínica. */
+  criarConsultaAvaliacao: (pacienteId: string, vencimento?: string) =>
+    api.post<Cobranca>('/cobrancas/consulta-avaliacao', { pacienteId, vencimento }).then((r) => r.data),
+  update: (id: string, payload: Partial<CobrancaPayload>) => api.patch<Cobranca>(`/cobrancas/${id}`, payload).then((r) => r.data),
+  /** Envia aviso por e-mail e/ou WhatsApp; basta um canal aceito para a cobrança ir a "enviada". */
+  enviarAviso: (id: string, canais: Array<'email' | 'whatsapp'>) =>
+    api
+      .post<{ cobranca: Cobranca; canais: Array<{ canal: string; ok: boolean; erro?: string }> }>(`/cobrancas/${id}/aviso`, { canais })
+      .then((r) => r.data),
+  marcarPaga: (id: string, formaPagamento?: string) =>
+    api.patch<Cobranca>(`/cobrancas/${id}/pagar`, { formaPagamento }).then((r) => r.data),
+  cancelar: (id: string, motivo: string) => api.patch<Cobranca>(`/cobrancas/${id}/cancelar`, { motivo }).then((r) => r.data),
+  resumo: (mes: string) => api.get<ResumoFinanceiroMensal>('/cobrancas/resumo', { params: { mes } }).then((r) => r.data),
+  config: () =>
+    api.get<{ valorConsultaAvaliacaoCentavos: number }>('/cobrancas/configuracao').then((r) => r.data),
+  salvarConfig: (valorConsultaAvaliacaoCentavos: number) =>
+    api.put<{ valorConsultaAvaliacaoCentavos: number }>('/cobrancas/configuracao', { valorConsultaAvaliacaoCentavos }).then((r) => r.data),
 };

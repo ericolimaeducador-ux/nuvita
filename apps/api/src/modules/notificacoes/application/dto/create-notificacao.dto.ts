@@ -69,6 +69,15 @@ export class CreateNotificacaoDto {
   @IsString()
   documento?: string;
 
+  // Aviso de cobrança: valor já formatado (R$ 0,00) e vencimento (DD/MM/AAAA).
+  @IsOptional()
+  @IsString()
+  valor?: string;
+
+  @IsOptional()
+  @IsString()
+  vencimento?: string;
+
   @IsOptional()
   @IsString()
   timezonePaciente?: string;

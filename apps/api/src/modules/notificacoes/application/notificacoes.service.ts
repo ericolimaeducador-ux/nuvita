@@ -64,6 +64,8 @@ export class NotificacoesService {
       medico: dto.medico ?? '',
       link: dto.link ?? '',
       documento: dto.documento ?? '',
+      valor: dto.valor ?? '',
+      vencimento: dto.vencimento ?? '',
     };
     const rendered = this.templates.render(dto.tipo, variaveis, dto.paraResponsavel);
     const notificacao = await this.notificacoes.create({

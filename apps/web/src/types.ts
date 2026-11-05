@@ -1171,3 +1171,79 @@ export interface AvaliacaoIU {
   respCuidador?: string;
   criadoEm: string;
 }
+
+// ---------- Financeiro de paciente do Estomaterapia (etapa 4b): REGISTRO de cobranças + AVISOS ----------
+// O sistema NÃO recebe dinheiro de paciente (a clínica recebe por fora). Valores em CENTAVOS.
+// TODO(conteudo): rótulos de tipo/forma/status e textos de cobrança — revisar na etapa de conteúdo.
+export enum TipoCobranca {
+  CONSULTA_AVALIACAO = 'consulta_avaliacao',
+  PACOTE_MENSAL = 'pacote_mensal',
+  OUTRO = 'outro',
+}
+export const TIPO_COBRANCA_LABEL: Record<TipoCobranca, string> = {
+  [TipoCobranca.CONSULTA_AVALIACAO]: 'Consulta de avaliação',
+  [TipoCobranca.PACOTE_MENSAL]: 'Pacote mensal',
+  [TipoCobranca.OUTRO]: 'Outro',
+};
+
+export enum FormaPagamentoCobranca {
+  A_VISTA = 'a_vista',
+  PIX = 'pix',
+  CREDITO = 'credito',
+  BOLETO = 'boleto',
+  OUTRO = 'outro',
+}
+export const FORMA_PAGAMENTO_COBRANCA_LABEL: Record<FormaPagamentoCobranca, string> = {
+  [FormaPagamentoCobranca.A_VISTA]: 'À vista',
+  [FormaPagamentoCobranca.PIX]: 'Pix',
+  [FormaPagamentoCobranca.CREDITO]: 'Crédito',
+  [FormaPagamentoCobranca.BOLETO]: 'Boleto',
+  [FormaPagamentoCobranca.OUTRO]: 'Outro',
+};
+
+export enum StatusCobranca {
+  PENDENTE = 'pendente',
+  ENVIADA = 'enviada',
+  PAGA = 'paga',
+  VENCIDA = 'vencida',
+  CANCELADA = 'cancelada',
+}
+export const STATUS_COBRANCA_LABEL: Record<StatusCobranca, string> = {
+  [StatusCobranca.PENDENTE]: 'Pendente',
+  [StatusCobranca.ENVIADA]: 'Enviada',
+  [StatusCobranca.PAGA]: 'Paga',
+  [StatusCobranca.VENCIDA]: 'Vencida',
+  [StatusCobranca.CANCELADA]: 'Cancelada',
+};
+
+export interface ItemCobranca {
+  descricao: string;
+  valorCentavos: number;
+}
+
+export interface Cobranca {
+  id: string;
+  clinicaId: string;
+  pacienteId: string;
+  tipo: TipoCobranca;
+  descricao: string;
+  valorCentavos: number;
+  itens: ItemCobranca[];
+  formaPagamento?: FormaPagamentoCobranca;
+  parcelas?: number;
+  vencimento: string;
+  /** Status EFETIVO: pendente/enviada com vencimento passado já vem como `vencida`. */
+  status: StatusCobranca;
+  enviadaEm?: string;
+  pagaEm?: string;
+  canceladaEm?: string;
+  motivoCancelamento?: string;
+}
+
+export interface ResumoFinanceiroMensal {
+  mes: string;
+  aReceberCentavos: number;
+  recebidoCentavos: number;
+  vencidoCentavos: number;
+  quantidades: { aReceber: number; recebido: number; vencido: number };
+}

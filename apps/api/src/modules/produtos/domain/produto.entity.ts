@@ -25,8 +25,6 @@ export enum SexoProduto {
 export enum EmbalagemProduto {
   STANDARD = 'standard',
   POCKET = 'pocket',
-  // Caixa com 90 unidades (sondas Cure Dextra).
-  CAIXA_90 = 'caixa_90',
 }
 
 // Classificação interna de projeto (mesmos rótulos neutros de ProjetoPaciente, definida localmente para manter o
@@ -34,7 +32,7 @@ export enum EmbalagemProduto {
 export enum ProjetoCatalogo {
   ALPHA = 'ALPHA',
   BETA = 'BETA',
-  SIGMA = 'Sigma',
+  SIGMA = 'SIGMA',
 }
 
 export interface Produto {

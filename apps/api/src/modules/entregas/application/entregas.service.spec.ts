@@ -93,8 +93,7 @@ describe('EntregasService.create', () => {
 
   it('linha nova (tipo livre) é categorizada pelo prefixo; sem pista vira "outro"', async () => {
     const { categoriaDoTipo } = await import('./entregas.service');
-    expect(categoriaDoTipo('Cure Dextra')).toBe('sonda');
-    expect(categoriaDoTipo('cateter_nova_linha')).toBe('sonda');
+    expect(categoriaDoTipo('cateter_cure_dextra')).toBe('sonda');
     expect(categoriaDoTipo('coletor_nova')).toBe('coletor');
     expect(categoriaDoTipo('bolsa_xyz')).toBe('outro');
     expect(categoriaDoTipo(TipoProduto.CATETER_VAPRO)).toBe('sonda');

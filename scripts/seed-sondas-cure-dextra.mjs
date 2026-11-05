@@ -6,8 +6,9 @@
  * descricaoTecnica, ativo, criadoEm, atualizadoEm). Só nome, calibre, código (+ campos obrigatórios do catálogo);
  * NENHUM dado regulatório (ANVISA, esterilização, RT, fabricante) nem ficha técnica é armazenado.
  *
- * Valores confirmados pelo Erico: projeto "Sigma"; sexo "universal" (a ficha não traz comprimento, a sonda serve
- * ambos os sexos); tipo "Cure Dextra"; embalagem "caixa_90" (90 unidades por caixa); código = ICC (510795 / 510796).
+ * Valores confirmados pelo Erico: projeto "SIGMA"; sexo "universal" (a ficha não traz comprimento, a sonda serve
+ * ambos os sexos); tipo "cateter_cure_dextra"; embalagem "standard" (quantidade por caixa NÃO é guardada);
+ * código = ICC (510795 / 510796).
  * Fora do seed (só aqui): SAP 1735396 (igual nas duas), EAN 815947021243 / 815947021250, SIMPRO 0000352731 / 0000352732.
  *
  * COMPRIMENTO: a ficha não informa. `comprimentoCm` fica AUSENTE; o Erico preenche depois pela tela do catálogo.
@@ -26,11 +27,11 @@ const SONDAS = [
   { codigo: 510796, french: 14 },
 ].map(({ codigo, french }) => ({
   codigo,
-  nome: `Cure Dextra Universal ${french}Fr Caixa 90`,
-  tipo: 'Cure Dextra',
+  nome: `Cure Dextra Universal ${french}Fr Standard`,
+  tipo: 'cateter_cure_dextra',
   sexo: 'universal',
-  embalagem: 'caixa_90',
-  projeto: 'Sigma',
+  embalagem: 'standard',
+  projeto: 'SIGMA',
   french,
   descricaoTecnica: `Sonda Cure Dextra, ponta reta, calibre ${french} Fr`,
 }));

@@ -151,9 +151,9 @@ describe('DTOs do catálogo', () => {
   });
 
   it('linha nova (fora dos valores já conhecidos) é aceita e o tipo vem com trim', async () => {
-    const inst = plainToInstance(CreateProdutoDto, { ...dto, tipo: '  Cure Dextra  ' });
+    const inst = plainToInstance(CreateProdutoDto, { ...dto, tipo: '  cateter_cure_dextra  ' });
     expect(await validate(inst, opcoes)).toEqual([]);
-    expect(inst.tipo).toBe('Cure Dextra');
+    expect(inst.tipo).toBe('cateter_cure_dextra');
   });
 
   it('os valores já gravados continuam válidos', async () => {
@@ -166,7 +166,7 @@ describe('DTOs do catálogo', () => {
     const erros = async (tipo: unknown) =>
       (await validate(plainToInstance(ListProdutosQueryDto, { tipo }), opcoes)).map((e) => e.property);
     expect(await erros('')).toContain('tipo');
-    expect(await erros('Cure Dextra')).toEqual([]);
+    expect(await erros('cateter_cure_dextra')).toEqual([]);
   });
 
   it('o código não pode ser alterado por PATCH', async () => {

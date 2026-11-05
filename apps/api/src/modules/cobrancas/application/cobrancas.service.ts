@@ -169,7 +169,7 @@ export class CobrancasService {
       cobranca = await this.repo.create({
         clinicaId: input.clinicaId,
         pacienteId: input.pacienteId,
-        tipo: TipoCobranca.CONSULTA_AVALIACAO,
+        tipo: TipoCobranca.CONSULTA_ENFERMAGEM,
         descricao: DESCRICAO_CONSULTA_ENFERMAGEM,
         valorCentavos: input.valorCentavos,
         itens: [],

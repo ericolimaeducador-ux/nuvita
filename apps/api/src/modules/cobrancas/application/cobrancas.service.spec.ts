@@ -517,3 +517,34 @@ describe('marcar paga — forma de pagamento OPCIONAL', () => {
     expect(await e({ pagaEm: '2020-01-01' })).toContain('pagaEm');
   });
 });
+
+describe('tipo consulta_enfermagem (etapa 5a)', () => {
+  it('não é aceito na criação manual (só nasce da assinatura da consulta); os demais tipos seguem válidos', async () => {
+    const op = { whitelist: true, forbidNonWhitelisted: true };
+    const base = { pacienteId: PACIENTE_ID, descricao: 'x', valorCentavos: 100, vencimento: '2099-01-01' };
+    const erros = async (tipo: string) => (await validate(plainToInstance(CreateCobrancaDto, { ...base, tipo }), op)).map((e) => e.property);
+    expect(await erros('consulta_enfermagem')).toContain('tipo');
+    for (const tipo of ['consulta_avaliacao', 'pacote_mensal', 'outro']) expect(await erros(tipo)).toEqual([]);
+  });
+
+  it('gerarCobrancaDeConsulta grava o tipo consulta_enfermagem com o vínculo consultaId', async () => {
+    const create = jest.fn().mockImplementation((d) => Promise.resolve(cobranca({ ...d, id: 'c9' })));
+    const { service } = montar({ create, findByConsultaId: jest.fn().mockResolvedValue(null) });
+    const c = await service.gerarCobrancaDeConsulta({ clinicaId: 'clinica-1', pacienteId: PACIENTE_ID, consultaId: 'cons-1', valorCentavos: 22000 }, contexto);
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ tipo: TipoCobranca.CONSULTA_ENFERMAGEM, consultaId: 'cons-1', valorCentavos: 22000 }));
+    expect(c.tipo).toBe('consulta_enfermagem');
+  });
+
+  it('o resumo mensal conta a cobrança de consulta_enfermagem como qualquer outra (a receber / recebido / vencido)', async () => {
+    const hoje = new Date('2026-06-15T12:00:00Z');
+    const lista = [
+      cobranca({ id: '1', tipo: TipoCobranca.CONSULTA_ENFERMAGEM, valorCentavos: 22000, vencimento: new Date('2026-06-20T00:00:00Z') }),
+      cobranca({ id: '2', tipo: TipoCobranca.CONSULTA_ENFERMAGEM, valorCentavos: 22000, vencimento: new Date('2026-06-02T00:00:00Z') }),
+      cobranca({ id: '3', tipo: TipoCobranca.CONSULTA_ENFERMAGEM, valorCentavos: 15000, status: StatusCobranca.PAGA, vencimento: new Date('2026-06-01T00:00:00Z'), pagaEm: new Date('2026-06-05T00:00:00Z') }),
+      cobranca({ id: '4', tipo: TipoCobranca.PACOTE_MENSAL, valorCentavos: 50000, vencimento: new Date('2026-06-25T00:00:00Z') }),
+    ];
+    const { service } = montar({ listParaResumo: jest.fn().mockResolvedValue(lista) });
+    const r = await service.resumo({ mes: '2026-06' }, contexto.user, hoje);
+    expect(r).toMatchObject({ aReceberCentavos: 72000, vencidoCentavos: 22000, recebidoCentavos: 15000 });
+  });
+});

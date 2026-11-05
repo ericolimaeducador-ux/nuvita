@@ -213,7 +213,7 @@ export function CobrancasSecao({ pacienteId }: { pacienteId: string }) {
               <Select value={form.tipo || undefined} onValueChange={(v) => setForm((f) => ({ ...f, tipo: v as TipoCobranca }))}>
                 <SelectTrigger aria-label="Tipo"><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {Object.values(TipoCobranca).map((t) => <SelectItem key={t} value={t}>{TIPO_COBRANCA_LABEL[t]}</SelectItem>)}
+                  {Object.values(TipoCobranca).filter((t) => t !== TipoCobranca.CONSULTA_ENFERMAGEM).map((t) => <SelectItem key={t} value={t}>{TIPO_COBRANCA_LABEL[t]}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

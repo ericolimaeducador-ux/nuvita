@@ -210,7 +210,7 @@ describe('ConsultasService — cobrança na assinatura ("assina primeiro, cobra 
     const { assinada, consulta } = await criarEAssinar(m, { incluidaEmPacote: false });
 
     expect(m.cob.cobrancas).toHaveLength(1);
-    expect(m.cob.cobrancas[0]).toMatchObject({ consultaId: consulta.id, valorCentavos: 31000, pacienteId: PACIENTE, clinicaId: CLINICA });
+    expect(m.cob.cobrancas[0]).toMatchObject({ consultaId: consulta.id, valorCentavos: 31000, pacienteId: PACIENTE, clinicaId: CLINICA, tipo: 'consulta_enfermagem', descricao: 'Consulta de enfermagem' });
     expect(assinada.cobranca).toMatchObject({ incluidaEmPacote: false, valorCentavos: 31000, status: StatusCobrancaConsulta.GERADA, cobrancaId: 'cob1' });
     expect(m.eventos()).toEqual(expect.arrayContaining([AuditEvent.CONSULTA_ENFERMAGEM_SIGNED, AuditEvent.CONSULTA_COBRANCA_GERADA]));
   });

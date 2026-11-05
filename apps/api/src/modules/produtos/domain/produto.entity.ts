@@ -5,8 +5,10 @@
 // próprio catálogo, isso é uma decisão a tomar (clinicaId no schema + índice único {clinicaId, codigo}); hoje todas as
 // clínicas enxergam o mesmo catálogo e só ADMIN/SUPER_ADMIN o alteram.
 //
-// TODO(conteudo): os valores dos enums abaixo (marcas, "sonda", "coletor") são do catálogo de incontinência urinária
-// e ficam como estão porque os dados já gravados usam esses valores. Revisar/ampliar na etapa de conteúdo
+// TIPO/LINHA: é uma STRING livre (não-vazia, com trim), não um enum fechado, para que uma linha/marca nova possa ser
+// cadastrada pelo ADMIN sem mudar código. `TipoProduto` abaixo lista só os valores JÁ gravados (usados como constantes
+// em testes e no mapeamento de categoria das entregas); qualquer outro texto também é válido.
+// TODO(conteudo): marcas, "sonda" e "coletor" são do catálogo de incontinência urinária; revisar na etapa de conteúdo
 // (estomaterapia: bolsas, barreiras, etc.).
 export enum TipoProduto {
   CATETER_VAPRO = 'cateter_vapro',
@@ -30,6 +32,7 @@ export enum EmbalagemProduto {
 export enum ProjetoCatalogo {
   ALPHA = 'ALPHA',
   BETA = 'BETA',
+  SIGMA = 'SIGMA',
 }
 
 export interface Produto {
@@ -37,7 +40,7 @@ export interface Produto {
   codigo: number;
   codigoFabricante?: string;
   nome: string;
-  tipo: TipoProduto;
+  tipo: string;
   sexo: SexoProduto;
   embalagem: EmbalagemProduto;
   projeto: ProjetoCatalogo;

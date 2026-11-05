@@ -1,11 +1,12 @@
 import { Transform } from 'class-transformer';
-import { IsEnum, IsOptional } from 'class-validator';
-import { TipoProduto } from '../../domain/produto.entity';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class ListProdutosQueryDto {
   @IsOptional()
-  @IsEnum(TipoProduto)
-  tipo?: TipoProduto;
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  tipo?: string;
 
   /** Só ADMIN/SUPER_ADMIN enxergam inativos (a tela de gestão do catálogo). */
   @IsOptional()

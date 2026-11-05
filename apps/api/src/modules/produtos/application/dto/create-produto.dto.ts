@@ -1,6 +1,6 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
-import { EmbalagemProduto, ProjetoCatalogo, SexoProduto, TipoProduto } from '../../domain/produto.entity';
+import { EmbalagemProduto, ProjetoCatalogo, SexoProduto } from '../../domain/produto.entity';
 
 export class CreateProdutoDto {
   /** Código do catálogo (único). */
@@ -17,8 +17,11 @@ export class CreateProdutoDto {
   @IsNotEmpty()
   nome!: string;
 
-  @IsEnum(TipoProduto)
-  tipo!: TipoProduto;
+  /** Tipo/linha do produto: texto livre, não-vazio, sem espaços nas pontas (ex.: cateter_vapro). */
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  tipo!: string;
 
   @IsEnum(SexoProduto)
   sexo!: SexoProduto;

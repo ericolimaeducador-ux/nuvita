@@ -6,6 +6,7 @@ import { Papel } from '../../../../../../packages/shared/src/auth';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
 import { EmbalagemProduto, Produto, ProjetoCatalogo, SexoProduto, TipoProduto } from '../domain/produto.entity';
+import { ListProdutosQueryDto } from './dto/list-produtos-query.dto';
 import { CreateProdutoDto } from './dto/create-produto.dto';
 import { UpdateProdutoDto } from './dto/update-produto.dto';
 import { ProdutoAuditContext, ProdutosService } from './produtos.service';
@@ -139,11 +140,33 @@ describe('DTOs do catálogo', () => {
   it.each([
     ['sem código', { codigo: undefined }, 'codigo'],
     ['código zero', { codigo: 0 }, 'codigo'],
-    ['tipo fora do enum', { tipo: 'qualquer' }, 'tipo'],
+    ['tipo vazio', { tipo: '' }, 'tipo'],
+    ['tipo só com espaços', { tipo: '   ' }, 'tipo'],
+    ['tipo que não é texto', { tipo: 5 }, 'tipo'],
+    ['sem tipo', { tipo: undefined }, 'tipo'],
     ['nome vazio', { nome: '' }, 'nome'],
     ['campo desconhecido (ativo não é editável pelo cliente)', { ativo: false }, 'ativo'],
   ])('%s: recusado', async (_nome, over, campo) => {
     expect(await errosCriar(over)).toContain(campo);
+  });
+
+  it('linha nova (fora dos valores já conhecidos) é aceita e o tipo vem com trim', async () => {
+    const inst = plainToInstance(CreateProdutoDto, { ...dto, tipo: '  cateter_cure_dextra  ' });
+    expect(await validate(inst, opcoes)).toEqual([]);
+    expect(inst.tipo).toBe('cateter_cure_dextra');
+  });
+
+  it('os valores já gravados continuam válidos', async () => {
+    for (const tipo of Object.values(TipoProduto)) {
+      expect(await errosCriar({ tipo })).toEqual([]);
+    }
+  });
+
+  it('filtro por tipo na listagem: vazio recusado, texto livre aceito', async () => {
+    const erros = async (tipo: unknown) =>
+      (await validate(plainToInstance(ListProdutosQueryDto, { tipo }), opcoes)).map((e) => e.property);
+    expect(await erros('')).toContain('tipo');
+    expect(await erros('cateter_cure_dextra')).toEqual([]);
   });
 
   it('o código não pode ser alterado por PATCH', async () => {

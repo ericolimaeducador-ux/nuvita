@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Produto, TipoProduto } from '../../domain/produto.entity';
+import { Produto } from '../../domain/produto.entity';
 import { CreateProdutoInput, ProdutoRepository, UpdateProdutoInput } from '../../application/ports/produto.repository';
 import { ProdutoDocument, ProdutoMongo } from './produto.schema';
 
@@ -14,7 +14,7 @@ export class ProdutoMongoRepository implements ProdutoRepository {
     return doc ? this.toEntity(doc) : null;
   }
 
-  async findAll(tipo?: TipoProduto, ativo?: boolean): Promise<Produto[]> {
+  async findAll(tipo?: string, ativo?: boolean): Promise<Produto[]> {
     const filter: Record<string, unknown> = {};
     if (tipo) filter['tipo'] = tipo;
     if (ativo !== undefined) filter['ativo'] = ativo;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { ErroConsulta } from '@/components/ErroConsulta';
 import { PageHeader } from '@/components/PageHeader';
@@ -7,14 +8,82 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/components/ui/use-toast';
 import { apiErrorMessage } from '@/api/client';
 import { cobrancasApi } from '@/api/resources';
 import { useAuth } from '@/auth/AuthContext';
 import { centavosParaInput, reaisParaCentavos } from '@/lib/dinheiro';
 import { formatBRL } from '@/utils';
-import { Papel } from '@/types';
+import { Papel, STATUS_COBRANCA_LABEL, StatusCobranca } from '@/types';
+
+const STATUS_ABERTOS = [StatusCobranca.PENDENTE, StatusCobranca.ENVIADA, StatusCobranca.VENCIDA];
+
+/** Cobranças em aberto (pendentes, enviadas e vencidas) da clínica, com o nome do paciente; mais antigas primeiro. */
+function CobrancasAbertas() {
+  const q = useInfiniteQuery({
+    queryKey: ['cobrancas-abertas'],
+    queryFn: ({ pageParam }) => cobrancasApi.listByClinica({ status: STATUS_ABERTOS, cursor: pageParam, limit: 20 }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (ultima) => (ultima.hasMore ? ultima.nextCursor : undefined),
+  });
+  const itens = q.data?.pages.flatMap((p) => p.items) ?? [];
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-base">Cobranças pendentes e vencidas</CardTitle></CardHeader>
+      <CardContent>
+        {q.isLoading ? (
+          <Skeleton className="h-24 w-full" />
+        ) : q.isError ? (
+          <ErroConsulta erro={q.error} refetch={q.refetch} recurso="as cobranças em aberto" />
+        ) : itens.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma cobrança pendente ou vencida.</p>
+        ) : (
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Paciente</TableHead>
+                  <TableHead>Vencimento</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {itens.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="text-sm">
+                      <Link className="font-medium hover:underline" to={`/pacientes/${c.pacienteId}`}>{c.pacienteNome ?? 'Paciente'}</Link>
+                      <div className="text-xs text-muted-foreground">{c.descricao}</div>
+                    </TableCell>
+                    {/* Data de calendário (UTC): formatar pelo texto evita o dia anterior no fuso local. */}
+                    <TableCell>{c.vencimento.slice(0, 10).split('-').reverse().join('/')}</TableCell>
+                    <TableCell>
+                      <Badge variant={c.status === StatusCobranca.VENCIDA ? 'destructive' : 'outline'}>
+                        {STATUS_COBRANCA_LABEL[c.status] ?? c.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">{formatBRL(c.valorCentavos / 100)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {q.hasNextPage && (
+              <div className="pt-3 text-center">
+                <Button variant="outline" size="sm" onClick={() => void q.fetchNextPage()} disabled={q.isFetchingNextPage}>
+                  {q.isFetchingNextPage ? 'Carregando…' : 'Carregar mais'}
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 /**
  * Financeiro de pacientes do Estomaterapia: resumo mensal (a receber / recebido / vencido) e o valor da consulta de
@@ -59,6 +128,8 @@ export function FinanceiroPacientesPage() {
         description="Registro de cobranças e avisos aos pacientes. A clínica recebe por fora; aqui só se registra e se avisa."
       />
 
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <div className="space-y-6">
       <div className="flex items-end gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="finMes">Mês</Label>
@@ -105,6 +176,9 @@ export function FinanceiroPacientesPage() {
           {!podeEditarValor && <p className="text-xs text-muted-foreground">Só o administrador altera este valor.</p>}
         </CardContent>
       </Card>
+      </div>
+      <CobrancasAbertas />
+      </div>
     </div>
   );
 }

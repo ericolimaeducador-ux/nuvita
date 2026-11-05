@@ -21,7 +21,8 @@ import { CobrancaAuditContext, CobrancasService, formatarData, formatarReais } f
 import { CobrancaRepository } from './ports/cobranca.repository';
 import { FinanceiroConfigRepository } from './ports/financeiro-config.repository';
 import { CreateCobrancaDto } from './dto/create-cobranca.dto';
-import { CanalAviso, CancelarCobrancaDto, ResumoQueryDto, SalvarConfigFinanceiroDto } from './dto/outros.dto';
+import { montarFiltroClinica } from '../infrastructure/mongo/cobranca-mongo.repository';
+import { CanalAviso, CancelarCobrancaDto, ListCobrancasQueryDto, PagarCobrancaDto, ResumoQueryDto, SalvarConfigFinanceiroDto } from './dto/outros.dto';
 
 const PACIENTE_ID = '65f000000000000000000001';
 
@@ -387,5 +388,132 @@ describe('formatação e DTOs', () => {
     expect(await erros(ResumoQueryDto, { mes: '2026-06' })).toEqual([]);
     expect(await erros(SalvarConfigFinanceiroDto, { valorConsultaAvaliacaoCentavos: -1 })).toContain('valorConsultaAvaliacaoCentavos');
     expect(await erros(SalvarConfigFinanceiroDto, { valorConsultaAvaliacaoCentavos: 22000 })).toEqual([]);
+  });
+});
+
+describe('CobrancasService.listarPorClinica — lista da clínica (etapa 4b)', () => {
+  const hoje = new Date('2026-06-15T12:00:00Z');
+  const pagina = (items: Cobranca[], extra = {}) => ({ items, hasMore: false, ...extra });
+
+  it('usa SEMPRE a clínica do token, passa o filtro de status e o início do dia, e traz o nome do paciente', async () => {
+    const listByClinica = jest.fn().mockResolvedValue(pagina([cobranca({ status: StatusCobranca.PENDENTE })]));
+    const { service, pacientes } = montar({ listByClinica });
+
+    const r = await service.listarPorClinica(
+      { status: [StatusCobranca.PENDENTE, StatusCobranca.VENCIDA], limit: 10 },
+      contexto.user,
+      hoje,
+    );
+
+    expect(listByClinica).toHaveBeenCalledWith({
+      clinicaId: 'clinica-1',
+      status: ['pendente', 'vencida'],
+      hoje: new Date('2026-06-15T00:00:00Z'),
+      cursor: undefined,
+      limit: 10,
+    });
+    expect(pacientes.resumoPorIds).toHaveBeenCalledWith('clinica-1', [PACIENTE_ID]);
+    expect(r.items[0].pacienteNome).toBe('Maria');
+    expect(r.hasMore).toBe(false);
+  });
+
+  it('um clinicaId de outra clínica na query é recusado (403) e o repositório nem é consultado', async () => {
+    const listByClinica = jest.fn();
+    const { service } = montar({ listByClinica });
+
+    await expect(service.listarPorClinica({ clinicaId: 'outra-clinica' }, contexto.user, hoje)).rejects.toThrow();
+    expect(listByClinica).not.toHaveBeenCalled();
+  });
+
+  it('devolve o status EFETIVO (vencida) e repassa a paginação por cursor', async () => {
+    const listByClinica = jest
+      .fn()
+      .mockResolvedValue(pagina([cobranca({ vencimento: new Date('2000-01-01T00:00:00Z') })], { hasMore: true, nextCursor: 'abc' }));
+    const { service } = montar({ listByClinica });
+
+    const r = await service.listarPorClinica({ cursor: 'xyz' }, contexto.user, hoje);
+
+    expect(listByClinica.mock.calls[0][0].cursor).toBe('xyz');
+    expect(r.items[0].status).toBe(StatusCobranca.VENCIDA);
+    expect(r).toMatchObject({ hasMore: true, nextCursor: 'abc' });
+  });
+
+  it('paciente que não é da clínica não ganha nome (lista segue sem vazar dado)', async () => {
+    const listByClinica = jest.fn().mockResolvedValue(pagina([cobranca({ pacienteId: 'desconhecido' })]));
+    const { service } = montar({ listByClinica });
+    const r = await service.listarPorClinica({}, contexto.user, hoje);
+    expect(r.items[0].pacienteNome).toBeUndefined();
+  });
+});
+
+describe('montarFiltroClinica — filtro por status e tenancy', () => {
+  const hoje = new Date('2026-06-15T00:00:00Z');
+  const base = { clinicaId: 'clinica-1', hoje };
+
+  it('o clinicaId entra SEMPRE, fora do $or dos status (nunca vaza cobrança de outra clínica)', () => {
+    const f = montarFiltroClinica({ ...base, status: [StatusCobranca.PENDENTE, StatusCobranca.VENCIDA, StatusCobranca.PAGA] }) as { $and: Record<string, unknown>[] };
+    expect(f.$and[0]).toEqual({ clinicaId: 'clinica-1' });
+    expect(f.$and[1]).toEqual({
+      $or: [
+        { status: 'pendente', vencimento: { $gte: hoje } },
+        { status: { $in: ['pendente', 'enviada'] }, vencimento: { $lt: hoje } },
+        { status: 'paga' },
+      ],
+    });
+  });
+
+  it('sem status: só a clínica; enviada usa vencimento >= hoje; cursor entra como $or de desempate', () => {
+    expect(montarFiltroClinica(base)).toEqual({ $and: [{ clinicaId: 'clinica-1' }] });
+    const f = montarFiltroClinica({ ...base, status: [StatusCobranca.ENVIADA] }, { v: new Date('2026-07-01T00:00:00Z'), id: 'i1' }) as { $and: Record<string, unknown>[] };
+    expect(f.$and[1]).toEqual({ $or: [{ status: 'enviada', vencimento: { $gte: hoje } }] });
+    expect(f.$and[2]).toEqual({ $or: [{ vencimento: { $gt: new Date('2026-07-01T00:00:00Z') } }, { vencimento: new Date('2026-07-01T00:00:00Z'), _id: { $gt: 'i1' } }] });
+  });
+});
+
+describe('ListCobrancasQueryDto', () => {
+  const opcoes = { whitelist: true, forbidNonWhitelisted: true, transform: true };
+  const validar = async (dados: Record<string, unknown>) => {
+    const inst = plainToInstance(ListCobrancasQueryDto, dados);
+    return { erros: (await validate(inst, opcoes)).map((e) => e.property), inst };
+  };
+
+  it('aceita status em lista separada por vírgula, limit numérico e cursor', async () => {
+    const { erros, inst } = await validar({ status: 'pendente,enviada,vencida', limit: '25', cursor: 'abc' });
+    expect(erros).toEqual([]);
+    expect(inst.status).toEqual(['pendente', 'enviada', 'vencida']);
+    expect(inst.limit).toBe(25);
+  });
+
+  it('recusa status inventado, limit acima de 100 e pacienteId que não é ObjectId', async () => {
+    expect((await validar({ status: 'pendente,talvez' })).erros).toContain('status');
+    expect((await validar({ limit: '500' })).erros).toContain('limit');
+    expect((await validar({ pacienteId: 'abc' })).erros).toContain('pacienteId');
+  });
+});
+
+describe('marcar paga — forma de pagamento OPCIONAL', () => {
+  const upd = () => jest.fn().mockImplementation((_c, _i, _s, data) => Promise.resolve(cobranca({ ...data })));
+
+  it('sem forma: não toca na forma já gravada', async () => {
+    const update = upd();
+    const { service } = montar({ update });
+    await service.marcarPaga('c1', {}, undefined, contexto);
+    expect(update.mock.calls[0][3]).not.toHaveProperty('formaPagamento');
+  });
+
+  it('com forma: grava a forma informada', async () => {
+    const update = upd();
+    const { service } = montar({ update });
+    await service.marcarPaga('c1', { formaPagamento: FormaPagamentoCobranca.CREDITO }, undefined, contexto);
+    expect(update.mock.calls[0][3]).toMatchObject({ status: 'paga', formaPagamento: 'credito' });
+  });
+
+  it('o DTO aceita só as formas conhecidas e nenhum campo extra (pagaEm/pagoPor são do servidor)', async () => {
+    const op = { whitelist: true, forbidNonWhitelisted: true };
+    const e = async (d: object) => (await validate(plainToInstance(PagarCobrancaDto, d), op)).map((x) => x.property);
+    expect(await e({})).toEqual([]);
+    expect(await e({ formaPagamento: 'pix' })).toEqual([]);
+    expect(await e({ formaPagamento: 'cheque' })).toContain('formaPagamento');
+    expect(await e({ pagaEm: '2020-01-01' })).toContain('pagaEm');
   });
 });

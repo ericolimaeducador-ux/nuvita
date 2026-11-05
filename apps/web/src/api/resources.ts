@@ -737,10 +737,21 @@ export interface CobrancaPayload {
   vencimento: string;
 }
 
+export interface PaginaCobrancas {
+  items: Array<Cobranca & { pacienteNome?: string }>;
+  hasMore: boolean;
+  nextCursor?: string;
+}
+
 export const cobrancasApi = {
   listByPaciente: (pacienteId: string) =>
     api.get<Cobranca[]>('/cobrancas', { params: { pacienteId } }).then((r) => comoLista<Cobranca>(r.data) as Cobranca[]),
   create: (payload: CobrancaPayload) => api.post<Cobranca>('/cobrancas', payload).then((r) => r.data),
+  /** Lista da CLÍNICA (sem pacienteId): filtro por status efetivo, nome do paciente junto, paginada por cursor. */
+  listByClinica: (params: { status?: string[]; cursor?: string; limit?: number } = {}) =>
+    api
+      .get<PaginaCobrancas>('/cobrancas', { params: { status: params.status?.join(','), cursor: params.cursor, limit: params.limit } })
+      .then((r) => r.data),
   /** Atalho: o valor vem da configuração da clínica. */
   criarConsultaAvaliacao: (pacienteId: string, vencimento?: string) =>
     api.post<Cobranca>('/cobrancas/consulta-avaliacao', { pacienteId, vencimento }).then((r) => r.data),

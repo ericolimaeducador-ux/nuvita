@@ -14,6 +14,7 @@ import {
   CancelarCobrancaDto,
   ConsultaAvaliacaoDto,
   EnviarAvisoDto,
+  ListCobrancasQueryDto,
   PagarCobrancaDto,
   ResumoQueryDto,
   SalvarConfigFinanceiroDto,
@@ -42,13 +43,12 @@ export class CobrancasController {
     return this.service.criarConsultaAvaliacao(dto, this.contexto(request, user));
   }
 
+  // Com pacienteId: cobranças do paciente. Sem ele: lista da clínica (filtro por status, nome do paciente, paginada).
   @Get()
-  listarPorPaciente(
-    @Query('pacienteId') pacienteId: string,
-    @Query('clinicaId') clinicaId: string | undefined,
-    @CurrentUser() user: AuthTokenPayload,
-  ) {
-    return this.service.listarPorPaciente(pacienteId, clinicaId, user);
+  listar(@Query() query: ListCobrancasQueryDto, @CurrentUser() user: AuthTokenPayload) {
+    return query.pacienteId
+      ? this.service.listarPorPaciente(query.pacienteId, query.clinicaId, user)
+      : this.service.listarPorClinica(query, user);
   }
 
   @Get('resumo')

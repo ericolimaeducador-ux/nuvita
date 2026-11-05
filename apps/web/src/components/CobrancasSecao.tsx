@@ -43,6 +43,8 @@ const VAZIO = (): FormCobranca => ({
   tipo: '', descricao: '', valor: '', formaPagamento: '', parcelas: '', vencimento: dayjs().format('YYYY-MM-DD'),
 });
 
+const SEM_FORMA = 'nao_informar';
+
 const aberta = (c: Cobranca) => c.status !== StatusCobranca.PAGA && c.status !== StatusCobranca.CANCELADA;
 
 export function CobrancasSecao({ pacienteId }: { pacienteId: string }) {
@@ -51,6 +53,8 @@ export function CobrancasSecao({ pacienteId }: { pacienteId: string }) {
   const [form, setForm] = useState<FormCobranca>(VAZIO());
   const [avisando, setAvisando] = useState<Cobranca | null>(null);
   const [canais, setCanais] = useState({ email: true, whatsapp: false });
+  const [pagando, setPagando] = useState<Cobranca | null>(null);
+  const [formaPaga, setFormaPaga] = useState<string>(SEM_FORMA);
   const [cancelando, setCancelando] = useState<Cobranca | null>(null);
   const [motivo, setMotivo] = useState('');
 
@@ -89,8 +93,8 @@ export function CobrancasSecao({ pacienteId }: { pacienteId: string }) {
     onError: (e) => toast.error('Erro ao registrar a consulta de avaliação', apiErrorMessage(e)),
   });
   const pagaMut = useMutation({
-    mutationFn: (id: string) => cobrancasApi.marcarPaga(id),
-    onSuccess: () => { toast.success('Cobrança marcada como paga.'); revalidar(); },
+    mutationFn: (c: Cobranca) => cobrancasApi.marcarPaga(c.id, formaPaga === SEM_FORMA ? undefined : formaPaga),
+    onSuccess: () => { toast.success('Cobrança marcada como paga.'); setPagando(null); setFormaPaga(SEM_FORMA); revalidar(); },
     onError: (e) => toast.error('Erro ao marcar como paga', apiErrorMessage(e)),
   });
   const avisoMut = useMutation({
@@ -184,7 +188,7 @@ export function CobrancasSecao({ pacienteId }: { pacienteId: string }) {
                         <Button type="button" variant="ghost" size="icon" aria-label={`Enviar aviso ${c.descricao}`} onClick={() => setAvisando(c)}>
                           <BellRing className="h-4 w-4" />
                         </Button>
-                        <Button type="button" variant="ghost" size="icon" aria-label={`Marcar paga ${c.descricao}`} disabled={pagaMut.isPending} onClick={() => pagaMut.mutate(c.id)}>
+                        <Button type="button" variant="ghost" size="icon" aria-label={`Marcar paga ${c.descricao}`} onClick={() => { setFormaPaga(c.formaPagamento ?? SEM_FORMA); setPagando(c); }}>
                           <CheckCircle2 className="h-4 w-4" />
                         </Button>
                         <Button type="button" variant="ghost" size="icon" aria-label={`Cancelar cobrança ${c.descricao}`} onClick={() => setCancelando(c)}>
@@ -266,6 +270,33 @@ export function CobrancasSecao({ pacienteId }: { pacienteId: string }) {
             <Button variant="outline" onClick={() => setAvisando(null)}>Cancelar</Button>
             <Button disabled={(!canais.email && !canais.whatsapp) || avisoMut.isPending} onClick={() => avisando && avisoMut.mutate(avisando)}>
               {avisoMut.isPending ? 'Enviando…' : 'Enviar aviso'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={pagando !== null} onOpenChange={(a) => { if (!a) { setPagando(null); setFormaPaga(SEM_FORMA); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Marcar como paga</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Anota que a clínica recebeu por fora (o sistema não processa pagamento). Fica registrado quem marcou e quando.
+          </p>
+          <div className="space-y-2">
+            <Label>Forma de pagamento (opcional)</Label>
+            <Select value={formaPaga} onValueChange={setFormaPaga}>
+              <SelectTrigger aria-label="Forma de pagamento recebida"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SEM_FORMA}>Não informar</SelectItem>
+                {Object.values(FormaPagamentoCobranca).map((fp) => (
+                  <SelectItem key={fp} value={fp}>{FORMA_PAGAMENTO_COBRANCA_LABEL[fp]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPagando(null); setFormaPaga(SEM_FORMA); }}>Voltar</Button>
+            <Button disabled={pagaMut.isPending} onClick={() => pagando && pagaMut.mutate(pagando)}>
+              {pagaMut.isPending ? 'Salvando…' : 'Confirmar pagamento'}
             </Button>
           </DialogFooter>
         </DialogContent>

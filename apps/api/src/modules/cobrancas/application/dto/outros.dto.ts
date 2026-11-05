@@ -1,5 +1,6 @@
+import { Transform, Type } from 'class-transformer';
 import { ArrayNotEmpty, ArrayUnique, IsArray, IsEnum, IsInt, IsISO8601, IsMongoId, IsNotEmpty, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
-import { FormaPagamentoCobranca } from '../../domain/cobranca.entity';
+import { FormaPagamentoCobranca, StatusCobranca } from '../../domain/cobranca.entity';
 import { VALOR_MAXIMO_CENTAVOS } from './create-cobranca.dto';
 
 /** Atalho "consulta de avaliação": o valor vem da configuração da clínica, não do cliente. */
@@ -32,6 +33,31 @@ export class PagarCobrancaDto {
 
 export class CancelarCobrancaDto {
   @IsString() @IsNotEmpty() @MaxLength(500) motivo!: string;
+}
+
+/**
+ * GET /cobrancas. Com `pacienteId`: as cobranças daquele paciente (lista simples). Sem ele: a lista da CLÍNICA, com filtro
+ * por status efetivo (aceita vários separados por vírgula: pendente,enviada,vencida), paginada por cursor.
+ */
+export class ListCobrancasQueryDto {
+  @IsOptional() @IsString() clinicaId?: string;
+  @IsOptional() @IsMongoId() pacienteId?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.split(',').map((s) => s.trim()).filter(Boolean) : value))
+  @IsArray()
+  @ArrayUnique()
+  @IsEnum(StatusCobranca, { each: true })
+  status?: StatusCobranca[];
+
+  @IsOptional() @IsString() cursor?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
 }
 
 export class ResumoQueryDto {

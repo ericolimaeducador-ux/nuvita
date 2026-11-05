@@ -34,6 +34,7 @@ import { toast } from '@/components/ui/use-toast';
 import { ClassificacaoAreaSelector } from '@/components/ClassificacaoAreaSelector';
 import { AvaliacaoIuSecao } from '@/components/AvaliacaoIuSecao';
 import { CobrancasSecao } from '@/components/CobrancasSecao';
+import { ConsultasSecao } from '@/components/ConsultasSecao';
 import { ChecklistSecao } from '@/components/ChecklistSecao';
 import { EntregasSecao } from '@/components/EntregasSecao';
 import { FollowupSecao } from '@/components/FollowupSecao';
@@ -318,6 +319,13 @@ export function PacienteDetailPage() {
       {/* Testes psicológicos — placeholder: sem catálogo de testes ainda,
           nome do teste é texto livre. Estrutura pronta pra receber conteúdo depois. */}
       {ehEnfermeiro && <TestesPsicologicosSecao pacienteId={id} />}
+
+      {/* Consultas de enfermagem (5 etapas): conteúdo clínico, só para enfermeiros. */}
+      {ehEnfermeiro && (
+        <SectionErrorBoundary secao="Consultas de enfermagem">
+          <ConsultasSecao pacienteId={id} />
+        </SectionErrorBoundary>
+      )}
 
       {/* Avaliação de IU: enfermeiro/admin escrevem, secretaria lê. Registrar pode levar o paciente elegível ao passo de avaliação. */}
       <SectionErrorBoundary secao="Avaliação de IU">

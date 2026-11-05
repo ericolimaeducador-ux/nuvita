@@ -20,6 +20,11 @@ export class CobrancaMongoRepository implements CobrancaRepository {
     return doc ? this.toEntity(doc) : null;
   }
 
+  async findByConsultaId(clinicaId: string, consultaId: string): Promise<Cobranca | null> {
+    const doc = await this.model.findOne({ clinicaId, consultaId }).lean();
+    return doc ? this.toEntity(doc) : null;
+  }
+
   async listByPaciente(clinicaId: string, pacienteId: string): Promise<Cobranca[]> {
     const docs = await this.model.find({ clinicaId, pacienteId }).sort({ vencimento: -1 }).lean();
     return docs.map((d) => this.toEntity(d));

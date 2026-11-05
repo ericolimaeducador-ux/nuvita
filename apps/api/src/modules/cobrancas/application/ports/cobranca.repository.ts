@@ -5,6 +5,7 @@ export type NovaCobranca = Omit<Cobranca, 'id' | 'criadoEm' | 'atualizadoEm'>;
 export interface CobrancaRepository {
   create(data: NovaCobranca): Promise<Cobranca>;
   findById(clinicaId: string, id: string): Promise<Cobranca | null>;
+  findByConsultaId(clinicaId: string, consultaId: string): Promise<Cobranca | null>;
   listByPaciente(clinicaId: string, pacienteId: string): Promise<Cobranca[]>;
   /** Cobranças da clínica com vencimento em [de, ate) OU pagas em [de, ate) — base do resumo mensal. */
   listParaResumo(clinicaId: string, de: Date, ate: Date): Promise<Cobranca[]>;

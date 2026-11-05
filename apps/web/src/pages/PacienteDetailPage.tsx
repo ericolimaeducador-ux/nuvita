@@ -32,6 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/use-toast';
 import { ClassificacaoAreaSelector } from '@/components/ClassificacaoAreaSelector';
+import { AvaliacaoIuSecao } from '@/components/AvaliacaoIuSecao';
 import { ChecklistSecao } from '@/components/ChecklistSecao';
 import { EntregasSecao } from '@/components/EntregasSecao';
 import { FollowupSecao } from '@/components/FollowupSecao';
@@ -316,6 +317,15 @@ export function PacienteDetailPage() {
       {/* Testes psicológicos — placeholder: sem catálogo de testes ainda,
           nome do teste é texto livre. Estrutura pronta pra receber conteúdo depois. */}
       {ehEnfermeiro && <TestesPsicologicosSecao pacienteId={id} />}
+
+      {/* Avaliação de IU: enfermeiro/admin escrevem, secretaria lê. Registrar pode levar o paciente elegível ao passo de avaliação. */}
+      <SectionErrorBoundary secao="Avaliação de IU">
+        <AvaliacaoIuSecao
+          pacienteId={id}
+          podeEscrever={user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN || user?.papel === Papel.SUPER_ADMIN}
+          enfermeiroRegistro={user?.coren ?? user?.registroProfissional}
+        />
+      </SectionErrorBoundary>
 
       {/* Checklist de documentos (equipe): receber o último item pode levar o paciente elegível à consulta médica. */}
       <SectionErrorBoundary secao="Checklist de documentos">

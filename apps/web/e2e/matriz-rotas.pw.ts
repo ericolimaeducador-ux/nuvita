@@ -15,6 +15,7 @@ const ROTAS: Array<[string, string, Papel[]]> = [
   ['/pacientes', '/pacientes', ['SUPER_ADMIN', 'ADMIN', 'ENFERMEIRO', 'SECRETARIA']],
   ['/pacientes/:id', '/pacientes/p1', ['SUPER_ADMIN', 'ADMIN', 'ENFERMEIRO', 'SECRETARIA']],
   ['/fluxo-clinico', '/fluxo-clinico', ['SUPER_ADMIN', 'ADMIN', 'ENFERMEIRO', 'SECRETARIA']],
+  ['/captacao-pacientes', '/captacao-pacientes', ['SUPER_ADMIN', 'ADMIN', 'ENFERMEIRO', 'SECRETARIA']],
   // documentos clínicos e impressão do prontuário: PRIVATIVOS do enfermeiro
   ['/pacientes/:id/prontuario/:prontuarioId/imprimir', '/pacientes/p1/prontuario/r1/imprimir', ['ENFERMEIRO']],
   ['/pacientes/:id/documentos/atestado', '/pacientes/p1/documentos/atestado', ['ENFERMEIRO']],
@@ -85,6 +86,7 @@ const FORA_DA_MATRIZ: Record<string, string> = {
   '/esqueci-senha': 'pública: pedido de link de redefinição de senha (resposta idêntica para qualquer e-mail)',
   '/redefinir-senha': 'pública: a credencial é o token de uso único do e-mail',
   '/tele/:token': 'pública: a credencial é o token da sala (paciente)',
+  '/captacao_pacientes': 'pública: a credencial é o PIN dos captadores, validado pela API (header x-captador-pin)',
   '/aceitar-termos': 'gate de sessão (GateChain): vale para qualquer papel logado',
   '/definir-senha': 'gate de sessão (GateChain): vale para qualquer papel logado',
   '/': 'redireciona para /dashboard',

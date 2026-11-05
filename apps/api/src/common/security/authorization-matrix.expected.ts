@@ -90,6 +90,18 @@ export const MATRIZ_API: Record<string, string> = {
   'GET /followup': 'AES',
   'GET /followup/avaliacao/:avaliacaoIuId': 'AES',
   'GET /followup/:id': 'AES',
+  // avaliação de IU (etapa 4a): dado clínico — enfermeiro/admin escrevem, secretaria só lê; 'minhas' é só do enfermeiro
+  'POST /avaliacao-iu': 'AE',
+  'PATCH /avaliacao-iu/:id': 'AE',
+  'PATCH /avaliacao-iu/:id/excluir': 'AE',
+  'GET /avaliacao-iu/minhas': 'E',
+  'GET /avaliacao-iu/count': 'AES',
+  'GET /avaliacao-iu': 'AES',
+  'GET /avaliacao-iu/:id': 'AES',
+  // captação (etapa 4a): POST é PÚBLICO (protegido por PIN no CaptadorPinGuard); gestão da fila = equipe da clínica
+  'POST /captacao': 'PUBLICO',
+  'GET /captacao': 'AES',
+  'POST /captacao/:id/exportar': 'AES',
 
   // produtos: catálogo operacional global. Leitura da equipe; alteração só admin (SUPER_ADMIN sempre passa)
   'GET /produtos': 'AES',

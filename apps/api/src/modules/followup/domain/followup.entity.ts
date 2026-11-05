@@ -8,8 +8,8 @@ export interface FollowUp {
   id: string;
   clinicaId: string;
   pacienteId: string;
-  // Referência à avaliação que originou o follow-up. Opcional por ora: o módulo avaliacao-iu ainda não foi portado
-  // (os registros antigos têm o valor). TODO: validar a referência quando avaliacao-iu existir.
+  // Referência à avaliação que originou o follow-up (validada na criação: existe e é deste paciente/clínica).
+  // Opcional: registros sem avaliação continuam válidos.
   avaliacaoIuId?: string;
   enfermeiroId: string;
   dataFollowup: Date;

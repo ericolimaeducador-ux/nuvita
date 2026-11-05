@@ -7,6 +7,7 @@ import type {
   Documento,
   Endereco,
   Entrega,
+  AvaliacaoIU,
   ChecklistItem,
   FollowUp,
   EtapaFluxoClinico,
@@ -683,4 +684,35 @@ export const followupApi = {
   /** Elegível/não elegível podem mover a etapa do fluxo clínico do paciente (decisão do servidor). */
   create: (payload: CreateFollowUpPayload) => api.post<FollowUp>('/followup', payload).then((r) => r.data),
   excluir: (id: string) => api.patch<FollowUp>(`/followup/${id}/excluir`).then((r) => r.data),
+};
+
+// ---------- Avaliação de IU ----------
+export const avaliacaoIUApi = {
+  /** Criar pode levar o paciente elegível para AVALIACAO_IU no fluxo clínico (decisão do servidor). */
+  create: (payload: Record<string, unknown>) => api.post<AvaliacaoIU>('/avaliacao-iu', payload).then((r) => r.data),
+  update: (id: string, payload: Record<string, unknown>) =>
+    api.patch<AvaliacaoIU>(`/avaliacao-iu/${id}`, payload).then((r) => r.data),
+  listByPaciente: (pacienteId: string) =>
+    api.get<AvaliacaoIU[]>('/avaliacao-iu', { params: { pacienteId } }).then((r) => comoLista<AvaliacaoIU>(r.data) as AvaliacaoIU[]),
+  excluir: (id: string) => api.patch<AvaliacaoIU>(`/avaliacao-iu/${id}/excluir`).then((r) => r.data),
+};
+
+// ---------- Captação de pacientes (fila de campo) ----------
+export interface CaptacaoPendente {
+  id: string;
+  nome?: string;
+  cpf?: string;
+  dataNascimento?: string;
+  endereco?: string;
+  telefone: string;
+  email?: string;
+  codigoEnfermeiro: string;
+  status: 'pendente' | 'exportado';
+  criadoEm: string;
+}
+export const captacaoApi = {
+  listarPendentes: () => api.get<{ success: true; data: CaptacaoPendente[] }>('/captacao').then((r) => r.data),
+  /** Exporta o lead como paciente [IU] na etapa inicial do fluxo. 400 se o lead não atende o cadastro de paciente. */
+  exportar: (id: string) =>
+    api.post<{ success: true; message: string; pacienteId: string }>(`/captacao/${id}/exportar`).then((r) => r.data),
 };

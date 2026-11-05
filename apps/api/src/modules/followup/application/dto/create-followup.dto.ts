@@ -5,8 +5,8 @@ import { StatusElegibilidade } from '../../domain/followup.entity';
 export class CreateFollowUpDto {
   @IsOptional() @IsString() clinicaId?: string;
   @IsMongoId() pacienteId!: string;
-  // Opcional por ora (avaliacao-iu ainda não foi portado). TODO: obrigatório + validado quando existir.
-  @IsOptional() @IsString() avaliacaoIuId?: string;
+  // Opcional; quando vem, o serviço valida que a avaliação existe e é deste paciente/clínica.
+  @IsOptional() @IsMongoId() avaliacaoIuId?: string;
   @IsDateString() dataFollowup!: string;
   @IsEnum(StatusElegibilidade) statusElegibilidade!: StatusElegibilidade;
   @IsString() @IsNotEmpty() @MaxLength(5000) observacoes!: string;

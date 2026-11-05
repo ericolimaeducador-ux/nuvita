@@ -5,6 +5,7 @@ import { AuditLogMongoRepository } from '../auth/infrastructure/mongo/audit-log-
 import { AuditLogMongo, AuditLogSchema } from '../auth/infrastructure/mongo/audit-log.schema';
 import { JwtAuthGuard } from '../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/presentation/guards/roles.guard';
+import { AvaliacaoIUModule } from '../avaliacao-iu/avaliacao-iu.module';
 import { PacientesModule } from '../pacientes/pacientes.module';
 import { ProdutosModule } from '../produtos/produtos.module';
 import { EntregasService } from './application/entregas.service';
@@ -21,6 +22,7 @@ import { EntregasController } from './presentation/entregas.controller';
     ]),
     PacientesModule,
     ProdutosModule,
+    AvaliacaoIUModule,
   ],
   controllers: [EntregasController],
   providers: [

@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, PipelineStage, Types } from 'mongoose';
-import { EtapaFluxoClinico } from '../../../../../../../packages/shared/src/fluxo-clinico';
 import {
+  CorrigirIdentidadeInput,
   CreatePacienteInput,
   ListPacientesInput,
   PacienteRepository,
@@ -11,7 +11,7 @@ import {
   UpdatePacienteInput,
 } from '../../application/ports/paciente.repository';
 import { CursorPaginationResult } from '../../domain/pagination';
-import { Convenio, Endereco, Paciente } from '../../domain/paciente.entity';
+import { ClassificacaoArea, Convenio, Endereco, Paciente, ResponsavelLegal } from '../../domain/paciente.entity';
 import { PacienteCryptoService } from '../crypto/paciente-crypto.service';
 import { PacienteDocument, PacienteMongo } from './paciente.schema';
 
@@ -52,11 +52,18 @@ export class PacienteMongoRepository implements PacienteRepository {
       convenio: this.encryptJsonOptional(input.convenio),
       consentimentoLGPD: input.consentimentoLGPD,
       projeto: input.projeto,
+      linhaTerapeutica: input.linhaTerapeutica,
       representante: input.representante,
-      etapaFluxo: EtapaFluxoClinico.AGUARDANDO_ATENDIMENTO,
-      etapaFluxoDesde: new Date(),
+      responsavelLegal: this.encryptJsonOptional(input.responsavelLegal),
+      autorizacaoResponsavel: input.autorizacaoResponsavel,
+      classificacoes: input.classificacoes,
       ativo: true,
     };
+    // Etapa inicial só entra quando informada (paciente elegível ao fluxo): sem null explícito.
+    if (input.etapaFluxo !== undefined) {
+      doc.etapaFluxo = input.etapaFluxo;
+      doc.etapaFluxoDesde = input.etapaFluxoDesde ?? new Date();
+    }
     if (input.cpf) {
       doc.cpf = this.crypto.encryptString(this.crypto.normalizeCpf(input.cpf));
       doc.cpfHash = this.crypto.cpfHash(input.cpf);
@@ -192,6 +199,72 @@ export class PacienteMongoRepository implements PacienteRepository {
     return document ? this.toEntity(document) : null;
   }
 
+  async corrigirIdentidade(
+    clinicaId: string,
+    pacienteId: string,
+    input: CorrigirIdentidadeInput,
+  ): Promise<Paciente | null> {
+    // Estado anterior lido com cpf/nome/data já decifrados só em memória; a versão
+    // vai criptografada. Ler e gravar não são atômicos entre si, então o filtro do
+    // update exige que o cpfHash ainda seja o lido — se outra escrita mexeu no
+    // meio, a correção não é aplicada (retorna null → 404/409 no serviço).
+    const atual = await this.pacienteModel
+      .findOne({ clinicaId, _id: new Types.ObjectId(pacienteId), ativo: true })
+      .exec();
+    if (!atual) return null;
+    const anterior = this.toEntity(atual);
+
+    const set: Record<string, unknown> = { atualizadoEm: new Date() };
+    const campos: string[] = [];
+    const novo: Record<string, unknown> = {};
+    if (input.nome !== undefined) {
+      set.nome = input.nome;
+      novo.nome = input.nome;
+      campos.push('nome');
+    }
+    if (input.cpf !== undefined) {
+      set.cpf = this.crypto.encryptString(this.crypto.normalizeCpf(input.cpf));
+      set.cpfHash = this.crypto.cpfHash(input.cpf);
+      novo.cpf = this.crypto.normalizeCpf(input.cpf);
+      campos.push('cpf');
+    }
+    if (input.dataNascimento !== undefined) {
+      set.dataNascimento = input.dataNascimento;
+      novo.dataNascimento = input.dataNascimento;
+      campos.push('dataNascimento');
+    }
+
+    const versao = {
+      campos,
+      dados: this.crypto.encryptJson({
+        anterior: { nome: anterior.nome, cpf: anterior.cpf, dataNascimento: anterior.dataNascimento },
+        novo,
+        justificativa: input.justificativa,
+      }),
+      solicitadoPor: input.solicitadoPor,
+      ...(input.ticketId ? { ticketId: input.ticketId } : {}),
+      executadoPor: input.executadoPor,
+      executadoEm: input.executadoEm,
+    };
+
+    // Uma única operação em um único documento: novos valores + versão anterior
+    // entram juntos ou nenhum dos dois entra (sem transação, sem estado parcial).
+    const document = await this.pacienteModel
+      .findOneAndUpdate(
+        {
+          clinicaId,
+          _id: new Types.ObjectId(pacienteId),
+          ativo: true,
+          ...(atual.get('cpfHash') ? { cpfHash: atual.get('cpfHash') } : { cpfHash: { $exists: false } }),
+        },
+        { $set: set, $push: { versoesIdentidade: versao } },
+        { new: true },
+      )
+      .exec();
+
+    return document ? this.toEntity(document) : null;
+  }
+
   async deactivate(clinicaId: string, pacienteId: string): Promise<Paciente | null> {
     const document = await this.pacienteModel
       .findOneAndUpdate(
@@ -230,12 +303,15 @@ export class PacienteMongoRepository implements PacienteRepository {
     if (input.endereco !== undefined) update.endereco = this.encryptJsonOptional(input.endereco);
     if (input.convenio !== undefined) update.convenio = this.encryptJsonOptional(input.convenio);
     if (input.consentimentoLGPD !== undefined) update.consentimentoLGPD = input.consentimentoLGPD;
-    if (input.programaIU !== undefined) update.programaIU = input.programaIU;
     if (input.projeto !== undefined) update.projeto = input.projeto;
+    if (input.linhaTerapeutica !== undefined) update.linhaTerapeutica = input.linhaTerapeutica;
     if (input.representante !== undefined) update.representante = input.representante;
-    if (input.observacoes !== undefined) update.observacoes = this.encryptOptional(input.observacoes);
+    if (input.classificacoes !== undefined) update.classificacoes = input.classificacoes;
     if (input.etapaFluxo !== undefined) update.etapaFluxo = input.etapaFluxo;
     if (input.etapaFluxoDesde !== undefined) update.etapaFluxoDesde = input.etapaFluxoDesde;
+    if (input.responsavelLegal !== undefined) update.responsavelLegal = this.encryptJsonOptional(input.responsavelLegal);
+    if (input.autorizacaoResponsavel !== undefined) update.autorizacaoResponsavel = input.autorizacaoResponsavel;
+    if (input.observacoes !== undefined) update.observacoes = this.encryptOptional(input.observacoes);
 
     return update;
   }
@@ -272,9 +348,12 @@ export class PacienteMongoRepository implements PacienteRepository {
       convenio: this.decryptJsonOptional<Convenio>(object.convenio),
       consentimentoLGPD: object.consentimentoLGPD,
       observacoes: this.decryptOptional(object.observacoes),
-      programaIU: object.programaIU ?? false,
       projeto: object.projeto,
+      linhaTerapeutica: object.linhaTerapeutica,
       representante: object.representante,
+      responsavelLegal: this.decryptJsonOptional<ResponsavelLegal>(object.responsavelLegal),
+      autorizacaoResponsavel: object.autorizacaoResponsavel,
+      classificacoes: object.classificacoes as ClassificacaoArea[] | undefined,
       etapaFluxo: object.etapaFluxo,
       etapaFluxoDesde: object.etapaFluxoDesde,
       ativo: object.ativo,
@@ -290,17 +369,15 @@ export class PacienteMongoRepository implements PacienteRepository {
     };
   }
 
-  /** Filtros comuns de list/searchByName (tenant, ativo, programaIU, etapa, dia de nascimento). */
+  /** Filtros comuns de list/searchByName (tenant, ativo, projeto, dia de nascimento). */
   private listQuery(input: ListPacientesInput): Record<string, unknown> {
     const query = this.baseQuery(input.clinicaId, input.incluirInativos);
-    if (input.programaIU !== undefined) query.programaIU = input.programaIU;
-    if (input.projeto !== undefined) {
-      query.projeto = input.projeto;
-    } else if (input.projetoExcluir !== undefined) {
-      query.projeto = { $ne: input.projetoExcluir };
-    }
+    if (input.projeto !== undefined) query.projeto = input.projeto;
+    if (input.linhaTerapeutica !== undefined) query.linhaTerapeutica = input.linhaTerapeutica;
     if (input.representante !== undefined) query.representante = input.representante;
     if (input.etapaFluxo !== undefined) query.etapaFluxo = input.etapaFluxo;
+    // Elegível ao fluxo = classificacoes é EXATAMENTE ['IU'] (igualdade de array no Mongo).
+    if (input.somenteFluxoClinico) query.classificacoes = [ClassificacaoArea.IU];
     if (input.dataNascimento) {
       // Campo gravado como meia-noite UTC; intervalo de 24h cobre o dia inteiro.
       const inicio = new Date(`${input.dataNascimento}T00:00:00.000Z`);
@@ -410,13 +487,7 @@ export class PacienteMongoRepository implements PacienteRepository {
   }
 
   private decryptOptional(value?: string): string | undefined {
-    if (!value) return undefined;
-    try {
-      return this.crypto.decryptString(value);
-    } catch (error) {
-      this.logger.warn(`Campo cifrado de paciente ilegível e omitido na leitura: ${(error as Error).message}`);
-      return undefined;
-    }
+    return value ? this.crypto.decryptString(value) : undefined;
   }
 
   private encryptJsonOptional<T>(value?: T): string | undefined {
@@ -424,12 +495,6 @@ export class PacienteMongoRepository implements PacienteRepository {
   }
 
   private decryptJsonOptional<T>(value?: string): T | undefined {
-    if (!value) return undefined;
-    try {
-      return this.crypto.decryptJson<T>(value);
-    } catch (error) {
-      this.logger.warn(`Campo cifrado de paciente ilegível e omitido na leitura: ${(error as Error).message}`);
-      return undefined;
-    }
+    return value ? this.crypto.decryptJson<T>(value) : undefined;
   }
 }

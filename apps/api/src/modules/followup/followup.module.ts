@@ -1,7 +1,11 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AUDIT_LOG_REPOSITORY } from '../auth/auth.constants';
+import { AuditLogMongoRepository } from '../auth/infrastructure/mongo/audit-log-mongo.repository';
+import { AuditLogMongo, AuditLogSchema } from '../auth/infrastructure/mongo/audit-log.schema';
 import { JwtAuthGuard } from '../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/presentation/guards/roles.guard';
+import { AvaliacaoIUModule } from '../avaliacao-iu/avaliacao-iu.module';
 import { NotificacoesModule } from '../notificacoes/notificacoes.module';
 import { PacientesModule } from '../pacientes/pacientes.module';
 import { FollowUpService } from './application/followup.service';
@@ -12,9 +16,13 @@ import { FollowUpController } from './presentation/followup.controller';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: FollowUpMongo.name, schema: FollowUpSchema }]),
+    MongooseModule.forFeature([
+      { name: FollowUpMongo.name, schema: FollowUpSchema },
+      { name: AuditLogMongo.name, schema: AuditLogSchema },
+    ]),
     NotificacoesModule,
     PacientesModule,
+    AvaliacaoIUModule,
   ],
   controllers: [FollowUpController],
   providers: [
@@ -22,6 +30,7 @@ import { FollowUpController } from './presentation/followup.controller';
     JwtAuthGuard,
     RolesGuard,
     { provide: FOLLOWUP_REPOSITORY, useClass: FollowUpMongoRepository },
+    { provide: AUDIT_LOG_REPOSITORY, useClass: AuditLogMongoRepository },
   ],
   exports: [FollowUpService],
 })

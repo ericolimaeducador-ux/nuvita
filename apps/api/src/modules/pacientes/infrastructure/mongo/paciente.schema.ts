@@ -1,7 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { ProjetoPaciente, Sexo } from '../../domain/paciente.entity';
-import { EtapaFluxoClinico } from '../../../../../../../packages/shared/src/fluxo-clinico';
+import {
+  ClassificacaoArea,
+  EtapaFluxoClinico,
+  LinhaTerapeutica,
+  ProjetoPaciente,
+  Sexo,
+} from '../../domain/paciente.entity';
 
 export type PacienteDocument = HydratedDocument<PacienteMongo>;
 
@@ -18,6 +23,50 @@ export class ConsentimentoLGPDMongo {
 }
 
 const ConsentimentoLGPDSchema = SchemaFactory.createForClass(ConsentimentoLGPDMongo);
+
+@Schema({ _id: false, versionKey: false })
+export class AutorizacaoResponsavelMongo {
+  @Prop({ required: true, default: false })
+  confirmado!: boolean;
+
+  // Quem confirmou (context.user.sub) e quando — não reescrito num PATCH que
+  // não toca em autorizacaoResponsavel (ver PacientesService.update()): fica
+  // como o registro histórico de QUANDO a autorização foi de fato confirmada.
+  @Prop()
+  registradaPor?: string;
+
+  @Prop()
+  registradaEm?: Date;
+}
+
+const AutorizacaoResponsavelSchema = SchemaFactory.createForClass(AutorizacaoResponsavelMongo);
+
+// Versão anterior de uma correção de identidade (feature-correcao-identidade-paciente).
+// `dados` é um blob criptografado (AES-256-GCM, mesma chave/serviço dos demais
+// campos sensíveis) com { anterior, novo, justificativa } — valores antigos/novos
+// e a justificativa livre NUNCA aparecem em claro nem na trilha de auditoria.
+@Schema({ _id: false, versionKey: false })
+export class VersaoIdentidadeMongo {
+  @Prop({ type: [String], required: true })
+  campos!: string[];
+
+  @Prop({ required: true })
+  dados!: string;
+
+  @Prop({ required: true })
+  solicitadoPor!: string;
+
+  @Prop()
+  ticketId?: string;
+
+  @Prop({ required: true })
+  executadoPor!: string;
+
+  @Prop({ required: true })
+  executadoEm!: Date;
+}
+
+const VersaoIdentidadeSchema = SchemaFactory.createForClass(VersaoIdentidadeMongo);
 
 @Schema({ collection: 'pacientes', versionKey: false })
 export class PacienteMongo {
@@ -54,33 +103,53 @@ export class PacienteMongo {
   @Prop({ type: ConsentimentoLGPDSchema })
   consentimentoLGPD?: ConsentimentoLGPDMongo;
 
-  @Prop({ default: false, index: true })
-  programaIU?: boolean;
-
-  // Rótulo neutro (Alpha/Beta) — não criptografado, não é dado sensível.
   @Prop({ enum: Object.values(ProjetoPaciente), index: true })
   projeto?: ProjetoPaciente;
+
+  @Prop({ enum: Object.values(LinhaTerapeutica), index: true })
+  linhaTerapeutica?: LinhaTerapeutica;
 
   // Quem indicou o paciente — não criptografado (mesmo racional de `projeto`)
   // para permitir filtro/agregação e autocomplete por valores já usados.
   @Prop({ trim: true, index: true })
   representante?: string;
 
+  // JSON criptografado (mesmo padrão de endereco/convenio, um único blob para o
+  // subdocumento inteiro) — inclui nome/cpf/telefone/email do responsável, todos
+  // dados pessoais sensíveis. Sem índice para o CPF do responsável (diferente do
+  // cpfHash do paciente): um mesmo responsável pode ter vários pacientes
+  // vinculados, e não há hoje um caso de uso de busca por CPF do responsável
+  // que justifique manter um índice (nem único, nem não-único) sobre esse dado.
+  @Prop()
+  responsavelLegal?: string;
+
+  // Não criptografado (mesmo padrão de consentimentoLGPD) — não é dado pessoal do
+  // responsável, é o registro operacional de QUEM/QUANDO autorizou.
+  @Prop({ type: AutorizacaoResponsavelSchema })
+  autorizacaoResponsavel?: AutorizacaoResponsavelMongo;
+
   // Texto livre, criptografado (mesmo padrão de telefone/email/endereco) —
   // qualquer profissional de atendimento pode escrever, ver PATCH /observacoes.
   @Prop()
   observacoes?: string;
 
-  @Prop({
-    required: true,
-    enum: Object.values(EtapaFluxoClinico),
-    default: EtapaFluxoClinico.AGUARDANDO_ATENDIMENTO,
-    index: true,
-  })
-  etapaFluxo!: EtapaFluxoClinico;
+  // Classificação de área (IU/FA/OT). Sem default: dado anterior à classificação fica sem o campo
+  // até o script de migração. A elegibilidade ao fluxo é derivada, não gravada.
+  @Prop({ type: [String], enum: Object.values(ClassificacaoArea), default: undefined, index: true })
+  classificacoes?: ClassificacaoArea[];
 
-  @Prop({ required: true, default: Date.now })
-  etapaFluxoDesde!: Date;
+  // Fluxo clínico: OPCIONAL e sem default forçado — só quem entra no fluxo (classificado só como IU) recebe etapa.
+  @Prop({ enum: Object.values(EtapaFluxoClinico) })
+  etapaFluxo?: EtapaFluxoClinico;
+
+  @Prop()
+  etapaFluxoDesde?: Date;
+
+  // Histórico append-only das correções de identidade. select:false — fica fora de
+  // qualquer leitura normal (lista, detalhe, export LGPD) e só sai por consulta
+  // explícita; gravado exclusivamente por PacienteMongoRepository.corrigirIdentidade().
+  @Prop({ type: [VersaoIdentidadeSchema], default: undefined, select: false })
+  versoesIdentidade?: VersaoIdentidadeMongo[];
 
   @Prop({ default: true, index: true })
   ativo!: boolean;
@@ -99,14 +168,10 @@ PacienteSchema.index({ clinicaId: 1, _id: 1 });
 // TODOS os campos estão ausentes, e clinicaId sempre existe — então todo
 // paciente sem CPF entrava no índice com cpfHash:null e o 2º colidia.
 // Índice parcial exige cpfHash realmente presente (string), como pretendido.
-// `ativo: true` também entra no filtro: "excluir paciente" é soft-delete
-// (ativo=false, dado continua no banco) — sem essa condição, o CPF de um
-// paciente excluído ficava preso para sempre, bloqueando um recadastro
-// corrigido ou até um paciente novo com o mesmo CPF na mesma clínica.
 PacienteSchema.index(
   { clinicaId: 1, cpfHash: 1 },
-  { unique: true, partialFilterExpression: { cpfHash: { $type: 'string' }, ativo: true } },
+  { unique: true, partialFilterExpression: { cpfHash: { $type: 'string' } } },
 );
 PacienteSchema.index({ clinicaId: 1, ativo: 1, criadoEm: -1, _id: -1 });
-PacienteSchema.index({ clinicaId: 1, etapaFluxo: 1, criadoEm: -1 });
 PacienteSchema.index({ clinicaId: 1, representante: 1 });
+PacienteSchema.index({ clinicaId: 1, etapaFluxo: 1, criadoEm: -1 });

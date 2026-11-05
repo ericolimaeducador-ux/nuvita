@@ -1,8 +1,11 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -15,6 +18,7 @@ import {
   exigeTwoFactor,
   Papel,
 } from '../../../../../../packages/shared/src/auth';
+import { versaoTermosExigida } from '../../../../../../packages/shared/src/termos';
 import {
   ACCESS_TOKEN_TTL,
   AUDIT_LOG_REPOSITORY,
@@ -23,6 +27,7 @@ import {
   USER_REPOSITORY,
 } from '../auth.constants';
 import { AuditEvent } from '../domain/audit-event.enum';
+import { AuthenticatedUser } from '../domain/authenticated-user';
 import { PublicUser, toPublicUser, User } from '../domain/user.entity';
 import { LoginRateLimiterService } from '../infrastructure/redis/login-rate-limiter.service';
 import { TokenRevocationService } from '../infrastructure/redis/token-revocation.service';
@@ -47,6 +52,8 @@ export interface AuthResponse extends AuthTokens {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(AUDIT_LOG_REPOSITORY) private readonly auditLogs: AuditLogRepository,
@@ -100,28 +107,34 @@ export class AuthService {
 
   async login(dto: LoginDto, context: RequestContext): Promise<AuthResponse> {
     const email = dto.email.toLowerCase();
-    await this.loginRateLimiter.assertAllowed(context.ip);
+    await this.loginRateLimiter.assertAllowed(context.ip, email);
 
     const user = await this.users.findByEmailWithSecrets(email);
     if (!user || !user.ativo) {
+      // Conta inexistente também paga o custo do bcrypt: sem atalho que revele, pelo tempo, que a conta não existe.
+      await bcrypt.compare(dto.password, await this.hashFicticio());
       await this.recordLoginFailure(email, context, 'INVALID_CREDENTIALS');
-      throw new UnauthorizedException('Credenciais invalidas.');
+      throw this.credenciaisInvalidas();
     }
 
     const passwordMatches = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordMatches) {
       await this.recordLoginFailure(email, context, 'INVALID_CREDENTIALS', user.id);
-      throw new UnauthorizedException('Credenciais invalidas.');
+      throw this.credenciaisInvalidas();
     }
 
     try {
       this.assertTwoFactorIfRequired(user, dto.totpCode);
-    } catch (error) {
+    } catch {
+      // Sem oráculo de senha: "senha certa sem/com código errado" é igual a "senha errada" para quem chama.
+      // A causa real fica só na auditoria.
       await this.recordLoginFailure(email, context, 'INVALID_2FA', user.id);
-      throw error;
+      throw this.credenciaisInvalidas();
     }
 
-    await this.loginRateLimiter.clear(context.ip);
+    // Zera só o par (ip, conta) que logou: o histórico de falhas de OUTRAS contas
+    // no mesmo IP (NAT, atacante) não pode ser apagado por um acerto.
+    await this.loginRateLimiter.clear(context.ip, email);
     const tokens = await this.issueTokens(user);
 
     await this.auditLogs.create({
@@ -146,6 +159,8 @@ export class AuthService {
     if (!user || !user.ativo) {
       throw new UnauthorizedException('Sessao invalida.');
     }
+
+    this.assertTokenNotStale(payload, user.tokensValidosApartirDe);
 
     await this.tokenRevocation.revoke(payload.jti, REFRESH_TOKEN_TTL_SECONDS);
     const tokens = await this.issueTokens(user);
@@ -194,12 +209,191 @@ export class AuthService {
     });
   }
 
-  async validateAccessPayload(payload: AuthTokenPayload): Promise<AuthTokenPayload> {
-    if (
-      payload.typ !== 'access' ||
-      (await this.tokenRevocation.isRevoked(payload.jti)) ||
-      (payload.iat !== undefined && (await this.tokenRevocation.isAllRevokedSince(payload.sub, payload.iat * 1000)))
-    ) {
+  /**
+   * Registra o aceite dos Termos de Uso do ENFERMEIRO (feature-terms-of-service-acceptance).
+   * Em clínica na fase de teste, o termo aceito é o Termo de Teste (versaoTermosExigida).
+   * Endpoint isento do gate (@GateExempt), senão o usuário travaria: não pode
+   * aceitar porque aceitar está bloqueado pelo próprio gate de termos.
+   *
+   * Idempotente para a mesma versão: reenviar não regrava nem re-audita.
+   */
+  async aceitarTermos(
+    userId: string,
+    versao: string,
+    context: RequestContext,
+  ): Promise<{ user: PublicUser }> {
+    const user = await this.users.findById(userId);
+    if (!user || !user.ativo) {
+      throw new UnauthorizedException('Usuario inativo ou inexistente.');
+    }
+
+    // Termo de Teste para clínica em fase de teste; Termos de Uso fora dela.
+    const versaoExigida = versaoTermosExigida(user.faseTeste);
+    if (versao !== versaoExigida) {
+      if (!versaoExigida) {
+        // Constante compartilhada vazia no runtime (build quebrado): o gate não
+        // tem versão vigente para validar. Fail-closed — ninguém aceita nada.
+        this.logEventoObservabilidade('error', {
+          msg: 'Versao vigente dos Termos de Uso indisponivel no runtime.',
+          event: 'terms_source_unavailable',
+          userId,
+        });
+        throw new ServiceUnavailableException('Termos de Uso indisponiveis no momento.');
+      }
+      this.logEventoObservabilidade('warn', {
+        msg: 'Aceite de Termos rejeitado: versao invalida ou desatualizada.',
+        event: 'gate_endpoint_4xx',
+        status: 400,
+        gate: 'terms',
+        userId,
+      });
+      throw new BadRequestException('Versao dos Termos de Uso invalida ou desatualizada.');
+    }
+
+    if (user.termosAceitos?.versao === versao) {
+      return { user: toPublicUser(user) };
+    }
+
+    const updated = await this.persistirEstadoDoGate(
+      'terms',
+      userId,
+      () => this.users.update(userId, { termosAceitos: { versao, dataAceite: new Date() } }),
+    );
+    if (!updated) {
+      throw new UnauthorizedException('Usuario inativo ou inexistente.');
+    }
+
+    await this.auditLogs.create({
+      event: AuditEvent.TERMS_ACCEPTED,
+      userId: updated.id,
+      email: updated.email,
+      ip: context.ip,
+      userAgent: context.userAgent,
+      metadata: { versao },
+    });
+
+    return { user: toPublicUser(updated) };
+  }
+
+  /**
+   * O profissional preenche o PRÓPRIO COREN uma única vez (feature-timbre-clinico-dinamico). Depois de
+   * preenchido fica travado (409): a correção é só do super-admin, também auditada. O id vem do token,
+   * nunca do corpo. TODO(legal): formato do COREN não validado — confirmar em fonte oficial.
+   */
+  async atualizarMeuCoren(userId: string, coren: string, context: RequestContext): Promise<{ user: PublicUser }> {
+    const user = await this.users.findById(userId);
+    if (!user || !user.ativo) {
+      throw new UnauthorizedException('Usuario inativo ou inexistente.');
+    }
+    if (user.coren) {
+      throw new ConflictException('COREN já definido; correção só pelo administrador.');
+    }
+
+    const updated = await this.users.update(userId, { coren });
+    if (!updated) {
+      throw new UnauthorizedException('Usuario inativo ou inexistente.');
+    }
+
+    await this.auditLogs.create({
+      event: AuditEvent.USER_COREN_SET,
+      userId,
+      email: user.email,
+      ip: context.ip,
+      userAgent: context.userAgent,
+      metadata: { corenNovo: coren },
+    });
+
+    return { user: toPublicUser(updated) };
+  }
+
+  /**
+   * Conclui a troca de senha obrigatória do primeiro login
+   * (feature-forced-password-change). Válido só enquanto `deveTrocarSenha` é
+   * true; não é um "trocar minha senha" genérico (esse não passa por aqui e
+   * exigiria a senha atual). Endpoint isento do gate (@GateExempt).
+   */
+  async trocarSenhaObrigatoria(
+    userId: string,
+    novaSenha: string,
+    context: RequestContext,
+  ): Promise<{ user: PublicUser }> {
+    const user = await this.users.findById(userId);
+    if (!user || !user.ativo) {
+      throw new UnauthorizedException('Usuario inativo ou inexistente.');
+    }
+
+    if (!user.deveTrocarSenha) {
+      this.logEventoObservabilidade('warn', {
+        msg: 'Troca de senha obrigatoria rejeitada: nao ha troca pendente para a conta.',
+        event: 'gate_endpoint_4xx',
+        status: 409,
+        gate: 'password',
+        userId,
+      });
+      throw new ConflictException('Nao ha troca de senha obrigatoria pendente para esta conta.');
+    }
+
+    const passwordHash = await bcrypt.hash(novaSenha, this.configService.getConfig().bcryptRounds);
+    const updated = await this.persistirEstadoDoGate('password', userId, () =>
+      this.users.update(userId, {
+        passwordHash,
+        deveTrocarSenha: false,
+        tokensValidosApartirDe: new Date(),
+      }),
+    );
+    if (!updated) {
+      throw new UnauthorizedException('Usuario inativo ou inexistente.');
+    }
+
+    await this.auditLogs.create({
+      event: AuditEvent.FORCED_PASSWORD_CHANGED,
+      userId: updated.id,
+      email: updated.email,
+      ip: context.ip,
+      userAgent: context.userAgent,
+    });
+
+    return { user: toPublicUser(updated) };
+  }
+
+  /**
+   * Persiste a mudança de estado de um gate pós-login (aceite de termos ou
+   * troca de senha obrigatória). Se a escrita lançar, emite
+   * `auth_gate_persist_failure` (§11 do TDD — o usuário completou o gate mas
+   * ficou preso nele) e re-lança.
+   */
+  private async persistirEstadoDoGate<T>(
+    gate: 'terms' | 'password',
+    userId: string,
+    persist: () => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await persist();
+    } catch (error) {
+      this.logEventoObservabilidade('error', {
+        msg: 'Falha ao persistir a conclusao de um gate pos-login.',
+        event: 'auth_gate_persist_failure',
+        gate,
+        userId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Observabilidade (§11 do TDD): sem lib de métricas — log estruturado, JSON
+   * numa linha, só ids/enums. Nunca senha, senha nova, segredo 2FA nem texto
+   * dos Termos.
+   */
+  private logEventoObservabilidade(
+    level: 'error' | 'warn',
+    payload: Record<string, unknown>,
+  ): void {
+    this.logger[level](JSON.stringify({ level, ...payload }));
+  }
+
+  async validateAccessPayload(payload: AuthTokenPayload): Promise<AuthenticatedUser> {
+    if (payload.typ !== 'access' || (await this.tokenRevocation.isRevoked(payload.jti))) {
       throw new UnauthorizedException('Token invalido.');
     }
 
@@ -208,7 +402,54 @@ export class AuthService {
       throw new UnauthorizedException('Usuario inativo ou inexistente.');
     }
 
-    return payload;
+    this.assertTokenNotStale(payload, user.tokensValidosApartirDe);
+
+    // Enriquece request.user com o estado de conta que o AuthGatesGuard avalia
+    // (mesmo findById acima — sem round-trip extra).
+    return {
+      ...payload,
+      deveTrocarSenha: user.deveTrocarSenha ?? false,
+      termosAceitos: user.termosAceitos ?? null,
+      faseTeste: user.faseTeste ?? false,
+    };
+  }
+
+  /**
+   * Revogação de sessão na troca de senha (feature-session-revocation-on-password-change).
+   * tokensValidosApartirDe ausente/null = nenhuma troca de senha jamais invalidou
+   * sessões deste usuário → NUNCA rejeitar nesse caso, é o critério de aceite
+   * mais sensível desta feature.
+   */
+  private assertTokenNotStale(
+    payload: AuthTokenPayload,
+    tokensValidosApartirDe: Date | null | undefined,
+  ): void {
+    if (!tokensValidosApartirDe) {
+      return;
+    }
+
+    const iatMs = payload.iat != null ? payload.iat * 1000 : undefined;
+    if (iatMs === undefined || iatMs < tokensValidosApartirDe.getTime()) {
+      this.logEventoObservabilidade('warn', {
+        msg: 'Token rejeitado: emitido antes da ultima troca de senha do usuario.',
+        event: 'token_rejected_stale_session',
+        userId: payload.sub,
+        typ: payload.typ,
+      });
+      throw new UnauthorizedException('Token invalido.');
+    }
+  }
+
+  private credenciaisInvalidas(): UnauthorizedException {
+    return new UnauthorizedException('Credenciais invalidas.');
+  }
+
+  private hashFicticioPromise?: Promise<string>;
+
+  /** Hash bcrypt descartável (mesmo custo das contas reais) para equalizar o tempo da conta inexistente. */
+  private hashFicticio(): Promise<string> {
+    this.hashFicticioPromise ??= bcrypt.hash(randomUUID(), this.configService.getConfig().bcryptRounds);
+    return this.hashFicticioPromise;
   }
 
   private assertTwoFactorIfRequired(user: User, token?: string): void {
@@ -238,7 +479,7 @@ export class AuthService {
     reason: string,
     userId?: string,
   ): Promise<void> {
-    await this.loginRateLimiter.recordFailure(context.ip);
+    await this.loginRateLimiter.recordFailure(context.ip, email);
     await this.auditLogs.create({
       event: AuditEvent.LOGIN_FAILURE,
       userId,
@@ -294,13 +535,8 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token invalido.');
     }
 
-    if (failIfRevoked) {
-      const revoked =
-        (await this.tokenRevocation.isRevoked(payload.jti)) ||
-        (payload.iat !== undefined && (await this.tokenRevocation.isAllRevokedSince(payload.sub, payload.iat * 1000)));
-      if (revoked) {
-        throw new UnauthorizedException('Refresh token revogado.');
-      }
+    if (failIfRevoked && (await this.tokenRevocation.isRevoked(payload.jti))) {
+      throw new UnauthorizedException('Refresh token revogado.');
     }
 
     return payload;

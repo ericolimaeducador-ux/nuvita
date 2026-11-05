@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEmail,
   IsEnum,
   IsISO8601,
@@ -34,8 +35,23 @@ export class CreateNotificacaoDto {
   @IsPhoneNumber()
   telefone?: string;
 
+  // "Olá {nome}" — o destinatário EFETIVO da mensagem: o responsável legal do
+  // paciente menor (ver PacientesService.resumoPorIds()/contatoEfetivo()), ou o
+  // próprio paciente. Quando os dois divergem, `nomePaciente` guarda o nome do
+  // paciente para o "sobre {nomePaciente}" do texto (ver notificacao-template.service.ts).
   @IsString()
   nome!: string;
+
+  @IsOptional()
+  @IsString()
+  nomePaciente?: string;
+
+  // true quando `nome`/`email` acima são do responsável legal, não do paciente —
+  // escolhe a variante do texto que se dirige ao responsável (ver
+  // NotificacaoTemplateService.render()).
+  @IsOptional()
+  @IsBoolean()
+  paraResponsavel?: boolean;
 
   @IsOptional()
   @IsString()
@@ -52,6 +68,15 @@ export class CreateNotificacaoDto {
   @IsOptional()
   @IsString()
   documento?: string;
+
+  // Aviso de cobrança: valor já formatado (R$ 0,00) e vencimento (DD/MM/AAAA).
+  @IsOptional()
+  @IsString()
+  valor?: string;
+
+  @IsOptional()
+  @IsString()
+  vencimento?: string;
 
   @IsOptional()
   @IsString()

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Patch,
   Post,
   Req,
   Res,
@@ -11,33 +12,29 @@ import { Request, Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { extractRequestMeta } from '../../../common/http/client-ip';
 import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
-import { AccountRecoveryService } from '../application/account-recovery.service';
 import { AuthService, AuthTokens, RequestContext } from '../application/auth.service';
-import { ForgotLoginDto } from '../application/dto/forgot-login.dto';
-import { ForgotPasswordDto } from '../application/dto/forgot-password.dto';
 import { LoginDto } from '../application/dto/login.dto';
 import { RegisterUserDto } from '../application/dto/register-user.dto';
-import { ResetPasswordDto } from '../application/dto/reset-password.dto';
-import { VerifyForgotLoginDto } from '../application/dto/verify-forgot-login.dto';
 import {
   REFRESH_TOKEN_COOKIE,
   REFRESH_TOKEN_TTL_SECONDS,
 } from '../auth.constants';
+import { AceitarTermosDto } from '../application/dto/aceitar-termos.dto';
+import { AtualizarPerfilDto } from '../application/dto/atualizar-perfil.dto';
+import { TrocarSenhaObrigatoriaDto } from '../application/dto/trocar-senha-obrigatoria.dto';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { GateExempt } from './decorators/gate-exempt.decorator';
+import { AuthGatesGuard } from './guards/auth-gates.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { AuthThrottlerGuard } from './guards/auth-throttler.guard';
 import { AllowWithoutTenant } from '../../../common/tenancy/tenant-required.guard';
 
-// Rate limiting por IP (anti brute-force de senha/TOTP). O padrão do módulo é
-// 30 req/min; login e register apertam abaixo. Só as rotas de /auth têm o
-// guard — o resto da API segue sem throttling (polling da telemedicina etc.).
+// Rate limiting por IP (anti brute-force de senha/TOTP). O guard é global
+// (GlobalThrottlerGuard, registrado como APP_GUARD no AppModule) e usa o mesmo
+// tracker por X-Forwarded-For; aqui só apertamos o limite bem abaixo do teto
+// padrão de 300/min nas rotas que aceitam credencial.
 @Controller('auth')
-@UseGuards(AuthThrottlerGuard)
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly accountRecoveryService: AccountRecoveryService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Post('register')
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
@@ -63,34 +60,6 @@ export class AuthController {
     };
   }
 
-  @Post('forgot-password')
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  @AllowWithoutTenant()
-  async forgotPassword(@Body() dto: ForgotPasswordDto, @Req() request: Request) {
-    return this.accountRecoveryService.forgotPassword(dto, this.contextFromRequest(request));
-  }
-
-  @Post('reset-password')
-  @Throttle({ default: { ttl: 60_000, limit: 10 } })
-  @AllowWithoutTenant()
-  async resetPassword(@Body() dto: ResetPasswordDto, @Req() request: Request) {
-    return this.accountRecoveryService.resetPassword(dto, this.contextFromRequest(request));
-  }
-
-  @Post('forgot-login')
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  @AllowWithoutTenant()
-  async forgotLogin(@Body() dto: ForgotLoginDto, @Req() request: Request) {
-    return this.accountRecoveryService.forgotLogin(dto, this.contextFromRequest(request));
-  }
-
-  @Post('forgot-login/verify')
-  @Throttle({ default: { ttl: 60_000, limit: 10 } })
-  @AllowWithoutTenant()
-  async verifyForgotLogin(@Body() dto: VerifyForgotLoginDto, @Req() request: Request) {
-    return this.accountRecoveryService.verifyForgotLogin(dto, this.contextFromRequest(request));
-  }
-
   @Post('refresh')
   async refresh(
     @Req() request: Request,
@@ -111,7 +80,8 @@ export class AuthController {
   }
 
   @Post('logout')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AuthGatesGuard)
+  @GateExempt()
   async logout(
     @CurrentUser() user: AuthTokenPayload,
     @Req() request: Request,
@@ -125,6 +95,55 @@ export class AuthController {
 
     response.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/auth' });
     return { ok: true };
+  }
+
+  // Isento do gate (@GateExempt): é justamente o endpoint que resolve o gate
+  // de termos — sem a isenção, um ENFERMEIRO com termos pendentes nunca
+  // conseguiria aceitá-los (deadlock). Ver §2.6/§9 do TDD.
+  @Post('aceitar-termos')
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
+  @UseGuards(JwtAuthGuard, AuthGatesGuard)
+  @GateExempt()
+  @AllowWithoutTenant()
+  async aceitarTermos(
+    @Body() dto: AceitarTermosDto,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.authService.aceitarTermos(user.sub, dto.versao, this.contextFromRequest(request));
+  }
+
+  // Isento do gate (@GateExempt): é o endpoint que resolve o gate de troca de
+  // senha obrigatória — sem a isenção, quem tem `deveTrocarSenha` nunca
+  // conseguiria trocá-la (deadlock). Ver §2.6/§9 do TDD.
+  @Post('trocar-senha-obrigatoria')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @UseGuards(JwtAuthGuard, AuthGatesGuard)
+  @GateExempt()
+  @AllowWithoutTenant()
+  async trocarSenhaObrigatoria(
+    @Body() dto: TrocarSenhaObrigatoriaDto,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.authService.trocarSenhaObrigatoria(
+      user.sub,
+      dto.novaSenha,
+      this.contextFromRequest(request),
+    );
+  }
+
+  // O profissional grava o PRÓPRIO COREN (uma vez). O id vem do token; o corpo só aceita `coren`.
+  @Patch('me')
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
+  @UseGuards(JwtAuthGuard, AuthGatesGuard)
+  @AllowWithoutTenant()
+  async atualizarPerfil(
+    @Body() dto: AtualizarPerfilDto,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.authService.atualizarMeuCoren(user.sub, dto.coren, this.contextFromRequest(request));
   }
 
   private setRefreshCookie(response: Response, tokens: AuthTokens): void {

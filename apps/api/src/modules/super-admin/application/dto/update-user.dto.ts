@@ -1,4 +1,5 @@
-import { IsArray, IsBoolean, IsEmail, IsEnum, IsOptional, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsArray, IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { Modulo, Papel } from '../../../../../../../packages/shared/src/auth';
 
 export class UpdateUserDto {
@@ -26,10 +27,13 @@ export class UpdateUserDto {
   @IsString()
   registroProfissional?: string;
 
-  /** Opcional — usado só pra recuperação de login via WhatsApp. */
+  /** Correção do COREN pelo super-admin (auditada). TODO(legal): formato do COREN não validado — confirmar em fonte oficial. */
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
-  telefone?: string;
+  @IsNotEmpty()
+  @MaxLength(40)
+  coren?: string;
 
   // Exceções de permissão por usuário sobre o padrão do papel.
   @IsOptional()

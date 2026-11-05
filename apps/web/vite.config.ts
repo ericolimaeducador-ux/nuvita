@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 
-// Frontend Nuvita. Encaminha as rotas da API NestJS (porta 3000) preservando
+// Frontend Nuvita Psi. Encaminha as rotas da API NestJS (porta 3000) preservando
 // os mesmos paths — assim o cookie de refresh (httpOnly, path /auth) é mantido.
 //
 // Como algumas rotas do SPA (/pacientes, /prontuarios, ...) coincidem com as da
@@ -21,10 +21,10 @@ const apiProxy = {
   },
 };
 
-// Em produção (GitHub Pages) o site é servido em /<repo>/ — por padrão /nuvita/.
+// Em produção (GitHub Pages) o site é servido em /<repo>/ — por padrão /nuvita-psi/.
 // Sobrescreva com VITE_BASE (ex.: '/' para domínio próprio). No dev fica em '/'.
 export default defineConfig(({ command }) => ({
-  base: command === 'build' ? (process.env.VITE_BASE ?? '/nuvita/') : '/',
+  base: command === 'build' ? (process.env.VITE_BASE ?? '/nuvita-psi/') : '/',
   plugins: [react()],
   resolve: {
     alias: {
@@ -34,7 +34,7 @@ export default defineConfig(({ command }) => ({
   server: {
     port: 5173,
     proxy: {
-      '^/(auth|clinicas|pacientes|captacao|agendamentos|prontuarios|documentos|notificacoes|financeiro|telemedicina|super-admin|analytics|avaliacao-iu|followup|laudo-medico|produtos|entregas|health|checklist-documentos|observacoes-paciente|pagamentos)(?=$|[/?])':
+      '^/(auth|clinicas|pacientes|agendamentos|prontuarios|documentos|documentos-emitidos|notificacoes|financeiro|telemedicina|super-admin|analytics|health|observacoes-paciente|produtos|entregas|checklist-documentos|followup|captacao|avaliacao-iu|cobrancas|testes-psicologicos|ia-clinica|tickets|inscricoes-teste)(?=$|[/?])':
         apiProxy,
     },
   },

@@ -1,3 +1,7 @@
+// TODO(conteudo): TODO o conteúdo clínico desta ficha (os ~33 campos, enums, rótulos e textos) é do fluxo de
+// incontinência urinária e foi mantido exatamente como no Nuvita antigo. Revisar/substituir na etapa de conteúdo
+// (estomaterapia). Os VALORES gravados em `avaliacoes_iu` não mudam.
+// A coleção `avaliacoes_iu` é mantida como no Nuvita antigo.
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import {

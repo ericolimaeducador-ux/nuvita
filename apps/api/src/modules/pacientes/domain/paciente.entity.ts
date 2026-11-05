@@ -1,4 +1,7 @@
+import { ClassificacaoArea } from '../../../../../../packages/shared/src/paciente';
 import { EtapaFluxoClinico } from '../../../../../../packages/shared/src/fluxo-clinico';
+
+export { ClassificacaoArea, EtapaFluxoClinico };
 
 export enum Sexo {
   FEMININO = 'FEMININO',
@@ -7,17 +10,21 @@ export enum Sexo {
   NAO_INFORMADO = 'NAO_INFORMADO',
 }
 
-// Classificação interna de projeto (tipo de cateter). Os nomes dos
-// fabricantes são propriedade intelectual e NUNCA aparecem no sistema —
-// só os rótulos neutros Alpha/Beta. O mapeamento fica fora do software.
+// Classificação interna do paciente. Hoje só existe o Projeto PSI
+// (atendimento psicológico) — visibilidade restrita ao papel ENFERMEIRO (ver
+// PacientesService.list/findOne).
 export enum ProjetoPaciente {
-  ALPHA = 'ALPHA',
-  BETA = 'BETA',
-  SIGMA = 'SIGMA',
-  // Pacientes de atendimento psicológico — visibilidade restrita ao papel
-  // PSICOLOGO (ver PacientesService.list/findOne). Não faz parte do
-  // programa de cateterismo/incontinência urinária.
   PSI = 'PSI',
+}
+
+/** Abordagem terapêutica adotada com o paciente — orienta os campos
+ * específicos registrados em cada sessão (ver RegistroPsicologico). */
+export enum LinhaTerapeutica {
+  TCC = 'TCC',
+  PSICANALISE = 'PSICANALISE',
+  HUMANISTA = 'HUMANISTA',
+  GESTALT = 'GESTALT',
+  JUNGUIANA = 'JUNGUIANA',
 }
 
 export interface Endereco {
@@ -42,6 +49,30 @@ export interface ConsentimentoLGPD {
   versao: string;
 }
 
+/**
+ * Responsável legal de paciente menor de idade (Art. 8º do Código de Ética
+ * Profissional do CFP + Resolução CFP nº 13/2022 — citados pelo usuário;
+ * fonte ainda não verificada em texto normativo primário nesta sessão).
+ * Todos os campos ficam opcionais no TIPO — a obrigatoriedade condicional
+ * (quando o paciente é menor) é regra de negócio, validada em
+ * PacientesService, não uma restrição estrutural do dado.
+ */
+export interface ResponsavelLegal {
+  nome?: string;
+  cpf?: string;
+  telefone?: string;
+  email?: string;
+  /** Ex.: "mãe", "pai", "tutor legal". Texto livre — sem catálogo fechado no MVP. */
+  vinculo?: string;
+}
+
+export interface AutorizacaoResponsavel {
+  confirmado: boolean;
+  /** context.user.sub de quem confirmou — mesmo padrão de `criadoPor` em agendamento/lançamento financeiro. */
+  registradaPor?: string;
+  registradaEm?: Date;
+}
+
 export interface Paciente {
   id: string;
   clinicaId: string;
@@ -54,13 +85,22 @@ export interface Paciente {
   endereco?: Endereco;
   convenio?: Convenio;
   consentimentoLGPD?: ConsentimentoLGPD;
-  programaIU?: boolean;
   projeto?: ProjetoPaciente;
+  linhaTerapeutica?: LinhaTerapeutica;
   /** Quem indicou/encaminhou o paciente. Texto livre, não criptografado — precisa ser filtrável/agregável. */
   representante?: string;
+  responsavelLegal?: ResponsavelLegal;
+  autorizacaoResponsavel?: AutorizacaoResponsavel;
   observacoes?: string;
-  etapaFluxo: EtapaFluxoClinico;
-  etapaFluxoDesde: Date;
+  /**
+   * Classificação de área (IU, FA, OT), uma ou mais. Ausente/vazia = dado anterior à classificação.
+   * A elegibilidade ao fluxo clínico é DERIVADA (ver elegivelFluxoClinico em packages/shared) — nunca gravada.
+   */
+  classificacoes?: ClassificacaoArea[];
+  /** Etapa atual do fluxo clínico. Ausente = fora do fluxo (paciente nunca foi elegível). Preservada se deixar de ser elegível. */
+  etapaFluxo?: EtapaFluxoClinico;
+  /** Quando a etapa atual começou. */
+  etapaFluxoDesde?: Date;
   ativo: boolean;
   criadoEm: Date;
   atualizadoEm: Date;

@@ -43,3 +43,4 @@ AuditLogSchema.pre('findOneAndUpdate', rejectAuditLogMutation);
 AuditLogSchema.pre('updateMany', rejectAuditLogMutation);
 AuditLogSchema.pre('deleteOne', rejectAuditLogMutation);
 AuditLogSchema.pre('deleteMany', rejectAuditLogMutation);
+AuditLogSchema.pre('findOneAndDelete', rejectAuditLogMutation);

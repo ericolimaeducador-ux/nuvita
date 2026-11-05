@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
-import { AUDIT_LOG_REPOSITORY } from '../auth/auth.constants';
+import { AUDIT_LOG_REPOSITORY, USER_REPOSITORY } from '../auth/auth.constants';
+import { UserMongoRepository } from '../auth/infrastructure/mongo/user-mongo.repository';
+import { UserMongo, UserSchema } from '../auth/infrastructure/mongo/user.schema';
 import { AuditLogMongoRepository } from '../auth/infrastructure/mongo/audit-log-mongo.repository';
 import { AuditLogMongo, AuditLogSchema } from '../auth/infrastructure/mongo/audit-log.schema';
 import { JwtAuthGuard } from '../auth/presentation/guards/jwt-auth.guard';
@@ -32,6 +34,7 @@ import { ProntuariosController } from './presentation/prontuarios.controller';
       { name: ProntuarioAddendumMongo.name, schema: ProntuarioAddendumSchema },
       { name: Cid10Mongo.name, schema: Cid10Schema },
       { name: AuditLogMongo.name, schema: AuditLogSchema },
+      { name: UserMongo.name, schema: UserSchema },
     ]),
   ],
   controllers: [ProntuariosController],
@@ -42,8 +45,9 @@ import { ProntuariosController } from './presentation/prontuarios.controller';
     { provide: PRONTUARIO_REPOSITORY, useClass: ProntuarioMongoRepository },
     { provide: CID10_REPOSITORY, useClass: Cid10MongoRepository },
     { provide: AUDIT_LOG_REPOSITORY, useClass: AuditLogMongoRepository },
+    { provide: USER_REPOSITORY, useClass: UserMongoRepository },
   ],
-  // O repositório sai do módulo porque o financeiro do psicólogo conta as
+  // O repositório sai do módulo porque o financeiro do enfermeiro conta as
   // sessões pelos prontuários de psicoterapia.
   exports: [ProntuariosService, PRONTUARIO_REPOSITORY],
 })

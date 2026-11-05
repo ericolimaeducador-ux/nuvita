@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useSaidaProtegida } from '@/lib/saida-protegida';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { Plus, Search, Download, X } from 'lucide-react';
+import { Plus, Search, Download, X, ShieldAlert } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,28 +21,75 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { pacientesApi, type PacienteSort } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toItems, formatCpf, formatData, idade } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
+import { classificarIdadePorString } from '@/paciente-idade';
+import { cpfValido } from '@/lib/documento-fiscal';
 import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
-import { Sexo, SEXO_LABEL, ProjetoPaciente, PROJETO_LABEL, Papel, type Paciente } from '@/types';
+import {
+  Sexo, SEXO_LABEL, ProjetoPaciente, PROJETO_LABEL, Papel,
+  LinhaTerapeutica, LINHA_TERAPEUTICA_LABEL, ClassificacaoArea, type Paciente,
+} from '@/types';
+import { ClassificacaoAreaSelector } from '@/components/ClassificacaoAreaSelector';
 
-const pacienteSchema = z.object({
-  nome: z.string().min(1, 'Informe o nome.'),
-  cpf: z.string().regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, 'CPF inválido.').optional().or(z.literal('')),
-  dataNascimento: z.string().optional(),
-  sexo: z.nativeEnum(Sexo, { error: 'Selecione.' }).optional(),
-  projeto: z.nativeEnum(ProjetoPaciente, { error: 'Selecione.' }).optional(),
-  representante: z.string().optional(),
-  telefone: z.string().optional(),
-  email: z.string().email('E-mail inválido.').optional().or(z.literal('')),
-  consentimento: z.boolean().optional(),
-  logradouro: z.string().optional(),
-  numero: z.string().optional(),
-  complemento: z.string().optional(),
-  bairro: z.string().optional(),
-  cidade: z.string().optional(),
-  estado: z.string().optional(),
-  cep: z.string().optional(),
-});
+const CPF_REGEX = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/;
+
+// Espelho do servidor (IsDataNaoFutura): compara por dia de calendário.
+function nascimentoFuturo(iso: string): boolean {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return false;
+  const agora = new Date();
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) > Date.UTC(agora.getFullYear(), agora.getMonth(), agora.getDate());
+}
+
+export const pacienteSchema = z
+  .object({
+    nome: z.string().min(1, 'Informe o nome.'),
+    cpf: z.string().regex(CPF_REGEX, 'CPF inválido.').refine((v) => cpfValido(v), 'CPF inválido.').optional().or(z.literal('')),
+    // Obrigatória no cadastro (Fase 2: sem ela não dá para saber se o paciente é
+    // menor de idade e exigir responsável legal). Na edição continua opcional —
+    // ver editPacienteSchema, em PacienteDetailPage.tsx.
+    dataNascimento: z.string().min(1, 'Informe a data de nascimento.').refine((v) => !nascimentoFuturo(v), 'A data de nascimento não pode ser futura.'),
+    sexo: z.nativeEnum(Sexo, { error: 'Selecione.' }).optional(),
+    projeto: z.nativeEnum(ProjetoPaciente, { error: 'Selecione.' }).optional(),
+    linhaTerapeutica: z.nativeEnum(LinhaTerapeutica, { error: 'Selecione.' }).optional(),
+    // Classificação de área: ao menos uma (IU, FA, OT). Só "somente IU" entra no fluxo clínico.
+    classificacoes: z.array(z.nativeEnum(ClassificacaoArea)).min(1, 'Selecione ao menos uma classificação.'),
+    telefone: z.string().optional(),
+    email: z.string().email('E-mail inválido.').optional().or(z.literal('')),
+    consentimento: z.boolean().optional(),
+    // Responsável legal — só obrigatório quando dataNascimento indica menor de
+    // idade (checagem condicional abaixo, no superRefine; mesmo padrão do backend
+    // em PacientesService.validarResponsavelLegalObrigatorio()).
+    responsavelNome: z.string().optional(),
+    responsavelCpf: z.string().regex(CPF_REGEX, 'CPF inválido.').optional().or(z.literal('')),
+    responsavelTelefone: z.string().optional(),
+    responsavelEmail: z.string().email('E-mail inválido.').optional().or(z.literal('')),
+    responsavelVinculo: z.string().optional(),
+    autorizacaoResponsavel: z.boolean().optional(),
+    logradouro: z.string().optional(),
+    numero: z.string().optional(),
+    complemento: z.string().optional(),
+    bairro: z.string().optional(),
+    cidade: z.string().optional(),
+    estado: z.string().optional(),
+    cep: z.string().optional(),
+  })
+  .superRefine((v, ctx) => {
+    if (classificarIdadePorString(v.dataNascimento) !== 'menor') return;
+    if (!v.responsavelNome?.trim()) {
+      ctx.addIssue({ code: 'custom', path: ['responsavelNome'], message: 'Informe o nome do responsável legal.' });
+    }
+    if (!v.responsavelCpf?.trim()) {
+      ctx.addIssue({ code: 'custom', path: ['responsavelCpf'], message: 'Informe o CPF do responsável legal.' });
+    }
+    if (!v.responsavelTelefone?.trim()) {
+      ctx.addIssue({ code: 'custom', path: ['responsavelTelefone'], message: 'Informe o telefone do responsável legal.' });
+    }
+    if (!v.autorizacaoResponsavel) {
+      ctx.addIssue({ code: 'custom', path: ['autorizacaoResponsavel'], message: 'Confirme a autorização do responsável legal.' });
+    }
+  });
 type PacienteForm = z.infer<typeof pacienteSchema>;
 
 const SORT_OPTIONS: { value: PacienteSort; label: string }[] = [
@@ -56,14 +104,14 @@ export function PacientesPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
-  // Psicólogo só enxerga/cadastra pacientes do Projeto PSI — o backend já
+  // Enfermeiro só enxerga/cadastra pacientes do Projeto PSI — o backend já
   // filtra a lista; aqui só simplificamos a UI (sem seletor de projeto).
-  const ehPsicologo = user?.papel === Papel.PSICOLOGO;
+  const ehEnfermeiro = user?.papel === Papel.ENFERMEIRO;
   const [buscaInput, setBuscaInput] = useState('');
   const [busca, setBusca] = useState('');
   const [nascFiltro, setNascFiltro] = useState('');
   const [projetoFiltro, setProjetoFiltro] = useState<ProjetoPaciente | 'all'>('all');
-  const [representanteFiltro, setRepresentanteFiltro] = useState('');
+  const [linhaFiltro, setLinhaFiltro] = useState<LinhaTerapeutica | 'all'>('all');
   const [sort, setSort] = useState<PacienteSort>('recentes');
   const [incluirInativos, setIncluirInativos] = useState(false);
   const [open, setOpen] = useState(false);
@@ -74,16 +122,16 @@ export function PacientesPage() {
     return () => clearTimeout(t);
   }, [buscaInput]);
 
-  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<PacienteForm>({
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors, isDirty } } = useForm<PacienteForm>({
     resolver: zodResolver(pacienteSchema),
-    defaultValues: { consentimento: false },
+    defaultValues: { consentimento: false, classificacoes: [] },
   });
+  // Clique fora/ESC não fecham; Cancelar com algo digitado pede confirmação.
+  const saida = useSaidaProtegida(isDirty, () => { setOpen(false); reset(); });
 
-  // Sugestões de "quem indicou" já usadas na clínica (autocomplete via datalist).
-  const representantesQ = useQuery({
-    queryKey: ['pacientes', 'representantes'],
-    queryFn: pacientesApi.listarRepresentantes,
-  });
+  // Recalcula a cada tecla no campo de nascimento — mostra/esconde a seção de
+  // responsável legal em tempo real, sem esperar o submit.
+  const ehMenorNoFormulario = classificarIdadePorString(watch('dataNascimento')) === 'menor';
 
   // 11 dígitos sem letras = CPF (busca exata); qualquer outra coisa = nome.
   const buscaDigitos = busca.replace(/\D/g, '');
@@ -94,7 +142,7 @@ export function PacientesPage() {
     cpf: buscaEhCpf ? buscaDigitos : undefined,
     dataNascimento: nascFiltro || undefined,
     projeto: projetoFiltro !== 'all' ? projetoFiltro : undefined,
-    representante: representanteFiltro || undefined,
+    linhaTerapeutica: linhaFiltro !== 'all' ? linhaFiltro : undefined,
     sort,
     incluirInativos: incluirInativos || undefined,
   };
@@ -107,7 +155,7 @@ export function PacientesPage() {
   });
 
   const temFiltros = Boolean(
-    buscaInput || nascFiltro || projetoFiltro !== 'all' || representanteFiltro || sort !== 'recentes' || incluirInativos,
+    buscaInput || nascFiltro || projetoFiltro !== 'all' || linhaFiltro !== 'all' || sort !== 'recentes' || incluirInativos,
   );
 
   function limparFiltros() {
@@ -115,7 +163,7 @@ export function PacientesPage() {
     setBusca('');
     setNascFiltro('');
     setProjetoFiltro('all');
-    setRepresentanteFiltro('');
+    setLinhaFiltro('all');
     setSort('recentes');
     setIncluirInativos(false);
   }
@@ -144,21 +192,35 @@ export function PacientesPage() {
       cep: v.cep?.trim() || undefined,
     };
     const temEndereco = Object.values(enderecoCampos).some(Boolean);
+    const menor = classificarIdadePorString(v.dataNascimento) === 'menor';
 
     createMut.mutate({
       clinicaId: user?.clinicaId,
       nome: v.nome,
       cpf: v.cpf || undefined,
-      dataNascimento: v.dataNascimento ? dayjs(v.dataNascimento).format('YYYY-MM-DD') : undefined,
+      dataNascimento: dayjs(v.dataNascimento).format('YYYY-MM-DD'),
       sexo: v.sexo || undefined,
-      projeto: ehPsicologo ? ProjetoPaciente.PSI : (v.projeto || undefined),
-      representante: v.representante?.trim() || undefined,
+      projeto: ehEnfermeiro ? ProjetoPaciente.PSI : (v.projeto || undefined),
+      linhaTerapeutica: v.linhaTerapeutica || undefined,
+      classificacoes: v.classificacoes,
       telefone: v.telefone || undefined,
       email: v.email || undefined,
       endereco: temEndereco ? enderecoCampos : undefined,
       consentimentoLGPD: v.consentimento
         ? { aceito: true, dataAceite: new Date().toISOString(), versao: '1.0' }
         : undefined,
+      // Só envia responsável/autorização quando o cálculo indicou menor de idade —
+      // o superRefine acima já bloqueou o submit se algum campo obrigatório faltar.
+      responsavelLegal: menor
+        ? {
+            nome: v.responsavelNome?.trim() || undefined,
+            cpf: v.responsavelCpf || undefined,
+            telefone: v.responsavelTelefone?.trim() || undefined,
+            email: v.responsavelEmail || undefined,
+            vinculo: v.responsavelVinculo?.trim() || undefined,
+          }
+        : undefined,
+      autorizacaoResponsavel: menor ? { confirmado: !!v.autorizacaoResponsavel } : undefined,
     });
   }
 
@@ -215,7 +277,7 @@ export function PacientesPage() {
               </Select>
             </div>
 
-            {!ehPsicologo && (
+            {!ehEnfermeiro && (
               <div className="space-y-1">
                 <Label>Projeto</Label>
                 <Select value={projetoFiltro} onValueChange={(v) => setProjetoFiltro(v as ProjetoPaciente | 'all')}>
@@ -231,15 +293,16 @@ export function PacientesPage() {
             )}
 
             <div className="space-y-1">
-              <Label htmlFor="representanteFiltro">Representante</Label>
-              <Input
-                id="representanteFiltro"
-                className="w-44"
-                list="representantes-list"
-                placeholder="Todos"
-                value={representanteFiltro}
-                onChange={(e) => setRepresentanteFiltro(e.target.value)}
-              />
+              <Label>Linha terapêutica</Label>
+              <Select value={linhaFiltro} onValueChange={(v) => setLinhaFiltro(v as LinhaTerapeutica | 'all')}>
+                <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as linhas</SelectItem>
+                  {Object.values(LinhaTerapeutica).map((lt) => (
+                    <SelectItem key={lt} value={lt}>{LINHA_TERAPEUTICA_LABEL[lt]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center gap-2 pb-2.5">
@@ -258,13 +321,10 @@ export function PacientesPage() {
             )}
           </div>
 
-          {/* Compartilhado pelo filtro acima e pelo campo do formulário de cadastro. */}
-          <datalist id="representantes-list">
-            {representantesQ.data?.map((r) => <option key={r} value={r} />)}
-          </datalist>
-
           {listQ.isLoading ? (
             <div className="space-y-3">{[1,2,3,4,5].map((i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+          ) : listQ.isError && !listQ.data ? (
+            <ErroConsulta erro={listQ.error} refetch={listQ.refetch} recurso="a lista de pacientes" />
           ) : (
             <Table>
               <TableHeader>
@@ -275,7 +335,7 @@ export function PacientesPage() {
                   <TableHead>Idade</TableHead>
                   <TableHead>Sexo</TableHead>
                   <TableHead>Projeto</TableHead>
-                  <TableHead>Representante</TableHead>
+                  <TableHead>Linha terapêutica</TableHead>
                   <TableHead>Telefone</TableHead>
                   <TableHead>Situação</TableHead>
                   <TableHead className="w-14" />
@@ -287,12 +347,19 @@ export function PacientesPage() {
                     <TableCell className="font-medium">{p.nome}</TableCell>
                     <TableCell>{formatCpf(p.cpf)}</TableCell>
                     <TableCell>{formatData(p.dataNascimento)}</TableCell>
-                    <TableCell>{idade(p.dataNascimento)}</TableCell>
+                    <TableCell>
+                      {idade(p.dataNascimento)}
+                      {classificarIdadePorString(p.dataNascimento) === 'menor' && (
+                        <Badge variant="warning" className="ml-2">Menor de idade</Badge>
+                      )}
+                    </TableCell>
                     <TableCell>{p.sexo ? SEXO_LABEL[p.sexo] : '—'}</TableCell>
                     <TableCell>
                       {p.projeto ? <Badge variant="secondary">{PROJETO_LABEL[p.projeto]}</Badge> : '—'}
                     </TableCell>
-                    <TableCell>{p.representante || '—'}</TableCell>
+                    <TableCell>
+                      {p.linhaTerapeutica ? <Badge variant="secondary">{LINHA_TERAPEUTICA_LABEL[p.linhaTerapeutica]}</Badge> : '—'}
+                    </TableCell>
                     <TableCell>{p.telefone || '—'}</TableCell>
                     <TableCell>
                       <Badge variant={p.ativo === false ? 'secondary' : 'success'}>
@@ -300,6 +367,7 @@ export function PacientesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
+                      {(user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN) && (
                       <Button
                         variant="ghost" size="icon" title="Exportar dados (LGPD)"
                         onClick={() =>
@@ -310,16 +378,26 @@ export function PacientesPage() {
                       >
                         <Download className="h-4 w-4" />
                       </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
                 {pacientes.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center text-muted-foreground py-8">Nenhum paciente encontrado</TableCell>
+                    <TableCell colSpan={11} className="text-center text-muted-foreground py-8">Nenhum paciente encontrado</TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+          )}
+
+          {listQ.isFetchNextPageError && (
+            <ErroConsulta
+              className="mt-4"
+              erro={listQ.error}
+              refetch={() => listQ.fetchNextPage()}
+              recurso="mais pacientes"
+            />
           )}
 
           {listQ.hasNextPage && (
@@ -332,13 +410,13 @@ export function PacientesPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <Dialog open={open} onOpenChange={saida.onOpenChange}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" {...saida.contentProps}>
           <DialogHeader>
             <DialogTitle>Novo paciente</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground -mt-2">
-            Apenas o nome é obrigatório. Os demais dados podem ser completados depois, na tela do paciente.
+            Nome e data de nascimento são obrigatórios. Os demais dados podem ser completados depois, na tela do paciente.
           </p>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
@@ -354,7 +432,7 @@ export function PacientesPage() {
                 {errors.cpf && <p className="text-sm text-destructive">{errors.cpf.message}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dataNascimento">Nascimento (opcional)</Label>
+                <Label htmlFor="dataNascimento">Nascimento</Label>
                 <Input id="dataNascimento" type="date" {...register('dataNascimento')} />
                 {errors.dataNascimento && <p className="text-sm text-destructive">{errors.dataNascimento.message}</p>}
               </div>
@@ -370,8 +448,70 @@ export function PacientesPage() {
               </div>
             </div>
 
+            {/* Só aparece quando a data de nascimento indica menor de idade (Art. 8º
+                do Código de Ética Profissional do CFP + Resolução CFP nº 13/2022 —
+                citados pelo usuário; fonte ainda não verificada em texto normativo
+                primário). Todos os campos aqui são obrigatórios (ver superRefine
+                do pacienteSchema, acima). */}
+            {ehMenorNoFormulario && (
+              <div className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
+                <p className="flex items-center gap-1.5 text-sm font-medium text-amber-700">
+                  <ShieldAlert className="h-4 w-4" /> Responsável legal (paciente menor de idade)
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="responsavelNome">Nome do responsável</Label>
+                    <Input id="responsavelNome" placeholder="Nome completo" {...register('responsavelNome')} />
+                    {errors.responsavelNome && <p className="text-sm text-destructive">{errors.responsavelNome.message}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="responsavelCpf">CPF do responsável</Label>
+                    <Input id="responsavelCpf" placeholder="000.000.000-00" {...register('responsavelCpf')} />
+                    {errors.responsavelCpf && <p className="text-sm text-destructive">{errors.responsavelCpf.message}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="responsavelTelefone">Telefone do responsável</Label>
+                    <Input id="responsavelTelefone" placeholder="(00) 00000-0000" {...register('responsavelTelefone')} />
+                    {errors.responsavelTelefone && <p className="text-sm text-destructive">{errors.responsavelTelefone.message}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="responsavelEmail">E-mail do responsável (opcional)</Label>
+                    <Input id="responsavelEmail" type="email" placeholder="responsavel@email.com" {...register('responsavelEmail')} />
+                    {errors.responsavelEmail && <p className="text-sm text-destructive">{errors.responsavelEmail.message}</p>}
+                  </div>
+                  <div className="col-span-2 space-y-2">
+                    <Label htmlFor="responsavelVinculo">Vínculo (opcional)</Label>
+                    <Input id="responsavelVinculo" placeholder="Ex.: mãe, pai, tutor legal" {...register('responsavelVinculo')} />
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="autorizacaoResponsavel"
+                    checked={watch('autorizacaoResponsavel')}
+                    onCheckedChange={(c) => setValue('autorizacaoResponsavel', !!c)}
+                  />
+                  <Label htmlFor="autorizacaoResponsavel" className="text-sm leading-tight cursor-pointer">
+                    Responsável legal autorizou o acompanhamento psicoterapêutico.
+                  </Label>
+                </div>
+                {errors.autorizacaoResponsavel && (
+                  <p className="text-sm text-destructive">{errors.autorizacaoResponsavel.message}</p>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Classificação de área *</Label>
+              <ClassificacaoAreaSelector
+                idPrefix="novoClassificacao"
+                value={watch('classificacoes') ?? []}
+                onChange={(v) => setValue('classificacoes', v, { shouldDirty: true, shouldValidate: true })}
+              />
+              {errors.classificacoes && <p className="text-sm text-destructive">{errors.classificacoes.message}</p>}
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
-              {!ehPsicologo && (
+              {!ehEnfermeiro && (
                 <div className="space-y-2">
                   <Label>Projeto (opcional)</Label>
                   <Select onValueChange={(v) => setValue('projeto', v as ProjetoPaciente)}>
@@ -383,19 +523,22 @@ export function PacientesPage() {
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="representante">Representante (quem indicou)</Label>
-                <Input
-                  id="representante"
-                  list="representantes-list"
-                  placeholder="Nome de quem indicou"
-                  {...register('representante')}
-                />
+                <Label>Linha terapêutica (opcional)</Label>
+                <Select onValueChange={(v) => setValue('linhaTerapeutica', v as LinhaTerapeutica)}>
+                  <SelectTrigger><SelectValue placeholder="Sem classificação" /></SelectTrigger>
+                  <SelectContent>
+                    {Object.values(LinhaTerapeutica).map((lt) => (
+                      <SelectItem key={lt} value={lt}>{LINHA_TERAPEUTICA_LABEL[lt]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="telefone">Telefone</Label>
                 <Input id="telefone" placeholder="(00) 00000-0000" {...register('telefone')} />
               </div>
-              <div className="space-y-2">
+              {/* Enfermeiro não vê "Projeto": sobram 3 campos na grade de 2 colunas, então o e-mail ocupa a linha inteira. */}
+              <div className={ehEnfermeiro ? "col-span-2 space-y-2" : "space-y-2"}>
                 <Label htmlFor="pacEmail">E-mail</Label>
                 <Input id="pacEmail" type="email" placeholder="paciente@email.com" {...register('email')} />
                 {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
@@ -449,7 +592,7 @@ export function PacientesPage() {
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="button" variant="outline" onClick={saida.solicitarFechar}>Cancelar</Button>
               <Button type="submit" disabled={createMut.isPending}>{createMut.isPending ? 'Cadastrando...' : 'Cadastrar'}</Button>
             </DialogFooter>
           </form>

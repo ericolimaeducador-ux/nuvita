@@ -17,7 +17,7 @@ describe('ProntuariosService', () => {
     pacienteId: 'paciente-1',
     medicoId: 'medico-1',
     dataAtendimento: new Date('2026-01-01T12:00:00.000Z'),
-    tipo: TipoAtendimento.CONSULTA,
+    tipo: TipoAtendimento.PSICOTERAPIA,
     subjetivo: { queixaPrincipal: 'Dor' },
     objetivo: {},
     avaliacao: {},
@@ -33,7 +33,7 @@ describe('ProntuariosService', () => {
     user: {
       sub: 'medico-1',
       email: 'medico@nuvita.test',
-      papel: Papel.MEDICO,
+      papel: Papel.ENFERMEIRO,
       clinicaId: 'clinica-1',
       jti: 'jti',
       typ: 'access' as const,
@@ -47,6 +47,8 @@ describe('ProntuariosService', () => {
       { create: jest.fn() } as unknown as AuditLogRepository,
       { getConfig: () => ({ prontuarioSignatureSecret: 'signature-secret' }) } as unknown as AppConfigService,
       agendamentosServiceStub,
+      // Autorizado pelo usuário (2026-10-27): o serviço agora recebe o repositório de usuários.
+      { findById: jest.fn() } as never,
     );
   }
 
@@ -79,6 +81,8 @@ describe('ProntuariosService', () => {
       auditLogs as unknown as AuditLogRepository,
       { getConfig: () => ({ prontuarioSignatureSecret: 'signature-secret' }) } as unknown as AppConfigService,
       agendamentosServiceStub,
+      // Autorizado pelo usuário (2026-10-26): assinar agora confere o COREN do perfil.
+      { findById: jest.fn().mockResolvedValue({ id: 'medico-1', coren: 'COREN 06/12345' }) } as never,
     );
 
     await service.sign('prontuario-1', undefined, context);
@@ -88,6 +92,7 @@ describe('ProntuariosService', () => {
       'prontuario-1',
       expect.objectContaining({
         medicoId: 'medico-1',
+        coren: 'COREN 06/12345',
         hash: expect.stringMatching(/^[a-f0-9]{64}$/),
       }),
     );

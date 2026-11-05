@@ -65,7 +65,7 @@ describe('TenantRequiredGuard', () => {
 
   it('does not let other roles assume a clinic via header', () => {
     const request = {
-      user: { sub: 'u1', papel: Papel.MEDICO },
+      user: { sub: 'u1', papel: Papel.ENFERMEIRO },
       headers: { 'x-clinica-id': '6a4d54c060fe4d45ab23b331' },
     };
 

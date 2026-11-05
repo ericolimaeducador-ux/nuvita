@@ -1,6 +1,6 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsMongoId, IsOptional, IsString } from 'class-validator';
 
 export class CriarChecklistPadraoDto {
   @IsOptional() @IsString() clinicaId?: string;
-  @IsString() pacienteId!: string;
+  @IsMongoId() pacienteId!: string;
 }

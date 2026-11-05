@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { isValidObjectId, Model } from 'mongoose';
 import { Entrega, StatusEntrega } from '../../domain/entrega.entity';
 import { EntregaRepository } from '../../application/ports/entrega.repository';
 import { EntregaDocument, EntregaMongo } from './entrega.schema';
@@ -15,6 +15,7 @@ export class EntregaMongoRepository implements EntregaRepository {
   }
 
   async findById(clinicaId: string, id: string): Promise<Entrega | null> {
+    if (!isValidObjectId(id)) return null;
     const doc = await this.model.findOne({ _id: id, clinicaId }).lean();
     return doc ? this.toEntity(doc) : null;
   }
@@ -25,15 +26,17 @@ export class EntregaMongoRepository implements EntregaRepository {
   }
 
   async updateStatus(clinicaId: string, id: string, status: StatusEntrega): Promise<Entrega | null> {
+    if (!isValidObjectId(id)) return null;
     const doc = await this.model
-      .findOneAndUpdate({ _id: id, clinicaId }, { $set: { status, atualizadoEm: new Date() } }, { new: true, lean: true })
+      .findOneAndUpdate({ _id: id, clinicaId }, { $set: { status, atualizadoEm: new Date() } }, { new: true })
       .lean();
     return doc ? this.toEntity(doc) : null;
   }
 
   async update(clinicaId: string, id: string, data: Partial<Entrega>): Promise<Entrega | null> {
+    if (!isValidObjectId(id)) return null;
     const doc = await this.model
-      .findOneAndUpdate({ _id: id, clinicaId }, { $set: { ...data, atualizadoEm: new Date() } }, { new: true, lean: true })
+      .findOneAndUpdate({ _id: id, clinicaId }, { $set: { ...data, atualizadoEm: new Date() } }, { new: true })
       .lean();
     return doc ? this.toEntity(doc) : null;
   }

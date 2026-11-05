@@ -43,6 +43,9 @@ export class DocumentoMongo {
   @Prop()
   thumbnailUrl?: string;
 
+  @Prop({ type: Date, index: true })
+  confirmadoEm?: Date | null;
+
   @Prop({ default: Date.now, immutable: true, index: true })
   criadoEm!: Date;
 

@@ -1,16 +1,23 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { AuthTokenPayload } from '../../../../../../packages/shared/src/auth';
+import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
+import { Roles } from '../../auth/presentation/decorators/roles.decorator';
+import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
+import { AuthGatesGuard } from '../../auth/presentation/guards/auth-gates.guard';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
 import { AnalyticsService } from '../application/analytics.service';
-import { AnalyticsQueryDto } from '../application/dto/analytics-query.dto';
+import {
+  AnalyticsQueryDto,
+  HorariosVagosQueryDto,
+  RelatorioPsicologiaQueryDto,
+} from '../application/dto/analytics-query.dto';
 
-// Este sistema não restringe por papel/módulo: qualquer usuário autenticado
-// da clínica (RolesGuard removido de propósito) enxerga os relatórios —
-// mesma decisão já aplicada em PERMISSOES_PADRAO_POR_PAPEL.
+// Relatórios gerenciais: só a equipe da clínica. O papel PACIENTE NUNCA lê estes dados (trazem nomes de
+// outros pacientes e o financeiro da clínica). Ver authorization-matrix.spec.ts.
 @Controller('analytics')
-@UseGuards(JwtAuthGuard, TenantRequiredGuard)
+@UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
+@Roles(Papel.ADMIN, Papel.ENFERMEIRO, Papel.SECRETARIA)
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
@@ -42,42 +49,38 @@ export class AnalyticsController {
     return this.analyticsService.notificacoes(clinicaId, dataInicio, dataFim);
   }
 
-  @Get('pacientes-por-cateter')
-  pacientesPorCateter(@Query() query: AnalyticsQueryDto, @CurrentUser() user: AuthTokenPayload) {
-    const clinicaId = this.analyticsService.resolveClinicaId(user, query.clinicaId);
-    return this.analyticsService.pacientesPorCateter(clinicaId);
-  }
-
   @Get('pacientes-por-representante')
   pacientesPorRepresentante(@Query() query: AnalyticsQueryDto, @CurrentUser() user: AuthTokenPayload) {
     const clinicaId = this.analyticsService.resolveClinicaId(user, query.clinicaId);
     return this.analyticsService.pacientesPorRepresentante(clinicaId);
   }
 
-  @Get('entregas-no-mes')
-  entregasNoMes(@Query() query: AnalyticsQueryDto, @CurrentUser() user: AuthTokenPayload) {
+  @Get('cobrancas-psicologia')
+  cobrancasPsicologia(@Query() query: RelatorioPsicologiaQueryDto, @CurrentUser() user: AuthTokenPayload) {
     const clinicaId = this.analyticsService.resolveClinicaId(user, query.clinicaId);
-    const { dataInicio, dataFim } = this.period(query);
-    return this.analyticsService.entregasNoPeriodo(clinicaId, dataInicio, dataFim);
+    const profissionalId = this.analyticsService.resolveProfissionalId(user, query.profissionalId);
+    return this.analyticsService.cobrancasPsicologia(clinicaId, profissionalId);
   }
 
-  @Get('sondas-no-mes')
-  sondasNoMes(@Query() query: AnalyticsQueryDto, @CurrentUser() user: AuthTokenPayload) {
+  @Get('perda-seguimento')
+  perdaSeguimento(@Query() query: RelatorioPsicologiaQueryDto, @CurrentUser() user: AuthTokenPayload) {
     const clinicaId = this.analyticsService.resolveClinicaId(user, query.clinicaId);
-    const { dataInicio, dataFim } = this.period(query);
-    return this.analyticsService.sondasNoPeriodo(clinicaId, dataInicio, dataFim);
+    const profissionalId = this.analyticsService.resolveProfissionalId(user, query.profissionalId);
+    return this.analyticsService.perdaSeguimento(clinicaId, profissionalId, query.diasLimite);
   }
 
-  @Get('aguardando-relatorio')
-  aguardandoRelatorio(@Query() query: AnalyticsQueryDto, @CurrentUser() user: AuthTokenPayload) {
+  @Get('horarios-vagos')
+  horariosVagos(@Query() query: HorariosVagosQueryDto, @CurrentUser() user: AuthTokenPayload) {
     const clinicaId = this.analyticsService.resolveClinicaId(user, query.clinicaId);
-    return this.analyticsService.pacientesAguardandoRelatorio(clinicaId);
-  }
-
-  @Get('pacientes-por-etapa')
-  pacientesPorEtapa(@Query() query: AnalyticsQueryDto, @CurrentUser() user: AuthTokenPayload) {
-    const clinicaId = this.analyticsService.resolveClinicaId(user, query.clinicaId);
-    return this.analyticsService.pacientesPorEtapaFluxo(clinicaId);
+    const profissionalId = this.analyticsService.resolveProfissionalId(user, query.profissionalId);
+    return this.analyticsService.horariosVagos(
+      clinicaId,
+      new Date(query.data),
+      profissionalId,
+      query.horaInicio,
+      query.horaFim,
+      query.slotMinutos,
+    );
   }
 
   private period(query: AnalyticsQueryDto) {

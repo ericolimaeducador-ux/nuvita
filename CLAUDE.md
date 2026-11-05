@@ -12,3 +12,8 @@ Rules:
 - For review impact on changed files, use `graphify review-delta --graph .graphify/graph.json` instead of generic traversal
 - Read `.graphify/GRAPH_REPORT.md` only for broad architecture review or when `query` / `path` / `explain` do not surface enough context
 - After modifying code files in this session, run `npx graphify hook-rebuild` to keep the graph current
+
+## Documentation language
+
+- Engineering docs (lessons learned, PROGRESS, ADRs, code comments): English.
+- End-user material (psychologist manual, onboarding emails, in-product copy): Brazilian Portuguese. This overrides enforces-english for user-facing output.

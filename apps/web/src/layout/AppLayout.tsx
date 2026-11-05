@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  LayoutDashboard, Users, UserPlus, Calendar, Bell, DollarSign,
-  Video, Building2, LogOut, ChevronLeft, ChevronRight, Activity, Shield, Brain, Wallet, BarChart3,
+  LayoutDashboard, Users, Calendar, Bell,
+  Video, Building2, LogOut, ChevronLeft, ChevronRight, Shield, Brain, Wallet, BarChart3, LifeBuoy, Workflow, Package, UserPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/auth/AuthContext';
 import { superAdminApi } from '@/api/resources';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import { Modulo, Papel } from '@/types';
 import { Logo, LogoIcon } from '@/components/Logo';
 
@@ -20,17 +21,18 @@ import { Logo, LogoIcon } from '@/components/Logo';
 const navItems: { to: string; icon: React.ElementType; label: string; modulo: Modulo; roles?: Papel[] }[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', modulo: Modulo.DASHBOARD },
   { to: '/pacientes', icon: Users, label: 'Pacientes', modulo: Modulo.PACIENTES },
-  { to: '/captacao-pacientes', icon: UserPlus, label: 'Captação de Pacientes', modulo: Modulo.PACIENTES },
-  { to: '/fluxo-clinico', icon: Activity, label: 'Fluxo Clínico', modulo: Modulo.FLUXO_CLINICO },
+  { to: '/fluxo-clinico', icon: Workflow, label: 'Fluxo Clínico', modulo: Modulo.PACIENTES },
+  { to: '/captacao-pacientes', icon: UserPlus, label: 'Captação', modulo: Modulo.PACIENTES },
   { to: '/atendimento-psicologico', icon: Brain, label: 'Atend. Psicológico', modulo: Modulo.ATENDIMENTO_PSICOLOGICO },
-  { to: '/financeiro-psicologia', icon: Wallet, label: 'Financeiro (Psi)', modulo: Modulo.FINANCEIRO_PSICOLOGIA },
+  { to: '/financeiro-pacientes', icon: Wallet, label: 'Financeiro', modulo: Modulo.PACIENTES },
   { to: '/agenda', icon: Calendar, label: 'Agenda', modulo: Modulo.AGENDA },
   { to: '/notificacoes', icon: Bell, label: 'Notificações', modulo: Modulo.NOTIFICACOES },
-  { to: '/financeiro', icon: DollarSign, label: 'Financeiro', modulo: Modulo.FINANCEIRO },
   { to: '/telemedicina', icon: Video, label: 'Telemedicina', modulo: Modulo.TELEMEDICINA },
   { to: '/relatorios', icon: BarChart3, label: 'Relatórios', modulo: Modulo.ANALYTICS },
   { to: '/clinica', icon: Building2, label: 'Clínica', modulo: Modulo.CLINICA },
+  { to: '/catalogo-produtos', icon: Package, label: 'Produtos', modulo: Modulo.CLINICA },
   { to: '/super-admin', icon: Shield, label: 'Super Admin', modulo: Modulo.SUPER_ADMIN, roles: [Papel.SUPER_ADMIN] },
+  { to: '/tickets', icon: LifeBuoy, label: 'Tickets', modulo: Modulo.SUPER_ADMIN, roles: [Papel.SUPER_ADMIN] },
 ];
 
 export function AppLayout() {
@@ -177,6 +179,9 @@ export function AppLayout() {
           {ehSuperAdmin && (
             <div className="flex items-center gap-2 mr-auto">
               <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+              {clinicasQ.isError && (
+                <ErroConsulta className="py-1" erro={clinicasQ.error} refetch={clinicasQ.refetch} recurso="as clínicas" />
+              )}
               <Select value={clinicaAtiva ?? undefined} onValueChange={selecionarClinica}>
                 <SelectTrigger className="w-[220px] h-9">
                   <SelectValue placeholder="Selecione a clínica…" />
@@ -189,14 +194,16 @@ export function AppLayout() {
               </Select>
             </div>
           )}
-          <button
-            onClick={() => navigate('/notificacoes')}
-            className="relative p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-            aria-label="Notificações"
-          >
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-accent-gold" />
-          </button>
+          {permissoes.includes(Modulo.NOTIFICACOES) && (
+            <button
+              onClick={() => navigate('/notificacoes')}
+              className="relative p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              aria-label="Notificações"
+            >
+              <Bell className="h-5 w-5" />
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-accent-gold" />
+            </button>
+          )}
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-semibold text-foreground leading-tight">{user?.nome ?? 'Usuário'}</p>

@@ -1,3 +1,5 @@
+// TODO(conteudo): "insumo", "sonda", "coletor" e as origens (SUS, plano, varejo, doação) são rótulos do fluxo de
+// incontinência urinária. Revisar na etapa de conteúdo; os VALORES gravados não mudam.
 export enum OrigemEntrega {
   SUS = 'sus',
   PLANO_SAUDE = 'plano_saude',
@@ -12,14 +14,12 @@ export enum StatusEntrega {
   DEVOLVIDA = 'devolvida',
 }
 
-// Derivada automaticamente do `tipo` do produto do catálogo no momento da
-// entrega (ver EntregasService.create) — nunca aceita diretamente do cliente,
-// para não deixar o cliente "mentir" a categoria usada nos relatórios.
+// Derivada automaticamente do `tipo` do produto do catálogo no momento da entrega (ver EntregasService.create) —
+// nunca aceita diretamente do cliente, para não deixar o cliente "mentir" a categoria usada nos relatórios.
 export enum CategoriaInsumo {
   SONDA = 'sonda',
   COLETOR = 'coletor',
-  // Item sem correspondência no catálogo de produtos (ou catálogo futuro
-  // com categorias ainda não mapeadas).
+  // Item sem correspondência no catálogo de produtos (ou catálogo futuro com categorias ainda não mapeadas).
   OUTRO = 'outro',
 }
 
@@ -36,6 +36,7 @@ export interface Entrega {
   id: string;
   clinicaId: string;
   pacienteId: string;
+  /** Referência à avaliação de IU (módulo ainda não portado; hoje fica sem uso). */
   avaliacaoIuId?: string;
   responsavelId: string;
   dataEntrega: Date;

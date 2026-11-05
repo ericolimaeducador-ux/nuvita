@@ -51,8 +51,10 @@ export class CaptadorPinGuard implements CanActivate {
   private pinEsperado(): string | null {
     const configured = this.config.get<string>('PIN_CAPTADOR')?.trim();
     if (configured) return configured;
-    const nodeEnv = this.config.get<string>('NODE_ENV') ?? 'development';
-    if (nodeEnv === 'production' || nodeEnv === 'staging') return null;
-    return '123456';
+    // Sem PIN configurado, só desenvolvimento/teste local usa o PIN de desenvolvimento. Qualquer outro ambiente (inclusive
+    // NODE_ENV ausente ou desconhecido) FALHA FECHADO: a captação pública é recusada.
+    const nodeEnv = this.config.get<string>('NODE_ENV');
+    if (nodeEnv === 'development' || nodeEnv === 'test') return '123456';
+    return null;
   }
 }

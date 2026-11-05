@@ -16,6 +16,8 @@ import { apiErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { toItems, formatCpf, linkDaSala } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
+import { classificarErro } from '@/lib/consulta';
 import {
   ModalidadeAtendimento,
   MODALIDADE_LABEL,
@@ -53,7 +55,7 @@ function eventoVariant(tipo: TipoEventoSala): 'default' | 'success' | 'destructi
   return 'secondary';
 }
 
-function SalaCard({
+export function SalaCard({
   sala,
   paciente,
   onEncerrar,
@@ -164,6 +166,9 @@ function SalaCard({
             <History className="h-4 w-4" /> Registro do atendimento
           </p>
           {eventosQ.isLoading && <p className="text-sm text-muted-foreground">Carregando registro…</p>}
+          {eventosQ.isError && (
+            <ErroConsulta erro={eventosQ.error} refetch={eventosQ.refetch} recurso="o registro do atendimento" />
+          )}
           {eventosQ.data && eventosQ.data.length === 0 && (
             <p className="text-sm text-muted-foreground">Nenhum evento registrado ainda — o registro começa quando alguém entra na sala.</p>
           )}
@@ -392,6 +397,11 @@ export function TelemedicinaPage() {
         }
       />
 
+      {/* Sem a lista de pacientes, o histórico e os rótulos caem no ID. */}
+      {pacientesQ.isError && (
+        <ErroConsulta className="mb-6" erro={pacientesQ.error} refetch={pacientesQ.refetch} recurso="os nomes dos pacientes" />
+      )}
+
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-base">Buscar sala por agendamento</CardTitle>
@@ -413,8 +423,12 @@ export function TelemedicinaPage() {
             </Button>
           </div>
 
-          {buscarQ.isError && (
+          {/* Só 404 significa "sem sala"; 403/500/rede não podem parecer agendamento sem sala. */}
+          {buscarQ.isError && classificarErro(buscarQ.error).tipo === 'nao-encontrado' && (
             <p className="mt-3 text-sm text-amber-600">Nenhuma sala encontrada para este agendamento.</p>
+          )}
+          {buscarQ.isError && classificarErro(buscarQ.error).tipo !== 'nao-encontrado' && (
+            <ErroConsulta className="mt-3" erro={buscarQ.error} refetch={buscarQ.refetch} recurso="a sala deste agendamento" />
           )}
         </CardContent>
       </Card>
@@ -438,6 +452,9 @@ export function TelemedicinaPage() {
         </CardHeader>
         <CardContent>
           {historicoQ.isLoading && <p className="text-sm text-muted-foreground">Carregando histórico…</p>}
+          {historicoQ.isError && (
+            <ErroConsulta erro={historicoQ.error} refetch={historicoQ.refetch} recurso="o histórico de atendimentos" />
+          )}
           {historicoQ.data && (
             <HistoricoTelemedicina
               salas={historicoQ.data}
@@ -457,6 +474,9 @@ export function TelemedicinaPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Agendamento</Label>
+              {agendamentosQ.isError && (
+                <ErroConsulta erro={agendamentosQ.error} refetch={agendamentosQ.refetch} recurso="os agendamentos" />
+              )}
               <Select value={fAgId} onValueChange={handleSelecionarAgendamento}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o agendamento" />

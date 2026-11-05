@@ -1,9 +1,9 @@
 import type { CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
 
-// Logo oficial Nuvita (vetorial definitivo): nuvem + batimento cardíaco + wordmark.
+// Logo Nuvita Psi (baseado no vetorial oficial do Nuvita): nuvem + batimento cardíaco + wordmark.
 // Cores controladas por variáveis CSS (--logo-icon-color / --logo-text-color) para
-// reuso em fundos claros e escuros. Os PNGs de `lib/brand.ts` seguem nos documentos
+// reuso em fundos claros e escuros. Os PNGs de `lib/brand.ts` servem só à interface do app (não aos documentos)
 // impressos (fundo branco, sem dependência de fonte web).
 
 // Traçado da nuvem + linha do batimento, compartilhado entre o logo completo e o ícone.
@@ -42,13 +42,13 @@ export function Logo({
 
   return (
     <svg
-      viewBox="0 0 250 80"
+      viewBox="0 0 320 80"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       style={style}
       className={cn('nuvita-logo shrink-0', className)}
       role="img"
-      aria-label="Nuvita"
+      aria-label="Nuvita Psi"
     >
       {ICON_PATHS}
       <text
@@ -56,10 +56,10 @@ export function Logo({
         y="55"
         fontFamily="'Plus Jakarta Sans', 'Inter', 'Montserrat', sans-serif"
         fontWeight="bold"
-        fontSize={44}
+        fontSize={38}
         fill="var(--logo-text-color, #FFFFFF)"
       >
-        Nuvita
+        Nuvita Psi
       </text>
     </svg>
   );
@@ -84,7 +84,7 @@ export function LogoIcon({ size = 32, iconColor = '#FFB800', className }: LogoIc
       style={style}
       className={cn('shrink-0', className)}
       role="img"
-      aria-label="Nuvita"
+      aria-label="Nuvita Psi"
     >
       {ICON_PATHS}
     </svg>

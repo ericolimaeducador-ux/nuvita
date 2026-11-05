@@ -28,7 +28,7 @@ import { SalvarConfigPsicologoDto } from './dto/salvar-config-psicologo.dto';
 import { RequestAuditContext } from './financeiro.service';
 
 /**
- * Financeiro do psicólogo autônomo: o acompanhamento é vendido em ciclos de 4
+ * Financeiro do enfermeiro autônomo: o acompanhamento é vendido em ciclos de 4
  * sessões, pagos antes de começar. O sistema conta as sessões pelos prontuários
  * de psicoterapia e avisa quando o ciclo atual ainda não foi cobrado.
  */
@@ -47,7 +47,7 @@ export class PsicologiaFinanceiroService {
     const profissionalId = this.profissionalDoPainel(context.user, profissionalIdSolicitado);
 
     const [sessoes, cobrancas, config] = await Promise.all([
-      this.prontuarios.resumoSessoesPorPaciente(clinicaId, TipoAtendimento.PSICOTERAPIA, profissionalId),
+      this.prontuarios.resumoSessoesAssinadasPorPaciente(clinicaId, TipoAtendimento.PSICOTERAPIA, profissionalId),
       this.lancamentos.list({
         clinicaId,
         origem: OrigemLancamento.PSICOLOGIA,
@@ -100,12 +100,18 @@ export class PsicologiaFinanceiroService {
 
     await this.audit(AuditEvent.FINANCIAL_DASHBOARD_VIEWED, context, { clinicaId, origem: OrigemLancamento.PSICOLOGIA });
 
+    // "Ciclo fechado, renovar" × "sem cobrança no ciclo atual": duas frases diferentes, decididas aqui e não na tela.
+    const aCobrar = pacientes.filter((p) => p.statusCiclo === StatusCiclo.A_COBRAR);
+    const fechadosARenovar = aCobrar.filter((p) => p.sessoesRealizadas > 0 && p.sessoesNoCiclo === 0).length;
+
     return {
       valorSessao: config?.valorSessao,
       sessoesPorCiclo: SESSOES_POR_CICLO,
       recebidoNoMes,
       aReceber: pacientes.reduce((total, p) => total + p.valorEmAberto, 0),
-      ciclosACobrar: pacientes.filter((p) => p.statusCiclo === StatusCiclo.A_COBRAR).length,
+      ciclosACobrar: aCobrar.length,
+      ciclosFechadosARenovar: fechadosARenovar,
+      ciclosSemCobranca: aCobrar.length - fechadosARenovar,
       pacientes,
     };
   }
@@ -232,23 +238,23 @@ export class PsicologiaFinanceiroService {
     };
   }
 
-  /** O psicólogo só mexe no próprio caixa — nem enxerga nem baixa cobrança de outro. */
+  /** O enfermeiro só mexe no próprio caixa — nem enxerga nem baixa cobrança de outro. */
   private async garantirCobrancaPropria(clinicaId: string, id: string, user: AuthTokenPayload) {
     const lancamento = await this.lancamentos.findById(clinicaId, id);
     if (!lancamento || lancamento.origem !== OrigemLancamento.PSICOLOGIA) {
       throw new NotFoundException('Cobranca nao encontrada.');
     }
-    if (user.papel === Papel.PSICOLOGO && lancamento.profissionalId !== user.sub) {
+    if (user.papel === Papel.ENFERMEIRO && lancamento.profissionalId !== user.sub) {
       throw new ForbiddenException('Esta cobranca pertence a outro profissional.');
     }
   }
 
   /**
-   * De quem é o caixa. O psicólogo só opera o próprio, sempre — nem informando
-   * outro id. Admin/super-admin podem abrir o painel de um psicólogo específico.
+   * De quem é o caixa. O enfermeiro só opera o próprio, sempre — nem informando
+   * outro id. Admin/super-admin podem abrir o painel de um enfermeiro específico.
    */
   private profissionalDoPainel(user: AuthTokenPayload, solicitado?: string): string {
-    if (user.papel === Papel.PSICOLOGO) return user.sub;
+    if (user.papel === Papel.ENFERMEIRO) return user.sub;
     return solicitado ?? user.sub;
   }
 

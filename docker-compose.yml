@@ -7,7 +7,7 @@ services:
     volumes:
       - mongo_data:/data/db
     environment:
-      MONGO_INITDB_DATABASE: nuvita
+      MONGO_INITDB_DATABASE: nuvita-psi
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -32,14 +32,14 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    container_name: nuvita-api
+    container_name: nuvita-psi-api
     restart: unless-stopped
     env_file:
       - .env
     environment:
       NODE_ENV: production
       PORT: 3000
-      MONGODB_URI: mongodb://mongodb:27017/nuvita
+      MONGODB_URI: mongodb://mongodb:27017/nuvita-psi
       REDIS_URL: redis://redis:6379
       CORS_ORIGIN: http://localhost:8080
     ports:
@@ -54,7 +54,7 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    container_name: nuvita-web
+    container_name: nuvita-psi-web
     restart: unless-stopped
     ports:
       - "8080:80"

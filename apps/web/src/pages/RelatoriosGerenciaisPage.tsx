@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import dayjs from 'dayjs';
 import {
   Bar,
   BarChart,
@@ -9,16 +10,17 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { Users, UserPlus, Syringe, FileClock } from 'lucide-react';
+import { Users, UserPlus, DollarSign, AlertTriangle, Clock } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { analyticsApi } from '@/api/resources';
-import { formatData } from '@/utils';
-import { ETAPA_FLUXO_LABEL, type EtapaFluxoClinico } from '@/types';
+import { formatBRL } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
 
 // Todo gráfico aqui é uma série única (contagem por categoria) — por isso uma
 // única cor (o azul primário do app), sem necessidade de paleta categórica.
@@ -27,7 +29,6 @@ const BAR_COLOR = 'hsl(var(--primary))';
 const GRID_COLOR = 'hsl(var(--border))';
 const TICK_STYLE = { fill: 'hsl(var(--muted-foreground))', fontSize: 12 };
 
-const MAX_REPRESENTANTES_EXIBIDOS = 8;
 
 function StatTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
   return (
@@ -47,21 +48,28 @@ function ChartCard({
   title,
   loading,
   empty,
+  falha,
   children,
+  className,
 }: {
   title: string;
   loading: boolean;
   empty: boolean;
+  /** Consulta em erro: o gráfico não pode parecer "sem dados". */
+  falha?: { error: unknown; refetch: () => unknown } | null;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? (
           <Skeleton className="h-64 w-full" />
+        ) : falha ? (
+          <ErroConsulta erro={falha.error} refetch={falha.refetch} recurso="este gráfico" />
         ) : empty ? (
           <p className="py-16 text-center text-sm text-muted-foreground">Sem dados no período.</p>
         ) : (
@@ -97,63 +105,58 @@ export function RelatoriosGerenciaisPage() {
     queryKey: ['analytics', 'pacientes', periodo],
     queryFn: () => analyticsApi.pacientes(periodo),
   });
-  const porEtapaQ = useQuery({
-    queryKey: ['analytics', 'pacientes-por-etapa'],
-    queryFn: () => analyticsApi.pacientesPorEtapa(),
+  const agendamentosQ = useQuery({
+    queryKey: ['analytics', 'agendamentos', periodo],
+    queryFn: () => analyticsApi.agendamentos(periodo),
   });
-  const porRepresentanteQ = useQuery({
-    queryKey: ['analytics', 'pacientes-por-representante'],
-    queryFn: () => analyticsApi.pacientesPorRepresentante(),
+  const financeiroQ = useQuery({
+    queryKey: ['analytics', 'financeiro', periodo],
+    queryFn: () => analyticsApi.financeiro(periodo),
   });
-  const porCateterQ = useQuery({
-    queryKey: ['analytics', 'pacientes-por-cateter'],
-    queryFn: () => analyticsApi.pacientesPorCateter(),
+  const cobrancasQ = useQuery({
+    queryKey: ['analytics', 'cobrancas-psicologia'],
+    queryFn: () => analyticsApi.cobrancasPsicologia(),
   });
-  const entregasQ = useQuery({
-    queryKey: ['analytics', 'entregas-no-mes', periodo],
-    queryFn: () => analyticsApi.entregasNoMes(periodo),
-  });
-  const sondasQ = useQuery({
-    queryKey: ['analytics', 'sondas-no-mes', periodo],
-    queryFn: () => analyticsApi.sondasNoMes(periodo),
-  });
-  const aguardandoRelatorioQ = useQuery({
-    queryKey: ['analytics', 'aguardando-relatorio'],
-    queryFn: () => analyticsApi.aguardandoRelatorio(),
+  const perdaSeguimentoQ = useQuery({
+    queryKey: ['analytics', 'perda-seguimento'],
+    queryFn: () => analyticsApi.perdaSeguimento(),
   });
 
-  const dadosEtapa = useMemo(
-    () =>
-      (porEtapaQ.data ?? []).map((d) => ({
-        etapa: ETAPA_FLUXO_LABEL[d.etapa as EtapaFluxoClinico] ?? d.etapa,
-        total: d.total,
-      })),
-    [porEtapaQ.data],
-  );
-
-  // Mais de ~8 categorias num gráfico de barras vira ilegível — dobra a
-  // cauda em "Outros" em vez de listar todo mundo (ver skill `dataviz`,
-  // anti-padrão "cycling hues past 8" aplicado aqui a contagem de barras).
-  const dadosRepresentante = useMemo(() => {
-    const bruto = (porRepresentanteQ.data ?? []).map((d) => ({ nome: d._id, total: d.total }));
-    if (bruto.length <= MAX_REPRESENTANTES_EXIBIDOS) return bruto;
-    const principais = bruto.slice(0, MAX_REPRESENTANTES_EXIBIDOS);
-    const outros = bruto.slice(MAX_REPRESENTANTES_EXIBIDOS).reduce((soma, d) => soma + d.total, 0);
-    return [...principais, { nome: 'Outros', total: outros }];
-  }, [porRepresentanteQ.data]);
-
-  const dadosCateter = useMemo(
-    () => (porCateterQ.data ?? []).map((d) => ({ french: `Fr ${d._id}`, total: d.total })),
-    [porCateterQ.data],
-  );
+  // Horários vagos: janela ajustável na hora de consultar, não persistida
+  // (não existe cadastro de expediente no sistema hoje).
+  const [diaVagos, setDiaVagos] = useState(dayjs().format('YYYY-MM-DD'));
+  const [horaInicioVagos, setHoraInicioVagos] = useState(8);
+  const [horaFimVagos, setHoraFimVagos] = useState(19);
+  const horariosVagosQ = useQuery({
+    queryKey: ['analytics', 'horarios-vagos', diaVagos, horaInicioVagos, horaFimVagos],
+    queryFn: () => analyticsApi.horariosVagos({ data: diaVagos, horaInicio: horaInicioVagos, horaFim: horaFimVagos }),
+  });
 
   const novosNoPeriodo = (pacientesQ.data?.novosPorMes ?? []).reduce((soma, m) => soma + m.total, 0);
+
+  const dadosPorDia = useMemo(
+    () => (agendamentosQ.data?.porDia ?? []).map((d) => ({ nome: dayjs(d._id).format('DD/MM'), total: d.total })),
+    [agendamentosQ.data],
+  );
+  const dadosPorSemana = useMemo(
+    () => (agendamentosQ.data?.porSemana ?? []).map((d) => ({ nome: `Sem. ${d._id.semana}/${d._id.ano}`, total: d.total })),
+    [agendamentosQ.data],
+  );
+  const dadosPorMesAtendimentos = useMemo(
+    () => (agendamentosQ.data?.porMes ?? []).map((d) => ({ nome: `${d._id.mes}/${d._id.ano}`, total: d.total })),
+    [agendamentosQ.data],
+  );
+  const dadosReceitaPorMes = useMemo(
+    () => (financeiroQ.data?.receitasPorMes ?? []).map((d) => ({ nome: `${d._id.mes}/${d._id.ano}`, total: d.total })),
+    [financeiroQ.data],
+  );
+  const receitaTotalNoPeriodo = (financeiroQ.data?.receitasPorMes ?? []).reduce((soma, m) => soma + m.total, 0);
 
   return (
     <div className="p-6 space-y-6">
       <PageHeader
         title="Relatórios Gerenciais"
-        subtitle="Visão consolidada de pacientes, representantes e insumos para a gestão da unidade"
+        subtitle="Visão consolidada de pacientes e atendimentos para a gestão da clínica"
       />
 
       <Card>
@@ -167,91 +170,117 @@ export function RelatoriosGerenciaisPage() {
             <Input id="relDataFim" type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
           </div>
           <p className="pb-2 text-xs text-muted-foreground">
-            Afeta: novos pacientes, entregas e sondas do período. Os demais gráficos mostram o quadro atual.
+            Afeta: novos pacientes no período. Os demais gráficos mostram o quadro atual.
           </p>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {pacientesQ.isError && (
+        <ErroConsulta erro={pacientesQ.error} refetch={pacientesQ.refetch} recurso="os dados de pacientes" />
+      )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatTile icon={<Users className="h-5 w-5" />} label="Pacientes ativos" value={pacientesQ.data?.totalAtivos ?? '—'} />
-        <StatTile icon={<UserPlus className="h-5 w-5" />} label="Novos no período" value={novosNoPeriodo} />
-        <StatTile icon={<Syringe className="h-5 w-5" />} label="Sondas entregues no período" value={sondasQ.data?.totalQuantidade ?? 0} />
-        <StatTile icon={<FileClock className="h-5 w-5" />} label="Aguardando relatório médico" value={aguardandoRelatorioQ.data?.length ?? 0} />
+        <StatTile icon={<UserPlus className="h-5 w-5" />} label="Novos no período" value={pacientesQ.isError ? '—' : novosNoPeriodo} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartCard title="Pacientes por etapa do fluxo clínico" loading={porEtapaQ.isLoading} empty={dadosEtapa.every((d) => d.total === 0)}>
+        <ChartCard title="Atendimentos por mês" loading={agendamentosQ.isLoading} falha={agendamentosQ.isError ? agendamentosQ : null} empty={dadosPorMesAtendimentos.length === 0}>
           <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={dadosEtapa} layout="vertical" margin={{ left: 24 }}>
-              <CartesianGrid horizontal={false} stroke={GRID_COLOR} />
-              <XAxis type="number" allowDecimals={false} tick={TICK_STYLE} axisLine={{ stroke: GRID_COLOR }} tickLine={false} />
-              <YAxis type="category" dataKey="etapa" width={180} tick={TICK_STYLE} axisLine={{ stroke: GRID_COLOR }} tickLine={false} />
-              <Tooltip {...tooltipStyle()} />
-              <Bar dataKey="total" name="Pacientes" fill={BAR_COLOR} radius={[0, 4, 4, 0]} maxBarSize={24} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        <ChartCard title="Pacientes por representante" loading={porRepresentanteQ.isLoading} empty={dadosRepresentante.length === 0}>
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={dadosRepresentante} layout="vertical" margin={{ left: 24 }}>
-              <CartesianGrid horizontal={false} stroke={GRID_COLOR} />
-              <XAxis type="number" allowDecimals={false} tick={TICK_STYLE} axisLine={{ stroke: GRID_COLOR }} tickLine={false} />
-              <YAxis type="category" dataKey="nome" width={140} tick={TICK_STYLE} axisLine={{ stroke: GRID_COLOR }} tickLine={false} />
-              <Tooltip {...tooltipStyle()} />
-              <Bar dataKey="total" name="Pacientes" fill={BAR_COLOR} radius={[0, 4, 4, 0]} maxBarSize={24} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        <ChartCard title="Pacientes por calibre de cateter (French)" loading={porCateterQ.isLoading} empty={dadosCateter.length === 0}>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={dadosCateter} margin={{ top: 8 }}>
+            <BarChart data={dadosPorMesAtendimentos} margin={{ left: 8 }}>
               <CartesianGrid vertical={false} stroke={GRID_COLOR} />
-              <XAxis dataKey="french" tick={TICK_STYLE} axisLine={{ stroke: GRID_COLOR }} tickLine={false} />
+              <XAxis dataKey="nome" tick={TICK_STYLE} axisLine={{ stroke: GRID_COLOR }} tickLine={false} />
               <YAxis allowDecimals={false} tick={TICK_STYLE} axisLine={{ stroke: GRID_COLOR }} tickLine={false} />
               <Tooltip {...tooltipStyle()} />
-              <Bar dataKey="total" name="Pacientes" fill={BAR_COLOR} radius={[4, 4, 0, 0]} maxBarSize={40} />
+              <Bar dataKey="total" name="Atendimentos" fill={BAR_COLOR} radius={[4, 4, 0, 0]} maxBarSize={40} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Atendimentos por semana" loading={agendamentosQ.isLoading} falha={agendamentosQ.isError ? agendamentosQ : null} empty={dadosPorSemana.length === 0}>
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={dadosPorSemana} margin={{ left: 8 }}>
+              <CartesianGrid vertical={false} stroke={GRID_COLOR} />
+              <XAxis dataKey="nome" tick={TICK_STYLE} axisLine={{ stroke: GRID_COLOR }} tickLine={false} />
+              <YAxis allowDecimals={false} tick={TICK_STYLE} axisLine={{ stroke: GRID_COLOR }} tickLine={false} />
+              <Tooltip {...tooltipStyle()} />
+              <Bar dataKey="total" name="Atendimentos" fill={BAR_COLOR} radius={[4, 4, 0, 0]} maxBarSize={40} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Atendimentos por dia" loading={agendamentosQ.isLoading} falha={agendamentosQ.isError ? agendamentosQ : null} empty={dadosPorDia.length === 0} className="lg:col-span-2">
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={dadosPorDia} margin={{ left: 8 }}>
+              <CartesianGrid vertical={false} stroke={GRID_COLOR} />
+              <XAxis dataKey="nome" tick={TICK_STYLE} axisLine={{ stroke: GRID_COLOR }} tickLine={false} />
+              <YAxis allowDecimals={false} tick={TICK_STYLE} axisLine={{ stroke: GRID_COLOR }} tickLine={false} />
+              <Tooltip {...tooltipStyle()} />
+              <Bar dataKey="total" name="Atendimentos" fill={BAR_COLOR} radius={[4, 4, 0, 0]} maxBarSize={40} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
       </div>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <StatTile icon={<DollarSign className="h-5 w-5" />} label="Receita recebida no período" value={financeiroQ.isError ? '—' : formatBRL(receitaTotalNoPeriodo)} />
+        <StatTile
+          icon={<AlertTriangle className="h-5 w-5" />}
+          label="Cobranças vencidas"
+          value={
+            cobrancasQ.isError
+              ? '—'
+              : `${cobrancasQ.data?.vencidas.length ?? 0} · ${formatBRL(cobrancasQ.data?.totalVencido ?? 0)}`
+          }
+        />
+      </div>
+
+      <ChartCard title="Receita recebida por mês" loading={financeiroQ.isLoading} falha={financeiroQ.isError ? financeiroQ : null} empty={dadosReceitaPorMes.length === 0}>
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={dadosReceitaPorMes} margin={{ left: 8 }}>
+            <CartesianGrid vertical={false} stroke={GRID_COLOR} />
+            <XAxis dataKey="nome" tick={TICK_STYLE} axisLine={{ stroke: GRID_COLOR }} tickLine={false} />
+            <YAxis tick={TICK_STYLE} axisLine={{ stroke: GRID_COLOR }} tickLine={false} tickFormatter={(v) => formatBRL(v)} />
+            <Tooltip {...tooltipStyle()} formatter={(v) => formatBRL(Number(v))} />
+            <Bar dataKey="total" name="Receita" fill={BAR_COLOR} radius={[4, 4, 0, 0]} maxBarSize={40} />
+          </BarChart>
+        </ResponsiveContainer>
+      </ChartCard>
+
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Pacientes que receberam insumo em casa no período</CardTitle>
+          <CardTitle className="text-base">Cobranças a vencer / vencidas</CardTitle>
         </CardHeader>
         <CardContent>
-          {entregasQ.isLoading ? (
+          {cobrancasQ.isLoading ? (
             <Skeleton className="h-32 w-full" />
+          ) : cobrancasQ.isError ? (
+            <ErroConsulta erro={cobrancasQ.error} refetch={cobrancasQ.refetch} recurso="as cobranças" />
+          ) : (cobrancasQ.data?.vencidas.length ?? 0) + (cobrancasQ.data?.aVencer.length ?? 0) === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma cobrança pendente.</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Paciente</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Itens</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Vencimento</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Situação</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(entregasQ.data ?? []).map((e, i) => (
-                  <TableRow key={`${e.pacienteId}-${i}`}>
-                    <TableCell className="font-medium">{e.pacienteNome}</TableCell>
-                    <TableCell>{formatData(e.dataEntrega)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {e.itens.map((it) => `${it.descricao} (${it.quantidade}x)`).join(', ')}
+                {[...(cobrancasQ.data?.vencidas ?? []), ...(cobrancasQ.data?.aVencer ?? [])].map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">{c.pacienteNome ?? c.pacienteId ?? '—'}</TableCell>
+                    <TableCell>{c.vencimento ? dayjs(c.vencimento).format('DD/MM/YYYY') : '—'}</TableCell>
+                    <TableCell>{formatBRL(c.valor)}</TableCell>
+                    <TableCell>
+                      <Badge variant={c.vencimento && dayjs(c.vencimento).isBefore(dayjs(), 'day') ? 'destructive' : 'warning'}>
+                        {c.vencimento && dayjs(c.vencimento).isBefore(dayjs(), 'day') ? 'Vencida' : 'A vencer'}
+                      </Badge>
                     </TableCell>
-                    <TableCell>{e.status}</TableCell>
                   </TableRow>
                 ))}
-                {(entregasQ.data ?? []).length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                      Nenhuma entrega no período.
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
           )}
@@ -260,35 +289,86 @@ export function RelatoriosGerenciaisPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Pacientes aguardando relatório médico</CardTitle>
+          <CardTitle className="text-base">Perda de seguimento / absenteísmo</CardTitle>
         </CardHeader>
         <CardContent>
-          {aguardandoRelatorioQ.isLoading ? (
+          <p className="text-sm text-muted-foreground mb-4">
+            Pacientes sem sessão concluída há mais de 30 dias, ou com alta proporção de faltas.
+          </p>
+          {perdaSeguimentoQ.isLoading ? (
             <Skeleton className="h-32 w-full" />
+          ) : perdaSeguimentoQ.isError ? (
+            <ErroConsulta erro={perdaSeguimentoQ.error} refetch={perdaSeguimentoQ.refetch} recurso="os sinais de perda de seguimento" />
+          ) : (perdaSeguimentoQ.data ?? []).length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Nenhum sinal de perda de seguimento.</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Paciente</TableHead>
-                  <TableHead>Pendente desde</TableHead>
+                  <TableHead>Última sessão concluída</TableHead>
+                  <TableHead>Faltas</TableHead>
+                  <TableHead>Total de agendamentos</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(aguardandoRelatorioQ.data ?? []).map((p) => (
+                {(perdaSeguimentoQ.data ?? []).map((p) => (
                   <TableRow key={p.pacienteId}>
-                    <TableCell className="font-medium">{p.pacienteNome}</TableCell>
-                    <TableCell>{formatData(p.criadoEm)}</TableCell>
+                    <TableCell className="font-medium">{p.pacienteNome ?? p.pacienteId ?? '—'}</TableCell>
+                    <TableCell>{p.ultimaSessaoConcluidaEm ? dayjs(p.ultimaSessaoConcluidaEm).format('DD/MM/YYYY') : 'Nunca'}</TableCell>
+                    <TableCell>{p.faltas}</TableCell>
+                    <TableCell>{p.totalAgendamentos}</TableCell>
                   </TableRow>
                 ))}
-                {(aguardandoRelatorioQ.data ?? []).length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={2} className="text-center text-muted-foreground py-8">
-                      Nenhum paciente aguardando relatório médico.
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" /> Horários vagos</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="diaVagos">Dia</Label>
+              <Input id="diaVagos" type="date" value={diaVagos} onChange={(e) => setDiaVagos(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="horaInicioVagos">Início do expediente</Label>
+              <Input
+                id="horaInicioVagos" type="number" min={0} max={23} className="w-24"
+                value={horaInicioVagos} onChange={(e) => setHoraInicioVagos(Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="horaFimVagos">Fim do expediente</Label>
+              <Input
+                id="horaFimVagos" type="number" min={1} max={24} className="w-24"
+                value={horaFimVagos} onChange={(e) => setHoraFimVagos(Number(e.target.value))}
+              />
+            </div>
+            <p className="pb-2 text-xs text-muted-foreground">
+              Janela informada aqui, não é salva — não há cadastro de expediente no sistema.
+            </p>
+          </div>
+
+          {horariosVagosQ.isLoading ? (
+            <Skeleton className="h-16 w-full" />
+          ) : horariosVagosQ.isError ? (
+            <ErroConsulta erro={horariosVagosQ.error} refetch={horariosVagosQ.refetch} recurso="os horários livres" />
+          ) : (horariosVagosQ.data ?? []).length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">Sem horários livres nessa janela.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {(horariosVagosQ.data ?? []).map((s) => (
+                <Badge key={s.inicio} variant="secondary">
+                  {dayjs(s.inicio).format('HH:mm')}–{dayjs(s.fim).format('HH:mm')}
+                </Badge>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>

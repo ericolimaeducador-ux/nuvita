@@ -1,17 +1,23 @@
 import { api } from './client';
+import { comoLista, comoObjetoComLista } from '@/lib/consulta';
 import type {
   Agendamento,
-  AvaliacaoIU,
-  ChecklistDocumentoItem,
-  DashboardFinanceiro,
+  AuthUser,
+  DecisaoUsoIA,
   Documento,
+  Endereco,
   Entrega,
-  EtapaFluxoClinico,
+  AvaliacaoIU,
+  ChecklistItem,
+  Cobranca,
+  ResumoFinanceiroMensal,
   FollowUp,
-  LaudoMedico,
+  EtapaFluxoClinico,
   Lancamento,
+  LinhaTerapeutica,
   ListUsuariosResult,
   LoginResponse,
+  Produto,
   ModalidadeAtendimento,
   Modulo,
   ObservacaoPaciente,
@@ -21,9 +27,7 @@ import type {
   PageResult,
   Papel,
   PresignUploadResponse,
-  Produto,
   Prontuario,
-  RascunhoLaudoIA,
   SalaAcessoInfo,
   SalaEvento,
   SalaTelemedicina,
@@ -36,25 +40,46 @@ import type {
   TipoAtendimento,
   TipoDocumento,
   UsuarioAdmin,
+  DocumentoEmitido,
+  ResumoAcompanhamento,
 } from '@/types';
 
 // ---------- Auth ----------
+/** Resposta dos endpoints que resolvem um gate pós-login: devolvem o user atualizado. */
+export interface GateResolvidoResponse {
+  user: AuthUser;
+}
+
 export const authApi = {
   login: (email: string, password: string, totpCode?: string) =>
     api
       .post<LoginResponse>('/auth/login', { email, password, totpCode })
       .then((r) => r.data),
   logout: () => api.post('/auth/logout').then((r) => r.data),
-  forgotPassword: (email: string) =>
-    api.post<{ ok: true }>('/auth/forgot-password', { email }).then((r) => r.data),
-  resetPassword: (token: string, novaSenha: string) =>
-    api.post<{ ok: true }>('/auth/reset-password', { token, novaSenha }).then((r) => r.data),
-  forgotLogin: (telefone: string) =>
-    api.post<{ ok: true }>('/auth/forgot-login', { telefone }).then((r) => r.data),
-  verifyForgotLogin: (telefone: string, codigo: string) =>
+  // O próprio profissional grava o COREN (a API aceita uma única vez; depois só o super-admin corrige).
+  salvarMeuCoren: (coren: string) =>
+    api.patch<{ user: AuthUser }>('/auth/me', { coren }).then((r) => r.data),
+  aceitarTermos: (versao: string) =>
     api
-      .post<{ emailMascarado: string; resetToken: string }>('/auth/forgot-login/verify', { telefone, codigo })
+      .post<GateResolvidoResponse>('/auth/aceitar-termos', { versao })
       .then((r) => r.data),
+  // Públicos e sem oráculo: a resposta não depende de o e-mail existir.
+  esqueciSenha: (email: string) =>
+    api.post<{ ok: true; mensagem: string }>('/auth/esqueci-senha', { email }).then((r) => r.data),
+  redefinirSenha: (token: string, novaSenha: string) =>
+    api.post<{ ok: true }>('/auth/redefinir-senha', { token, novaSenha }).then((r) => r.data),
+  trocarSenhaObrigatoria: (novaSenha: string) =>
+    api
+      .post<GateResolvidoResponse>('/auth/trocar-senha-obrigatoria', { novaSenha })
+      .then((r) => r.data),
+};
+
+// ---------- Documentos emitidos pelo servidor ----------
+export const documentosEmitidosApi = {
+  declaracaoComparecimento: (payload: { pacienteId: string; agendamentoId: string }) =>
+    api.post<DocumentoEmitido>('/documentos-emitidos/declaracao-comparecimento', payload).then((r) => r.data),
+  atestadoComparecimento: (payload: { pacienteId: string; agendamentoId: string }) =>
+    api.post<DocumentoEmitido>('/documentos-emitidos/atestado-comparecimento', payload).then((r) => r.data),
 };
 
 // ---------- Clínicas ----------
@@ -63,12 +88,42 @@ export interface CriarUsuarioPayload {
   email: string;
   password: string;
   papel: Papel;
-  telefone?: string;
+  /** Obrigatório para ENFERMEIRO. */
+  coren?: string;
 }
+export interface CriarUsuarioResponse {
+  user: { id: string; nome: string; email: string; papel: Papel };
+  /** Segundo fator do usuário criado (enfermeiro): exibido UMA vez para o ADMIN repassar. */
+  twoFactorSetup?: { otpauthUrl: string; base32: string };
+}
+
+/** Contrato de GET /clinicas/minha (timbre dos documentos clínicos). Campos ausentes = não preenchidos. */
+export interface MinhaClinica {
+  nome: string;
+  documento: string;
+  tipoDocumento: 'CPF' | 'CNPJ';
+  endereco?: Endereco;
+  telefone?: string;
+  emailContato?: string;
+  logoUrl?: string;
+}
+
 export const clinicasApi = {
+  minha: () => api.get<MinhaClinica>('/clinicas/minha').then((r) => r.data),
+  // Primeiro uso: a enfermeira informa o CPF/CNPJ do consultório UMA vez (depois só o super-admin corrige).
+  preencherDocumento: (payload: { tipoDocumento: 'CPF' | 'CNPJ'; documento: string }) =>
+    api.patch<MinhaClinica>('/clinicas/minha/documento', payload).then((r) => r.data),
   // Cria um usuário (profissional ou secretaria) dentro da clínica do ADMIN.
   criarUsuario: (clinicaId: string, payload: CriarUsuarioPayload) =>
-    api.post(`/clinicas/${clinicaId}/usuarios`, payload).then((r) => r.data),
+    api.post<CriarUsuarioResponse>(`/clinicas/${clinicaId}/usuarios`, payload).then((r) => r.data),
+  // Logo da clínica (ADMIN da própria clínica; SUPER_ADMIN por id). Bucket privado: PUT presignado + confirmar.
+  solicitarUploadLogo: (clinicaId: string, payload: { mimeType: string; tamanho: number; hash: string }) =>
+    api
+      .post<{ uploadUrl: string; logoKey: string; expiresInSeconds: number }>(`/clinicas/${clinicaId}/logo/upload-url`, payload)
+      .then((r) => r.data),
+  confirmarLogo: (clinicaId: string, logoKey: string) =>
+    api.post(`/clinicas/${clinicaId}/logo/confirmar`, { logoKey }).then(() => undefined),
+  removerLogo: (clinicaId: string) => api.delete(`/clinicas/${clinicaId}/logo`).then(() => undefined),
 };
 
 // ---------- Pacientes ----------
@@ -84,16 +139,18 @@ export interface ListPacientesParams {
   limit?: number;
   incluirInativos?: boolean;
   clinicaId?: string;
-  programaIU?: boolean;
   projeto?: ProjetoPaciente;
   representante?: string;
+  /** Fluxo clínico: filtra pela etapa atual. */
   etapaFluxo?: EtapaFluxoClinico;
+  /** true = só pacientes elegíveis ao fluxo clínico (classificados exatamente como IU). */
+  fluxoClinico?: boolean;
 }
 export const pacientesApi = {
   list: (params: ListPacientesParams = {}) =>
-    api.get<PageResult<Paciente>>('/pacientes', { params }).then((r) => r.data),
+    api.get<PageResult<Paciente>>('/pacientes', { params }).then((r) => comoLista<Paciente>(r.data) as PageResult<Paciente>),
   listarRepresentantes: () =>
-    api.get<string[]>('/pacientes/representantes').then((r) => r.data),
+    api.get<string[]>('/pacientes/representantes').then((r) => comoLista<string>(r.data) as string[]),
   get: (id: string) => api.get<Paciente>(`/pacientes/${id}`).then((r) => r.data),
   create: (payload: Record<string, unknown>) =>
     api.post<Paciente>('/pacientes', payload).then((r) => r.data),
@@ -101,34 +158,13 @@ export const pacientesApi = {
     api.patch<Paciente>(`/pacientes/${id}`, payload).then((r) => r.data),
   deactivate: (id: string) =>
     api.patch(`/pacientes/${id}/desativar`).then((r) => r.data),
+  /** Avanço manual de etapa do fluxo clínico (a API valida elegibilidade, etapa e papel). */
+  avancarEtapa: (id: string) =>
+    api.patch<Paciente>(`/pacientes/${id}/fluxo/avancar`).then((r) => r.data),
   export: (id: string) =>
     api.get(`/pacientes/${id}/export`).then((r) => r.data),
   updateObservacoes: (id: string, observacoes: string) =>
     api.patch<Paciente>(`/pacientes/${id}/observacoes`, { observacoes }).then((r) => r.data),
-  avancarEtapaFluxo: (id: string) =>
-    api.patch<Paciente>(`/pacientes/${id}/fluxo/avancar`).then((r) => r.data),
-};
-
-// ---------- Captação de pacientes (fila de campo) ----------
-export interface CaptacaoPendente {
-  id: string;
-  nome?: string;
-  cpf?: string;
-  dataNascimento?: string;
-  endereco?: string;
-  telefone: string;
-  email?: string;
-  codigoEnfermeiro: string;
-  status: 'pendente' | 'exportado';
-  criadoEm: string;
-}
-export const captacaoApi = {
-  listarPendentes: () =>
-    api.get<{ success: true; data: CaptacaoPendente[] }>('/captacao').then((r) => r.data),
-  exportar: (id: string) =>
-    api
-      .post<{ success: true; message: string; pacienteId: string }>(`/captacao/${id}/exportar`)
-      .then((r) => r.data),
 };
 
 // ---------- Agenda ----------
@@ -154,7 +190,7 @@ export const agendaApi = {
   list: (params: ListAgendamentosParams = {}) =>
     api
       .get<PageResult<Agendamento> | Agendamento[]>('/agendamentos', { params })
-      .then((r) => r.data),
+      .then((r) => comoLista<Agendamento>(r.data)),
   create: (payload: CreateAgendamentoPayload) =>
     api.post<Agendamento>('/agendamentos', payload).then((r) => r.data),
   // Reagendar = atualizar data/hora (PATCH /:id).
@@ -175,11 +211,15 @@ export const prontuariosApi = {
   list: (params: { pacienteId?: string } = {}) =>
     api
       .get<PageResult<Prontuario> | Prontuario[]>('/prontuarios', { params })
-      .then((r) => r.data),
+      .then((r) => comoLista<Prontuario>(r.data)),
   get: (id: string) =>
     api.get<Prontuario>(`/prontuarios/${id}`).then((r) => r.data),
   create: (payload: Record<string, unknown>) =>
     api.post<Prontuario>('/prontuarios', payload).then((r) => r.data),
+  resumoAcompanhamento: (pacienteId: string) =>
+    api
+      .get<ResumoAcompanhamento>('/prontuarios/resumo-acompanhamento', { params: { pacienteId } })
+      .then((r) => r.data),
   assinar: (id: string) =>
     api.post(`/prontuarios/${id}/assinar`).then((r) => r.data),
   cid10: (q: string) =>
@@ -198,7 +238,7 @@ export const documentosApi = {
   list: (params: { pacienteId?: string; prontuarioId?: string } = {}) =>
     api
       .get<PageResult<Documento> | Documento[]>('/documentos', { params })
-      .then((r) => r.data),
+      .then((r) => comoLista<Documento>(r.data)),
   presignUpload: (payload: {
     clinicaId: string; pacienteId: string; prontuarioId?: string;
     nome: string; nomePaciente?: string; tipo: TipoDocumento; mimeType: string; tamanho: number; hash: string;
@@ -219,45 +259,6 @@ export const notificacoesApi = {
     api.post('/notificacoes', payload).then((r) => r.data),
 };
 
-// ---------- Financeiro ----------
-export interface ListLancamentosParams {
-  tipo?: string;
-  status?: string;
-  dataInicio?: string;
-  dataFim?: string;
-  cursor?: string;
-  limit?: number;
-}
-
-export interface CreateLancamentoPayload {
-  clinicaId: string;
-  tipo: string;
-  descricao: string;
-  valor: number;
-  formaPagamento?: string;
-  vencimento?: string;
-  pacienteId?: string;
-  agendamentoId?: string;
-  observacoes?: string;
-}
-
-export const financeiroApi = {
-  dashboard: (params?: { dataInicio?: string; dataFim?: string }) =>
-    api.get<DashboardFinanceiro>('/financeiro/dashboard', { params }).then((r) => r.data),
-  list: (params: ListLancamentosParams = {}) =>
-    api
-      .get<PageResult<Lancamento> | Lancamento[]>('/financeiro/lancamentos', { params })
-      .then((r) => r.data),
-  create: (payload: CreateLancamentoPayload) =>
-    api.post<Lancamento>('/financeiro/lancamentos', payload).then((r) => r.data),
-  receber: (id: string, formaPagamento?: string) =>
-    api
-      .patch(`/financeiro/lancamentos/${id}/receber`, { formaPagamento })
-      .then((r) => r.data),
-  cancelar: (id: string) =>
-    api.patch(`/financeiro/lancamentos/${id}/cancelar`).then((r) => r.data),
-};
-
 // ---------- Financeiro da psicologia ----------
 export interface CobrarCicloPayload {
   pacienteId: string;
@@ -270,7 +271,10 @@ export interface CobrarCicloPayload {
 }
 
 export const psicoFinanceiroApi = {
-  painel: () => api.get<PainelPsicologia>('/financeiro/psicologia/painel').then((r) => r.data),
+  painel: () =>
+    api
+      .get<PainelPsicologia>('/financeiro/psicologia/painel')
+      .then((r) => comoObjetoComLista<PainelPsicologia>(r.data, 'pacientes')),
   salvarConfig: (valorSessao: number) =>
     api.post('/financeiro/psicologia/configuracao', { valorSessao }).then((r) => r.data),
   cobrar: (payload: CobrarCicloPayload) =>
@@ -293,7 +297,7 @@ export const telemedicinaApi = {
   createSala: (payload: CreateSalaPayload) =>
     api.post<SalaTelemedicina>('/telemedicina/salas', payload).then((r) => r.data),
   listar: (params?: { dataInicio?: string; dataFim?: string }) =>
-    api.get<SalaTelemedicina[]>('/telemedicina/salas', { params }).then((r) => r.data),
+    api.get<SalaTelemedicina[]>('/telemedicina/salas', { params }).then((r) => comoLista<SalaTelemedicina>(r.data) as SalaTelemedicina[]),
   findByAgendamento: (agendamentoId: string) =>
     api
       .get<SalaTelemedicina>(`/telemedicina/salas/agendamento/${agendamentoId}`)
@@ -303,7 +307,7 @@ export const telemedicinaApi = {
   encerrar: (id: string) =>
     api.patch(`/telemedicina/salas/${id}/encerrar`).then((r) => r.data),
   eventos: (salaId: string) =>
-    api.get<SalaEvento[]>(`/telemedicina/salas/${salaId}/eventos`).then((r) => r.data),
+    api.get<SalaEvento[]>(`/telemedicina/salas/${salaId}/eventos`).then((r) => comoLista<SalaEvento>(r.data) as SalaEvento[]),
 };
 
 // Acesso à sala pelo token do link (paciente entra sem login; o token é a credencial).
@@ -336,102 +340,63 @@ export const teleAcessoApi = {
   },
 };
 
-// ---------- Produtos ----------
-export const produtosApi = {
-  list: (tipo?: string) =>
-    api.get<Produto[]>('/produtos', { params: tipo ? { tipo } : {} }).then((r) => r.data),
-  get: (codigo: number) =>
-    api.get<Produto>(`/produtos/${codigo}`).then((r) => r.data),
-};
-
-// ---------- Avaliação IU ----------
-export const avaliacaoIUApi = {
-  create: (payload: Record<string, unknown>) =>
-    api.post<AvaliacaoIU>('/avaliacao-iu', payload).then((r) => r.data),
-  update: (id: string, payload: Record<string, unknown>) =>
-    api.patch<AvaliacaoIU>(`/avaliacao-iu/${id}`, payload).then((r) => r.data),
-  listByPaciente: (pacienteId: string) =>
-    api.get<AvaliacaoIU[]>('/avaliacao-iu', { params: { pacienteId } }).then((r) => r.data),
-  get: (id: string) =>
-    api.get<AvaliacaoIU>(`/avaliacao-iu/${id}`).then((r) => r.data),
-  minhas: () =>
-    api.get<AvaliacaoIU[]>('/avaliacao-iu/minhas').then((r) => r.data),
-  count: () =>
-    api.get<{ total: number }>('/avaliacao-iu/count').then((r) => r.data),
-  excluir: (id: string) =>
-    api.patch(`/avaliacao-iu/${id}/excluir`).then((r) => r.data),
-};
-
-// ---------- Follow-up ----------
-export const followUpApi = {
-  create: (payload: Record<string, unknown>) =>
-    api.post<FollowUp>('/followup', payload).then((r) => r.data),
-  listByPaciente: (pacienteId: string) =>
-    api.get<FollowUp[]>('/followup', { params: { pacienteId } }).then((r) => r.data),
-  listByAvaliacao: (avaliacaoIuId: string) =>
-    api.get<FollowUp[]>(`/followup/avaliacao/${avaliacaoIuId}`).then((r) => r.data),
-  resumo: () =>
-    api.get<{ emAvaliacao: number; elegivel: number; naoElegivel: number }>('/followup/resumo').then((r) => r.data),
-  excluir: (id: string) =>
-    api.patch(`/followup/${id}/excluir`).then((r) => r.data),
-};
-
-// ---------- Laudo Médico ----------
-export const laudoMedicoApi = {
-  create: (payload: Record<string, unknown>) =>
-    api.post<LaudoMedico>('/laudo-medico', payload).then((r) => r.data),
-  update: (id: string, payload: Record<string, unknown>) =>
-    api.patch<LaudoMedico>(`/laudo-medico/${id}`, payload).then((r) => r.data),
-  listByPaciente: (pacienteId: string) =>
-    api.get<LaudoMedico[]>('/laudo-medico', { params: { pacienteId } }).then((r) => r.data),
-  pendentesRevisao: () =>
-    api.get<LaudoMedico[]>('/laudo-medico/pendentes-revisao').then((r) => r.data),
-  get: (id: string) =>
-    api.get<LaudoMedico>(`/laudo-medico/${id}`).then((r) => r.data),
-  encaminhar: (id: string) =>
-    api.post<LaudoMedico>(`/laudo-medico/${id}/encaminhar`, {}).then((r) => r.data),
-  excluir: (id: string) =>
-    api.patch(`/laudo-medico/${id}/excluir`).then((r) => r.data),
-  assinar: (id: string, crm?: string) =>
-    api.post(`/laudo-medico/${id}/assinar`, {}, { params: crm ? { crm } : {} }).then((r) => r.data),
-  preencherComIA: (pacienteId: string, avaliacaoIuId: string) =>
-    api.post<RascunhoLaudoIA>('/laudo-medico/pre-preenchimento', { pacienteId, avaliacaoIuId }).then((r) => r.data),
-};
-
 // ---------- Observações do paciente (timeline append-only) ----------
 export const observacoesPacienteApi = {
   create: (payload: { pacienteId: string; texto: string }) =>
     api.post<ObservacaoPaciente>('/observacoes-paciente', payload).then((r) => r.data),
   listByPaciente: (pacienteId: string) =>
-    api.get<ObservacaoPaciente[]>('/observacoes-paciente', { params: { pacienteId } }).then((r) => r.data),
+    api.get<ObservacaoPaciente[]>('/observacoes-paciente', { params: { pacienteId } }).then((r) => comoLista<ObservacaoPaciente>(r.data) as ObservacaoPaciente[]),
 };
 
-// ---------- Checklist de Documentos ----------
-export const checklistDocumentosApi = {
-  create: (payload: { pacienteId: string; nome: string; observacao?: string }) =>
-    api.post<ChecklistDocumentoItem>('/checklist-documentos', payload).then((r) => r.data),
+// ---------- Testes psicológicos (placeholder — sem catálogo ainda) ----------
+export interface TestePsicologico {
+  id: string;
+  clinicaId: string;
+  pacienteId: string;
+  nomeTeste: string;
+  dataAplicacao: string;
+  resultado?: string;
+  aplicadoPor: string;
+  criadoEm: string;
+}
+
+export const testesPsicologicosApi = {
+  create: (payload: { pacienteId: string; nomeTeste: string; dataAplicacao: string; resultado?: string }) =>
+    api.post<TestePsicologico>('/testes-psicologicos', payload).then((r) => r.data),
   listByPaciente: (pacienteId: string) =>
-    api.get<ChecklistDocumentoItem[]>('/checklist-documentos', { params: { pacienteId } }).then((r) => r.data),
-  update: (id: string, payload: { status?: string; observacao?: string; nome?: string }) =>
-    api.patch<ChecklistDocumentoItem>(`/checklist-documentos/${id}`, payload).then((r) => r.data),
-  remove: (id: string) =>
-    api.delete<{ ok: true }>(`/checklist-documentos/${id}`).then((r) => r.data),
-  criarPadrao: (pacienteId: string) =>
-    api.post<ChecklistDocumentoItem[]>('/checklist-documentos/padrao', { pacienteId }).then((r) => r.data),
-  resumoPendentes: () =>
-    api.get<{ pendentes: number }>('/checklist-documentos/resumo-pendentes').then((r) => r.data),
+    api.get<TestePsicologico[]>('/testes-psicologicos', { params: { pacienteId } }).then((r) => comoLista<TestePsicologico>(r.data) as TestePsicologico[]),
 };
 
-// ---------- Entregas ----------
-export const entregasApi = {
-  create: (payload: Record<string, unknown>) =>
-    api.post<Entrega>('/entregas', payload).then((r) => r.data),
-  listByPaciente: (pacienteId: string) =>
-    api.get<Entrega[]>('/entregas', { params: { pacienteId } }).then((r) => r.data),
-  get: (id: string) =>
-    api.get<Entrega>(`/entregas/${id}`).then((r) => r.data),
-  confirmar: (id: string) =>
-    api.post(`/entregas/${id}/confirmar`).then((r) => r.data),
+// ---------- IA clínica (sugestão de abordagem + prescrição de exercícios) ----------
+export interface SugerirAbordagemPayload {
+  linhaTerapeutica?: LinhaTerapeutica;
+  motivoAtendimento?: string;
+  diagnosticosSaudeMental?: string;
+  avaliacaoRisco?: string;
+  evolucao?: string;
+  anotacoesLivres?: string;
+  numeroSessoesAnteriores?: number;
+}
+
+export interface GerarPrescricaoPayload {
+  linhaTerapeutica?: LinhaTerapeutica;
+  contextoClinico?: string;
+  checklistSelecionado?: string[];
+}
+
+export const iaClinicaApi = {
+  sugerirAbordagem: (payload: SugerirAbordagemPayload) =>
+    api
+      .post<{ sugestao: string; registroUsoIaId: string }>('/ia-clinica/sugerir-abordagem', payload)
+      .then((r) => r.data),
+  gerarPrescricao: (payload: GerarPrescricaoPayload) =>
+    api
+      .post<{ prescricao: string; registroUsoIaId: string }>('/ia-clinica/gerar-prescricao', payload)
+      .then((r) => r.data),
+  registrarDecisao: (registroUsoIaId: string, decisao: DecisaoUsoIA) =>
+    api
+      .post<void>(`/ia-clinica/registros/${registroUsoIaId}/decisao`, { decisao })
+      .then((r) => r.data),
 };
 
 // ---------- Super Admin ----------
@@ -451,7 +416,6 @@ export interface UpdateUsuarioPayload {
   clinicaId?: string | null;
   ativo?: boolean;
   registroProfissional?: string;
-  telefone?: string;
   modulosConcedidos?: Modulo[];
   modulosRevogados?: Modulo[];
 }
@@ -463,7 +427,8 @@ export interface CreateAdminUserPayload {
   papel: Papel;
   clinicaId?: string;
   registroProfissional?: string;
-  telefone?: string;
+  /** Obrigatório para ENFERMEIRO. */
+  coren?: string;
 }
 
 export interface TwoFactorSetup {
@@ -471,12 +436,18 @@ export interface TwoFactorSetup {
   base32: string;
 }
 
+export type TipoDocumentoClinica = 'CPF' | 'CNPJ';
+
 export interface ClinicaAdmin {
   id: string;
   nome: string;
-  cnpj: string;
+  /** CPF ou CNPJ, normalizado (sem pontuação). */
+  documento: string;
+  tipoDocumento: TipoDocumentoClinica;
   plano: 'basico' | 'profissional' | 'enterprise';
   ativo: boolean;
+  /** Teste beta: usuários aceitam o Termo de Teste. Ausente em respostas antigas = false. */
+  faseTeste?: boolean;
   criadoEm: string;
   totalUsuarios: number;
 }
@@ -485,11 +456,49 @@ export interface UpdateClinicaPayload {
   nome?: string;
   plano?: ClinicaAdmin['plano'];
   ativo?: boolean;
+  faseTeste?: boolean;
+  /** Correção da identidade fiscal (só SUPER_ADMIN): sempre os dois juntos. */
+  tipoDocumento?: TipoDocumentoClinica;
+  documento?: string;
+}
+
+export interface CriarClinicaPayload {
+  clinica: {
+    nome: string;
+    /** Opcional: a enfermeira informa o CPF/CNPJ do consultório no primeiro uso (os dois andam juntos). */
+    tipoDocumento?: TipoDocumentoClinica;
+    documento?: string;
+    plano: ClinicaAdmin['plano'];
+    fusoHorario: string;
+    duracaoConsultaPadrao: number;
+    faseTeste?: boolean;
+  };
+  /** Opcional: sem ele a clínica nasce sem administrador (nome e e-mail andam juntos). */
+  primeiroAdmin?: { nome: string; email: string };
+}
+
+export interface CriarClinicaResponse {
+  clinica: { id: string; nome: string; plano: ClinicaAdmin['plano'] };
+  /** Ausente quando a clínica foi criada sem administrador. */
+  admin?: { id: string; nome: string; email: string; papel: Papel };
+  /** Devolvida UMA vez — repassar ao cliente por fora. Ausente sem administrador. */
+  senhaTemporaria?: string;
+  twoFactorSetup?: { base32: string; otpauthUrl?: string };
+}
+
+export interface EventoRecuperacaoSenha {
+  evento: string;
+  quando: string;
+  email?: string;
+  caminho?: string;
+  resultado?: string;
 }
 
 export const superAdminApi = {
+  recuperacaoSenha: () =>
+    api.get<EventoRecuperacaoSenha[]>('/super-admin/recuperacao-senha').then((r) => r.data),
   listUsuarios: (params: ListUsersParams = {}) =>
-    api.get<ListUsuariosResult>('/super-admin/usuarios', { params }).then((r) => r.data),
+    api.get<ListUsuariosResult>('/super-admin/usuarios', { params }).then((r) => (comoLista(r.data), r.data)),
   getUsuario: (id: string) =>
     api.get<UsuarioAdmin>(`/super-admin/usuarios/${id}`).then((r) => r.data),
   createUsuario: (payload: CreateAdminUserPayload) =>
@@ -501,7 +510,9 @@ export const superAdminApi = {
   reset2fa: (id: string) =>
     api.post<TwoFactorSetup>(`/super-admin/usuarios/${id}/reset-2fa`).then((r) => r.data),
   listClinicas: () =>
-    api.get<{ items: ClinicaAdmin[]; total: number }>('/super-admin/clinicas').then((r) => r.data),
+    api.get<{ items: ClinicaAdmin[]; total: number }>('/super-admin/clinicas').then((r) => (comoLista(r.data), r.data)),
+  criarClinica: (payload: CriarClinicaPayload) =>
+    api.post<CriarClinicaResponse>('/super-admin/clinicas', payload).then((r) => r.data),
   updateClinica: (id: string, payload: UpdateClinicaPayload) =>
     api.patch<ClinicaAdmin>(`/super-admin/clinicas/${id}`, payload).then((r) => r.data),
 };
@@ -519,33 +530,232 @@ export interface DashboardPacientes {
   porSexo: Array<{ _id: string | null; total: number }>;
 }
 
-export interface EntregaNoPeriodo {
-  pacienteId: string;
-  pacienteNome: string;
-  dataEntrega: string;
-  status: string;
-  itens: Array<{ codigo: number; descricao: string; quantidade: number; categoria?: string }>;
+export interface DashboardAgendamentos {
+  porStatus: Array<{ _id: string | null; total: number }>;
+  porTipo: Array<{ _id: string | null; total: number }>;
+  topMedicos: Array<{ _id: string | null; total: number }>;
+  porMes: Array<{ _id: { ano: number; mes: number }; total: number }>;
+  porDia: Array<{ _id: string; total: number }>;
+  porSemana: Array<{ _id: { ano: number; semana: number }; total: number }>;
 }
 
-export interface PacienteAguardandoRelatorio {
-  pacienteId: string;
-  pacienteNome: string;
-  criadoEm: string;
+export interface DashboardFinanceiroAnalytics {
+  receitasPorMes: Array<{ _id: { ano: number; mes: number }; total: number; quantidade: number }>;
+  despesasPorMes: Array<{ _id: { ano: number; mes: number }; total: number; quantidade: number }>;
+  porFormaPagamento: Array<{ _id: string | null; total: number; quantidade: number }>;
+  totalGeral: Array<{ _id: { tipo: string; status: string }; total: number }>;
+}
+
+export interface CobrancaResumo {
+  id: string;
+  pacienteId?: string;
+  pacienteNome?: string;
+  valor: number;
+  vencimento?: string;
+  ciclo?: number;
+}
+
+export interface CobrancasPsicologia {
+  vencidas: CobrancaResumo[];
+  aVencer: CobrancaResumo[];
+  semData: CobrancaResumo[];
+  totalVencido: number;
+  totalAVencer: number;
+}
+
+export interface PacientePerdaSeguimento {
+  pacienteId?: string;
+  pacienteNome?: string;
+  totalAgendamentos: number;
+  faltas: number;
+  ultimaSessaoConcluidaEm?: string;
+}
+
+export interface SlotVago {
+  inicio: string;
+  fim: string;
 }
 
 export const analyticsApi = {
   pacientes: (params: AnalyticsPeriodParams = {}) =>
-    api.get<DashboardPacientes>('/analytics/pacientes', { params }).then((r) => r.data),
-  pacientesPorCateter: (params: AnalyticsPeriodParams = {}) =>
-    api.get<Array<{ _id: number; total: number }>>('/analytics/pacientes-por-cateter', { params }).then((r) => r.data),
+    api
+      .get<DashboardPacientes>('/analytics/pacientes', { params })
+      .then((r) => comoObjetoComLista<DashboardPacientes>(r.data, 'novosPorMes')),
   pacientesPorRepresentante: (params: AnalyticsPeriodParams = {}) =>
-    api.get<Array<{ _id: string; total: number }>>('/analytics/pacientes-por-representante', { params }).then((r) => r.data),
-  entregasNoMes: (params: AnalyticsPeriodParams = {}) =>
-    api.get<EntregaNoPeriodo[]>('/analytics/entregas-no-mes', { params }).then((r) => r.data),
-  sondasNoMes: (params: AnalyticsPeriodParams = {}) =>
-    api.get<{ totalQuantidade: number }>('/analytics/sondas-no-mes', { params }).then((r) => r.data),
-  aguardandoRelatorio: (params: AnalyticsPeriodParams = {}) =>
-    api.get<PacienteAguardandoRelatorio[]>('/analytics/aguardando-relatorio', { params }).then((r) => r.data),
-  pacientesPorEtapa: (params: AnalyticsPeriodParams = {}) =>
-    api.get<Array<{ etapa: EtapaFluxoClinico; total: number }>>('/analytics/pacientes-por-etapa', { params }).then((r) => r.data),
+    api.get<Array<{ _id: string; total: number }>>('/analytics/pacientes-por-representante', { params }).then((r) => comoLista<{ _id: string; total: number }>(r.data) as Array<{ _id: string; total: number }>),
+  agendamentos: (params: AnalyticsPeriodParams = {}) =>
+    api
+      .get<DashboardAgendamentos>('/analytics/agendamentos', { params })
+      .then((r) => comoObjetoComLista<DashboardAgendamentos>(r.data, ['porMes', 'porDia', 'porSemana'])),
+  financeiro: (params: AnalyticsPeriodParams = {}) =>
+    api
+      .get<DashboardFinanceiroAnalytics>('/analytics/financeiro', { params })
+      .then((r) => comoObjetoComLista<DashboardFinanceiroAnalytics>(r.data, 'receitasPorMes')),
+  cobrancasPsicologia: (params: { clinicaId?: string; profissionalId?: string } = {}) =>
+    api
+      .get<CobrancasPsicologia>('/analytics/cobrancas-psicologia', { params })
+      .then((r) => comoObjetoComLista<CobrancasPsicologia>(r.data, ['vencidas', 'aVencer'])),
+  perdaSeguimento: (params: { clinicaId?: string; profissionalId?: string; diasLimite?: number } = {}) =>
+    api.get<PacientePerdaSeguimento[]>('/analytics/perda-seguimento', { params }).then((r) => comoLista<PacientePerdaSeguimento>(r.data) as PacientePerdaSeguimento[]),
+  horariosVagos: (params: {
+    data: string;
+    clinicaId?: string;
+    profissionalId?: string;
+    horaInicio?: number;
+    horaFim?: number;
+    slotMinutos?: number;
+  }) => api.get<SlotVago[]>('/analytics/horarios-vagos', { params }).then((r) => comoLista<SlotVago>(r.data) as SlotVago[]),
+};
+
+// ---------- Produtos (catálogo operacional global) ----------
+export interface ProdutoPayload {
+  codigo?: number;
+  codigoFabricante?: string;
+  nome: string;
+  tipo: string;
+  sexo: string;
+  embalagem: string;
+  projeto: string;
+  french?: number;
+  comprimentoCm?: number;
+  descricaoTecnica: string;
+  descricaoSiafisico?: string;
+  codigoSiafisico?: number;
+}
+
+export const produtosApi = {
+  list: (params: { tipo?: string; incluirInativos?: boolean } = {}) =>
+    api.get<Produto[]>('/produtos', { params }).then((r) => comoLista<Produto>(r.data) as Produto[]),
+  create: (payload: ProdutoPayload) => api.post<Produto>('/produtos', payload).then((r) => r.data),
+  update: (codigo: number, payload: Partial<ProdutoPayload>) =>
+    api.patch<Produto>(`/produtos/${codigo}`, payload).then((r) => r.data),
+  desativar: (codigo: number) => api.patch<Produto>(`/produtos/${codigo}/desativar`).then((r) => r.data),
+};
+
+// ---------- Entregas ----------
+export interface CreateEntregaPayload {
+  pacienteId: string;
+  dataEntrega: string;
+  origem: string;
+  itens: Array<{
+    codigo: number;
+    descricao: string;
+    quantidade: number;
+    valorUnitarioCentavos: number;
+    valorTotalCentavos: number;
+  }>;
+  valorTotalCentavos: number;
+  notaFiscal?: string;
+  observacoes?: string;
+}
+
+export const entregasApi = {
+  listByPaciente: (pacienteId: string) =>
+    api.get<Entrega[]>('/entregas', { params: { pacienteId } }).then((r) => comoLista<Entrega>(r.data) as Entrega[]),
+  create: (payload: CreateEntregaPayload) => api.post<Entrega>('/entregas', payload).then((r) => r.data),
+  /** Pode levar o paciente elegível para CONCLUIDO no fluxo clínico (decisão do servidor). */
+  confirmar: (id: string) => api.post<Entrega>(`/entregas/${id}/confirmar`).then((r) => r.data),
+};
+
+// ---------- Checklist de documentos ----------
+export const checklistApi = {
+  listByPaciente: (pacienteId: string) =>
+    api.get<ChecklistItem[]>('/checklist-documentos', { params: { pacienteId } }).then((r) => comoLista<ChecklistItem>(r.data) as ChecklistItem[]),
+  create: (payload: { pacienteId: string; nome: string; observacao?: string }) =>
+    api.post<ChecklistItem>('/checklist-documentos', payload).then((r) => r.data),
+  criarPadrao: (pacienteId: string) =>
+    api.post<ChecklistItem[]>('/checklist-documentos/padrao', { pacienteId }).then((r) => r.data),
+  /** Marcar o último item como recebido pode levar o paciente elegível à consulta médica (decisão do servidor). */
+  update: (id: string, payload: { status?: string; nome?: string; observacao?: string }) =>
+    api.patch<ChecklistItem>(`/checklist-documentos/${id}`, payload).then((r) => r.data),
+  remove: (id: string) => api.delete<{ ok: true }>(`/checklist-documentos/${id}`).then((r) => r.data),
+};
+
+// ---------- Follow-up de elegibilidade ----------
+export interface CreateFollowUpPayload {
+  pacienteId: string;
+  dataFollowup: string;
+  statusElegibilidade: string;
+  observacoes: string;
+  proximoFollowup?: string;
+  /** Avaliação de IU de origem (opcional); o servidor valida que é deste paciente/clínica. */
+  avaliacaoIuId?: string;
+}
+
+export const followupApi = {
+  listByPaciente: (pacienteId: string) =>
+    api.get<FollowUp[]>('/followup', { params: { pacienteId } }).then((r) => comoLista<FollowUp>(r.data) as FollowUp[]),
+  /** Elegível/não elegível podem mover a etapa do fluxo clínico do paciente (decisão do servidor). */
+  create: (payload: CreateFollowUpPayload) => api.post<FollowUp>('/followup', payload).then((r) => r.data),
+  excluir: (id: string) => api.patch<FollowUp>(`/followup/${id}/excluir`).then((r) => r.data),
+};
+
+// ---------- Avaliação de IU ----------
+export const avaliacaoIUApi = {
+  /** Criar pode levar o paciente elegível para AVALIACAO_IU no fluxo clínico (decisão do servidor). */
+  create: (payload: Record<string, unknown>) => api.post<AvaliacaoIU>('/avaliacao-iu', payload).then((r) => r.data),
+  update: (id: string, payload: Record<string, unknown>) =>
+    api.patch<AvaliacaoIU>(`/avaliacao-iu/${id}`, payload).then((r) => r.data),
+  listByPaciente: (pacienteId: string) =>
+    api.get<AvaliacaoIU[]>('/avaliacao-iu', { params: { pacienteId } }).then((r) => comoLista<AvaliacaoIU>(r.data) as AvaliacaoIU[]),
+  excluir: (id: string) => api.patch<AvaliacaoIU>(`/avaliacao-iu/${id}/excluir`).then((r) => r.data),
+};
+
+// ---------- Captação de pacientes (fila de campo) ----------
+export interface CaptacaoPendente {
+  id: string;
+  nome?: string;
+  cpf?: string;
+  dataNascimento?: string;
+  endereco?: string;
+  telefone: string;
+  email?: string;
+  responsavelLegal?: { nome?: string; cpf?: string; telefone?: string; email?: string; vinculo?: string };
+  autorizacaoResponsavel?: { confirmado: boolean };
+  codigoEnfermeiro: string;
+  status: 'pendente' | 'exportado';
+  criadoEm: string;
+}
+export const captacaoApi = {
+  listarPendentes: () => api.get<{ success: true; data: CaptacaoPendente[] }>('/captacao').then((r) => r.data),
+  /** Completa o lead (ex.: data de nascimento) antes de exportar. Só salva; não exporta. */
+  atualizar: (id: string, payload: Record<string, unknown>) =>
+    api.patch<{ success: true; data: CaptacaoPendente }>(`/captacao/${id}`, payload).then((r) => r.data),
+  /** Exporta o lead como paciente [IU] na etapa inicial do fluxo. 400 se o lead não atende o cadastro de paciente. */
+  exportar: (id: string) =>
+    api.post<{ success: true; message: string; pacienteId: string }>(`/captacao/${id}/exportar`).then((r) => r.data),
+};
+
+// ---------- Financeiro de paciente (cobranças: registro + avisos; sem processar pagamento) ----------
+export interface CobrancaPayload {
+  pacienteId?: string;
+  tipo: string;
+  descricao: string;
+  valorCentavos?: number;
+  formaPagamento?: string;
+  parcelas?: number;
+  vencimento: string;
+}
+
+export const cobrancasApi = {
+  listByPaciente: (pacienteId: string) =>
+    api.get<Cobranca[]>('/cobrancas', { params: { pacienteId } }).then((r) => comoLista<Cobranca>(r.data) as Cobranca[]),
+  create: (payload: CobrancaPayload) => api.post<Cobranca>('/cobrancas', payload).then((r) => r.data),
+  /** Atalho: o valor vem da configuração da clínica. */
+  criarConsultaAvaliacao: (pacienteId: string, vencimento?: string) =>
+    api.post<Cobranca>('/cobrancas/consulta-avaliacao', { pacienteId, vencimento }).then((r) => r.data),
+  update: (id: string, payload: Partial<CobrancaPayload>) => api.patch<Cobranca>(`/cobrancas/${id}`, payload).then((r) => r.data),
+  /** Envia aviso por e-mail e/ou WhatsApp; basta um canal aceito para a cobrança ir a "enviada". */
+  enviarAviso: (id: string, canais: Array<'email' | 'whatsapp'>) =>
+    api
+      .post<{ cobranca: Cobranca; canais: Array<{ canal: string; ok: boolean; erro?: string }> }>(`/cobrancas/${id}/aviso`, { canais })
+      .then((r) => r.data),
+  marcarPaga: (id: string, formaPagamento?: string) =>
+    api.patch<Cobranca>(`/cobrancas/${id}/pagar`, { formaPagamento }).then((r) => r.data),
+  cancelar: (id: string, motivo: string) => api.patch<Cobranca>(`/cobrancas/${id}/cancelar`, { motivo }).then((r) => r.data),
+  resumo: (mes: string) => api.get<ResumoFinanceiroMensal>('/cobrancas/resumo', { params: { mes } }).then((r) => r.data),
+  config: () =>
+    api.get<{ valorConsultaAvaliacaoCentavos: number }>('/cobrancas/configuracao').then((r) => r.data),
+  salvarConfig: (valorConsultaAvaliacaoCentavos: number) =>
+    api.put<{ valorConsultaAvaliacaoCentavos: number }>('/cobrancas/configuracao', { valorConsultaAvaliacaoCentavos }).then((r) => r.data),
 };

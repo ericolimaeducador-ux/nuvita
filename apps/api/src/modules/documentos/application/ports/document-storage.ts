@@ -15,8 +15,13 @@ export interface PresignedUploadOutput {
 
 export interface DocumentStorage {
   createUploadUrl(input: PresignedUploadInput): Promise<PresignedUploadOutput>;
-  createReadUrl(privateUrl: string, expiresInSeconds: number): Promise<string>;
+  /** `downloadFilename`: nome genérico (sem dado pessoal) sugerido ao baixar. */
+  createReadUrl(privateUrl: string, expiresInSeconds: number, downloadFilename?: string): Promise<string>;
   createThumbnailIfSupported(documento: Documento): Promise<string | undefined>;
+  /** Metadados do objeto no bucket: `undefined` se não existe; lança se o storage estiver indisponível. */
+  headObject(privateUrl: string): Promise<{ tamanho: number; mimeType?: string } | undefined>;
+  /** URL privada (s3://bucket/chave) de uma chave de objeto deste bucket. */
+  privateUrlForKey(key: string): string;
   /** Remove o objeto (e seu thumbnail, se houver) do storage. Best-effort. */
   deleteObject(privateUrl: string): Promise<void>;
 }

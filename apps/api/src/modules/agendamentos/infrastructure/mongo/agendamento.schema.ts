@@ -9,7 +9,7 @@ export class AgendamentoMongo {
   @Prop({ required: true, index: true }) clinicaId!: string;
   @Prop({ required: true, index: true }) pacienteId!: string;
   @Prop({ required: true, index: true }) medicoId!: string;
-  @Prop({ required: true, enum: ModalidadeAtendimento, default: ModalidadeAtendimento.MEDICO, index: true }) modalidade!: ModalidadeAtendimento;
+  @Prop({ required: true, enum: ModalidadeAtendimento, default: ModalidadeAtendimento.PSICOLOGIA, index: true }) modalidade!: ModalidadeAtendimento;
   @Prop({ required: true, index: true }) dataHoraInicio!: Date;
   @Prop({ required: true }) dataHoraFim!: Date;
   @Prop({ required: true, enum: TipoAgendamento }) tipo!: TipoAgendamento;
@@ -19,6 +19,15 @@ export class AgendamentoMongo {
   @Prop({ required: true }) criadoPor!: string;
   criadoEm!: Date;
   atualizadoEm?: Date;
+
+  // Idempotência dos lembretes automáticos (feature-consultation-reminder-scheduler).
+  // Estampado quando o respectivo lembrete é enviado. Ausente = nunca enviado —
+  // NUNCA tratar ausência como "já enviado" nem travar nada nesse caso.
+  @Prop({ type: Date })
+  lembrete24hEnviadoEm?: Date;
+
+  @Prop({ type: Date })
+  lembrete1hEnviadoEm?: Date;
 }
 
 export const AgendamentoSchema = SchemaFactory.createForClass(AgendamentoMongo);

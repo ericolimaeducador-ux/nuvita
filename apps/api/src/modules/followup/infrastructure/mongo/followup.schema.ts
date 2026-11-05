@@ -12,8 +12,8 @@ export class FollowUpMongo {
   @Prop({ required: true, index: true })
   pacienteId!: string;
 
-  @Prop({ required: true, index: true })
-  avaliacaoIuId!: string;
+  @Prop({ index: true })
+  avaliacaoIuId?: string;
 
   @Prop({ required: true, index: true })
   enfermeiroId!: string;

@@ -1,5 +1,5 @@
 /**
- * Security module for Nuvita API.
+ * Security module for Nuvita Psi API.
  *
  * Exports:
  * - AppConfigService: application configuration loaded from either GCP Secret Manager or env files

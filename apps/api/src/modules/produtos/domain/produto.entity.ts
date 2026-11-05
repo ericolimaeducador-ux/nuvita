@@ -1,3 +1,15 @@
+// Catálogo OPERACIONAL de produtos (insumos entregues ao paciente). Sem e-commerce: nada de preço de venda online,
+// checkout ou carteira (isso é da landing, etapa 4).
+//
+// TENANCY: o catálogo é GLOBAL (sem clinicaId), igual ao Nuvita antigo. Se no futuro cada clínica precisar do seu
+// próprio catálogo, isso é uma decisão a tomar (clinicaId no schema + índice único {clinicaId, codigo}); hoje todas as
+// clínicas enxergam o mesmo catálogo e só ADMIN/SUPER_ADMIN o alteram.
+//
+// TIPO/LINHA: é uma STRING livre (não-vazia, com trim), não um enum fechado, para que uma linha/marca nova possa ser
+// cadastrada pelo ADMIN sem mudar código. `TipoProduto` abaixo lista só os valores JÁ gravados (usados como constantes
+// em testes e no mapeamento de categoria das entregas); qualquer outro texto também é válido.
+// TODO(conteudo): marcas, "sonda" e "coletor" são do catálogo de incontinência urinária; revisar na etapa de conteúdo
+// (estomaterapia: bolsas, barreiras, etc.).
 export enum TipoProduto {
   CATETER_VAPRO = 'cateter_vapro',
   COLETOR_ACTICOAT = 'coletor_acticoat',
@@ -15,12 +27,12 @@ export enum EmbalagemProduto {
   POCKET = 'pocket',
 }
 
-// Classificação interna de projeto (mesmos rótulos neutros de ProjetoPaciente,
-// definida localmente para manter o domínio de produtos autocontido). Vincula
-// cada item do catálogo ao projeto do paciente ao qual ele pode ser indicado.
+// Classificação interna de projeto (mesmos rótulos neutros de ProjetoPaciente, definida localmente para manter o
+// domínio de produtos autocontido). Vincula cada item do catálogo ao projeto ao qual ele pode ser indicado.
 export enum ProjetoCatalogo {
   ALPHA = 'ALPHA',
   BETA = 'BETA',
+  SIGMA = 'SIGMA',
 }
 
 export interface Produto {
@@ -28,7 +40,7 @@ export interface Produto {
   codigo: number;
   codigoFabricante?: string;
   nome: string;
-  tipo: TipoProduto;
+  tipo: string;
   sexo: SexoProduto;
   embalagem: EmbalagemProduto;
   projeto: ProjetoCatalogo;

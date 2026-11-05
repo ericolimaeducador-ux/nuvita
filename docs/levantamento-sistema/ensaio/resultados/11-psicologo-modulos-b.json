@@ -1,0 +1,450 @@
+[
+  {
+    "nome": "agenda-calendario",
+    "ok": true,
+    "f": {
+      "url": "/agenda",
+      "titulos": [
+        "Agenda"
+      ],
+      "botoes": [
+        "Sair",
+        "Calendário",
+        "Lista",
+        "Novo agendamento",
+        "Hoje",
+        "‹",
+        "›",
+        "Mês",
+        "Semana",
+        "Dia",
+        "27",
+        "28",
+        "29",
+        "30",
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26"
+      ],
+      "links": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "campos": [],
+      "dialogo": null
+    },
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "agenda-lista",
+    "ok": true,
+    "f": {
+      "url": "/agenda",
+      "titulos": [
+        "Agenda"
+      ],
+      "botoes": [
+        "Sair",
+        "Calendário",
+        "Lista",
+        "Novo agendamento"
+      ],
+      "links": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "campos": [
+        "dia"
+      ],
+      "dialogo": null
+    },
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "agenda-novo-dialog",
+    "ok": true,
+    "campos": [
+      "Modalidade",
+      "Paciente",
+      "ID do profissional responsável",
+      "Início",
+      "Fim",
+      "Tipo",
+      "Observações"
+    ],
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "regressao-agenda-novo",
+    "ok": true,
+    "aposForaEEsc_aberto": true,
+    "textoPreservado": true,
+    "cancelarPediuConfirmacao": true,
+    "erros": [],
+    "confirms": [
+      "Descartar alterações?"
+    ]
+  },
+  {
+    "nome": "agenda-menu-linha",
+    "ok": false,
+    "erro": "locator.click: Timeout 30000ms exceeded."
+  },
+  {
+    "nome": "atendimento-painel",
+    "ok": true,
+    "f": {
+      "url": "/atendimento-psicologico",
+      "titulos": [
+        "Atendimento Psicológico"
+      ],
+      "botoes": [
+        "Sair",
+        "Novo agendamento",
+        "Agendados e confirmados",
+        "Histórico",
+        "Prontuário",
+        "Atender"
+      ],
+      "links": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "campos": [
+        "button"
+      ],
+      "dialogo": null
+    },
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "atendimento-registro-dialog",
+    "ok": true,
+    "labels": [
+      "Motivo do atendimento / queixa principal",
+      "Avaliação de demanda",
+      "Doenças prévias / condições de saúde",
+      "Diagnósticos de saúde mental (prévios ou atuais)",
+      "Medicamentos em uso",
+      "Histórico familiar de saúde mental",
+      "Qualidade do sono",
+      "Apetite / alimentação",
+      "Atividade física",
+      "Uso de álcool, tabaco e outras substâncias",
+      "Estado emocional / sentimentos relatados e afeto observado",
+      "Dor (0 a 10)",
+      "Rede de apoio familiar / social",
+      "Avaliação de risco (ideação suicida, autolesão, risco a terceiros)",
+      "Objetivos do acompanhamento",
+      "Procedimento / técnica utilizada",
+      "Evolução",
+      "Encaminhamentos",
+      "Registro de Pensamentos Disfuncionais (RPD)",
+      "Distorções cognitivas identificadas",
+      "Tarefa de casa prescrita",
+      "Técnica aplicada na sessão e evolução",
+      "CRP do psicólogo responsável"
+    ],
+    "botoes": [
+      "Sugerir abordagem",
+      "Fechar",
+      "Salvar rascunho",
+      "Salvar e assinar",
+      "Close"
+    ],
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "atendimento-ia-sem-chave",
+    "ok": true,
+    "toast": "",
+    "erros": [
+      "500 POST /ia-clinica/sugerir-abordagem"
+    ],
+    "confirms": []
+  },
+  {
+    "nome": "regressao-atendimento-registro",
+    "ok": true,
+    "aposForaEEsc_aberto": true,
+    "fecharPediuConfirmacao": true,
+    "erros": [],
+    "confirms": [
+      "As anotações desta sessão ainda não foram salvas. Fechar mesmo assim?"
+    ]
+  },
+  {
+    "nome": "atendimento-historico",
+    "ok": true,
+    "texto": "Histórico de sessões — Ana Exemplo Demonstração Registros de psicoterapia deste paciente, do mais recente ao mais antigo. Nenhuma sessão registrada ainda. Close",
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "atendimento-novo-agendamento-psi",
+    "ok": true,
+    "labels": [
+      "Paciente",
+      "Tipo",
+      "Data e hora",
+      "Duração (min)",
+      "Observações"
+    ],
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "atendimento-atender",
+    "ok": true,
+    "url": "/atendimento-psicologico",
+    "texto": "Nuvita Psi Dashboard Pacientes Atend. Psicológico Financeiro (Psi) Agenda Telemedicina Relatórios PD Psicóloga Demonstração PSICOLOGO Sair Psicóloga Demonstração PSICOLOGO PD Ana Exemplo Demonstração Sessão de Psicoterapia · 23/10/2026 14:00 Copiar link do pac",
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "financeiro-painel",
+    "ok": true,
+    "f": {
+      "url": "/financeiro-psicologia",
+      "titulos": [
+        "Financeiro — Psicologia"
+      ],
+      "botoes": [
+        "Sair",
+        "Salvar",
+        "Cobrar ciclo 1"
+      ],
+      "links": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "campos": [
+        "0,00"
+      ],
+      "dialogo": null
+    },
+    "texto": "Financeiro — Psicologia Recebimento das consultas. O acompanhamento é vendido em ciclos de 4 sessões, pagos antes de começar. Seu preço de sessão Valor da sessão (R$) Salvar Recebido no mês R$ 0,00 outubro de 2026 A receber R$ 0,00 Cobranças emitidas e ainda não pagas Ciclos a cobrar 1 Pacientes sem cobrança do ciclo atual Pacientes em acompanhamento 1 Com ao menos uma sessão ou cobrança Um paciente fechou o ciclo e ainda não foi cobrado. A cobrança é do próximo pacote de 4 sessões — combine com",
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "financeiro-cobrar-ciclo",
+    "ok": true,
+    "texto": "Cobrar ciclo 1 Bruno Exemplo Demonstração — pacote de 4 sessões (sessões 2 a 5). Valor do ciclo (R$) Cadastre seu preço de sessão no topo da página para o valor vir preenchido. Forma de pagamento Opcional Vencimento Observações Cancelar Criar cobrança Close",
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "relatorios",
+    "ok": true,
+    "f": {
+      "url": "/relatorios",
+      "titulos": [
+        "Relatórios Gerenciais"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "links": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "campos": [
+        "relDataInicio",
+        "relDataFim",
+        "diaVagos",
+        "horaInicioVagos",
+        "horaFimVagos"
+      ],
+      "dialogo": null
+    },
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "documentos-lista",
+    "ok": true,
+    "f": {
+      "url": "/documentos",
+      "titulos": [
+        "Documentos"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "links": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "campos": [],
+      "dialogo": null
+    },
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "documentos-upload",
+    "ok": false,
+    "erro": "locator.fill: Timeout 30000ms exceeded."
+  },
+  {
+    "nome": "telemedicina-tela",
+    "ok": true,
+    "f": {
+      "url": "/telemedicina",
+      "titulos": [
+        "Telemedicina"
+      ],
+      "botoes": [
+        "Sair",
+        "Nova sala",
+        "Selecione o agendamento",
+        "Buscar",
+        "22/10/2026(2)"
+      ],
+      "links": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "campos": [
+        "button"
+      ],
+      "dialogo": null
+    },
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "telemedicina-nova-sala",
+    "ok": true,
+    "labels": [
+      "Agendamento",
+      "Modalidade"
+    ],
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "doc-atestado",
+    "ok": true,
+    "botoesCompor": [
+      "Voltar",
+      "Gerar atestado"
+    ],
+    "abriuPrevia": false,
+    "pdfBytes": 63383,
+    "texto": "Atestado de Comparecimento Paciente: Ana Exemplo Demonstração Voltar Data e horário do atendimento Gerar atestado",
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "doc-laudo",
+    "ok": true,
+    "botoesCompor": [
+      "Voltar",
+      "Gerar laudo"
+    ],
+    "abriuPrevia": false,
+    "pdfBytes": 79274,
+    "texto": "Laudo Psicoterápico Paciente: Ana Exemplo Demonstração Voltar Rascunho gerado a partir do histórico de sessões — revise e edite livremente antes de emitir. Texto do laudo Gerar laudo",
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "doc-encaminhamento",
+    "ok": true,
+    "botoesCompor": [
+      "Voltar",
+      "Gerar encaminhamento"
+    ],
+    "abriuPrevia": false,
+    "pdfBytes": 78637,
+    "texto": "Encaminhamento a outro profissional Paciente: Ana Exemplo Demonstração Voltar Profissional / especialidade de destino Motivo do encaminhamento Gerar encaminhamento",
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "doc-prescricao",
+    "ok": true,
+    "botoesCompor": [
+      "Voltar",
+      "Gerar com IA",
+      "Gerar prescrição"
+    ],
+    "abriuPrevia": false,
+    "pdfBytes": 119019,
+    "texto": "Prescrição de Cuidados em Psicologia Paciente: Ana Exemplo Demonstração Voltar Checklist de cuidados Exercícios de respiração/relaxamento Diário comportamental Leituras/filmes indicados Encaminhamento a outro profissional (se necessário) Sugestões — TCC (Terapia Cognitivo-Comportamental) + Diário de",
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "logout",
+    "ok": true,
+    "url": "/login",
+    "erros": [],
+    "confirms": []
+  }
+]

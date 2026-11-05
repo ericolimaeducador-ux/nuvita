@@ -1,3 +1,4 @@
+// TODO(conteudo): os códigos de enfermeiro captador são os REAIS do Nuvita antigo (espelham captacao.constants.ts da API).
 import type { ChangeEvent, FormEvent, ReactNode, Ref } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

@@ -1,3 +1,6 @@
+// TODO(conteudo): TODO o conteúdo clínico desta ficha (os ~33 campos, enums, rótulos e textos) é do fluxo de
+// incontinência urinária e foi mantido exatamente como no Nuvita antigo. Revisar/substituir na etapa de conteúdo
+// (estomaterapia). Os VALORES gravados em `avaliacoes_iu` não mudam.
 export enum LocalAtendimento {
   RESIDENCIA = 'residencia',
   HOSPITAL = 'hospital',
@@ -36,7 +39,7 @@ export enum EncaminhamentoIU {
 
 export interface ProdutoIndicado {
   codigo: number;
-  sexo: 'feminino' | 'masculino';
+  sexo: 'feminino' | 'masculino' | 'universal';
   french: number;
 }
 

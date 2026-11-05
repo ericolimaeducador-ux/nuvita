@@ -1,0 +1,26 @@
+[
+  {
+    "nome": "emitir-laudo",
+    "ok": true,
+    "botoes": [
+      "Voltar e editar",
+      "Imprimir / Salvar PDF"
+    ],
+    "textoEmitido": "Prévia — Laudo Psicoterápico Voltar e editar Imprimir / Salvar PDF Clínica Demonstração (Manual) CNPJ: 11.222.333/0001-81 LAUDO PSICOTERÁPICO Emitido em 22/10/2026 Paciente: Ana Exemplo Demonstração Texto fictício de laudo psicoterápico para o ensaio. _____________________________________ Psicóloga Demonstração — CRP CRP 00/00000 Clínica Demonstração (Manual) · CNPJ: 11.222.333/0001-81",
+    "pdfBytes": 37222,
+    "erros": [],
+    "confirms": []
+  },
+  {
+    "nome": "emitir-prescricao",
+    "ok": true,
+    "botoes": [
+      "Voltar e editar",
+      "Imprimir / Salvar PDF"
+    ],
+    "textoEmitido": "Prévia — Prescrição de Cuidados Voltar e editar Imprimir / Salvar PDF Clínica Demonstração (Manual) CNPJ: 11.222.333/0001-81 PRESCRIÇÃO DE CUIDADOS EM PSICOLOGIA 22/10/2026 Paciente: Ana Exemplo Demonstração Exercícios de respiração/relaxamento Orientação fictícia de cuidados. _____________________________________ Psicóloga Demonstração — CRP CRP 00/00000 Clínica Demonstração (Manual) · CNPJ: 11.222.333/0001-81",
+    "pdfBytes": 37653,
+    "erros": [],
+    "confirms": []
+  }
+]

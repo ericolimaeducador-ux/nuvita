@@ -15,6 +15,7 @@ import { toItems, idade } from '@/utils';
 import type { Paciente } from '@/types';
 import { EtapaFluxoClinico, ETAPA_FLUXO_LABEL, calcularPrazoEtapa } from '@/types';
 import { cn } from '@/lib/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
 
 const ETAPAS: Array<{ key: 'todos' | EtapaFluxoClinico; label: string; icon: React.ElementType }> = [
   { key: 'todos', label: 'Todos', icon: Activity },
@@ -38,7 +39,7 @@ const ETAPA_COLOR: Record<EtapaFluxoClinico, string> = {
   [EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA]: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
   [EtapaFluxoClinico.AGUARDANDO_ENTREGA]: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
   [EtapaFluxoClinico.NAO_ELEGIVEL]: 'bg-red-500/10 text-red-600 border-red-500/20',
-  [EtapaFluxoClinico.CONCLUIDO]: 'bg-accent-gold/15 text-amber-700 border-accent-gold/30',
+  [EtapaFluxoClinico.CONCLUIDO]: 'bg-amber-500/15 text-amber-700 border-amber-500/30',
 };
 
 function EtapaChip({ etapa }: { etapa: EtapaFluxoClinico }) {
@@ -74,6 +75,9 @@ export function FluxoClinicoPage() {
       nome: busca || undefined,
       limit: 50,
       etapaFluxo: filtroEtapa !== 'todos' ? filtroEtapa : undefined,
+      // Só pacientes ELEGÍVEIS ao fluxo (classificados exatamente como IU). Quem foi reclassificado para fora
+      // do fluxo mantém a etapa gravada, mas não aparece aqui.
+      fluxoClinico: true,
     }),
   });
 
@@ -82,8 +86,8 @@ export function FluxoClinicoPage() {
   return (
     <div className="p-6 space-y-6">
       <PageHeader
-        title="Fluxo Clínico"
-        subtitle="Pipeline completo: aguardando atendimento → avaliação → follow-up → entrevista → documentos → consulta → jurídico → entrega"
+        title="Fluxo Clínico — Incontinência Urinária"
+        subtitle="Pipeline de IU: aguardando atendimento → avaliação → follow-up → entrevista → documentos → consulta → entrega"
       />
 
       <div className="flex gap-2 flex-wrap">
@@ -111,11 +115,13 @@ export function FluxoClinicoPage() {
             <Input
               className="pl-9"
               placeholder="Buscar paciente..."
-              onChange={(e) => setBusca(e.target.value)}
+              onChange={(e) => setBusca(e.target.value.trim())}
             />
           </div>
 
-          {pacientesQ.isLoading ? (
+          {pacientesQ.isError ? (
+            <ErroConsulta erro={pacientesQ.error} refetch={pacientesQ.refetch} recurso="os pacientes do fluxo clínico" />
+          ) : pacientesQ.isLoading ? (
             <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
           ) : (
             <Table>
@@ -129,7 +135,7 @@ export function FluxoClinicoPage() {
               </TableHeader>
               <TableBody>
                 {pacientes.map((p) => (
-                  <TableRow key={p.id} className="cursor-pointer hover:bg-secondary" onClick={() => navigate(`/fluxo-clinico/${p.id}`)}>
+                  <TableRow key={p.id} className="cursor-pointer hover:bg-secondary" onClick={() => navigate(`/pacientes/${p.id}`)}>
                     <TableCell className="font-medium">{p.nome}</TableCell>
                     <TableCell>{p.dataNascimento ? idade(p.dataNascimento) : '—'}</TableCell>
                     <TableCell>{p.etapaFluxo ? <EtapaChip etapa={p.etapaFluxo} /> : '—'}</TableCell>

@@ -1,0 +1,32 @@
+import { abrir, observar, foto, entrar, lerContas, BASE } from './lib.mjs';
+import { writeFileSync } from 'fs';
+const caminho = process.env.CONTAS; const c = lerContas(caminho);
+const { browser, ctx } = await abrir();
+const page = await ctx.newPage(); const obs = observar(page);
+let ultimo = null;
+page.on('response', async (r) => { if (/\/clinicas\/.+\/usuarios$/.test(r.url()) && r.request().method() === 'POST') { try { const j = await r.json(); ultimo = { status: r.status(), chaves: Object.keys(j) }; } catch {} } });
+await entrar(page, c.admin);
+await page.goto(BASE + '/clinica'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
+async function criar(nome, email, senha, perfilRotulo, slug) {
+  const form = page.locator('form').first();
+  await page.locator('#nome').fill(nome);
+  await form.getByRole('combobox').first().click();
+  await page.getByRole('option', { name: perfilRotulo }).click();
+  await page.locator('#clEmail').fill(email);
+  await page.locator('#password').fill(senha);
+  await foto(page, `cadastro/${slug}-preenchido.png`);
+  await form.getByRole('button', { name: /criar usuário/i }).click();
+  await page.waitForTimeout(1500);
+  await foto(page, `cadastro/${slug}-apos-criar.png`);
+  const dlg = (await page.getByRole('dialog').allInnerTexts()).join(' || ').replace(/\s+/g, ' ').slice(0, 420);
+  console.log(`[${perfilRotulo}] resposta:`, JSON.stringify(ultimo), '\n  dialogo:', dlg);
+  const fechar = page.getByRole('dialog').getByRole('button', { name: /concluído|fechar|ok/i }).first();
+  if (await fechar.count()) await fechar.click();
+  await page.waitForTimeout(500);
+}
+await criar('Psicóloga Dois Demonstração', 'psicologa2.demo@manual.nuvita.test', 'Provisoria#Psi2026', 'Psicólogo(a)', '04-admin-cria-psicologo');
+await criar('Secretária Demonstração', 'secretaria.demo@manual.nuvita.test', 'SecretariaProv#2026', 'Secretaria', '05-admin-cria-secretaria');
+c.secretaria = { email: 'secretaria.demo@manual.nuvita.test', senha: 'SecretariaProv#2026', segredo2fa: null };
+writeFileSync(caminho, JSON.stringify(c, null, 2));
+console.log('erros:', JSON.stringify(obs.erros.filter((e) => e.status !== 403)));
+await browser.close();

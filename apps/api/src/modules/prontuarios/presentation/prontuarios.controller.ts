@@ -14,9 +14,11 @@ import { extractRequestMeta } from '../../../common/http/client-ip';
 import { AuthTokenPayload, PAPEIS_PROFISSIONAIS } from '../../../../../../packages/shared/src/auth';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
+import { AuthGatesGuard } from '../../auth/presentation/guards/auth-gates.guard';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
+import { AgendamentosService } from '../../agendamentos/application/agendamentos.service';
 import { Cid10QueryDto } from '../application/dto/cid10-query.dto';
 import { CreateAddendumDto } from '../application/dto/create-addendum.dto';
 import { CreateProntuarioDto } from '../application/dto/create-prontuario.dto';
@@ -25,18 +27,38 @@ import { UpdateProntuarioDto } from '../application/dto/update-prontuario.dto';
 import { ProntuarioRequestContext, ProntuariosService } from '../application/prontuarios.service';
 
 @Controller('prontuarios')
-@UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
 @Roles(...PAPEIS_PROFISSIONAIS)
 export class ProntuariosController {
-  constructor(private readonly prontuariosService: ProntuariosService) {}
+  constructor(
+    private readonly prontuariosService: ProntuariosService,
+    private readonly agendamentosService: AgendamentosService,
+  ) {}
 
   @Post()
-  create(
+  async create(
     @Body() dto: CreateProntuarioDto,
     @CurrentUser() user: AuthTokenPayload,
     @Req() request: Request,
   ) {
-    return this.prontuariosService.create(dto, this.contextFromRequest(request, user));
+    const ctx = this.contextFromRequest(request, user);
+    await this.agendamentosService.validarReferencias(
+      { pacienteId: dto.pacienteId, agendamentoId: dto.agendamentoId },
+      dto.clinicaId,
+      ctx,
+    );
+    return this.prontuariosService.create(dto, ctx);
+  }
+
+  // Fatos do laudo calculados no servidor. Declarada ANTES de ':id' para não ser capturada como id.
+  @Get('resumo-acompanhamento')
+  resumoAcompanhamento(
+    @Query('pacienteId') pacienteId: string,
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.prontuariosService.resumoAcompanhamento(pacienteId, clinicaId, this.contextFromRequest(request, user));
   }
 
   @Get()

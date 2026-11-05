@@ -21,7 +21,7 @@ export enum FormaPagamento {
 
 /**
  * De onde veio o lançamento. O financeiro geral (urologia, clínica) e o
- * financeiro do psicólogo autônomo compartilham o mesmo livro-caixa, mas cada
+ * financeiro do enfermeiro autônomo compartilham o mesmo livro-caixa, mas cada
  * um só enxerga a sua origem.
  */
 export enum OrigemLancamento {
@@ -43,7 +43,7 @@ export interface Lancamento {
   recebidoEm?: Date;
   observacoes?: string;
   origem: OrigemLancamento;
-  /** Profissional dono do recebimento (psicólogo autônomo). */
+  /** Profissional dono do recebimento (enfermeiro autônomo). */
   profissionalId?: string;
   /** Ciclo de sessões que esta cobrança paga (psicologia). */
   ciclo?: number;

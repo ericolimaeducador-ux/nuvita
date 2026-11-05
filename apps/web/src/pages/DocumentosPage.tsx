@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { Download, Trash2, File } from 'lucide-react';
@@ -5,11 +6,13 @@ import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { documentosApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { toItems } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
 import { toast } from '@/components/ui/use-toast';
 import { TIPO_DOCUMENTO_LABEL, type Documento } from '@/types';
 
@@ -22,12 +25,17 @@ function fmtTamanho(bytes?: number): string {
 
 export function DocumentosPage() {
   const qc = useQueryClient();
+  const [docParaExcluir, setDocParaExcluir] = useState<Documento | null>(null);
 
   const listQ = useQuery({ queryKey: ['documentos'], queryFn: () => documentosApi.list() });
 
   const excluirMut = useMutation({
     mutationFn: (id: string) => documentosApi.excluir(id),
-    onSuccess: () => { toast.success('Documento excluído.'); void qc.invalidateQueries({ queryKey: ['documentos'] }); },
+    onSuccess: () => {
+      toast.success('Documento excluído.');
+      setDocParaExcluir(null);
+      void qc.invalidateQueries({ queryKey: ['documentos'] });
+    },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
@@ -54,6 +62,8 @@ export function DocumentosPage() {
         <CardContent className="p-6">
           {listQ.isLoading ? (
             <div className="space-y-3">{[1,2,3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+          ) : listQ.isError ? (
+            <ErroConsulta erro={listQ.error} refetch={listQ.refetch} recurso="os documentos" />
           ) : (
             <Table>
               <TableHeader>
@@ -85,7 +95,7 @@ export function DocumentosPage() {
                         <Button
                           variant="ghost" size="icon" title="Excluir"
                           className="text-destructive hover:text-destructive"
-                          onClick={() => excluirMut.mutate(d.id)}
+                          onClick={() => setDocParaExcluir(d)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -103,6 +113,30 @@ export function DocumentosPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!docParaExcluir} onOpenChange={(o) => { if (!o) setDocParaExcluir(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Excluir documento</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Tem certeza que deseja excluir <span className="font-medium text-foreground">{docParaExcluir?.nome}</span>?
+            O arquivo será removido do armazenamento e esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDocParaExcluir(null)} disabled={excluirMut.isPending}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => docParaExcluir && excluirMut.mutate(docParaExcluir.id)}
+              disabled={excluirMut.isPending}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> {excluirMut.isPending ? 'Excluindo…' : 'Excluir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

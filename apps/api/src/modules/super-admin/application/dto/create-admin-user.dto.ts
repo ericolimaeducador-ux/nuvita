@@ -1,4 +1,5 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength, ValidateIf } from 'class-validator';
 import { Papel } from '../../../../../../../packages/shared/src/auth';
 
 export class CreateAdminUserDto {
@@ -23,8 +24,10 @@ export class CreateAdminUserDto {
   @IsString()
   registroProfissional?: string;
 
-  /** Opcional — usado só pra recuperação de login via WhatsApp. */
-  @IsOptional()
+  /** Obrigatório para ENFERMEIRO (não vazio; TODO(legal): o formato do COREN ainda depende de fonte oficial). */
+  @ValidateIf((o: { papel?: Papel }) => o.papel === Papel.ENFERMEIRO)
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
-  telefone?: string;
+  @IsNotEmpty({ message: 'Informe o COREN do enfermeiro.' })
+  coren?: string;
 }

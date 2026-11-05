@@ -4,6 +4,19 @@ import { Modulo, Papel } from '../../../../../../../packages/shared/src/auth';
 
 export type UserDocument = HydratedDocument<UserMongo>;
 
+// Aceite dos Termos de Uso do profissional (feature-terms-of-service-acceptance).
+// Formato espelha ConsentimentoLGPDMongo do paciente — mesma convenção já validada.
+@Schema({ _id: false, versionKey: false })
+export class TermosAceitosMongo {
+  @Prop({ required: true })
+  versao!: string;
+
+  @Prop({ required: true })
+  dataAceite!: Date;
+}
+
+const TermosAceitosSchema = SchemaFactory.createForClass(TermosAceitosMongo);
+
 @Schema({ collection: 'users', versionKey: false })
 export class UserMongo {
   @Prop({ required: true, trim: true })
@@ -29,13 +42,9 @@ export class UserMongo {
   @Prop({ trim: true })
   registroProfissional?: string;
 
-  // Usado só pra recuperação de login via WhatsApp (opcional, cadastrado por
-  // um ADMIN/SUPER_ADMIN — não há edição de perfil pelo próprio usuário hoje).
+  // COREN do enfermeiro (timbre dos documentos clínicos). Sem unique: o formato não é validado.
   @Prop({ trim: true })
-  telefone?: string;
-
-  @Prop({ index: true, sparse: true })
-  telefoneHash?: string;
+  coren?: string;
 
   @Prop({ default: true, index: true })
   ativo!: boolean;
@@ -49,7 +58,33 @@ export class UserMongo {
 
   @Prop({ default: Date.now, immutable: true })
   criadoEm!: Date;
+
+  // Troca de senha obrigatória no 1º login (feature-forced-password-change).
+  // Nasce false; só o onboarding de clínica seta true. Ausente em docs antigos = false.
+  @Prop({ default: false })
+  deveTrocarSenha!: boolean;
+
+  // Aceite dos Termos de Uso (feature-terms-of-service-acceptance).
+  // Ausente/null = nunca aceitou. Reaceite obrigatório a cada nova versão do termo.
+  @Prop({ type: TermosAceitosSchema })
+  termosAceitos?: TermosAceitosMongo;
+
+  // Cópia da marcação `faseTeste` da clínica (teste beta): define que o termo exigido
+  // é o Termo de Teste. Ausente em docs antigos = false (Termos de Uso).
+  @Prop({ default: false })
+  faseTeste!: boolean;
+
+  // Revogação de sessão na troca de senha (feature-session-revocation-on-password-change).
+  // Estampado a cada troca de senha bem-sucedida. Ausente = nenhuma troca de senha
+  // jamais invalidou sessões deste usuário — NUNCA tratar ausência como rejeição.
+  @Prop({ type: Date })
+  tokensValidosApartirDe?: Date;
+
+  // Redefinição de senha por e-mail: só o hash do token. Apagado em qualquer troca de senha.
+  @Prop({ type: { tokenHash: String, expiraEm: Date }, _id: false, select: false })
+  resetSenha?: { tokenHash: string; expiraEm: Date };
 }
 
 export const UserSchema = SchemaFactory.createForClass(UserMongo);
+UserSchema.index({ 'resetSenha.tokenHash': 1 }, { sparse: true });
 UserSchema.index({ clinicaId: 1, _id: 1 });

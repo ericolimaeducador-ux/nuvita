@@ -6,8 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { prontuariosApi, pacientesApi } from '@/api/resources';
 import { formatData, formatEndereco } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
+import { primeiraFalha } from '@/lib/consulta';
 import { DocumentoTimbre, DocumentoRodape } from '@/components/DocumentoTimbre';
+import { GateCorenEmissao } from '@/components/GateCorenEmissao';
+import { GateDocumentoConsultorio } from '@/components/GateDocumentoConsultorio';
+import { useEmissor } from '@/components/DocumentoAssinatura';
 import { TipoAtendimento, TIPO_ATENDIMENTO_LABEL, REGISTRO_PSICOLOGICO_CAMPOS, type ExameSegmentar } from '@/types';
+import { camposDoFormulario, formularioDoRegistro, linhaDoRegistro, rotuloDoCampo, ROTULO_FORMULARIO } from '@/lib/registroPsicologico';
 
 const EXAME_SEGMENTAR_CAMPOS: { key: keyof ExameSegmentar; label: string }[] = [
   { key: 'cabecaPescoco', label: 'Cabeça e pescoço' },
@@ -19,6 +25,13 @@ const EXAME_SEGMENTAR_CAMPOS: { key: keyof ExameSegmentar; label: string }[] = [
   { key: 'extremidades', label: 'Extremidades' },
   { key: 'pele', label: 'Pele e mucosas' },
 ];
+
+/** Valor do campo como texto, ou undefined se estiver vazio. */
+function textoCampo(v: unknown): string | undefined {
+  if (v === undefined || v === null) return undefined;
+  const t = String(v).trim();
+  return t === '' ? undefined : t;
+}
 
 function Campo({ label, children }: { label: string; children?: React.ReactNode }) {
   if (children === undefined || children === null || children === '' ||
@@ -33,6 +46,7 @@ function Campo({ label, children }: { label: string; children?: React.ReactNode 
 export function ProntuarioImpressaoPage() {
   const { id: pacienteId, prontuarioId } = useParams<{ id: string; prontuarioId: string }>();
   const navigate = useNavigate();
+  const emissor = useEmissor();
 
   const pacienteQ = useQuery({
     queryKey: ['paciente', pacienteId],
@@ -52,8 +66,40 @@ export function ProntuarioImpressaoPage() {
     return <div className="p-8 space-y-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-96 w-full" /></div>;
   }
 
-  const isEnfermagem = pr?.tipo === TipoAtendimento.CONSULTA_ENFERMAGEM;
+  // Impossível imprimir prontuário em branco: sem paciente e prontuário, só o alerta.
+  const falha = primeiraFalha(prontuarioQ, pacienteQ);
+  if (falha || !pr || !paciente) {
+    return (
+      <div className="p-8 space-y-4">
+        <ErroConsulta
+          erro={falha?.error}
+          refetch={falha?.refetch}
+          recurso="o prontuário e os dados do paciente"
+        />
+        <Button variant="ghost" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+        </Button>
+      </div>
+    );
+  }
+
   const isPsicoterapia = pr?.tipo === TipoAtendimento.PSICOTERAPIA;
+  // O formulário GRAVADO no registro decide o que se lista; registro antigo (sem o campo) segue por inferência.
+  const formulario = formularioDoRegistro(pr);
+  const camposDoRegistro = isPsicoterapia
+    ? camposDoFormulario(formulario, paciente?.linhaTerapeutica ?? linhaDoRegistro(pr?.registroPsicologico))
+    : [];
+  const jaListados = new Set<string>(camposDoRegistro.map((c) => c.key));
+  const camposExtras = isPsicoterapia
+    ? REGISTRO_PSICOLOGICO_CAMPOS
+        .filter(([key]) => !jaListados.has(key) && textoCampo(pr?.registroPsicologico?.[key]) !== undefined)
+        .map(([key]) => ({ key, label: rotuloDoCampo(key) }))
+    : [];
+  // COREN da assinatura: o CARIMBADO no registro pelo servidor. Registro antigo (sem carimbo): o de quem está logado, como antes.
+  const corenCarimbado = pr?.assinado?.coren?.trim();
+  const identificacaoAssinatura = corenCarimbado
+    ? [emissor.nome, /^coren/i.test(corenCarimbado) ? corenCarimbado : `COREN ${corenCarimbado}`].filter(Boolean).join(' — ')
+    : emissor.identificacao;
   const sv = pr?.objetivo?.sinaisVitais;
   const sinais = sv
     ? [
@@ -70,14 +116,15 @@ export function ProntuarioImpressaoPage() {
   const seg = pr?.objetivo?.exameSegmentar;
 
   return (
-    <>
+    <GateDocumentoConsultorio>
+    <GateCorenEmissao>
       {/* Botões só na tela, não imprimem */}
       <div className="print:hidden flex items-center gap-3 p-4 border-b border-border">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <span className="text-sm text-muted-foreground">
-          Prévia do {isEnfermagem ? 'Registro de Enfermagem' : isPsicoterapia ? 'Registro de Atendimento Psicológico' : 'Prontuário (SOAP)'}
+          Prévia do {isPsicoterapia ? 'Registro de Atendimento Psicológico' : 'Prontuário (SOAP)'}
         </span>
         <Button size="sm" className="ml-auto" onClick={() => window.print()}>
           <Printer className="h-4 w-4 mr-2" /> Imprimir / Salvar PDF
@@ -92,7 +139,7 @@ export function ProntuarioImpressaoPage() {
         <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4 mb-6">
           <div>
             <h1 className="text-base font-bold uppercase tracking-wide">
-              {isEnfermagem ? 'Registro de Enfermagem' : isPsicoterapia ? 'Registro de Atendimento Psicológico' : 'Prontuário — SOAP'}
+              {isPsicoterapia ? 'Registro de Atendimento Psicológico' : 'Prontuário — SOAP'}
             </h1>
             <p className="text-xs text-gray-500 mt-0.5">{pr ? (TIPO_ATENDIMENTO_LABEL[pr.tipo] ?? pr.tipo) : '—'}</p>
           </div>
@@ -115,21 +162,17 @@ export function ProntuarioImpressaoPage() {
           </div>
         </section>
 
-        {isEnfermagem ? (
+        {isPsicoterapia ? (
           <section className="mb-5">
-            <h2 className="text-xs font-bold uppercase text-gray-500 mb-2 border-b border-gray-300 pb-1">Registro de Enfermagem</h2>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-1 mb-2">
-              <Campo label="Ligação ao paciente">{pr?.registroEnfermagem?.dataLigacao && formatData(pr.registroEnfermagem.dataLigacao)}</Campo>
-              <Campo label="Chegada da sonda">{pr?.registroEnfermagem?.sondaChegouEm && formatData(pr.registroEnfermagem.sondaChegouEm)}</Campo>
-            </div>
-            <p className="whitespace-pre-line">{pr?.registroEnfermagem?.observacoes || '—'}</p>
-          </section>
-        ) : isPsicoterapia ? (
-          <section className="mb-5">
-            <h2 className="text-xs font-bold uppercase text-gray-500 mb-2 border-b border-gray-300 pb-1">Registro de Atendimento Psicológico</h2>
+            <h2 className="text-xs font-bold uppercase text-gray-500 mb-2 border-b border-gray-300 pb-1">Registro de Atendimento Psicológico — {ROTULO_FORMULARIO[formulario]}</h2>
             <div className="space-y-1.5">
-              {REGISTRO_PSICOLOGICO_CAMPOS.map(([key, label]) => (
-                <Campo key={key} label={label}>{pr?.registroPsicologico?.[key]}</Campo>
+              {/* Rótulos e ordem do FORMULÁRIO usado; o que ficou vazio aparece como "Não preenchido". */}
+              {camposDoRegistro.map(({ key, label }) => (
+                <Campo key={key} label={label}>{textoCampo(pr?.registroPsicologico?.[key]) ?? 'Não preenchido'}</Campo>
+              ))}
+              {/* Nunca esconder conteúdo gravado que não está no formulário usado (ex.: COREN digitado em registro antigo). */}
+              {camposExtras.map(({ key, label }) => (
+                <Campo key={key} label={label}>{textoCampo(pr?.registroPsicologico?.[key])}</Campo>
               ))}
             </div>
           </section>
@@ -199,7 +242,7 @@ export function ProntuarioImpressaoPage() {
               </div>
             )}
             <div className="border-t-2 border-gray-800 pt-1">
-              <p className="text-sm font-semibold">Profissional Responsável</p>
+              <p className="text-sm font-semibold">{identificacaoAssinatura || 'Profissional Responsável'}</p>
             </div>
           </div>
           <div className="text-sm text-gray-500 text-right">
@@ -224,6 +267,7 @@ export function ProntuarioImpressaoPage() {
           }
         }
       `}</style>
-    </>
+    </GateCorenEmissao>
+    </GateDocumentoConsultorio>
   );
 }

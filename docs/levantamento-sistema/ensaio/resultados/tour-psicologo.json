@@ -1,0 +1,510 @@
+{
+  "perfil": "psicologo",
+  "depoisDoLogin": "/dashboard",
+  "rotas": [
+    {
+      "slug": "dashboard",
+      "pedida": "/dashboard",
+      "final": "/dashboard",
+      "redirecionou": false,
+      "titulos": [
+        "Olá, Psicóloga Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Atend. Psicológico Financeiro (Psi) Agenda Telemedicina Relatórios PD Psicóloga Demonstração PSICOLOGO Sair Psicóloga Demonstração PSICOLOGO PD Olá, Psicóloga Demonstração quinta-feira, 22 de outubro de 2026 Psicoterapia — sessõe",
+      "img": "screenshots/perfis/psicologo/dashboard.png"
+    },
+    {
+      "slug": "pacientes",
+      "pedida": "/pacientes",
+      "final": "/pacientes",
+      "redirecionou": false,
+      "titulos": [
+        "Pacientes"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair",
+        "Novo paciente",
+        "Mais recentes",
+        "Todas as linhas"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Atend. Psicológico Financeiro (Psi) Agenda Telemedicina Relatórios PD Psicóloga Demonstração PSICOLOGO Sair Psicóloga Demonstração PSICOLOGO PD Pacientes Cadastro e prontuário base dos pacientes da clínica Novo paciente Buscar Da",
+      "img": "screenshots/perfis/psicologo/pacientes.png"
+    },
+    {
+      "slug": "paciente-ficha",
+      "pedida": "/pacientes/:id",
+      "final": "/pacientes/:id",
+      "redirecionou": false,
+      "titulos": [
+        "Ana Exemplo Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair",
+        "Voltar",
+        "Exportar (LGPD)",
+        "Dados cadastrais",
+        "Prontuários e atendimentos0",
+        "Documentos clínicos",
+        "Testes Psicológicos1",
+        "Aplicar teste",
+        "Documentos0",
+        "Novo documento"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Atend. Psicológico Financeiro (Psi) Agenda Telemedicina Relatórios PD Psicóloga Demonstração PSICOLOGO Sair Psicóloga Demonstração PSICOLOGO PD Voltar Ana Exemplo Demonstração 390.533.447-05 36 anos Ativo Exportar (LGPD) Dados ca",
+      "img": "screenshots/perfis/psicologo/paciente-ficha.png"
+    },
+    {
+      "slug": "imprimir-prontuario",
+      "pedida": "/pacientes/6ada6457601ae7ce8e864969/prontuario/6ada6458601ae7ce8e864987/imprimir",
+      "final": "/pacientes/6ada6457601ae7ce8e864969/prontuario/6ada6458601ae7ce8e864987/imprimir",
+      "redirecionou": false,
+      "titulos": [
+        "Clínica Demonstração (Manual)",
+        "Registro de Atendimento Psicológico",
+        "Paciente",
+        "Registro de Atendimento Psicológico"
+      ],
+      "menu": [],
+      "botoes": [
+        "Imprimir / Salvar PDF"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Prévia do Registro de Atendimento Psicológico Imprimir / Salvar PDF Clínica Demonstração (Manual) CNPJ: 11.222.333/0001-81 REGISTRO DE ATENDIMENTO PSICOLÓGICO Atendimento Psicológico Data do atendimento: 22/10/2026 16:30 PACIENTE Nome: Bruno Exemplo Demonstraç",
+      "img": "screenshots/perfis/psicologo/imprimir-prontuario.png"
+    },
+    {
+      "slug": "doc-atestado",
+      "pedida": "/pacientes/:id/documentos/atestado",
+      "final": "/pacientes/:id/documentos/atestado",
+      "redirecionou": false,
+      "titulos": [
+        "Atestado de Comparecimento"
+      ],
+      "menu": [],
+      "botoes": [
+        "Voltar",
+        "Gerar atestado"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Atestado de Comparecimento Paciente: Ana Exemplo Demonstração Voltar Data e horário do atendimento Gerar atestado",
+      "img": "screenshots/perfis/psicologo/doc-atestado.png"
+    },
+    {
+      "slug": "doc-laudo",
+      "pedida": "/pacientes/:id/documentos/laudo",
+      "final": "/pacientes/:id/documentos/laudo",
+      "redirecionou": false,
+      "titulos": [
+        "Laudo Psicoterápico"
+      ],
+      "menu": [],
+      "botoes": [
+        "Voltar",
+        "Gerar laudo"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Laudo Psicoterápico Paciente: Ana Exemplo Demonstração Voltar Rascunho gerado a partir do histórico de sessões — revise e edite livremente antes de emitir. Texto do laudo Gerar laudo",
+      "img": "screenshots/perfis/psicologo/doc-laudo.png"
+    },
+    {
+      "slug": "doc-encaminhamento",
+      "pedida": "/pacientes/:id/documentos/encaminhamento",
+      "final": "/pacientes/:id/documentos/encaminhamento",
+      "redirecionou": false,
+      "titulos": [
+        "Encaminhamento a outro profissional"
+      ],
+      "menu": [],
+      "botoes": [
+        "Voltar",
+        "Gerar encaminhamento"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Encaminhamento a outro profissional Paciente: Ana Exemplo Demonstração Voltar Profissional / especialidade de destino Motivo do encaminhamento Gerar encaminhamento",
+      "img": "screenshots/perfis/psicologo/doc-encaminhamento.png"
+    },
+    {
+      "slug": "doc-prescricao",
+      "pedida": "/pacientes/:id/documentos/prescricao",
+      "final": "/pacientes/:id/documentos/prescricao",
+      "redirecionou": false,
+      "titulos": [
+        "Prescrição de Cuidados em Psicologia"
+      ],
+      "menu": [],
+      "botoes": [
+        "Voltar",
+        "Gerar com IA",
+        "Gerar prescrição"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Prescrição de Cuidados em Psicologia Paciente: Ana Exemplo Demonstração Voltar Checklist de cuidados Exercícios de respiração/relaxamento Diário comportamental Leituras/filmes indicados Encaminhamento a outro profissional (se necessário) Sugestões — TCC (Terap",
+      "img": "screenshots/perfis/psicologo/doc-prescricao.png"
+    },
+    {
+      "slug": "agenda",
+      "pedida": "/agenda",
+      "final": "/agenda",
+      "redirecionou": false,
+      "titulos": [
+        "Agenda"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair",
+        "Calendário",
+        "Lista",
+        "Novo agendamento",
+        "Hoje",
+        "‹",
+        "›",
+        "Mês",
+        "Semana",
+        "Dia",
+        "27",
+        "28",
+        "29",
+        "30",
+        "01"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Atend. Psicológico Financeiro (Psi) Agenda Telemedicina Relatórios PD Psicóloga Demonstração PSICOLOGO Sair Psicóloga Demonstração PSICOLOGO PD Agenda Agendamentos das três modalidades: médica, enfermagem e jurídica Calendário Li",
+      "img": "screenshots/perfis/psicologo/agenda.png"
+    },
+    {
+      "slug": "prontuarios",
+      "pedida": "/prontuarios",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Psicóloga Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Atend. Psicológico Financeiro (Psi) Agenda Telemedicina Relatórios PD Psicóloga Demonstração PSICOLOGO Sair Psicóloga Demonstração PSICOLOGO PD Olá, Psicóloga Demonstração quinta-feira, 22 de outubro de 2026 Psicoterapia — sessõe",
+      "img": "screenshots/perfis/psicologo/prontuarios.png"
+    },
+    {
+      "slug": "documentos",
+      "pedida": "/documentos",
+      "final": "/documentos",
+      "redirecionou": false,
+      "titulos": [
+        "Documentos"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Atend. Psicológico Financeiro (Psi) Agenda Telemedicina Relatórios PD Psicóloga Demonstração PSICOLOGO Sair Psicóloga Demonstração PSICOLOGO PD Documentos Arquivos clínicos e administrativos de todos os pacientes (só leitura — o ",
+      "img": "screenshots/perfis/psicologo/documentos.png"
+    },
+    {
+      "slug": "notificacoes",
+      "pedida": "/notificacoes",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Psicóloga Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Atend. Psicológico Financeiro (Psi) Agenda Telemedicina Relatórios PD Psicóloga Demonstração PSICOLOGO Sair Psicóloga Demonstração PSICOLOGO PD Olá, Psicóloga Demonstração quinta-feira, 22 de outubro de 2026 Psicoterapia — sessõe",
+      "img": "screenshots/perfis/psicologo/notificacoes.png"
+    },
+    {
+      "slug": "telemedicina",
+      "pedida": "/telemedicina",
+      "final": "/telemedicina",
+      "redirecionou": false,
+      "titulos": [
+        "Telemedicina"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair",
+        "Nova sala",
+        "Selecione o agendamento",
+        "Buscar"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Atend. Psicológico Financeiro (Psi) Agenda Telemedicina Relatórios PD Psicóloga Demonstração PSICOLOGO Sair Psicóloga Demonstração PSICOLOGO PD Telemedicina Nova sala Buscar sala por agendamento Selecione o agendamento Buscar His",
+      "img": "screenshots/perfis/psicologo/telemedicina.png"
+    },
+    {
+      "slug": "atendimento-psicologico",
+      "pedida": "/atendimento-psicologico",
+      "final": "/atendimento-psicologico",
+      "redirecionou": false,
+      "titulos": [
+        "Atendimento Psicológico"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair",
+        "Novo agendamento",
+        "Agendados e confirmados",
+        "Histórico",
+        "Prontuário",
+        "Atender"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Atend. Psicológico Financeiro (Psi) Agenda Telemedicina Relatórios PD Psicóloga Demonstração PSICOLOGO Sair Psicóloga Demonstração PSICOLOGO PD Atendimento Psicológico Pacientes agendados para avaliação psicológica e psicoterapia",
+      "img": "screenshots/perfis/psicologo/atendimento-psicologico.png"
+    },
+    {
+      "slug": "financeiro-psicologia",
+      "pedida": "/financeiro-psicologia",
+      "final": "/financeiro-psicologia",
+      "redirecionou": false,
+      "titulos": [
+        "Financeiro — Psicologia"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair",
+        "Salvar",
+        "Cobrar ciclo 1"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Atend. Psicológico Financeiro (Psi) Agenda Telemedicina Relatórios PD Psicóloga Demonstração PSICOLOGO Sair Psicóloga Demonstração PSICOLOGO PD Financeiro — Psicologia Recebimento das consultas. O acompanhamento é vendido em cicl",
+      "img": "screenshots/perfis/psicologo/financeiro-psicologia.png"
+    },
+    {
+      "slug": "clinica",
+      "pedida": "/clinica",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Psicóloga Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Atend. Psicológico Financeiro (Psi) Agenda Telemedicina Relatórios PD Psicóloga Demonstração PSICOLOGO Sair Psicóloga Demonstração PSICOLOGO PD Olá, Psicóloga Demonstração quinta-feira, 22 de outubro de 2026 Psicoterapia — sessõe",
+      "img": "screenshots/perfis/psicologo/clinica.png"
+    },
+    {
+      "slug": "relatorios",
+      "pedida": "/relatorios",
+      "final": "/relatorios",
+      "redirecionou": false,
+      "titulos": [
+        "Relatórios Gerenciais"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Atend. Psicológico Financeiro (Psi) Agenda Telemedicina Relatórios PD Psicóloga Demonstração PSICOLOGO Sair Psicóloga Demonstração PSICOLOGO PD Relatórios Gerenciais Visão consolidada de pacientes e atendimentos para a gestão da ",
+      "img": "screenshots/perfis/psicologo/relatorios.png"
+    },
+    {
+      "slug": "super-admin",
+      "pedida": "/super-admin",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Psicóloga Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Atend. Psicológico Financeiro (Psi) Agenda Telemedicina Relatórios PD Psicóloga Demonstração PSICOLOGO Sair Psicóloga Demonstração PSICOLOGO PD Olá, Psicóloga Demonstração quinta-feira, 22 de outubro de 2026 Psicoterapia — sessõe",
+      "img": "screenshots/perfis/psicologo/super-admin.png"
+    },
+    {
+      "slug": "tickets",
+      "pedida": "/tickets",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Psicóloga Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Atend. Psicológico Financeiro (Psi) Agenda Telemedicina Relatórios PD Psicóloga Demonstração PSICOLOGO Sair Psicóloga Demonstração PSICOLOGO PD Olá, Psicóloga Demonstração quinta-feira, 22 de outubro de 2026 Psicoterapia — sessõe",
+      "img": "screenshots/perfis/psicologo/tickets.png"
+    },
+    {
+      "slug": "rota-inexistente",
+      "pedida": "/rota-que-nao-existe",
+      "final": "/dashboard",
+      "redirecionou": true,
+      "titulos": [
+        "Olá, Psicóloga Demonstração"
+      ],
+      "menu": [
+        "Dashboard",
+        "Pacientes",
+        "Atend. Psicológico",
+        "Financeiro (Psi)",
+        "Agenda",
+        "Telemedicina",
+        "Relatórios"
+      ],
+      "botoes": [
+        "Sair"
+      ],
+      "erros": [],
+      "consoleErros": 1,
+      "texto": "Nuvita Psi Dashboard Pacientes Atend. Psicológico Financeiro (Psi) Agenda Telemedicina Relatórios PD Psicóloga Demonstração PSICOLOGO Sair Psicóloga Demonstração PSICOLOGO PD Olá, Psicóloga Demonstração quinta-feira, 22 de outubro de 2026 Psicoterapia — sessõe",
+      "img": "screenshots/perfis/psicologo/rota-inexistente.png"
+    }
+  ]
+}

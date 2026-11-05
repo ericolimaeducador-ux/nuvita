@@ -1,0 +1,15 @@
+import { abrir, observar, foto, fatos, entrar, lerContas, BASE } from './lib.mjs';
+const c = lerContas(process.env.CONTAS);
+const { browser, ctx } = await abrir();
+const page = await ctx.newPage(); const obs = observar(page);
+await entrar(page, c.superAdmin);
+await page.goto(BASE + '/super-admin'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+console.log('tabs:', await page.getByRole('tab').allInnerTexts());
+await foto(page, 'perfis/superAdmin/super-admin-usuarios.png');
+await page.getByRole('button', { name: /novo usuário/i }).first().click();
+await page.waitForTimeout(600);
+await foto(page, 'super-admin/01-novo-usuario-dialog.png');
+const f = await fatos(page);
+console.log('dialog campos:', f.campos.join(' | ')); console.log('dialog:', f.dialogo?.slice(0, 400));
+console.log(JSON.stringify(await page.getByRole('dialog').locator('label').allInnerTexts()));
+await browser.close();

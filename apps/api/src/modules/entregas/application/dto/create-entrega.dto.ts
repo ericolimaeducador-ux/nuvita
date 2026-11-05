@@ -1,22 +1,39 @@
-import { IsArray, IsDateString, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsMongoId,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import { OrigemEntrega } from '../../domain/entrega.entity';
 
 export class ItemEntregaDto {
-  @IsNumber() codigo!: number;
+  @IsInt() @Min(1) codigo!: number;
   @IsString() descricao!: string;
-  @IsNumber() quantidade!: number;
-  @IsNumber() valorUnitarioCentavos!: number;
-  @IsNumber() valorTotalCentavos!: number;
+  @IsInt() @Min(1) quantidade!: number;
+  @IsInt() @Min(0) valorUnitarioCentavos!: number;
+  @IsInt() @Min(0) valorTotalCentavos!: number;
 }
 
 export class CreateEntregaDto {
-  @IsOptional() @IsString() clinicaId?: string;
-  @IsString() pacienteId!: string;
-  @IsOptional() @IsString() avaliacaoIuId?: string;
+  @IsOptional() @IsMongoId() clinicaId?: string;
+  @IsMongoId() pacienteId!: string;
+  // Referência à avaliação de IU (módulo ainda não portado). Sem validação de existência por enquanto.
+  @IsOptional() @IsMongoId() avaliacaoIuId?: string;
   @IsDateString() dataEntrega!: string;
   @IsEnum(OrigemEntrega) origem!: OrigemEntrega;
-  @IsArray() itens!: ItemEntregaDto[];
-  @IsNumber() valorTotalCentavos!: number;
+  @IsArray()
+  @ArrayNotEmpty({ message: 'Informe ao menos um item na entrega.' })
+  @ValidateNested({ each: true })
+  @Type(() => ItemEntregaDto)
+  itens!: ItemEntregaDto[];
+  @IsInt() @Min(0) valorTotalCentavos!: number;
   @IsOptional() @IsString() notaFiscal?: string;
   @IsOptional() @IsString() observacoes?: string;
 }

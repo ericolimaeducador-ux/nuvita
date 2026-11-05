@@ -39,8 +39,8 @@ export class GoogleSecretsService implements OnModuleInit {
   private metadataCache = new Map<string, SecretMetadata>();
 
   private readonly projectId = process.env.GCP_PROJECT_ID;
-  private readonly kmsKeyRing = process.env.KMS_KEY_RING || 'nuvita-keyring';
-  private readonly kmsKey = process.env.KMS_KEY || 'nuvita-master-key';
+  private readonly kmsKeyRing = process.env.KMS_KEY_RING || 'nuvita-psi-keyring';
+  private readonly kmsKey = process.env.KMS_KEY || 'nuvita-psi-master-key';
   private readonly cacheTTL = 5 * 60 * 1000; // 5 minutes
   private readonly rotationCheckInterval = 24 * 60 * 60 * 1000; // 24 hours
 

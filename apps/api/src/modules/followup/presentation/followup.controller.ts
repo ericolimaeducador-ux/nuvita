@@ -1,29 +1,32 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
+import { extractRequestMeta } from '../../../common/http/client-ip';
 import { AuthTokenPayload, PAPEIS_PROFISSIONAIS, Papel } from '../../../../../../packages/shared/src/auth';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
+import { AuthGatesGuard } from '../../auth/presentation/guards/auth-gates.guard';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
-import { FollowUpService } from '../application/followup.service';
+import { FollowUpAuditContext, FollowUpService } from '../application/followup.service';
 import { CreateFollowUpDto } from '../application/dto/create-followup.dto';
 
-// Leitura (GET) fica aberta também a ADMIN/SECRETARIA — precisam enxergar o
-// pipeline (fluxo clínico) para saber quando agendar o paciente com o médico.
-// Mutações incluem ADMIN além dos profissionais de atendimento (o frontend
-// sempre ofereceu essas ações ao ADMIN; o backend negava com 403).
+// Leitura: equipe da clínica inclusive SECRETARIA — precisa enxergar o pipeline para saber quando agendar o paciente.
+// Mutação: a decisão de elegibilidade é CLÍNICA — só ENFERMEIRO e ADMIN (SUPER_ADMIN sempre passa); SECRETARIA não decide.
+// PACIENTE não tem acesso.
 const LEITURA_PIPELINE = [...PAPEIS_PROFISSIONAIS, Papel.ADMIN, Papel.SECRETARIA];
 const MUTACAO_PIPELINE = [...PAPEIS_PROFISSIONAIS, Papel.ADMIN];
 
 @Controller('followup')
-@UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
+@Roles(...LEITURA_PIPELINE)
 export class FollowUpController {
   constructor(private readonly service: FollowUpService) {}
 
   @Post()
   @Roles(...MUTACAO_PIPELINE)
-  create(@Body() dto: CreateFollowUpDto, @CurrentUser() user: AuthTokenPayload) {
-    return this.service.create(dto, user);
+  create(@Body() dto: CreateFollowUpDto, @CurrentUser() user: AuthTokenPayload, @Req() request: Request) {
+    return this.service.create(dto, this.contexto(request, user));
   }
 
   @Patch(':id/excluir')
@@ -32,19 +35,17 @@ export class FollowUpController {
     @Param('id') id: string,
     @Query('clinicaId') clinicaId: string | undefined,
     @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
   ) {
-    return this.service.excluir(id, clinicaId, user);
+    return this.service.excluir(id, clinicaId, this.contexto(request, user));
   }
 
   @Get('resumo')
-  @Roles(...LEITURA_PIPELINE)
-  resumo(@CurrentUser() user: AuthTokenPayload) {
-    const clinicaId = user.clinicaId ?? '';
-    return this.service.resumo(clinicaId);
+  resumo(@Query('clinicaId') clinicaId: string | undefined, @CurrentUser() user: AuthTokenPayload) {
+    return this.service.resumo(clinicaId, user);
   }
 
   @Get()
-  @Roles(...LEITURA_PIPELINE)
   listByPaciente(
     @Query('pacienteId') pacienteId: string,
     @Query('clinicaId') clinicaId: string | undefined,
@@ -54,7 +55,6 @@ export class FollowUpController {
   }
 
   @Get('avaliacao/:avaliacaoIuId')
-  @Roles(...LEITURA_PIPELINE)
   listByAvaliacao(
     @Param('avaliacaoIuId') avaliacaoIuId: string,
     @Query('clinicaId') clinicaId: string | undefined,
@@ -64,12 +64,15 @@ export class FollowUpController {
   }
 
   @Get(':id')
-  @Roles(...LEITURA_PIPELINE)
   findOne(
     @Param('id') id: string,
     @Query('clinicaId') clinicaId: string | undefined,
     @CurrentUser() user: AuthTokenPayload,
   ) {
     return this.service.findOne(id, clinicaId, user);
+  }
+
+  private contexto(request: Request, user: AuthTokenPayload): FollowUpAuditContext {
+    return { ...extractRequestMeta(request), user };
   }
 }

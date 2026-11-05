@@ -1,6 +1,10 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength, ValidateNested, IsInt, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength, ValidateNested, IsInt, Min, Validate } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { TipoDocumentoFiscal } from '../../../../../../../packages/shared/src/documentos';
 import { PlanoClinica } from '../../domain/clinica.entity';
+import { DocumentoFiscalConstraint } from './documento-fiscal.validator';
+
+const trimTexto = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
 export class EnderecoClinicaDto {
   @IsOptional()
@@ -49,6 +53,18 @@ export class ConfiguracoesClinicaDto {
   @IsEmail()
   emailRemetente?: string;
 
+  @IsOptional()
+  @Transform(trimTexto)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(30)
+  telefone?: string;
+
+  @IsOptional()
+  @Transform(trimTexto)
+  @IsEmail()
+  emailContato?: string;
+
   @IsString()
   fusoHorario!: string;
 
@@ -73,8 +89,13 @@ export class CreateClinicaDto {
   @IsString()
   nome!: string;
 
+  @IsEnum(TipoDocumentoFiscal)
+  tipoDocumento!: TipoDocumentoFiscal;
+
+  /** CPF ou CNPJ conforme `tipoDocumento`; aceita com ou sem pontuação. OBRIGATÓRIO aqui (só a criação pelo super-admin o dispensa). */
   @IsString()
-  cnpj!: string;
+  @Validate(DocumentoFiscalConstraint)
+  documento!: string;
 
   @IsOptional()
   @ValidateNested()
@@ -83,6 +104,11 @@ export class CreateClinicaDto {
 
   @IsEnum(PlanoClinica)
   plano!: PlanoClinica;
+
+  /** Clínica do teste beta (Termo de Teste no aceite). Ausente = false. */
+  @IsOptional()
+  @IsBoolean()
+  faseTeste?: boolean;
 
   @ValidateNested()
   @Type(() => ConfiguracoesClinicaDto)

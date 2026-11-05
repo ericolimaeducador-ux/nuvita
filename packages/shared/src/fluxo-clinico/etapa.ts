@@ -71,19 +71,23 @@ export const PROXIMA_ETAPA_MANUAL: Partial<Record<EtapaFluxoClinico, EtapaFluxoC
   [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: EtapaFluxoClinico.AGUARDANDO_CONSULTA_MEDICA,
 };
 
-/** Quem pode acionar o avanço manual a partir de cada etapa (ADMIN sempre pode, adicionado no backend). */
+/**
+ * Quem pode acionar o avanço manual a partir de cada etapa (ADMIN sempre pode, adicionado no backend).
+ * Nesta versão o ENFERMEIRO também pode (no Nuvita antigo era só a SECRETARIA).
+ */
 export const PAPEIS_AVANCO_MANUAL: Partial<Record<EtapaFluxoClinico, Papel[]>> = {
-  [EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO]: [Papel.SECRETARIA],
-  [EtapaFluxoClinico.ENTREVISTA_AGENDADA]: [Papel.SECRETARIA],
-  [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: [Papel.SECRETARIA],
+  [EtapaFluxoClinico.APTO_AGUARDANDO_CONTATO]: [Papel.SECRETARIA, Papel.ENFERMEIRO],
+  [EtapaFluxoClinico.ENTREVISTA_AGENDADA]: [Papel.SECRETARIA, Papel.ENFERMEIRO],
+  [EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS]: [Papel.SECRETARIA, Papel.ENFERMEIRO],
 };
 
-function rank(etapa: EtapaFluxoClinico): number {
-  return ORDEM_ETAPAS_FLUXO.indexOf(etapa);
+function rank(etapa: EtapaFluxoClinico | null | undefined): number {
+  // Paciente ainda sem etapa (fora do fluxo até agora) fica antes da primeira.
+  return etapa ? ORDEM_ETAPAS_FLUXO.indexOf(etapa) : -1;
 }
 
 /** Único ponto de decisão: só permite mover para frente no pipeline. */
-export function podeAvancarPara(atual: EtapaFluxoClinico, novaEtapa: EtapaFluxoClinico): boolean {
+export function podeAvancarPara(atual: EtapaFluxoClinico | null | undefined, novaEtapa: EtapaFluxoClinico): boolean {
   return rank(novaEtapa) > rank(atual);
 }
 

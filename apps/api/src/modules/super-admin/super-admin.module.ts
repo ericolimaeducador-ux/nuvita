@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from '../auth/auth.module';
 import { SecurityModule } from '../../common/security/security.module';
+import { ClinicasModule } from '../clinicas/clinicas.module';
 import { CLINICA_REPOSITORY } from '../clinicas/clinicas.constants';
 import { ClinicaMongoRepository } from '../clinicas/infrastructure/mongo/clinica-mongo.repository';
 import { ClinicaMongo, ClinicaSchema } from '../clinicas/infrastructure/mongo/clinica.schema';
@@ -12,6 +13,7 @@ import { SuperAdminService } from './super-admin.service';
   imports: [
     AuthModule,
     SecurityModule,
+    ClinicasModule,
     MongooseModule.forFeature([{ name: ClinicaMongo.name, schema: ClinicaSchema }]),
   ],
   controllers: [SuperAdminController],

@@ -21,7 +21,7 @@ import { PsicologiaFinanceiroController } from './presentation/psicologia-financ
 @Module({
   imports: [
     ConfigModule,
-    // O painel do psicólogo conta as sessões pelos prontuários e resolve os
+    // O painel do enfermeiro conta as sessões pelos prontuários e resolve os
     // nomes dos pacientes — daí os dois módulos.
     ProntuariosModule,
     PacientesModule,

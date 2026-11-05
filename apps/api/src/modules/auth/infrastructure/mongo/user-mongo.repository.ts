@@ -18,8 +18,9 @@ export class UserMongoRepository implements UserRepository {
       clinicaId: input.clinicaId,
       '2faSecret': input.twoFactorSecret,
       registroProfissional: input.registroProfissional,
-      telefone: input.telefone,
-      telefoneHash: input.telefoneHash,
+      coren: input.coren,
+      deveTrocarSenha: input.deveTrocarSenha,
+      faseTeste: input.faseTeste ?? false,
       ativo: true,
     });
 
@@ -42,11 +43,6 @@ export class UserMongoRepository implements UserRepository {
 
   async findById(id: string): Promise<User | null> {
     const user = await this.userModel.findById(id).exec();
-    return user ? this.toEntity(user) : null;
-  }
-
-  async findByTelefoneHash(telefoneHash: string): Promise<User | null> {
-    const user = await this.userModel.findOne({ telefoneHash }).exec();
     return user ? this.toEntity(user) : null;
   }
 
@@ -74,15 +70,48 @@ export class UserMongoRepository implements UserRepository {
     if (input.passwordHash !== undefined) set['passwordHash'] = input.passwordHash;
     if (input.twoFactorSecret !== undefined) set['2faSecret'] = input.twoFactorSecret;
     if (input.registroProfissional !== undefined) set['registroProfissional'] = input.registroProfissional;
+    if (input.coren !== undefined) set['coren'] = input.coren;
     if (input.modulosConcedidos !== undefined) set['modulosConcedidos'] = input.modulosConcedidos;
     if (input.modulosRevogados !== undefined) set['modulosRevogados'] = input.modulosRevogados;
-    if (input.telefone !== undefined) set['telefone'] = input.telefone;
-    if (input.telefoneHash !== undefined) set['telefoneHash'] = input.telefoneHash;
+    if (input.deveTrocarSenha !== undefined) set['deveTrocarSenha'] = input.deveTrocarSenha;
+    if (input.termosAceitos !== undefined) set['termosAceitos'] = input.termosAceitos;
+    if (input.faseTeste !== undefined) set['faseTeste'] = input.faseTeste;
+    if (input.tokensValidosApartirDe !== undefined) set['tokensValidosApartirDe'] = input.tokensValidosApartirDe;
 
+    // Qualquer troca de senha (reset do super-admin, troca obrigatória, reset por e-mail) invalida
+    // o link de redefinição pendente.
+    const update: Record<string, unknown> = { $set: set };
+    if (input.passwordHash !== undefined) update['$unset'] = { resetSenha: '' };
+
+    const doc = await this.userModel.findByIdAndUpdate(id, update, { new: true }).exec();
+    return doc ? this.toEntity(doc) : null;
+  }
+
+  async salvarResetSenha(id: string, tokenHash: string, expiraEm: Date): Promise<void> {
+    await this.userModel
+      .findByIdAndUpdate(id, { $set: { resetSenha: { tokenHash, expiraEm } } }, { new: true })
+      .exec();
+  }
+
+  async redefinirSenhaComToken(tokenHash: string, passwordHash: string, agora: Date): Promise<User | null> {
     const doc = await this.userModel
-      .findByIdAndUpdate(id, { $set: set }, { new: true })
+      .findOneAndUpdate(
+        { 'resetSenha.tokenHash': tokenHash, 'resetSenha.expiraEm': { $gt: agora }, ativo: true },
+        {
+          $set: { passwordHash, deveTrocarSenha: false, tokensValidosApartirDe: agora },
+          $unset: { resetSenha: '' },
+        },
+        { new: true },
+      )
       .exec();
     return doc ? this.toEntity(doc) : null;
+  }
+
+  async definirFaseTesteDaClinica(clinicaId: string, faseTeste: boolean): Promise<number> {
+    const result = await this.userModel
+      .updateMany({ clinicaId, faseTeste: { $ne: faseTeste } }, { $set: { faseTeste } })
+      .exec();
+    return result.modifiedCount;
   }
 
   private buildQuery(filters: UserFilters): FilterQuery<UserDocument> {
@@ -109,11 +138,17 @@ export class UserMongoRepository implements UserRepository {
       clinicaId: object.clinicaId,
       twoFactorSecret: object['2faSecret'],
       registroProfissional: object.registroProfissional,
-      telefone: object.telefone,
+      coren: object.coren,
       ativo: object.ativo,
       criadoEm: object.criadoEm,
+      deveTrocarSenha: object.deveTrocarSenha ?? false,
+      termosAceitos: object.termosAceitos
+        ? { versao: object.termosAceitos.versao, dataAceite: object.termosAceitos.dataAceite }
+        : null,
+      faseTeste: object.faseTeste ?? false,
       modulosConcedidos: object.modulosConcedidos,
       modulosRevogados: object.modulosRevogados,
+      tokensValidosApartirDe: object.tokensValidosApartirDe,
     };
   }
 }

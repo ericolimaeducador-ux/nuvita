@@ -8,7 +8,9 @@ export interface FollowUp {
   id: string;
   clinicaId: string;
   pacienteId: string;
-  avaliacaoIuId: string;
+  // Referência à avaliação que originou o follow-up (validada na criação: existe e é deste paciente/clínica).
+  // Opcional: registros sem avaliação continuam válidos.
+  avaliacaoIuId?: string;
   enfermeiroId: string;
   dataFollowup: Date;
   statusElegibilidade: StatusElegibilidade;

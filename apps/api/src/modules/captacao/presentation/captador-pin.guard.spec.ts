@@ -75,3 +75,17 @@ describe('CaptadorPinGuard — endurecimento', () => {
     spy.mockRestore();
   });
 });
+
+describe('CaptadorPinGuard — falha fechada fora de desenvolvimento/teste (etapa 4a)', () => {
+  it('sem NODE_ENV definido e sem PIN_CAPTADOR, recusa (não usa o PIN de desenvolvimento)', () => {
+    expect(() => guard({}).canActivate(contexto('123456'))).toThrow(UnauthorizedException);
+  });
+
+  it('com NODE_ENV desconhecido e sem PIN_CAPTADOR, recusa', () => {
+    expect(() => guard({ NODE_ENV: 'homolog' }).canActivate(contexto('123456'))).toThrow(UnauthorizedException);
+  });
+
+  it('em test, sem PIN_CAPTADOR, aceita o PIN de desenvolvimento', () => {
+    expect(guard({ NODE_ENV: 'test' }).canActivate(contexto('123456'))).toBe(true);
+  });
+});

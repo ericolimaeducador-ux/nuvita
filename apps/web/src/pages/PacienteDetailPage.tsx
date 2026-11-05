@@ -1,18 +1,24 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useSaidaProtegida } from '@/lib/saida-protegida';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import dayjs from 'dayjs';
 import {
-  ArrowLeft, User, Download, Plus, FileText, FileSignature, Scale,
-  Package, PackageCheck, ClipboardList, CalendarClock, ChevronDown, Stethoscope,
-  ListChecks, Trash2, UserCheck, Pencil,
+  ArrowLeft, User, Download, Plus, FileText,
+  CalendarClock, ChevronDown, Stethoscope,
+  Trash2, Pencil, FileSignature, ClipboardCheck, ShieldAlert,
 } from 'lucide-react';
-import { ProntuarioDetailDialog, NovoAtendimentoDialog } from '@/components/ProntuarioDialogs';
+import { ProntuarioDetailDialog } from '@/components/ProntuarioDialogs';
 import { NovoDocumentoDialog } from '@/components/NovoDocumentoDialog';
-import { NovaAvaliacaoIUDialog, NovoLaudoDialog, ConfirmExcluirDialog } from '@/components/FluxoClinicoDialogs';
+import {
+  CorrigirIdentidadeDialog,
+  SolicitarCorrecaoDialog,
+  TicketsDoPaciente,
+} from '@/components/CorrecaoIdentidadeDialogs';
+import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,24 +31,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/use-toast';
+import { ClassificacaoAreaSelector } from '@/components/ClassificacaoAreaSelector';
+import { AvaliacaoIuSecao } from '@/components/AvaliacaoIuSecao';
+import { CobrancasSecao } from '@/components/CobrancasSecao';
+import { ChecklistSecao } from '@/components/ChecklistSecao';
+import { EntregasSecao } from '@/components/EntregasSecao';
+import { FollowupSecao } from '@/components/FollowupSecao';
 import { useAuth } from '@/auth/AuthContext';
 import {
   pacientesApi, prontuariosApi, agendaApi, documentosApi,
-  laudoMedicoApi, avaliacaoIUApi, entregasApi,
-  checklistDocumentosApi, followUpApi,
-  produtosApi, observacoesPacienteApi,
+  observacoesPacienteApi, testesPsicologicosApi,
+  type TestePsicologico,
 } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
-import { formatCpf, formatData, idade, toItems, formatBRL, formatEndereco } from '@/utils';
+import { formatCpf, formatData, idade, toItems, formatEndereco } from '@/utils';
+import { ErroConsulta } from '@/components/ErroConsulta';
+import { classificarErro } from '@/lib/consulta';
+import { classificarIdadePorString } from '@/paciente-idade';
 import {
   Sexo, SEXO_LABEL, ProjetoPaciente, PROJETO_LABEL, STATUS_AGENDAMENTO_LABEL, TIPO_ATENDIMENTO_LABEL,
-  StatusEntrega, Modulo, Papel,
-  StatusChecklistDocumento, STATUS_CHECKLIST_DOCUMENTO_LABEL, TIPO_DOCUMENTO_LABEL,
-  StatusElegibilidade, STATUS_ELEGIBILIDADE_LABEL,
-  StatusLaudoMedico, STATUS_LAUDO_MEDICO_LABEL,
-  StatusAgendamento, TipoAtendimento, TIPO_ATENDIMENTO_POR_AGENDAMENTO,
+  Papel, TIPO_DOCUMENTO_LABEL, LinhaTerapeutica, LINHA_TERAPEUTICA_LABEL,
+  ClassificacaoArea, ETAPA_FLUXO_LABEL, elegivelFluxoClinico,
   type Agendamento, type Prontuario, type Documento, type Paciente,
-  type LaudoMedico, type AvaliacaoIU, type Entrega, type FollowUp,
 } from '@/types';
 
 function DescItem({ label, value }: { label: string; value: string }) {
@@ -87,53 +97,14 @@ function Vazio({ children }: { children: React.ReactNode }) {
 export function PacienteDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const qc = useQueryClient();
-  const { permissoes, user } = useAuth();
-  // Psicólogo atende fora do fluxo clínico da Mais Quali Vida: só enxerga
+  const { user } = useAuth();
+  // Enfermeiro atende fora do fluxo clínico da Mais Quali Vida: só enxerga
   // dados cadastrais, os próprios atendimentos (psicoterapia) e documentos.
-  const ehPsicologo = user?.papel === Papel.PSICOLOGO;
+  const ehEnfermeiro = user?.papel === Papel.ENFERMEIRO;
   const [viewProntuarioId, setViewProntuarioId] = useState<string | null>(null);
-  const [novoOpen, setNovoOpen] = useState(false);
-  const [atendimentoPrefill, setAtendimentoPrefill] = useState<{
-    agendamentoId: string; tipo: TipoAtendimento; data: string;
-  } | null>(null);
-
-  function iniciarAtendimentoDeAgendamento(a: Agendamento) {
-    const tipo = TIPO_ATENDIMENTO_POR_AGENDAMENTO[a.tipo];
-    if (!tipo) return;
-    setAtendimentoPrefill({
-      agendamentoId: a.id,
-      tipo,
-      data: dayjs(a.dataHoraInicio).format('YYYY-MM-DDTHH:mm'),
-    });
-    setNovoOpen(true);
-  }
-
-  // "Iniciar atendimento" clicado a partir da Agenda: chega aqui via router state.
-  // Abre o formulário já preenchido e limpa o state pra não reabrir num refresh/voltar.
-  useEffect(() => {
-    const vindoDaAgenda = (location.state as { iniciarAgendamento?: { agendamentoId: string; tipo: TipoAtendimento; data: string } } | null)?.iniciarAgendamento;
-    if (!vindoDaAgenda) return;
-    setAtendimentoPrefill({
-      agendamentoId: vindoDaAgenda.agendamentoId,
-      tipo: vindoDaAgenda.tipo,
-      data: dayjs(vindoDaAgenda.data).format('YYYY-MM-DDTHH:mm'),
-    });
-    setNovoOpen(true);
-    navigate(location.pathname, { replace: true, state: null });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state]);
-
   const [novoDocOpen, setNovoDocOpen] = useState(false);
   const [docParaExcluir, setDocParaExcluir] = useState<Documento | null>(null);
-  const [confirmDesativarOpen, setConfirmDesativarOpen] = useState(false);
-  const [novaAvaliacaoOpen, setNovaAvaliacaoOpen] = useState(false);
-  const [avaliacaoEdit, setAvaliacaoEdit] = useState<AvaliacaoIU | null>(null);
-  const [avaliacaoParaExcluir, setAvaliacaoParaExcluir] = useState<AvaliacaoIU | null>(null);
-  const [novoLaudoOpen, setNovoLaudoOpen] = useState(false);
-  const [laudoEmEdicao, setLaudoEmEdicao] = useState<LaudoMedico | null>(null);
-  const [laudoParaExcluir, setLaudoParaExcluir] = useState<LaudoMedico | null>(null);
 
   const pacQ = useQuery({ queryKey: ['paciente', id], queryFn: () => pacientesApi.get(id), enabled: !!id });
   const prontQ = useQuery({ queryKey: ['prontuarios', 'paciente', id], queryFn: () => prontuariosApi.list({ pacienteId: id }), enabled: !!id });
@@ -148,42 +119,8 @@ export function PacienteDetailPage() {
     },
     onError: (e) => toast.error('Erro ao excluir', apiErrorMessage(e)),
   });
-  const laudosQ = useQuery({ queryKey: ['laudos', 'paciente', id], queryFn: () => laudoMedicoApi.listByPaciente(id), enabled: !!id });
-  const excluirLaudoMut = useMutation({
-    mutationFn: (laudoId: string) => laudoMedicoApi.excluir(laudoId),
-    onSuccess: () => {
-      toast.success('Relatório excluído.');
-      setLaudoParaExcluir(null);
-      void qc.invalidateQueries({ queryKey: ['laudos', 'paciente', id] });
-    },
-    onError: (e) => toast.error('Erro ao excluir', apiErrorMessage(e)),
-  });
-  const avaliacoesQ = useQuery({ queryKey: ['avaliacoes-iu', 'paciente', id], queryFn: () => avaliacaoIUApi.listByPaciente(id), enabled: !!id });
-  const excluirAvaliacaoMut = useMutation({
-    mutationFn: (avId: string) => avaliacaoIUApi.excluir(avId),
-    onSuccess: () => {
-      toast.success('Avaliação excluída.');
-      setAvaliacaoParaExcluir(null);
-      void qc.invalidateQueries({ queryKey: ['avaliacoes-iu', 'paciente', id] });
-    },
-    onError: (e) => toast.error('Erro ao excluir', apiErrorMessage(e)),
-  });
-  const entregasQ = useQuery({ queryKey: ['entregas', 'paciente', id], queryFn: () => entregasApi.listByPaciente(id), enabled: !!id });
-  const produtosQ = useQuery({ queryKey: ['produtos'], queryFn: () => produtosApi.list() });
-
-  const produtos = (produtosQ.data ?? []).filter((p) => p.projeto === pacQ.data?.projeto);
-  const avaliacoes = (avaliacoesQ.data as AvaliacaoIU[]) ?? [];
-  // Laudo se apoia na última avaliação (produto indicado + vínculo), como no fluxo clínico.
-  const ultimaAvaliacao = avaliacoes[0];
-
-  // Papéis que podem criar cada registro (mesma regra do fluxo clínico, sem depender da etapa).
-  const podeNovaAvaliacao = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
-  const podeNovoLaudo = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
-  // Export LGPD: mesmos papéis autorizados no backend (GET /pacientes/:id/export).
-  const podeExportar =
-    user?.papel === Papel.SECRETARIA || user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
-  // Excluir (desativar) paciente: mesmos papéis autorizados no backend (PATCH /pacientes/:id/desativar).
-  const podeDesativar = user?.papel === Papel.SECRETARIA || user?.papel === Papel.ADMIN;
+  // Export LGPD: mesmos papéis autorizados no backend (GET /pacientes/:id/export): não é da secretária.
+  const podeExportar = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN;
 
   // Direito de acesso/portabilidade (LGPD): baixa um JSON com todos os dados do
   // paciente. Antes o botão só disparava o GET e descartava a resposta (nada
@@ -206,23 +143,7 @@ export function PacienteDetailPage() {
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
-  // Exclusão é soft-delete: marca o paciente como inativo (ativo: false), preservando
-  // histórico clínico. Não some da base — some das listas e buscas por padrão.
-  const desativarMut = useMutation({
-    mutationFn: () => pacientesApi.deactivate(id),
-    onSuccess: () => {
-      toast.success('Paciente excluído', 'O cadastro foi desativado.');
-      setConfirmDesativarOpen(false);
-      void qc.invalidateQueries({ queryKey: ['pacientes'] });
-      navigate('/pacientes');
-    },
-    onError: (e) => toast.error('Erro ao excluir paciente', apiErrorMessage(e)),
-  });
-
   const prontuarios = useMemo(() => toItems<Prontuario>(prontQ.data as never), [prontQ.data]);
-  const entregas = entregasQ.data ?? [];
-  const insumosRecebidos = entregas.filter((e) => e.status === StatusEntrega.ENTREGUE);
-  const insumosAReceber = entregas.filter((e) => e.status !== StatusEntrega.ENTREGUE);
 
   if (pacQ.isLoading) return (
     <div className="p-6 space-y-4">
@@ -232,14 +153,28 @@ export function PacienteDetailPage() {
     </div>
   );
 
-  if (pacQ.isError || !pacQ.data) return (
-    <div className="p-6 text-center">
-      <p className="text-lg font-semibold text-foreground mb-4">Paciente não encontrado</p>
-      <Button onClick={() => navigate('/pacientes')}>Voltar para Pacientes</Button>
-    </div>
-  );
+  // Só 404 significa "não encontrado"; 403/500/rede usam ErroConsulta (não podem parecer paciente inexistente).
+  if (pacQ.isError || !pacQ.data) {
+    const naoEncontrado = pacQ.isError && classificarErro(pacQ.error).tipo === 'nao-encontrado';
+    return (
+      <div className="p-6 text-center">
+        {naoEncontrado ? (
+          <p className="text-lg font-semibold text-foreground mb-4">Paciente não encontrado</p>
+        ) : (
+          <ErroConsulta
+            className="mb-4 justify-center"
+            erro={pacQ.error}
+            refetch={pacQ.refetch}
+            recurso="os dados do paciente"
+          />
+        )}
+        <Button onClick={() => navigate('/pacientes')}>Voltar para Pacientes</Button>
+      </div>
+    );
+  }
 
   const p = pacQ.data;
+  const classificacaoIdade = classificarIdadePorString(p.dataNascimento);
 
   return (
     <div className="p-6 space-y-4">
@@ -259,16 +194,12 @@ export function PacienteDetailPage() {
               <div className="flex items-center gap-4 mt-1 flex-wrap">
                 <span className="text-sm text-muted-foreground">{formatCpf(p.cpf)}</span>
                 <span className="text-sm text-muted-foreground">{idade(p.dataNascimento)}</span>
+                {classificacaoIdade === 'menor' && <Badge variant="warning">Menor de idade</Badge>}
                 <Badge variant={p.ativo === false ? 'secondary' : 'success'}>
                   {p.ativo === false ? 'Inativo' : 'Ativo'}
                 </Badge>
               </div>
             </div>
-            {!ehPsicologo && (
-              <Button size="sm" onClick={() => setNovoOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" /> Novo atendimento
-              </Button>
-            )}
             {podeExportar && (
               <Button
                 variant="outline"
@@ -280,29 +211,29 @@ export function PacienteDetailPage() {
                 <Download className="mr-2 h-4 w-4" /> {exportMut.isPending ? 'Exportando…' : 'Exportar (LGPD)'}
               </Button>
             )}
-            {podeDesativar && p.ativo !== false && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                title="Desativa o cadastro do paciente (não apaga o histórico clínico)"
-                onClick={() => setConfirmDesativarOpen(true)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> Excluir paciente
-              </Button>
-            )}
           </div>
         </CardContent>
       </Card>
 
+      {/* Aviso não bloqueante — sem data de nascimento não dá para saber se o
+          paciente é menor de idade (regra de responsável legal, Fase 2). */}
+      {classificacaoIdade === 'indeterminado' && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-700">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>Data de nascimento não informada — complete o cadastro no próximo atendimento para verificar se o paciente é menor de idade.</p>
+        </div>
+      )}
+
       {/* Dados cadastrais */}
-      <DadosCadastraisSecao paciente={p} pacienteId={id} />
+      <SectionErrorBoundary secao="Dados cadastrais">
+        <DadosCadastraisSecao paciente={p} pacienteId={id} />
+      </SectionErrorBoundary>
 
       {/* Prontuários / atendimentos */}
       <Secao
         icon={<Stethoscope className="h-4 w-4" />}
         titulo="Prontuários e atendimentos"
-        contagem={prontuarios.length}
+        contagem={prontQ.isError ? undefined : prontuarios.length}
         acao={
           prontuarios.length > 0 ? (
             <Select onValueChange={(v) => setViewProntuarioId(v)}>
@@ -320,8 +251,10 @@ export function PacienteDetailPage() {
       >
         {prontQ.isLoading ? (
           <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+        ) : prontQ.isError ? (
+          <ErroConsulta erro={prontQ.error} refetch={prontQ.refetch} recurso="os atendimentos deste paciente" />
         ) : prontuarios.length === 0 ? (
-          <Vazio>Nenhum atendimento registrado. Use “Novo atendimento”.</Vazio>
+          <Vazio>Nenhum atendimento registrado ainda.</Vazio>
         ) : (
           <Table>
             <TableHeader>
@@ -339,10 +272,7 @@ export function PacienteDetailPage() {
                   <TableCell>{pr.dataAtendimento ? dayjs(pr.dataAtendimento).format('DD/MM/YYYY HH:mm') : '—'}</TableCell>
                   <TableCell>{TIPO_ATENDIMENTO_LABEL[pr.tipo] ?? pr.tipo}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      <Badge variant={pr.assinado ? 'success' : 'warning'}>{pr.assinado ? 'Assinado' : 'Rascunho'}</Badge>
-                      {pr.relatorioJudicial && <Badge variant="secondary" className="gap-1"><Scale className="h-3 w-3" />NAT-JUS</Badge>}
-                    </div>
+                    <Badge variant={pr.assinado ? 'success' : 'warning'}>{pr.assinado ? 'Assinado' : 'Rascunho'}</Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {pr.avaliacao?.diagnosticoDefinitivo || pr.avaliacao?.cid10?.join(', ') || pr.avaliacao?.hipotesesDiagnosticas?.[0] || '—'}
@@ -355,73 +285,77 @@ export function PacienteDetailPage() {
         )}
       </Secao>
 
-      {/* Observações gerais — campo livre p/ qualquer profissional de atendimento (fora do escopo do psicólogo) */}
-      {!ehPsicologo && <ObservacoesSecao pacienteId={id} observacoesAtuais={p.observacoes} />}
-
-      {/* Avaliações de incontinência urinária — fluxo da Mais Quali Vida, fora do escopo do psicólogo */}
-      {!ehPsicologo && (
-        <Secao
-          icon={<ClipboardList className="h-4 w-4" />}
-          titulo="Avaliações de incontinência urinária"
-          contagem={avaliacoesQ.data?.length}
-          defaultOpen={false}
-          acao={
-            podeNovaAvaliacao ? (
-              <Button size="sm" variant="outline" onClick={() => { setAvaliacaoEdit(null); setNovaAvaliacaoOpen(true); }}>
-                <Plus className="mr-2 h-4 w-4" /> Nova avaliação
-              </Button>
-            ) : undefined
-          }
-        >
-          {avaliacoesQ.isLoading ? (
-            <Skeleton className="h-20 w-full" />
-          ) : (avaliacoesQ.data ?? []).length === 0 ? (
-            <Vazio>Nenhuma avaliação de IU registrada.</Vazio>
-          ) : (
-            <Table>
-              <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Motivo</TableHead><TableHead>Cateter indicado</TableHead><TableHead className="w-40" /></TableRow></TableHeader>
-              <TableBody>
-                {(avaliacoesQ.data as AvaliacaoIU[]).map((a) => (
-                  <TableRow key={a.id}>
-                    <TableCell>{formatData(a.dataAtendimento)}</TableCell>
-                    <TableCell className="text-muted-foreground truncate max-w-xs">{a.motivoIU || '—'}</TableCell>
-                    <TableCell className="text-muted-foreground">{a.produtoIndicado ? `${a.produtoIndicado.sexo} ${a.produtoIndicado.french}Fr` : '—'}</TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      {podeNovaAvaliacao && (
-                        <Button variant="ghost" size="sm" onClick={() => { setAvaliacaoEdit(a); setNovaAvaliacaoOpen(true); }}>Editar</Button>
-                      )}
-                      <Button variant="ghost" size="sm" onClick={() => navigate(`/fluxo-clinico/${id}/avaliacao/${a.id}/imprimir`)}>Imprimir</Button>
-                      {podeNovaAvaliacao && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive"
-                          title="Excluir avaliação"
-                          onClick={() => setAvaliacaoParaExcluir(a)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+      {/* Declaração de comparecimento: documento administrativo (só presença, data/hora da agenda). */}
+      {(ehEnfermeiro || user?.papel === Papel.SECRETARIA || user?.papel === Papel.ADMIN) && (
+        <Secao icon={<FileSignature className="h-4 w-4" />} titulo="Declaração de comparecimento" defaultOpen={false}>
+          <Button variant="outline" size="sm" onClick={() => navigate(`/pacientes/${id}/documentos/declaracao-comparecimento`)}>
+            Emitir declaração de comparecimento
+          </Button>
         </Secao>
       )}
 
-      {/* Follow-up de elegibilidade (ligações do enfermeiro) */}
-      {!ehPsicologo && permissoes.includes(Modulo.FLUXO_CLINICO) && <FollowUpSecao pacienteId={id} />}
+      {/* Documentos clínicos — emissão de atestado/laudo/encaminhamento/prescrição,
+          distinto da seção "Documentos" abaixo (que é upload de arquivo). */}
+      {ehEnfermeiro && (
+        <Secao icon={<FileSignature className="h-4 w-4" />} titulo="Documentos clínicos" defaultOpen={false}>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate(`/pacientes/${id}/documentos/atestado`)}>
+              Atestado de comparecimento
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate(`/pacientes/${id}/documentos/laudo`)}>
+              Laudo psicoterápico
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate(`/pacientes/${id}/documentos/encaminhamento`)}>
+              Encaminhamento
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate(`/pacientes/${id}/documentos/prescricao`)}>
+              Prescrição de cuidados
+            </Button>
+          </div>
+        </Secao>
+      )}
 
-      {/* Checklist de documentos (secretaria/admin) */}
-      {!ehPsicologo && permissoes.includes(Modulo.DOCUMENTOS) && <ChecklistDocumentosSecao pacienteId={id} />}
+      {/* Testes psicológicos — placeholder: sem catálogo de testes ainda,
+          nome do teste é texto livre. Estrutura pronta pra receber conteúdo depois. */}
+      {ehEnfermeiro && <TestesPsicologicosSecao pacienteId={id} />}
+
+      {/* Avaliação de IU: enfermeiro/admin escrevem, secretaria lê. Registrar pode levar o paciente elegível ao passo de avaliação. */}
+      <SectionErrorBoundary secao="Avaliação de IU">
+        <AvaliacaoIuSecao
+          pacienteId={id}
+          podeEscrever={user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN || user?.papel === Papel.SUPER_ADMIN}
+          enfermeiroRegistro={user?.coren ?? user?.registroProfissional}
+        />
+      </SectionErrorBoundary>
+
+      {/* Checklist de documentos (equipe): receber o último item pode levar o paciente elegível à consulta médica. */}
+      <SectionErrorBoundary secao="Checklist de documentos">
+        <ChecklistSecao pacienteId={id} />
+      </SectionErrorBoundary>
+
+      {/* Follow-up de elegibilidade: ler = equipe; registrar (decisão clínica) = enfermeiro/admin. Pode mover a etapa do fluxo. */}
+      <SectionErrorBoundary secao="Follow-up">
+        <FollowupSecao pacienteId={id} podeDecidir={user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN || user?.papel === Papel.SUPER_ADMIN} />
+      </SectionErrorBoundary>
+
+      {/* Financeiro do paciente: registro de cobranças + avisos (a clínica recebe por fora). */}
+      <SectionErrorBoundary secao="Financeiro">
+        <CobrancasSecao pacienteId={id} />
+      </SectionErrorBoundary>
+
+      {/* Entregas de insumo: registrar (equipe) e confirmar (enfermeiro/admin). Confirmar pode concluir o fluxo clínico de IU. */}
+      <SectionErrorBoundary secao="Entregas">
+        <EntregasSecao pacienteId={id} podeConfirmar={user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.ADMIN || user?.papel === Papel.SUPER_ADMIN} />
+      </SectionErrorBoundary>
+
+      {/* Observações gerais — campo livre p/ qualquer profissional de atendimento (fora do escopo do enfermeiro) */}
+      {!ehEnfermeiro && <ObservacoesSecao pacienteId={id} observacoesAtuais={p.observacoes} />}
 
       {/* Documentos */}
       <Secao
         icon={<FileText className="h-4 w-4" />}
         titulo="Documentos"
-        contagem={toItems<Documento>(docsQ.data as never).length}
+        contagem={docsQ.isError ? undefined : toItems<Documento>(docsQ.data as never).length}
         defaultOpen={false}
         acao={
           <Button size="sm" variant="outline" onClick={() => setNovoDocOpen(true)}>
@@ -431,6 +365,8 @@ export function PacienteDetailPage() {
       >
         {docsQ.isLoading ? (
           <Skeleton className="h-20 w-full" />
+        ) : docsQ.isError ? (
+          <ErroConsulta erro={docsQ.error} refetch={docsQ.refetch} recurso="os documentos deste paciente" />
         ) : toItems<Documento>(docsQ.data as never).length === 0 ? (
           <Vazio>Nenhum documento anexado.</Vazio>
         ) : (
@@ -466,55 +402,23 @@ export function PacienteDetailPage() {
         )}
       </Secao>
 
-      {/* Laudos / relatórios médicos — fora do escopo do psicólogo */}
-      {!ehPsicologo && (
-        <Secao
-          icon={<FileSignature className="h-4 w-4" />}
-          titulo="Laudos e relatórios médicos"
-          contagem={laudosQ.data?.length}
-          defaultOpen={false}
-          acao={
-            podeNovoLaudo ? (
-              <Button size="sm" variant="outline" onClick={() => { setLaudoEmEdicao(null); setNovoLaudoOpen(true); }}>
-                <Plus className="mr-2 h-4 w-4" /> Novo Relatório Médico Judiciário
-              </Button>
-            ) : undefined
-          }
-        >
-          {laudosQ.isLoading ? (
+      {/* Histórico de agenda — fora do escopo do enfermeiro (agenda dele fica em Atendimento Psicológico) */}
+      {!ehEnfermeiro && (
+        <Secao icon={<CalendarClock className="h-4 w-4" />} titulo="Histórico de agenda" contagem={agendaQ.isError ? undefined : toItems<Agendamento>(agendaQ.data as never).length} defaultOpen={false}>
+          {agendaQ.isLoading ? (
             <Skeleton className="h-20 w-full" />
-          ) : (laudosQ.data ?? []).length === 0 ? (
-            <Vazio>Nenhum relatório médico judiciário emitido.</Vazio>
+          ) : agendaQ.isError ? (
+            <ErroConsulta erro={agendaQ.error} refetch={agendaQ.refetch} recurso="o histórico de agenda" />
+          ) : toItems<Agendamento>(agendaQ.data as never).length === 0 ? (
+            <Vazio>Nenhum agendamento.</Vazio>
           ) : (
             <Table>
-              <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>CID-10</TableHead><TableHead>Situação</TableHead><TableHead className="w-40" /></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Início</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
               <TableBody>
-                {(laudosQ.data as LaudoMedico[]).map((l) => (
-                  <TableRow key={l.id}>
-                    <TableCell>{formatData(l.dataLaudo)}</TableCell>
-                    <TableCell className="text-muted-foreground">{l.cid10?.join(', ') || '—'}</TableCell>
-                    <TableCell>
-                      <Badge variant={l.status === StatusLaudoMedico.ASSINADO ? 'success' : l.status === StatusLaudoMedico.AGUARDANDO_REVISAO ? 'secondary' : 'warning'}>
-                        {STATUS_LAUDO_MEDICO_LABEL[l.status]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="space-x-1">
-                      {podeNovoLaudo && l.status !== StatusLaudoMedico.ASSINADO && (
-                        <Button variant="ghost" size="sm" onClick={() => { setLaudoEmEdicao(l); setNovoLaudoOpen(true); }}>Revisar</Button>
-                      )}
-                      <Button variant="ghost" size="sm" onClick={() => navigate(`/fluxo-clinico/${id}/laudo/${l.id}/imprimir`)}>Imprimir</Button>
-                      {podeNovoLaudo && l.status !== StatusLaudoMedico.ASSINADO && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive"
-                          title="Excluir relatório"
-                          onClick={() => setLaudoParaExcluir(l)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
+                {toItems<Agendamento>(agendaQ.data as never).map((a) => (
+                  <TableRow key={a.id}>
+                    <TableCell>{dayjs(a.dataHoraInicio).format('DD/MM/YYYY HH:mm')}</TableCell>
+                    <TableCell><Badge>{STATUS_AGENDAMENTO_LABEL[a.status] ?? a.status}</Badge></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -523,72 +427,11 @@ export function PacienteDetailPage() {
         </Secao>
       )}
 
-      {/* Histórico de agenda — fora do escopo do psicólogo (agenda dele fica em Atendimento Psicológico) */}
-      {!ehPsicologo && (
-        <Secao icon={<CalendarClock className="h-4 w-4" />} titulo="Histórico de agenda" contagem={toItems<Agendamento>(agendaQ.data as never).length} defaultOpen={false}>
-          {agendaQ.isLoading ? (
-            <Skeleton className="h-20 w-full" />
-          ) : toItems<Agendamento>(agendaQ.data as never).length === 0 ? (
-            <Vazio>Nenhum agendamento.</Vazio>
-          ) : (
-            <Table>
-              <TableHeader><TableRow><TableHead>Início</TableHead><TableHead>Status</TableHead><TableHead className="w-40" /></TableRow></TableHeader>
-              <TableBody>
-                {toItems<Agendamento>(agendaQ.data as never).map((a) => {
-                  const podeIniciar =
-                    (a.status === StatusAgendamento.AGENDADO || a.status === StatusAgendamento.CONFIRMADO) &&
-                    !!TIPO_ATENDIMENTO_POR_AGENDAMENTO[a.tipo];
-                  return (
-                    <TableRow key={a.id}>
-                      <TableCell>{dayjs(a.dataHoraInicio).format('DD/MM/YYYY HH:mm')}</TableCell>
-                      <TableCell><Badge>{STATUS_AGENDAMENTO_LABEL[a.status] ?? a.status}</Badge></TableCell>
-                      <TableCell className="text-right">
-                        {podeIniciar && (
-                          <Button variant="ghost" size="sm" onClick={() => iniciarAtendimentoDeAgendamento(a)}>
-                            Iniciar atendimento
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </Secao>
-      )}
-
-      {/* Insumos — programa de cateterismo, fora do escopo do psicólogo */}
-      {!ehPsicologo && (
-        <>
-          <Secao icon={<PackageCheck className="h-4 w-4" />} titulo="Insumos recebidos" contagem={insumosRecebidos.length} defaultOpen={false}>
-            {entregasQ.isLoading ? <Skeleton className="h-20 w-full" /> : insumosRecebidos.length === 0 ? (
-              <Vazio>Nenhum insumo entregue ainda.</Vazio>
-            ) : <TabelaEntregas entregas={insumosRecebidos} />}
-          </Secao>
-
-          <Secao icon={<Package className="h-4 w-4" />} titulo="Insumos a receber" contagem={insumosAReceber.length} defaultOpen={false}>
-            {entregasQ.isLoading ? <Skeleton className="h-20 w-full" /> : insumosAReceber.length === 0 ? (
-              <Vazio>Nenhum insumo pendente.</Vazio>
-            ) : <TabelaEntregas entregas={insumosAReceber} />}
-          </Secao>
-        </>
-      )}
-
       <ProntuarioDetailDialog
         prontuarioId={viewProntuarioId}
         pacienteId={id}
         open={!!viewProntuarioId}
         onOpenChange={(o) => { if (!o) setViewProntuarioId(null); }}
-      />
-      <NovoAtendimentoDialog
-        pacienteId={id}
-        pacienteNome={p.nome}
-        open={novoOpen}
-        onOpenChange={(o) => { setNovoOpen(o); if (!o) setAtendimentoPrefill(null); }}
-        agendamentoId={atendimentoPrefill?.agendamentoId}
-        initialTipo={atendimentoPrefill?.tipo}
-        initialData={atendimentoPrefill?.data}
       />
       <NovoDocumentoDialog
         pacienteId={id}
@@ -619,190 +462,18 @@ export function PacienteDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <ConfirmExcluirDialog
-        open={confirmDesativarOpen}
-        titulo="Excluir paciente"
-        descricao={<>Tem certeza que deseja excluir <span className="font-medium text-foreground">{p.nome}</span>? O cadastro fica inativo e some das listas e buscas, mas o histórico clínico é preservado. Esta ação não pode ser desfeita pela tela.</>}
-        pending={desativarMut.isPending}
-        onCancel={() => setConfirmDesativarOpen(false)}
-        onConfirm={() => desativarMut.mutate()}
-      />
-      <ConfirmExcluirDialog
-        open={!!avaliacaoParaExcluir}
-        titulo="Excluir avaliação de incontinência urinária"
-        descricao={<>Tem certeza que deseja excluir a avaliação de <span className="font-medium text-foreground">{formatData(avaliacaoParaExcluir?.dataAtendimento)}</span>? Esta ação não pode ser desfeita pela tela.</>}
-        pending={excluirAvaliacaoMut.isPending}
-        onCancel={() => setAvaliacaoParaExcluir(null)}
-        onConfirm={() => avaliacaoParaExcluir && excluirAvaliacaoMut.mutate(avaliacaoParaExcluir.id)}
-      />
-      <ConfirmExcluirDialog
-        open={!!laudoParaExcluir}
-        titulo="Excluir Relatório Médico Judiciário"
-        descricao={<>Tem certeza que deseja excluir o relatório de <span className="font-medium text-foreground">{formatData(laudoParaExcluir?.dataLaudo)}</span>? Esta ação não pode ser desfeita pela tela.</>}
-        pending={excluirLaudoMut.isPending}
-        onCancel={() => setLaudoParaExcluir(null)}
-        onConfirm={() => laudoParaExcluir && excluirLaudoMut.mutate(laudoParaExcluir.id)}
-      />
-      <NovaAvaliacaoIUDialog
-        open={novaAvaliacaoOpen}
-        onOpenChange={(o) => { setNovaAvaliacaoOpen(o); if (!o) setAvaliacaoEdit(null); }}
-        pacienteId={id}
-        clinicaId={user?.clinicaId}
-        produtos={produtos}
-        avaliacao={avaliacaoEdit ?? undefined}
-        enfermeiroRegistro={user?.registroProfissional}
-        onCreated={() => void qc.invalidateQueries({ queryKey: ['avaliacoes-iu', 'paciente', id] })}
-      />
-      <NovoLaudoDialog
-        open={novoLaudoOpen}
-        onOpenChange={(o) => { setNovoLaudoOpen(o); if (!o) setLaudoEmEdicao(null); }}
-        pacienteId={id}
-        clinicaId={user?.clinicaId}
-        produtos={produtos}
-        avaliacaoId={ultimaAvaliacao?.id}
-        produtoIndicado={ultimaAvaliacao?.produtoIndicado}
-        laudo={laudoEmEdicao ?? undefined}
-        onCreated={() => void qc.invalidateQueries({ queryKey: ['laudos', 'paciente', id] })}
-      />
     </div>
   );
 }
 
-function TabelaEntregas({ entregas }: { entregas: Entrega[] }) {
-  return (
-    <Table>
-      <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Itens</TableHead><TableHead>Valor</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
-      <TableBody>
-        {entregas.map((e) => (
-          <TableRow key={e.id}>
-            <TableCell>{formatData(e.dataEntrega)}</TableCell>
-            <TableCell className="text-muted-foreground">
-              {(e.itens ?? []).map((i) => `${i.quantidade}× ${i.descricao}`).join(', ') || '—'}
-            </TableCell>
-            <TableCell>{formatBRL((e.valorTotalCentavos ?? 0) / 100)}</TableCell>
-            <TableCell><Badge variant={e.status === StatusEntrega.ENTREGUE ? 'success' : 'warning'}>{e.status}</Badge></TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-}
-
-/** Checklist administrativo de documentos pendentes/recebidos (secretaria/admin),
- * independente dos arquivos em si (seção Documentos, que é upload de fato). */
-function ChecklistDocumentosSecao({ pacienteId }: { pacienteId: string }) {
-  const qc = useQueryClient();
-  const [novoNome, setNovoNome] = useState('');
-
-  const listQ = useQuery({
-    queryKey: ['checklist-documentos', pacienteId],
-    queryFn: () => checklistDocumentosApi.listByPaciente(pacienteId),
-  });
-
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['checklist-documentos', pacienteId] });
-
-  const createMut = useMutation({
-    mutationFn: () => checklistDocumentosApi.create({ pacienteId, nome: novoNome.trim() }),
-    onSuccess: () => { setNovoNome(''); void invalidate(); },
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
-  });
-
-  const criarPadraoMut = useMutation({
-    mutationFn: () => checklistDocumentosApi.criarPadrao(pacienteId),
-    onSuccess: () => void invalidate(),
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
-  });
-
-  const toggleMut = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: StatusChecklistDocumento }) =>
-      checklistDocumentosApi.update(id, { status }),
-    onSuccess: () => void invalidate(),
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
-  });
-
-  const removeMut = useMutation({
-    mutationFn: (id: string) => checklistDocumentosApi.remove(id),
-    onSuccess: () => void invalidate(),
-    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
-  });
-
-  const itens = listQ.data ?? [];
-  const pendentes = itens.filter((i) => i.status === StatusChecklistDocumento.PENDENTE).length;
-
-  return (
-    <Secao icon={<ListChecks className="h-4 w-4" />} titulo="Checklist de documentos" contagem={itens.length} defaultOpen={false}>
-      <div className="space-y-3">
-        <div className="flex gap-2">
-          <Input
-            placeholder="Nome do documento (ex.: RG, comprovante de residência…)"
-            value={novoNome}
-            onChange={(e) => setNovoNome(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && novoNome.trim().length >= 2) createMut.mutate(); }}
-          />
-          <Button
-            size="sm"
-            disabled={novoNome.trim().length < 2 || createMut.isPending}
-            onClick={() => createMut.mutate()}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="shrink-0"
-            disabled={criarPadraoMut.isPending}
-            onClick={() => criarPadraoMut.mutate()}
-          >
-            {criarPadraoMut.isPending ? 'Criando…' : 'Usar lista padrão'}
-          </Button>
-        </div>
-
-        {listQ.isLoading ? (
-          <Skeleton className="h-16 w-full" />
-        ) : itens.length === 0 ? (
-          <Vazio>Nenhum documento no checklist. Use "Usar lista padrão" ou adicione manualmente.</Vazio>
-        ) : (
-          <div className="space-y-1.5">
-            {pendentes > 0 && (
-              <p className="text-xs font-medium text-amber-500">⚠ {pendentes} documento{pendentes !== 1 ? 's' : ''} pendente{pendentes !== 1 ? 's' : ''}</p>
-            )}
-            {itens.map((item) => (
-              <div key={item.id} className="flex items-center gap-3 glass rounded-lg p-2.5">
-                <button
-                  type="button"
-                  onClick={() => toggleMut.mutate({
-                    id: item.id,
-                    status: item.status === StatusChecklistDocumento.PENDENTE
-                      ? StatusChecklistDocumento.RECEBIDO
-                      : StatusChecklistDocumento.PENDENTE,
-                  })}
-                >
-                  <Badge
-                    variant={item.status === StatusChecklistDocumento.RECEBIDO ? 'success' : 'warning'}
-                    className="cursor-pointer"
-                  >
-                    {STATUS_CHECKLIST_DOCUMENTO_LABEL[item.status]}
-                  </Badge>
-                </button>
-                <span className="text-sm text-foreground flex-1 min-w-0 truncate">{item.nome}</span>
-                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeMut.mutate(item.id)}>
-                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </Secao>
-  );
-}
-
 const editPacienteSchema = z.object({
+  nome: z.string().optional(),
   cpf: z.string().regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, 'CPF inválido.').optional().or(z.literal('')),
   dataNascimento: z.string().optional(),
   sexo: z.nativeEnum(Sexo).optional().or(z.literal('')),
   projeto: z.nativeEnum(ProjetoPaciente).optional().or(z.literal('')),
-  representante: z.string().optional(),
+  linhaTerapeutica: z.nativeEnum(LinhaTerapeutica).optional().or(z.literal('')),
+  classificacoes: z.array(z.nativeEnum(ClassificacaoArea)).min(1, 'Selecione ao menos uma classificação.'),
   telefone: z.string().optional(),
   email: z.string().email('E-mail inválido.').optional().or(z.literal('')),
   consentimento: z.boolean().optional(),
@@ -822,27 +493,29 @@ type EditPacienteForm = z.infer<typeof editPacienteSchema>;
 function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente; pacienteId: string }) {
   const qc = useQueryClient();
   const { user } = useAuth();
-  // Psicólogo só cuida de pacientes do Projeto PSI — trava o campo em vez de
+  // Enfermeiro só cuida de pacientes do Projeto PSI — trava o campo em vez de
   // expor o seletor (evita que o paciente suma da lista dele por engano).
-  const ehPsicologo = user?.papel === Papel.PSICOLOGO;
+  const ehEnfermeiro = user?.papel === Papel.ENFERMEIRO;
+  // Nome, CPF e nascimento não se editam aqui (feature-correcao-identidade-paciente): só o
+  // SUPER_ADMIN corrige, com justificativa; os demais papéis abrem um ticket.
+  const ehSuperAdmin = user?.papel === Papel.SUPER_ADMIN;
   const [open, setOpen] = useState(false);
+  const [solicitarOpen, setSolicitarOpen] = useState(false);
+  const [corrigirOpen, setCorrigirOpen] = useState(false);
 
-  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<EditPacienteForm>({
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors, isDirty } } = useForm<EditPacienteForm>({
     resolver: zodResolver(editPacienteSchema),
-  });
-
-  const representantesQ = useQuery({
-    queryKey: ['pacientes', 'representantes'],
-    queryFn: pacientesApi.listarRepresentantes,
   });
 
   function abrir() {
     reset({
+      nome: p.nome,
       cpf: p.cpf ?? '',
       dataNascimento: p.dataNascimento ? p.dataNascimento.slice(0, 10) : '',
       sexo: p.sexo ?? '',
-      projeto: ehPsicologo ? ProjetoPaciente.PSI : (p.projeto ?? ''),
-      representante: p.representante ?? '',
+      projeto: ehEnfermeiro ? ProjetoPaciente.PSI : (p.projeto ?? ''),
+      linhaTerapeutica: p.linhaTerapeutica ?? '',
+      classificacoes: p.classificacoes ?? [],
       telefone: p.telefone ?? '',
       email: p.email ?? '',
       consentimento: !!p.consentimentoLGPD?.aceito,
@@ -867,6 +540,9 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
+  // Clique fora/ESC não fecham; Cancelar com edição pendente pede confirmação.
+  const saida = useSaidaProtegida(isDirty, () => setOpen(false));
+
   function onSubmit(v: EditPacienteForm) {
     // Endereço só é enviado se ao menos um campo foi preenchido; senão vai undefined
     // (o backend interpreta ausência como "não alterar" no PATCH).
@@ -882,11 +558,10 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
     const temEndereco = Object.values(enderecoCampos).some(Boolean);
 
     updateMut.mutate({
-      cpf: v.cpf || undefined,
-      dataNascimento: v.dataNascimento ? dayjs(v.dataNascimento).format('YYYY-MM-DD') : undefined,
       sexo: v.sexo || undefined,
       projeto: v.projeto || undefined,
-      representante: v.representante?.trim() || undefined,
+      linhaTerapeutica: v.linhaTerapeutica || undefined,
+      classificacoes: v.classificacoes,
       telefone: v.telefone || undefined,
       email: v.email || undefined,
       endereco: temEndereco ? enderecoCampos : undefined,
@@ -897,47 +572,101 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
   }
 
   return (
-    <Secao
-      icon={<User className="h-4 w-4" />}
-      titulo="Dados cadastrais"
-      defaultOpen={false}
-      acao={
-        <Button variant="ghost" size="icon" title="Editar cadastro" onClick={abrir}>
-          <Pencil className="h-4 w-4" />
-        </Button>
-      }
-    >
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 glass rounded-xl p-4">
-        <DescItem label="Nome" value={p.nome} />
-        <DescItem label="ID do paciente" value={pacienteId} />
-        <DescItem label="CPF" value={formatCpf(p.cpf)} />
-        <DescItem label="Nascimento" value={formatData(p.dataNascimento)} />
-        <DescItem label="Sexo" value={p.sexo ? SEXO_LABEL[p.sexo] : '—'} />
-        <DescItem label="Projeto" value={p.projeto ? PROJETO_LABEL[p.projeto] : '—'} />
-        <DescItem label="Representante" value={p.representante || '—'} />
-        <DescItem label="Telefone" value={p.telefone || '—'} />
-        <DescItem label="E-mail" value={p.email || '—'} />
-        <DescItem label="Consentimento LGPD" value={p.consentimentoLGPD?.aceito ? 'Aceito' : 'Pendente'} />
-        <div className="col-span-2 sm:col-span-3">
-          <DescItem label="Endereço" value={formatEndereco(p.endereco)} />
+    <>
+      <Secao
+        icon={<User className="h-4 w-4" />}
+        titulo="Dados cadastrais"
+        defaultOpen={false}
+        acao={
+          ehSuperAdmin ? (
+            <Button variant="outline" size="sm" onClick={() => setCorrigirOpen(true)}>
+              Corrigir identidade
+            </Button>
+          ) : (
+            <Button variant="ghost" size="icon" title="Editar cadastro" onClick={abrir}>
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )
+        }
+      >
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 glass rounded-xl p-4">
+          <DescItem label="Nome" value={p.nome} />
+          <DescItem label="ID do paciente" value={pacienteId} />
+          <DescItem label="CPF" value={formatCpf(p.cpf)} />
+          <DescItem label="Nascimento" value={formatData(p.dataNascimento)} />
+          <DescItem label="Sexo" value={p.sexo ? SEXO_LABEL[p.sexo] : '—'} />
+          <DescItem label="Projeto" value={p.projeto ? PROJETO_LABEL[p.projeto] : '—'} />
+          <DescItem label="Linha terapêutica" value={p.linhaTerapeutica ? LINHA_TERAPEUTICA_LABEL[p.linhaTerapeutica] : '—'} />
+          <DescItem
+            label="Classificação de área"
+            value={p.classificacoes?.length ? p.classificacoes.join(' + ') : '—'}
+          />
+          {p.etapaFluxo && (
+            <DescItem
+              label="Etapa do fluxo clínico"
+              value={`${ETAPA_FLUXO_LABEL[p.etapaFluxo]}${elegivelFluxoClinico(p.classificacoes) ? '' : ' (fora do fluxo)'}`}
+            />
+          )}
+          <DescItem label="Telefone" value={p.telefone || '—'} />
+          <DescItem label="E-mail" value={p.email || '—'} />
+          <DescItem label="Consentimento LGPD" value={p.consentimentoLGPD?.aceito ? 'Aceito' : 'Pendente'} />
+          <div className="col-span-2 sm:col-span-3">
+            <DescItem label="Endereço" value={formatEndereco(p.endereco)} />
+          </div>
+          {/* Só aparece quando há responsável legal cadastrado (paciente menor —
+              ver cadastro em PacientesPage.tsx). Sem edição aqui ainda nesta rodada;
+              a API já aceita PATCH com os mesmos campos, se precisar no futuro. */}
+          {p.responsavelLegal && (
+            <>
+              <DescItem label="Responsável legal" value={p.responsavelLegal.nome || '—'} />
+              <DescItem label="CPF do responsável" value={formatCpf(p.responsavelLegal.cpf)} />
+              <DescItem label="Telefone do responsável" value={p.responsavelLegal.telefone || '—'} />
+              <DescItem label="E-mail do responsável" value={p.responsavelLegal.email || '—'} />
+              <DescItem label="Vínculo" value={p.responsavelLegal.vinculo || '—'} />
+              <DescItem
+                label="Autorização do responsável"
+                value={
+                  p.autorizacaoResponsavel?.confirmado
+                    ? `Confirmada${p.autorizacaoResponsavel.registradaEm ? ' em ' + dayjs(p.autorizacaoResponsavel.registradaEm).format('DD/MM/YYYY HH:mm') : ''}`
+                    : 'Pendente'
+                }
+              />
+            </>
+          )}
         </div>
-      </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <TicketsDoPaciente pacienteId={pacienteId} />
+      </Secao>
+      <SolicitarCorrecaoDialog open={solicitarOpen} onOpenChange={setSolicitarOpen} pacienteId={pacienteId} />
+      <CorrigirIdentidadeDialog open={corrigirOpen} onOpenChange={setCorrigirOpen} pacienteId={pacienteId} />
+      <Dialog open={open} onOpenChange={saida.onOpenChange}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" {...saida.contentProps}>
           <DialogHeader>
             <DialogTitle>Editar cadastro</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted p-3 text-sm">
+              <span className="text-muted-foreground">Nome, CPF e nascimento só podem ser corrigidos pelo administrador da plataforma.</span>
+              <Button type="button" variant="outline" size="sm" onClick={() => {
+                  if (isDirty && !window.confirm('Você tem alterações não salvas. Descartar e continuar?')) return;
+                  setOpen(false);
+                  setSolicitarOpen(true);
+                }}>
+                Solicitar correção
+              </Button>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editNome">Nome</Label>
+              <Input id="editNome" disabled {...register('nome')} />
+            </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="editCpf">CPF</Label>
-                <Input id="editCpf" placeholder="000.000.000-00" {...register('cpf')} />
-                {errors.cpf && <p className="text-sm text-destructive">{errors.cpf.message}</p>}
+                <Input id="editCpf" placeholder="000.000.000-00" disabled {...register('cpf')} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="editDataNascimento">Nascimento</Label>
-                <Input id="editDataNascimento" type="date" {...register('dataNascimento')} />
+                <Input id="editDataNascimento" type="date" disabled {...register('dataNascimento')} />
               </div>
               <div className="space-y-2">
                 <Label>Sexo</Label>
@@ -950,7 +679,7 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
               </div>
             </div>
 
-            {!ehPsicologo && (
+            {!ehEnfermeiro && (
               <div className="space-y-2">
                 <Label>Projeto</Label>
                 <Select value={watch('projeto') || undefined} onValueChange={(v) => setValue('projeto', v as ProjetoPaciente)}>
@@ -963,16 +692,25 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="editRepresentante">Representante (quem indicou)</Label>
-              <Input
-                id="editRepresentante"
-                list="representantes-list-edit"
-                placeholder="Nome de quem indicou"
-                {...register('representante')}
+              <Label>Classificação de área *</Label>
+              <ClassificacaoAreaSelector
+                idPrefix="editClassificacao"
+                value={watch('classificacoes') ?? []}
+                onChange={(v) => setValue('classificacoes', v, { shouldDirty: true, shouldValidate: true })}
               />
-              <datalist id="representantes-list-edit">
-                {representantesQ.data?.map((r) => <option key={r} value={r} />)}
-              </datalist>
+              {errors.classificacoes && <p className="text-sm text-destructive">{errors.classificacoes.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Linha terapêutica</Label>
+              <Select value={watch('linhaTerapeutica') || undefined} onValueChange={(v) => setValue('linhaTerapeutica', v as LinhaTerapeutica)}>
+                <SelectTrigger><SelectValue placeholder="Sem classificação" /></SelectTrigger>
+                <SelectContent>
+                  {Object.values(LinhaTerapeutica).map((lt) => (
+                    <SelectItem key={lt} value={lt}>{LINHA_TERAPEUTICA_LABEL[lt]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -1034,13 +772,13 @@ function DadosCadastraisSecao({ paciente: p, pacienteId }: { paciente: Paciente;
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="button" variant="outline" onClick={saida.solicitarFechar}>Cancelar</Button>
               <Button type="submit" disabled={updateMut.isPending}>{updateMut.isPending ? 'Salvando...' : 'Salvar'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-    </Secao>
+    </>
   );
 }
 
@@ -1074,7 +812,7 @@ function ObservacoesSecao({ pacienteId, observacoesAtuais }: { pacienteId: strin
     <Secao
       icon={<FileText className="h-4 w-4" />}
       titulo="Observações"
-      contagem={observacoes.length + (legado ? 1 : 0)}
+      contagem={listQ.isError ? undefined : observacoes.length + (legado ? 1 : 0)}
       defaultOpen={false}
     >
       <div className="space-y-3">
@@ -1098,6 +836,8 @@ function ObservacoesSecao({ pacienteId, observacoesAtuais }: { pacienteId: strin
 
         {listQ.isLoading ? (
           <Skeleton className="h-16 w-full" />
+        ) : listQ.isError ? (
+          <ErroConsulta erro={listQ.error} refetch={listQ.refetch} recurso="as observações" />
         ) : observacoes.length === 0 && !legado ? (
           <Vazio>Nenhuma observação registrada.</Vazio>
         ) : (
@@ -1123,84 +863,131 @@ function ObservacoesSecao({ pacienteId, observacoesAtuais }: { pacienteId: strin
   );
 }
 
-/** Somente leitura — o registro em si é feito em /fluxo-clinico/:id (Passo 2),
- * onde o enfermeiro já tem o fluxo completo de elegibilidade. */
-function FollowUpSecao({ pacienteId }: { pacienteId: string }) {
-  const navigate = useNavigate();
+/**
+ * Testes psicológicos aplicados ao paciente — placeholder sem catálogo de
+ * testes ainda (nome do teste é texto livre); a estrutura de dados e o
+ * endpoint já estão prontos para receber um catálogo padronizado depois.
+ */
+function TestesPsicologicosSecao({ pacienteId }: { pacienteId: string }) {
   const qc = useQueryClient();
-  const { user } = useAuth();
-  const podeExcluir = user?.papel === Papel.ENFERMEIRO || user?.papel === Papel.MEDICO || user?.papel === Papel.ADMIN;
-  const [followupParaExcluir, setFollowupParaExcluir] = useState<FollowUp | null>(null);
+  const [open, setOpen] = useState(false);
+  const [nomeTeste, setNomeTeste] = useState('');
+  const [dataAplicacao, setDataAplicacao] = useState(() => dayjs().format('YYYY-MM-DD'));
+  const [resultado, setResultado] = useState('');
+  const saida = useSaidaProtegida(!!nomeTeste.trim() || !!resultado.trim(), () => {
+    setOpen(false);
+    setNomeTeste('');
+    setDataAplicacao(dayjs().format('YYYY-MM-DD'));
+    setResultado('');
+  });
+
   const listQ = useQuery({
-    queryKey: ['followup', 'paciente', pacienteId],
-    queryFn: () => followUpApi.listByPaciente(pacienteId),
+    queryKey: ['testes-psicologicos', pacienteId],
+    queryFn: () => testesPsicologicosApi.listByPaciente(pacienteId),
   });
-  const excluirMut = useMutation({
-    mutationFn: (followupId: string) => followUpApi.excluir(followupId),
+
+  const createMut = useMutation({
+    mutationFn: () =>
+      testesPsicologicosApi.create({
+        pacienteId,
+        nomeTeste: nomeTeste.trim(),
+        dataAplicacao: dayjs(dataAplicacao).toISOString(),
+        resultado: resultado.trim() || undefined,
+      }),
     onSuccess: () => {
-      toast.success('Follow-up excluído.');
-      setFollowupParaExcluir(null);
-      void qc.invalidateQueries({ queryKey: ['followup', 'paciente', pacienteId] });
+      toast.success('Teste registrado.');
+      setOpen(false);
+      setNomeTeste('');
+      setDataAplicacao(dayjs().format('YYYY-MM-DD'));
+      setResultado('');
+      void qc.invalidateQueries({ queryKey: ['testes-psicologicos', pacienteId] });
     },
-    onError: (e) => toast.error('Erro ao excluir', apiErrorMessage(e)),
+    onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
-  const followups = listQ.data ?? [];
+
+  const testes = toItems<TestePsicologico>(listQ.data as never);
 
   return (
+    <>
     <Secao
-      icon={<UserCheck className="h-4 w-4" />}
-      titulo="Follow-up"
-      contagem={followups.length}
+      icon={<ClipboardCheck className="h-4 w-4" />}
+      titulo="Testes Psicológicos"
+      contagem={listQ.isError ? undefined : testes.length}
       defaultOpen={false}
       acao={
-        <Button size="sm" variant="outline" onClick={() => navigate(`/fluxo-clinico/${pacienteId}`)}>
-          Ver no fluxo clínico
+        <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" /> Aplicar teste
         </Button>
       }
     >
       {listQ.isLoading ? (
         <Skeleton className="h-16 w-full" />
-      ) : followups.length === 0 ? (
-        <Vazio>Nenhum follow-up registrado ainda.</Vazio>
+      ) : listQ.isError ? (
+        <ErroConsulta erro={listQ.error} refetch={listQ.refetch} recurso="os testes psicológicos" />
+      ) : testes.length === 0 ? (
+        <Vazio>Nenhum teste aplicado ainda.</Vazio>
       ) : (
         <Table>
-          <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Elegibilidade</TableHead><TableHead>Observações</TableHead><TableHead className="w-10" /></TableRow></TableHeader>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Data</TableHead>
+              <TableHead>Teste</TableHead>
+              <TableHead>Resultado</TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
-            {followups.map((f) => (
-              <TableRow key={f.id}>
-                <TableCell>{formatData(f.dataFollowup)}</TableCell>
-                <TableCell>
-                  <Badge variant={f.statusElegibilidade === StatusElegibilidade.ELEGIVEL ? 'success' : f.statusElegibilidade === StatusElegibilidade.NAO_ELEGIVEL ? 'destructive' : 'warning'}>
-                    {STATUS_ELEGIBILIDADE_LABEL[f.statusElegibilidade]}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground truncate max-w-xs">{f.observacoes || '—'}</TableCell>
-                <TableCell>
-                  {podeExcluir && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive"
-                      title="Excluir follow-up"
-                      onClick={() => setFollowupParaExcluir(f)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </TableCell>
+            {testes.map((t) => (
+              <TableRow key={t.id}>
+                <TableCell>{dayjs(t.dataAplicacao).format('DD/MM/YYYY')}</TableCell>
+                <TableCell className="font-medium">{t.nomeTeste}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{t.resultado || '—'}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       )}
-      <ConfirmExcluirDialog
-        open={!!followupParaExcluir}
-        titulo="Excluir follow-up"
-        descricao={<>Tem certeza que deseja excluir o follow-up de <span className="font-medium text-foreground">{formatData(followupParaExcluir?.dataFollowup)}</span>? Esta ação não pode ser desfeita pela tela.</>}
-        pending={excluirMut.isPending}
-        onCancel={() => setFollowupParaExcluir(null)}
-        onConfirm={() => followupParaExcluir && excluirMut.mutate(followupParaExcluir.id)}
-      />
+
     </Secao>
+    {/* Dialog fora do Secao: o clique em "Aplicar teste" abre mesmo com a seção recolhida, e recolher não o desmonta. */}
+      <Dialog open={open} onOpenChange={saida.onOpenChange}>
+        <DialogContent className="max-w-md" {...saida.contentProps}>
+          <DialogHeader>
+            <DialogTitle>Aplicar teste psicológico</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="nomeTeste">Nome do teste</Label>
+              <Input
+                id="nomeTeste" placeholder="Ex.: BDI-II, BAI, WAIS-III…"
+                value={nomeTeste} onChange={(e) => setNomeTeste(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dataAplicacaoTeste">Data de aplicação</Label>
+              <Input
+                id="dataAplicacaoTeste" type="date"
+                value={dataAplicacao} onChange={(e) => setDataAplicacao(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="resultadoTeste">Resultado (opcional)</Label>
+              <Textarea
+                id="resultadoTeste" rows={4} placeholder="Escore, interpretação, observações…"
+                value={resultado} onChange={(e) => setResultado(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={saida.solicitarFechar}>Cancelar</Button>
+            <Button
+              onClick={() => createMut.mutate()}
+              disabled={!nomeTeste.trim() || !dataAplicacao || createMut.isPending}
+            >
+              {createMut.isPending ? 'Salvando…' : 'Registrar teste'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

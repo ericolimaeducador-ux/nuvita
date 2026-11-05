@@ -5,7 +5,7 @@ import { StatusChecklistDocumento } from '../../domain/checklist-documento.entit
 export type ChecklistDocumentoDocument = HydratedDocument<ChecklistDocumentoMongo>;
 
 // Checklist administrativo de documentos pendentes/recebidos por paciente
-// (uso da secretaria/admin), independente dos arquivos em si (módulo documentos).
+// (uso da equipe da clínica), independente dos arquivos em si (módulo documentos).
 @Schema({ collection: 'checklist_documentos_itens', versionKey: false })
 export class ChecklistDocumentoMongo {
   @Prop({ required: true, index: true })
@@ -25,6 +25,12 @@ export class ChecklistDocumentoMongo {
 
   @Prop({ required: true })
   criadoPor!: string;
+
+  @Prop()
+  excluidoEm?: Date;
+
+  @Prop()
+  excluidoPor?: string;
 
   @Prop({ default: Date.now, immutable: true })
   criadoEm!: Date;

@@ -1,4 +1,5 @@
-import { useMutation } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,46 +11,69 @@ import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { SegredoDoisFatores } from '@/components/SegredoDoisFatores';
+import { LogoClinicaCard } from '@/components/LogoClinicaCard';
+import { useClinicaMinha } from '@/lib/useClinicaMinha';
 import { clinicasApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { Papel, PAPEL_LABEL } from '@/types';
 
-const PAPEIS_CRIAVEIS = [Papel.MEDICO, Papel.ENFERMEIRO, Papel.SECRETARIA];
+const PAPEIS_CRIAVEIS = [Papel.ENFERMEIRO, Papel.SECRETARIA];
 
 const usuarioSchema = z.object({
   nome: z.string().min(1, 'Informe o nome.'),
   papel: z.nativeEnum(Papel, { error: 'Selecione o perfil.' }),
   email: z.string().min(1, 'Informe o e-mail.').email('E-mail inválido.'),
   password: z.string().min(10, 'Mínimo de 10 caracteres.'),
-  telefone: z.string().optional(),
+  coren: z.string().optional(),
+}).superRefine((v, ctx) => {
+  // O enfermeiro precisa de COREN no perfil para assinar. Só "não vazio": TODO(legal): o formato do COREN depende de fonte oficial.
+  if (v.papel === Papel.ENFERMEIRO && !v.coren?.trim()) {
+    ctx.addIssue({ code: 'custom', path: ['coren'], message: 'Informe o COREN do enfermeiro.' });
+  }
 });
 type UsuarioForm = z.infer<typeof usuarioSchema>;
 
 export function ClinicaPage() {
   const { user } = useAuth();
+  const qc = useQueryClient();
+  const { data: clinica } = useClinicaMinha();
 
-  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<UsuarioForm>({
+  const { register, handleSubmit, setValue, reset, watch, formState: { errors } } = useForm<UsuarioForm>({
     resolver: zodResolver(usuarioSchema),
-    defaultValues: { papel: Papel.MEDICO },
+    defaultValues: { papel: Papel.ENFERMEIRO },
   });
 
+  // Dados de acesso do usuário recém-criado, exibidos UMA vez (correção C2 do teste beta):
+  // sem o segundo fator, o enfermeiro criado aqui não conseguiria entrar.
+  const [acessoCriado, setAcessoCriado] = useState<{
+    nome: string;
+    email: string;
+    senha: string;
+    twoFactorSetup?: { otpauthUrl: string; base32: string };
+  } | null>(null);
+
   const mut = useMutation({
-    mutationFn: (payload: { nome: string; email: string; password: string; papel: Papel; telefone?: string }) =>
+    mutationFn: (payload: { nome: string; email: string; password: string; papel: Papel; coren?: string }) =>
       clinicasApi.criarUsuario(user?.clinicaId ?? '', payload),
-    onSuccess: () => { toast.success('Usuário criado com sucesso.'); reset(); },
+    onSuccess: (res, payload) => {
+      // O diálogo "Acesso criado" é a confirmação: sem toast de sucesso por cima (ficava duplicado).
+      setAcessoCriado({
+        nome: res.user.nome,
+        email: res.user.email,
+        senha: payload.password,
+        twoFactorSetup: res.twoFactorSetup,
+      });
+      reset();
+    },
     onError: (e) => toast.error('Erro', apiErrorMessage(e)),
   });
 
   function onSubmit(v: UsuarioForm) {
-    mut.mutate({
-      nome: v.nome,
-      email: v.email,
-      password: v.password,
-      papel: v.papel,
-      telefone: v.telefone || undefined,
-    });
+    mut.mutate({ nome: v.nome, email: v.email, password: v.password, papel: v.papel, ...(v.papel === Papel.ENFERMEIRO ? { coren: v.coren?.trim() } : {}) });
   }
 
   return (
@@ -59,13 +83,21 @@ export function ClinicaPage() {
         subtitle="Cadastro de profissionais e equipe da sua clínica (multi-tenant)"
       />
 
+      {user?.clinicaId && (
+        <LogoClinicaCard
+          clinicaId={user.clinicaId}
+          logoUrl={clinica?.logoUrl}
+          onAlterada={() => qc.invalidateQueries({ queryKey: ['clinica-minha'] })}
+        />
+      )}
+
       <div className="flex items-start gap-3 glass rounded-xl p-4 mb-6 border-blue-500/20">
         <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
         <div>
           <p className="text-sm font-medium text-foreground">Novo usuário da clínica</p>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Crie médicos, enfermeiros ou secretaria. Profissionais (médico e enfermeiro)
-            recebem 2FA obrigatório no primeiro acesso. Disponível apenas para ADMIN.
+            Crie enfermeiros ou secretaria. Todos trocam a senha provisória no primeiro acesso;
+            enfermeiros também recebem 2FA obrigatório. Disponível apenas para ADMIN.
           </p>
         </div>
       </div>
@@ -81,7 +113,7 @@ export function ClinicaPage() {
               </div>
               <div className="space-y-2">
                 <Label>Perfil</Label>
-                <Select defaultValue={Papel.MEDICO} onValueChange={(v) => setValue('papel', v as Papel)}>
+                <Select defaultValue={Papel.ENFERMEIRO} onValueChange={(v) => setValue('papel', v as Papel)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {PAPEIS_CRIAVEIS.map((p) => <SelectItem key={p} value={p}>{PAPEL_LABEL[p]}</SelectItem>)}
@@ -99,11 +131,13 @@ export function ClinicaPage() {
                 <PasswordInput id="password" placeholder="mínimo 10 caracteres" {...register('password')} />
                 {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="telefone">Telefone (opcional)</Label>
-                <Input id="telefone" placeholder="(11) 91234-5678" {...register('telefone')} />
-                <p className="text-xs text-muted-foreground">Usado só para recuperação de login via WhatsApp.</p>
-              </div>
+              {watch('papel') === Papel.ENFERMEIRO && (
+                <div className="space-y-2">
+                  <Label htmlFor="coren">COREN do enfermeiro</Label>
+                  <Input id="coren" placeholder="COREN 00/00000" {...register('coren')} />
+                  {errors.coren && <p className="text-sm text-destructive">{errors.coren.message}</p>}
+                </div>
+              )}
             </div>
 
             <Button type="submit" size="lg" disabled={mut.isPending} className="mt-2">
@@ -112,6 +146,41 @@ export function ClinicaPage() {
           </form>
         </CardContent>
       </Card>
+
+      <Dialog open={!!acessoCriado} onOpenChange={(o) => { if (!o) setAcessoCriado(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Acesso criado — {acessoCriado?.nome}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              Para entrar, use este e-mail e a senha provisória. A troca de senha é obrigatória no primeiro acesso.
+            </p>
+            <div className="rounded-md border border-border bg-secondary p-3 space-y-1">
+              <p><span className="text-muted-foreground">E-mail:</span> <span className="font-mono">{acessoCriado?.email}</span></p>
+              <p><span className="text-muted-foreground">Senha provisória:</span> <span className="font-mono select-all">{acessoCriado?.senha}</span></p>
+            </div>
+            {acessoCriado?.twoFactorSetup && (
+              <>
+                <p className="font-medium">Segundo fator (obrigatório para entrar)</p>
+                <SegredoDoisFatores
+                  base32={acessoCriado.twoFactorSetup.base32}
+                  otpauthUrl={acessoCriado.twoFactorSetup.otpauthUrl}
+                />
+              </>
+            )}
+            {acessoCriado?.twoFactorSetup && (
+              <p className="text-xs text-destructive">
+                O segundo fator não será exibido de novo. Cadastre-o agora no aplicativo autenticador
+                (ou repasse a quem vai usar este acesso) antes de fechar.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" onClick={() => setAcessoCriado(null)}>Já cadastrei, fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

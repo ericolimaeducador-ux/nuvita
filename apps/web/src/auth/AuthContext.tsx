@@ -7,9 +7,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { USER_KEY, getClinicaAtiva, getToken, setClinicaAtiva, setToken } from '@/api/client';
+import { getClinicaAtiva, getToken, setClinicaAtiva, setToken } from '@/api/client';
 import { authApi } from '@/api/resources';
-import { toast } from '@/components/ui/use-toast';
 import { resolvePermissoes, type AuthUser, type Modulo } from '@/types';
 
 interface AuthState {
@@ -23,10 +22,11 @@ interface AuthState {
   trocarClinica: (clinicaId: string | null) => void;
   login: (email: string, password: string, totpCode?: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Substitui o usuário local (ex.: depois de aceitar termos / trocar senha — a cadeia de gates re-avalia). */
+  atualizarUsuario: (user: AuthUser) => void;
 }
 
-/** Sinaliza que o login acabou de ocorrer (o reload pós-login apaga o estado React). */
-export const BOAS_VINDAS_KEY = 'nuvita.boasVindas';
+const USER_KEY = 'nuvita.user';
 const AuthCtx = createContext<AuthState | undefined>(undefined);
 
 function loadStoredUser(): AuthUser | null {
@@ -60,6 +60,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const atualizarUsuario = useCallback((u: AuthUser) => {
+    localStorage.setItem(USER_KEY, JSON.stringify(u));
+    setUser(u);
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
@@ -72,16 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTok(null);
     setUser(null);
     setClinicaAtivaState(null);
-  }, []);
-
-  // toast de boas-vindas adiado pelo login (que recarrega a página inteira)
-  useEffect(() => {
-    try {
-      if (sessionStorage.getItem(BOAS_VINDAS_KEY)) {
-        sessionStorage.removeItem(BOAS_VINDAS_KEY);
-        toast.success('Bem-vindo ao Nuvita.');
-      }
-    } catch { /* sem storage */ }
   }, []);
 
   // sincroniza logout entre abas
@@ -102,8 +97,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<AuthState>(
-    () => ({ user, token, loading, permissoes, clinicaAtiva, trocarClinica, login, logout }),
-    [user, token, loading, permissoes, clinicaAtiva, trocarClinica, login, logout],
+    () => ({
+      user,
+      token,
+      loading,
+      permissoes,
+      clinicaAtiva,
+      trocarClinica,
+      login,
+      logout,
+      atualizarUsuario,
+    }),
+    [user, token, loading, permissoes, clinicaAtiva, trocarClinica, login, logout, atualizarUsuario],
   );
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;

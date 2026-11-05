@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { isValidObjectId, Model } from 'mongoose';
 import { AvaliacaoIU } from '../../domain/avaliacao-iu.entity';
 import { AvaliacaoIURepository } from '../../application/ports/avaliacao-iu.repository';
 import { AvaliacaoIUDocument, AvaliacaoIUMongo } from './avaliacao-iu.schema';
@@ -15,6 +15,7 @@ export class AvaliacaoIUMongoRepository implements AvaliacaoIURepository {
   }
 
   async findById(clinicaId: string, id: string): Promise<AvaliacaoIU | null> {
+    if (!isValidObjectId(id)) return null;
     const doc = await this.model.findOne({ _id: id, clinicaId, excluidoEm: { $exists: false } }).lean();
     return doc ? this.toEntity(doc) : null;
   }
@@ -30,6 +31,7 @@ export class AvaliacaoIUMongoRepository implements AvaliacaoIURepository {
   }
 
   async update(clinicaId: string, id: string, data: Partial<AvaliacaoIU>): Promise<AvaliacaoIU | null> {
+    if (!isValidObjectId(id)) return null;
     const doc = await this.model
       .findOneAndUpdate({ _id: id, clinicaId, excluidoEm: { $exists: false } }, { $set: { ...data, atualizadoEm: new Date() } }, { new: true, lean: true })
       .lean();
@@ -41,6 +43,7 @@ export class AvaliacaoIUMongoRepository implements AvaliacaoIURepository {
   }
 
   async softDelete(clinicaId: string, id: string, excluidoPor: string): Promise<AvaliacaoIU | null> {
+    if (!isValidObjectId(id)) return null;
     const doc = await this.model
       .findOneAndUpdate(
         { _id: id, clinicaId, excluidoEm: { $exists: false } },

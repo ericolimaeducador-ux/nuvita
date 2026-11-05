@@ -1,0 +1,82 @@
+# DESLIGADO na importação do psi em 2026-11-04. Reativar só na Fase 4, depois de ajustar serviço, projeto GCP, segredos e domínio para o Nuvita de Estomaterapia.
+name: Deploy Web to Firebase Hosting
+
+# Publica o frontend (apps/web) e o proxy da API (rewrite -> Cloud Run) no
+# Firebase Hosting, projeto nuvita-499800:
+#   - site nuvita-psi-web  -> psi.nuvita.app.br       (SPA estatico)
+#   - site nuvita-psi-api  -> api-psi.nuvita.app.br   (rewrite ** -> nuvita-psi-api)
+#
+# Autenticacao via Workload Identity Federation (OIDC) — sem chave de SA de
+# longa duracao. Identidade: github-hosting-deployer@ (secret GCP_HOSTING_SA_EMAIL),
+# federada so ao repo ericolimaeducador-ux/nuvita-psi. Roles:
+#   - roles/firebasehosting.admin  (projeto)
+#   - roles/run.viewer             ESCOPADO ao servico nuvita-psi-api
+# Nao compartilha nada com nuvita-psi-deployer nem nuvita-psi-api-runtime.
+#
+# Secrets (Settings > Secrets and variables > Actions):
+#   - GCP_PROJECT_ID          nuvita-499800.
+#   - GCP_WIF_PROVIDER        projects/<num>/locations/global/workloadIdentityPools/<pool>/providers/<prov>
+#                             (mesmo secret ja usado pelo deploy-api.yml).
+#   - GCP_HOSTING_SA_EMAIL    github-hosting-deployer@nuvita-499800.iam.gserviceaccount.com.
+#
+# Cutover de DNS concluido (2026-09-10/11): psi.nuvita.app.br e
+# api-psi.nuvita.app.br ja servem via Firebase. deploy-pages.yml (GitHub
+# Pages) fica so como fallback manual — orfao desde este cutover.
+#
+# TRIGGER: push em main (mesmos paths que o deploy-pages.yml tinha) +
+# workflow_dispatch pra disparo manual quando precisar.
+on:
+  workflow_dispatch:
+
+# Um deploy por vez; nao cancela um deploy em andamento.
+concurrency:
+  group: firebase-hosting-web
+  cancel-in-progress: false
+
+# id-token: write e obrigatorio para o OIDC do Workload Identity Federation.
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    if: ${{ false }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web
+        working-directory: apps/web
+        env:
+          # Dominio proprio psi.nuvita.app.br serve na raiz (ver Arquitetura A).
+          VITE_BASE: /
+          # API publicada no site Firebase nuvita-psi-api (mesmo dominio
+          # registravel que psi.nuvita.app.br -> cookie SameSite=Strict flui).
+          VITE_API_URL: https://api-psi.nuvita.app.br
+        run: npm run build
+
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_HOSTING_SA_EMAIL }}
+
+      # Versao FIXA de proposito: com @latest, a 15.34.1 (2026-10-21) passou a falhar com 403 em
+      # serviceusage.services.get para esta SA. Ao subir de versao, conceda antes a role
+      # roles/serviceusage.serviceUsageViewer a github-hosting-deployer@.
+      - name: Deploy to Firebase Hosting
+        run: >-
+          npx --yes firebase-tools@15.34.0 deploy
+          --only hosting
+          --project "${{ secrets.GCP_PROJECT_ID }}"
+          --non-interactive

@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AUDIT_LOG_REPOSITORY } from '../auth/auth.constants';
+import { AuditLogMongoRepository } from '../auth/infrastructure/mongo/audit-log-mongo.repository';
+import { AuditLogMongo, AuditLogSchema } from '../auth/infrastructure/mongo/audit-log.schema';
 import { JwtAuthGuard } from '../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/presentation/guards/roles.guard';
 import { PacientesModule } from '../pacientes/pacientes.module';
@@ -11,7 +14,10 @@ import { AvaliacaoIUController } from './presentation/avaliacao-iu.controller';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: AvaliacaoIUMongo.name, schema: AvaliacaoIUSchema }]),
+    MongooseModule.forFeature([
+      { name: AvaliacaoIUMongo.name, schema: AvaliacaoIUSchema },
+      { name: AuditLogMongo.name, schema: AuditLogSchema },
+    ]),
     PacientesModule,
   ],
   controllers: [AvaliacaoIUController],
@@ -20,6 +26,7 @@ import { AvaliacaoIUController } from './presentation/avaliacao-iu.controller';
     JwtAuthGuard,
     RolesGuard,
     { provide: AVALIACAO_IU_REPOSITORY, useClass: AvaliacaoIUMongoRepository },
+    { provide: AUDIT_LOG_REPOSITORY, useClass: AuditLogMongoRepository },
   ],
   exports: [AvaliacaoIUService],
 })

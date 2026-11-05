@@ -1,13 +1,17 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
-import { EtapaFluxoClinico } from '../../../../../../packages/shared/src/fluxo-clinico';
 import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
-import { AUDIT_LOG_REPOSITORY } from '../../auth/auth.constants';
+import { AUDIT_LOG_REPOSITORY, USER_REPOSITORY } from '../../auth/auth.constants';
 import { AuditLogRepository } from '../../auth/application/ports/audit-log.repository';
+import { UserRepository } from '../../auth/application/ports/user.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
+import { CreateNotificacaoDto } from '../../notificacoes/application/dto/create-notificacao.dto';
+import { NotificacoesService } from '../../notificacoes/application/notificacoes.service';
+import { CanalNotificacao, TipoNotificacao } from '../../notificacoes/domain/notificacao.entity';
 import { PacientesService } from '../../pacientes/application/pacientes.service';
 import { AGENDAMENTO_REPOSITORY } from '../agendamentos.constants';
-import { ModalidadeAtendimento, StatusAgendamento, TipoAgendamento } from '../domain/agendamento.entity';
+import { Agendamento, ModalidadeAtendimento, StatusAgendamento } from '../domain/agendamento.entity';
+import { assertAtendimentoComecou } from '../domain/atendimento-horario';
 import { CancelAgendamentoDto } from './dto/cancel-agendamento.dto';
 import { CreateAgendamentoDto } from './dto/create-agendamento.dto';
 import { CreateBloqueioDto } from './dto/create-bloqueio.dto';
@@ -24,20 +28,28 @@ export interface RequestAuditContext {
 
 @Injectable()
 export class AgendamentosService {
+  private readonly logger = new Logger(AgendamentosService.name);
+
   constructor(
     @Inject(AGENDAMENTO_REPOSITORY) private readonly agendamentos: AgendamentoRepository,
     @Inject(AUDIT_LOG_REPOSITORY) private readonly auditLogs: AuditLogRepository,
     private readonly pacientesService: PacientesService,
+    private readonly notificacoesService: NotificacoesService,
+    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
   ) {}
 
   async create(dto: CreateAgendamentoDto, context: RequestAuditContext) {
     const clinicaId = this.resolveClinicaId(context.user, dto.clinicaId);
 
+    // BUG-028: fim depois do início e nenhum atendimento ativo do mesmo profissional sobreposto.
+    this.assertIntervaloValido(new Date(dto.dataHoraInicio), new Date(dto.dataHoraFim));
+    await this.assertSemSobreposicao(clinicaId, dto.medicoId, new Date(dto.dataHoraInicio), new Date(dto.dataHoraFim));
+
     const agendamento = await this.agendamentos.create({
       clinicaId,
       pacienteId: dto.pacienteId,
       medicoId: dto.medicoId,
-      modalidade: dto.modalidade ?? ModalidadeAtendimento.MEDICO,
+      modalidade: dto.modalidade ?? ModalidadeAtendimento.PSICOLOGIA,
       dataHoraInicio: new Date(dto.dataHoraInicio),
       dataHoraFim: new Date(dto.dataHoraFim),
       tipo: dto.tipo,
@@ -47,11 +59,7 @@ export class AgendamentosService {
 
     await this.audit(AuditEvent.APPOINTMENT_CREATED, context, { clinicaId, agendamentoId: agendamento.id });
 
-    if (agendamento.tipo === TipoAgendamento.ENTREVISTA) {
-      await this.pacientesService.avancarEtapaFluxo(
-        clinicaId, agendamento.pacienteId, EtapaFluxoClinico.ENTREVISTA_AGENDADA, context,
-      );
-    }
+    await this.notificarConfirmacaoAgendamento(agendamento, clinicaId, context);
 
     return agendamento;
   }
@@ -78,6 +86,7 @@ export class AgendamentosService {
     const agendamento = await this.agendamentos.findById(resolvedClinicaId, id);
 
     if (!agendamento) throw new NotFoundException('Agendamento nao encontrado.');
+    this.assertPosse(agendamento, context.user);
 
     await this.audit(AuditEvent.APPOINTMENT_VIEWED, context, { clinicaId: resolvedClinicaId, agendamentoId: id });
     const [enriquecido] = await this.comDadosDoPaciente(resolvedClinicaId, [agendamento]);
@@ -86,6 +95,20 @@ export class AgendamentosService {
 
   async update(id: string, dto: UpdateAgendamentoDto, clinicaId: string | undefined, context: RequestAuditContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+    await this.assertPosseSeEnfermeiro(resolvedClinicaId, id, context.user);
+    if (context.user.papel === Papel.ENFERMEIRO && dto.medicoId && dto.medicoId !== context.user.sub) {
+      throw new ForbiddenException('Enfermeiro nao pode passar o agendamento para outro profissional.');
+    }
+
+    const anterior = await this.agendamentos.findById(resolvedClinicaId, id);
+
+    if (anterior && (dto.medicoId || dto.dataHoraInicio || dto.dataHoraFim)) {
+      const inicio = dto.dataHoraInicio ? new Date(dto.dataHoraInicio) : anterior.dataHoraInicio;
+      const fim = dto.dataHoraFim ? new Date(dto.dataHoraFim) : anterior.dataHoraFim;
+      this.assertIntervaloValido(inicio, fim);
+      const ativo = [StatusAgendamento.AGENDADO, StatusAgendamento.CONFIRMADO, StatusAgendamento.CONCLUIDO].includes(anterior.status);
+      if (ativo) await this.assertSemSobreposicao(resolvedClinicaId, dto.medicoId ?? anterior.medicoId, inicio, fim, id);
+    }
 
     const agendamento = await this.agendamentos.update(resolvedClinicaId, id, {
       medicoId: dto.medicoId,
@@ -99,11 +122,31 @@ export class AgendamentosService {
     if (!agendamento) throw new NotFoundException('Agendamento nao encontrado.');
 
     await this.audit(AuditEvent.APPOINTMENT_UPDATED, context, { clinicaId: resolvedClinicaId, agendamentoId: id });
+
+    // Editar o horário contornaria a regra "atendimento no futuro": a troca fica na trilha (quem/quando = o próprio log).
+    if (anterior && (dto.dataHoraInicio || dto.dataHoraFim)) {
+      const inicioNovo = dto.dataHoraInicio ? new Date(dto.dataHoraInicio) : anterior.dataHoraInicio;
+      const fimNovo = dto.dataHoraFim ? new Date(dto.dataHoraFim) : anterior.dataHoraFim;
+      if (inicioNovo.getTime() !== anterior.dataHoraInicio.getTime() || fimNovo.getTime() !== anterior.dataHoraFim.getTime()) {
+        await this.audit(AuditEvent.APPOINTMENT_TIME_CHANGED, context, {
+          clinicaId: resolvedClinicaId,
+          agendamentoId: id,
+          inicioAnterior: anterior.dataHoraInicio.toISOString(),
+          inicioNovo: inicioNovo.toISOString(),
+          fimAnterior: anterior.dataHoraFim.toISOString(),
+          fimNovo: fimNovo.toISOString(),
+        });
+      }
+    }
     return agendamento;
   }
 
   async cancel(id: string, dto: CancelAgendamentoDto, clinicaId: string | undefined, context: RequestAuditContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+    // Lê antes de cancelar: a posse do enfermeiro e o status anterior (vai para a auditoria).
+    const anterior = await this.agendamentos.findById(resolvedClinicaId, id);
+    if (!anterior) throw new NotFoundException('Agendamento nao encontrado.');
+    this.assertPosse(anterior, context.user);
 
     const agendamento = await this.agendamentos.updateStatus(
       resolvedClinicaId,
@@ -117,6 +160,7 @@ export class AgendamentosService {
     await this.audit(AuditEvent.APPOINTMENT_CANCELLED, context, {
       clinicaId: resolvedClinicaId,
       agendamentoId: id,
+      statusAnterior: anterior.status,
       motivo: dto.motivoCancelamento,
     });
 
@@ -125,6 +169,11 @@ export class AgendamentosService {
 
   async conclude(id: string, clinicaId: string | undefined, context: RequestAuditContext) {
     const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+    await this.assertPosseSeEnfermeiro(resolvedClinicaId, id, context.user);
+
+    const atual = await this.agendamentos.findById(resolvedClinicaId, id);
+    if (!atual) throw new NotFoundException('Agendamento nao encontrado.');
+    assertAtendimentoComecou(atual.dataHoraInicio);
 
     const agendamento = await this.agendamentos.updateStatus(
       resolvedClinicaId,
@@ -135,16 +184,6 @@ export class AgendamentosService {
     if (!agendamento) throw new NotFoundException('Agendamento nao encontrado.');
 
     await this.audit(AuditEvent.APPOINTMENT_CONCLUDED, context, { clinicaId: resolvedClinicaId, agendamentoId: id });
-
-    if (agendamento.tipo === TipoAgendamento.ENTREVISTA) {
-      await this.pacientesService.avancarEtapaFluxo(
-        resolvedClinicaId, agendamento.pacienteId, EtapaFluxoClinico.AGUARDANDO_DOCUMENTOS, context,
-      );
-    } else if (agendamento.tipo === TipoAgendamento.ATENDIMENTO_ENFERMAGEM) {
-      await this.pacientesService.avancarEtapaFluxo(
-        resolvedClinicaId, agendamento.pacienteId, EtapaFluxoClinico.AVALIACAO_IU, context,
-      );
-    }
 
     return agendamento;
   }
@@ -186,18 +225,71 @@ export class AgendamentosService {
     return { ok: true };
   }
 
+  /**
+   * Leitura SILENCIOSA (sem auditar "visualizou") para o servidor montar documentos: 404 se não é da
+   * clínica; 403 se o enfermeiro não é o profissional do atendimento.
+   */
+  async obterParaEmissao(clinicaId: string, id: string, user: AuthTokenPayload): Promise<Agendamento> {
+    const agendamento = await this.agendamentos.findById(clinicaId, id);
+    if (!agendamento) throw new NotFoundException('Agendamento nao encontrado.');
+    this.assertPosse(agendamento, user);
+    return agendamento;
+  }
+
+  /**
+   * Os ids do payload de criação precisam pertencer à clínica do token (D4). Para o enfermeiro, o
+   * agendamento referenciado também precisa ser dele. Chamado pelos controllers antes de criar.
+   */
+  async validarReferencias(
+    refs: { pacienteId?: string; medicoId?: string; agendamentoId?: string },
+    clinicaId: string | undefined,
+    context: RequestAuditContext,
+  ): Promise<void> {
+    const resolvedClinicaId = this.resolveClinicaId(context.user, clinicaId);
+
+    if (refs.pacienteId) {
+      const resumo = await this.pacientesService.resumoPorIds(resolvedClinicaId, [refs.pacienteId]);
+      if (!resumo.has(refs.pacienteId)) throw new NotFoundException('Paciente nao encontrado.');
+    }
+    if (refs.medicoId) {
+      const medico = await this.users.findById(refs.medicoId);
+      if (!medico || medico.clinicaId !== resolvedClinicaId) throw new NotFoundException('Profissional nao encontrado.');
+    }
+    if (refs.agendamentoId) {
+      await this.assertPossePorId(resolvedClinicaId, refs.agendamentoId, context.user);
+    }
+  }
+
+  /** Enfermeiro só opera o que é dele; admin e secretária seguem com a clínica inteira. */
+  private assertPosse(agendamento: Agendamento, user: AuthTokenPayload): void {
+    if (user.papel === Papel.ENFERMEIRO && agendamento.medicoId !== user.sub) {
+      throw new ForbiddenException('Este agendamento pertence a outro profissional.');
+    }
+  }
+
+  /** Só o enfermeiro precisa da leitura extra; os demais papéis seguem direto para a atualização atômica. */
+  private async assertPosseSeEnfermeiro(clinicaId: string, id: string, user: AuthTokenPayload): Promise<void> {
+    if (user.papel === Papel.ENFERMEIRO) await this.assertPossePorId(clinicaId, id, user);
+  }
+
+  private async assertPossePorId(clinicaId: string, id: string, user: AuthTokenPayload): Promise<void> {
+    const agendamento = await this.agendamentos.findById(clinicaId, id);
+    if (!agendamento) throw new NotFoundException('Agendamento nao encontrado.');
+    this.assertPosse(agendamento, user);
+  }
+
   private resolveClinicaId(user: AuthTokenPayload, requestedClinicaId?: string): string {
     return resolveTenantClinicaId(user, requestedClinicaId);
   }
 
   /**
-   * O psicólogo enxerga só a própria agenda (pacientes do Projeto PSI já são
+   * O enfermeiro enxerga só a própria agenda (pacientes do Projeto PSI já são
    * isolados por profissional individualmente) — ignora qualquer `medicoId`
    * pedido na query e força o próprio id. Demais papéis mantêm a agenda
    * compartilhada da clínica (fluxo clínico passa por vários profissionais).
    */
   private resolveMedicoIdFiltro(user: AuthTokenPayload, medicoIdSolicitado?: string): string | undefined {
-    if (user.papel === Papel.PSICOLOGO) return user.sub;
+    if (user.papel === Papel.ENFERMEIRO) return user.sub;
     return medicoIdSolicitado;
   }
 
@@ -219,6 +311,17 @@ export class AgendamentosService {
     }));
   }
 
+  private assertIntervaloValido(inicio: Date, fim: Date): void {
+    if (fim.getTime() <= inicio.getTime()) {
+      throw new BadRequestException('O fim do atendimento precisa ser depois do início.');
+    }
+  }
+
+  private async assertSemSobreposicao(clinicaId: string, medicoId: string, inicio: Date, fim: Date, excluirId?: string): Promise<void> {
+    const conflito = await this.agendamentos.findAtivoSobreposto(clinicaId, medicoId, inicio, fim, excluirId);
+    if (conflito) throw new ConflictException('Você já tem atendimento neste horário');
+  }
+
   private async audit(event: AuditEvent, context: RequestAuditContext, metadata: Record<string, unknown>) {
     await this.auditLogs.create({
       event,
@@ -228,5 +331,123 @@ export class AgendamentosService {
       userAgent: context.userAgent,
       metadata,
     });
+  }
+
+  /**
+   * Dispara a notificação de confirmação de agendamento (CONFIRMACAO_AGENDAMENTO)
+   * via NotificacoesService.create() — o método público, que faz o check de
+   * opt-out, renderiza o template e ENFILEIRA no BullMQ (o worker processa o
+   * envio de fato depois). Não usa notificarElegibilidade(): aquele método
+   * grava direto no repositório e nunca enfileira, então nunca chega a enviar.
+   *
+   * Efeito colateral, não crítico: se o paciente não tem e-mail cadastrado ou
+   * se NotificacoesService.create() falhar por qualquer motivo, o agendamento
+   * já foi criado e não deve ser desfeito — mas a falha é logada (fail-closed
+   * com visibilidade, mesmo padrão de feature-ai-usage-audit-trail), nunca
+   * engolida em silêncio total.
+   */
+  private async notificarConfirmacaoAgendamento(
+    agendamento: Agendamento,
+    clinicaId: string,
+    context: RequestAuditContext,
+  ): Promise<void> {
+    const paciente = (await this.pacientesService.resumoPorIds(clinicaId, [agendamento.pacienteId])).get(
+      agendamento.pacienteId,
+    );
+    if (!paciente?.email) {
+      return;
+    }
+
+    const nomeMedico = await this.resolverNomeMedico(agendamento.medicoId, clinicaId);
+
+    try {
+      await this.notificacoesService.create(
+        {
+          clinicaId,
+          destinatarioId: agendamento.pacienteId,
+          tipo: TipoNotificacao.CONFIRMACAO_AGENDAMENTO,
+          canal: CanalNotificacao.EMAIL,
+          email: paciente.email,
+          nome: paciente.nomeDestinatario,
+          nomePaciente: paciente.nome,
+          paraResponsavel: paciente.ehResponsavel,
+          medico: nomeMedico,
+          hora: this.formatarDataHora(agendamento.dataHoraInicio),
+        } as CreateNotificacaoDto,
+        context,
+      );
+    } catch (error) {
+      this.logFalhaNotificacao(TipoNotificacao.CONFIRMACAO_AGENDAMENTO, clinicaId, agendamento.id, error);
+    }
+  }
+
+  /**
+   * Nome do profissional pro template de confirmação — `medicoId` não é
+   * necessariamente `context.user`: SECRETARIA/ADMIN podem criar o
+   * agendamento em nome de um profissional diferente. Mesmo tratamento de
+   * efeito colateral dos outros dados enriquecidos aqui: "não encontrado"
+   * (medicoId inválido/removido) é um caminho normal, sem log — só
+   * `findById()` lançar é uma falha de verdade, e essa é logada
+   * (notification_data_enrichment_failed), distinto de
+   * notification_trigger_failed: aqui a notificação ainda é enviada, só sem
+   * o nome do médico — lá a notificação inteira não sai.
+   */
+  private async resolverNomeMedico(medicoId: string, clinicaId: string): Promise<string | undefined> {
+    try {
+      const medico = await this.users.findById(medicoId);
+      // Nome de profissional de outra clínica nunca entra no template desta.
+      if (medico?.clinicaId && medico.clinicaId !== clinicaId) return undefined;
+      return medico?.nome;
+    } catch (error) {
+      this.logFalhaEnriquecimento('medico', medicoId, error);
+      return undefined;
+    }
+  }
+
+  private formatarDataHora(data: Date): string {
+    return new Intl.DateTimeFormat('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+      timeZone: 'America/Sao_Paulo',
+    }).format(data);
+  }
+
+  private logFalhaNotificacao(
+    tipo: TipoNotificacao,
+    clinicaId: string,
+    agendamentoId: string,
+    error: unknown,
+  ): void {
+    this.logger.warn(
+      JSON.stringify({
+        level: 'warn',
+        msg: 'Falha ao acionar notificacao pos-agendamento; agendamento foi criado normalmente.',
+        event: 'notification_trigger_failed',
+        tipo,
+        clinicaId,
+        agendamentoId,
+        erro: error instanceof Error ? error.message : String(error),
+      }),
+    );
+  }
+
+  /**
+   * Falha ao enriquecer um dado (ex.: nome do médico) usado num template de
+   * notificação — escopo e severidade diferentes de notification_trigger_failed:
+   * aqui a notificação ainda sai, só incompleta; lá ela não sai nenhuma.
+   * Nomes de evento distintos de propósito, pra não esconder essa diferença
+   * de quem investigar o log depois.
+   */
+  private logFalhaEnriquecimento(campo: string, medicoId: string, error: unknown): void {
+    this.logger.warn(
+      JSON.stringify({
+        level: 'warn',
+        msg: 'Falha ao enriquecer dado de notificacao; notificacao segue sem esse campo.',
+        event: 'notification_data_enrichment_failed',
+        campo,
+        medicoId,
+        erro: error instanceof Error ? error.message : String(error),
+      }),
+    );
   }
 }

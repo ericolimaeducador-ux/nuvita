@@ -65,7 +65,7 @@ function mensagemErroMidia(nome: string): string {
  * entrar e o profissional responde com uma (re)oferta com ICE restart — isso
  * cobre entrada em qualquer ordem, refresh de página e reconexões.
  *
- * `embutido` encaixa a sala dentro do layout do sistema (o psicólogo atende com
+ * `embutido` encaixa a sala dentro do layout do sistema (o enfermeiro atende com
  * o prontuário ao lado, na mesma janela); sem ele, ocupa a tela inteira.
  */
 export function SalaVideo({

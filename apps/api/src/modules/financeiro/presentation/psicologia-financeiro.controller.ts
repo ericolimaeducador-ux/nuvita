@@ -4,6 +4,7 @@ import { extractRequestMeta } from '../../../common/http/client-ip';
 import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
+import { AuthGatesGuard } from '../../auth/presentation/guards/auth-gates.guard';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { TenantRequiredGuard } from '../../../common/tenancy/tenant-required.guard';
@@ -12,10 +13,10 @@ import { PsicologiaFinanceiroService } from '../application/psicologia-financeir
 import { CobrarCicloDto } from '../application/dto/cobrar-ciclo.dto';
 import { SalvarConfigPsicologoDto } from '../application/dto/salvar-config-psicologo.dto';
 
-/** Recebimento das consultas do psicólogo autônomo — separado do financeiro da clínica. */
+/** Recebimento das consultas do enfermeiro autônomo — separado do financeiro da clínica. */
 @Controller('financeiro/psicologia')
-@UseGuards(JwtAuthGuard, TenantRequiredGuard, RolesGuard)
-@Roles(Papel.PSICOLOGO, Papel.ADMIN)
+@UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
+@Roles(Papel.ENFERMEIRO)
 export class PsicologiaFinanceiroController {
   constructor(private readonly service: PsicologiaFinanceiroService) {}
 

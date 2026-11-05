@@ -17,12 +17,16 @@ export enum TipoNotificacao {
   LINK_TELECONSULTA = 'link_teleconsulta',
   RESULTADO_DISPONIVEL = 'resultado_disponivel',
   ELEGIBILIDADE_CONFIRMADA = 'elegibilidade_confirmada',
+  // Aviso/lembrete de cobrança do financeiro de paciente (só registro + aviso; a clínica recebe por fora).
+  AVISO_COBRANCA = 'aviso_cobranca',
 }
 
 export interface ConteudoNotificacao {
   assunto?: string;
   mensagem: string;
   destino: string;
+  /** Endereço de resposta (Reply-To). Só e-mail; opcional. */
+  responderPara?: string;
   variaveis?: Record<string, string>;
 }
 

@@ -16,6 +16,10 @@ class AssinaturaMongo {
 
   @Prop({ required: true })
   hash!: string;
+
+  // COREN do perfil carimbado ao assinar; ausente nos registros anteriores.
+  @Prop()
+  coren?: string;
 }
 
 @Schema({ collection: 'prontuarios', versionKey: false })
@@ -51,16 +55,10 @@ export class ProntuarioMongo {
   plano!: Record<string, unknown>;
 
   @Prop({ type: MongooseSchema.Types.Mixed })
-  fichaAvaliacaoIU?: Record<string, unknown>;
-
-  @Prop({ type: MongooseSchema.Types.Mixed })
-  registroEnfermagem?: Record<string, unknown>;
-
-  @Prop({ type: MongooseSchema.Types.Mixed })
   registroPsicologico?: Record<string, unknown>;
 
-  @Prop({ type: MongooseSchema.Types.Mixed })
-  relatorioJudicial?: Record<string, unknown>;
+  @Prop({ type: String, enum: ['completo', 'seguimento'] })
+  formulario?: 'completo' | 'seguimento';
 
   @Prop({ type: [MongooseSchema.Types.Mixed], default: [] })
   arquivos!: Record<string, unknown>[];
@@ -78,6 +76,8 @@ export class ProntuarioMongo {
 export const ProntuarioSchema = SchemaFactory.createForClass(ProntuarioMongo);
 ProntuarioSchema.index({ clinicaId: 1, _id: 1 });
 ProntuarioSchema.index({ clinicaId: 1, pacienteId: 1, dataAtendimento: -1 });
+// Checagem de duplicidade por atendimento (não único: registros antigos podem repetir/faltar).
+ProntuarioSchema.index({ clinicaId: 1, agendamentoId: 1 }, { sparse: true });
 
 function rejectDelete(next: (error?: Error) => void): void {
   next(new Error('Medical records have mandatory 20-year retention and cannot be deleted.'));

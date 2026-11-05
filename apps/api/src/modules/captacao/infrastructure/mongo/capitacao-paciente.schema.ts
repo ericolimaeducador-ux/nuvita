@@ -9,6 +9,9 @@ import {
 export type CapitacaoPacienteDocument = HydratedDocument<CapitacaoPacienteMongo>;
 
 /**
+ * ATENÇÃO: o nome da coleção `capitacao_paciente` (com o erro de grafia) é MANTIDO de propósito, para casar com os dados
+ * reais do Nuvita antigo. Não "corrigir" sem migração.
+ *
  * Fila isolada de captação em campo. CPF, telefone, e-mail e endereço ficam
  * criptografados (mesma chave de pacientes). A collection não mistura com
  * `pacientes` nem com `prontuarios`.
@@ -35,6 +38,14 @@ export class CapitacaoPacienteMongo {
 
   @Prop()
   email?: string;
+
+  /** Responsável legal (menor de idade), completado depois pela clínica. JSON criptografado (mesma chave de pacientes). */
+  @Prop()
+  responsavelLegal?: string;
+
+  /** Autorização do responsável legal confirmada pela clínica ao completar o lead. */
+  @Prop()
+  autorizacaoResponsavelConfirmada?: boolean;
 
   @Prop({ required: true, enum: [...CODIGOS_ENFERMEIRO_CAPTADOR], index: true })
   codigoEnfermeiro!: string;

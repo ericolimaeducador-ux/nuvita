@@ -1,3 +1,5 @@
+// TODO(conteudo): estes códigos são os enfermeiros captadores de campo REAIS do Nuvita antigo (dados operacionais, não
+// inventados). Mantidos como estão para casar com os registros existentes em `capitacao_paciente`.
 /** Códigos dos enfermeiros captadores de campo (dropdown do formulário público). */
 export const CODIGOS_ENFERMEIRO_CAPTADOR = [
   'ENF-00126',

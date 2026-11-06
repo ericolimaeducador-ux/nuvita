@@ -2,6 +2,15 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { abortarSeChaveReaproveitada, CHAVES_REAPROVEITADAS } from './lib/segredos-reaproveitados.mjs';
+
+// R1: nenhum argumento pode pedir para gerar as chaves reaproveitadas (ex.: --incluir=PATIENT_DATA_HASH_KEY).
+try {
+  abortarSeChaveReaproveitada(process.argv.slice(2), 'gen-production-secrets');
+} catch (erro) {
+  console.error(`⛔ ${erro.message}`);
+  process.exit(1);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,12 +35,9 @@ const secrets = {
   JWT_ACCESS_SECRET: generateUrlSafeSecret(48),
   JWT_REFRESH_SECRET: generateUrlSafeSecret(48),
   
-  // Criptografia LGPD em repouso (AES-256)
-  PATIENT_DATA_ENCRYPTION_KEY: generateBase64Key(32),
-  PATIENT_DATA_HASH_KEY: generateHexKey(32),
+  // R1: PATIENT_DATA_ENCRYPTION_KEY, PATIENT_DATA_HASH_KEY e PRONTUARIO_SIGNATURE_SECRET NÃO são geradas aqui —
+  // são reaproveitadas do serviço real do Nuvita (ver scripts/lib/segredos-reaproveitados.mjs).
   
-  // Assinatura Digital Imutável de Prontuários (CFP 006/2019)
-  PRONTUARIO_SIGNATURE_SECRET: generateUrlSafeSecret(48),
   
   // Bootstrap do SuperAdmin inicial
   BOOTSTRAP_SECRET: generateUrlSafeSecret(32),
@@ -41,6 +47,9 @@ const secrets = {
   MONGO_APP_PASSWORD: generateUrlSafeSecret(24),
   REDIS_PASSWORD: generateUrlSafeSecret(24),
 };
+
+// R1: trava também a própria lista (se alguém voltar a incluir uma das chaves reaproveitadas, o script aborta).
+abortarSeChaveReaproveitada(Object.keys(secrets), 'gen-production-secrets (lista de segredos)');
 
 const productionEnvTemplate = `# ==============================================================================
 # NUVITA PSI — CONFIGURAÇÃO DE PRODUÇÃO (CONTABO + COOLIFY)
@@ -68,12 +77,12 @@ JWT_REFRESH_SECRET=${secrets.JWT_REFRESH_SECRET}
 JWT_ACCESS_EXPIRATION=15m
 JWT_REFRESH_EXPIRATION=7d
 
-# Criptografia LGPD de Dados dos Pacientes (AES-256)
-PATIENT_DATA_ENCRYPTION_KEY=${secrets.PATIENT_DATA_ENCRYPTION_KEY}
-PATIENT_DATA_HASH_KEY=${secrets.PATIENT_DATA_HASH_KEY}
+# Criptografia de dados de paciente e selo de integridade: REAPROVEITADOS do serviço real do Nuvita.
+# COPIE os valores ATUAIS do Secret Manager — nunca gere nem rotacione (senão os dados reais ficam indecifráveis).
+PATIENT_DATA_ENCRYPTION_KEY=
+PATIENT_DATA_HASH_KEY=
+PRONTUARIO_SIGNATURE_SECRET=
 
-# Assinatura Digital de Prontuários (Imutabilidade CFP)
-PRONTUARIO_SIGNATURE_SECRET=${secrets.PRONTUARIO_SIGNATURE_SECRET}
 
 # Autorização do Bootstrap Inicial
 BOOTSTRAP_SECRET=${secrets.BOOTSTRAP_SECRET}
@@ -98,6 +107,5 @@ fs.writeFileSync(outputPath, productionEnvTemplate, 'utf-8');
 console.log(`✅ Arquivo de configuração de produção gerado com sucesso em: ${outputPath}`);
 console.log('\nChaves críticas geradas:');
 console.log(`- JWT_ACCESS_SECRET: [${secrets.JWT_ACCESS_SECRET.substring(0, 8)}...]`);
-console.log(`- PATIENT_DATA_ENCRYPTION_KEY: [${secrets.PATIENT_DATA_ENCRYPTION_KEY.substring(0, 8)}...] (AES-256)`);
-console.log(`- PRONTUARIO_SIGNATURE_SECRET: [${secrets.PRONTUARIO_SIGNATURE_SECRET.substring(0, 8)}...]`);
+console.log(`- ${Object.keys(CHAVES_REAPROVEITADAS).join(', ')}: NÃO geradas — copiar do serviço real do Nuvita.`);
 console.log(`- BOOTSTRAP_SECRET: [${secrets.BOOTSTRAP_SECRET.substring(0, 8)}...]`);

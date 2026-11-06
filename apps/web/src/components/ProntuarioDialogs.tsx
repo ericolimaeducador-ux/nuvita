@@ -17,6 +17,7 @@ import {
   TipoAtendimento, TIPO_ATENDIMENTO_LABEL, REGISTRO_PSICOLOGICO_CAMPOS,
   type Prontuario, type ExameSegmentar, type RegistroPsicologico,
 } from '@/types';
+import { RECURSOS_LEGADO } from '@/lib/recursos-legado';
 
 
 const EXAME_SEGMENTAR_CAMPOS: { key: keyof ExameSegmentar; label: string }[] = [
@@ -209,7 +210,8 @@ export function ProntuarioDetailDialog({
               <FileText className="mr-2 h-4 w-4" /> Imprimir
             </Button>
           )}
-          {pr && !pr.assinado && (
+          {/* R1: prontuário antigo somente leitura (o servidor responde 403). */}
+          {RECURSOS_LEGADO.escritaProntuarioAntigo && pr && !pr.assinado && (
             <Button variant="outline" disabled={assinarMut.isPending} onClick={() => setConfirmandoAssinatura(true)}>
               <PenLine className="mr-2 h-4 w-4" /> {assinarMut.isPending ? 'Assinando...' : 'Assinar prontuário'}
             </Button>

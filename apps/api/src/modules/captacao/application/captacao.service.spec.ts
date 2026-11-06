@@ -14,7 +14,7 @@ import { RequestAuditContext } from '../../pacientes/application/pacientes.servi
 import { CapitacaoPacienteSchema } from '../infrastructure/mongo/capitacao-paciente.schema';
 import { UpdateCaptacaoDto } from './dto/update-captacao.dto';
 import { CreateCaptacaoDto } from './dto/create-captacao.dto';
-import { CaptacaoService } from './captacao.service';
+import { CaptacaoService, mensagemDuplicidade } from './captacao.service';
 
 const crypto = new PacienteCryptoService({
   getConfig: () => ({
@@ -504,5 +504,37 @@ describe('Schema capitacao_paciente — índice único de CPF e ausência de del
   it('o serviço não faz delete físico', () => {
     const src = readFileSync(require.resolve('./captacao.service'), 'utf8');
     expect(src).not.toMatch(/deleteOne|deleteMany|findByIdAndDelete|findOneAndDelete|\.remove\(/);
+  });
+});
+
+describe('R1.8 — duplicidade por índice e CPF com dígitos verificadores', () => {
+  const origem = { ip: '127.0.0.1', userAgent: 'jest' };
+
+  it('E11000 de índice que NÃO é o de CPF não diz "CPF" (mensagem genérica)', async () => {
+    const { service, model } = setup([]);
+    model.create.mockRejectedValueOnce({ code: 11000, keyPattern: { telefoneHash: 1 }, message: 'E11000 duplicate key error index: telefoneHash_1' });
+    const erro = await service.create({ telefone: '1', codigoEnfermeiro: 'ENF-00126' }, origem).catch((e: Error) => e);
+    expect(erro).toMatchObject({ status: 409 });
+    expect((erro as Error).message).not.toMatch(/CPF/);
+  });
+
+  it('E11000 do índice de CPF mantém a mensagem de CPF', async () => {
+    const { service, model } = setup([]);
+    model.create.mockRejectedValueOnce({ code: 11000, keyPattern: { cpfHash: 1 }, message: 'E11000 duplicate key error index: cpfHash_1' });
+    await expect(service.create({ cpf: '52998224725', telefone: '1', codigoEnfermeiro: 'ENF-00126' }, origem)).rejects.toThrow(/CPF/);
+  });
+
+  it('CreateCaptacaoDto recusa CPF com dígito verificador errado e sequência repetida', async () => {
+    const erros = async (obj: object) => (await validate(plainToInstance(CreateCaptacaoDto, obj))).map((e) => e.property);
+    expect(await erros({ telefone: '1', codigoEnfermeiro: 'ENF-00126', cpf: '529.982.247-26' })).toEqual(['cpf']);
+    expect(await erros({ telefone: '1', codigoEnfermeiro: 'ENF-00126', cpf: '000.000.000-00' })).toEqual(['cpf']);
+    expect(await erros({ telefone: '1', codigoEnfermeiro: 'ENF-00126', cpf: '111.111.111-11' })).toEqual(['cpf']);
+    expect(await erros({ telefone: '1', codigoEnfermeiro: 'ENF-00126', cpf: '529.982.247-25' })).toEqual([]);
+  });
+
+  it('índice identificado também pelo texto do erro (sem keyPattern); desconhecido -> genérica', () => {
+    expect(mensagemDuplicidade({ code: 11000, message: 'E11000 duplicate key error collection: x index: cpfHash_1 dup key' })).toMatch(/CPF/);
+    expect(mensagemDuplicidade({ code: 11000, message: 'E11000 duplicate key error collection: x index: telefoneHash_1' })).not.toMatch(/CPF/);
+    expect(mensagemDuplicidade({ code: 11000 })).toBe('Já existe uma captação pendente com estes dados.');
   });
 });

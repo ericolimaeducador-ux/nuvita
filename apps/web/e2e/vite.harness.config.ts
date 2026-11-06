@@ -8,7 +8,8 @@ const web = (p: string) => fileURLToPath(new URL(`../${p}`, import.meta.url));
 export default defineConfig({
   root: fileURLToPath(new URL('./harness', import.meta.url)),
   plugins: [react()],
-  resolve: { alias: { '@': web('src') } },
+  // '@shared' (pacote compartilhado API/web) igual ao vite.config.ts do app — sem ele o harness não monta desde a 5b.
+  resolve: { alias: { '@': web('src'), '@shared': web('../../packages/shared/src') } },
   css: { postcss: web('.') },
-  server: { port: 5199, strictPort: true, fs: { allow: [web('..')] } },
+  server: { port: 5199, strictPort: true, fs: { allow: [web('..'), web('../../packages/shared')] } },
 });

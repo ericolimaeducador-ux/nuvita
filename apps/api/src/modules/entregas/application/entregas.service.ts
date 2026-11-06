@@ -58,6 +58,8 @@ export class EntregasService {
       throw new NotFoundException('Avaliacao de IU nao encontrada.');
     }
 
+    // R1.6: o total NUNCA é aceito do cliente — é recalculado a partir dos itens; divergência = 400 (nada gravado).
+    const valorTotalCentavos = this.totalConferido(dto);
     const itens = await this.categorizarItens(dto.itens);
     const entrega = await this.repo.create({
       clinicaId,
@@ -68,7 +70,7 @@ export class EntregasService {
       origem: dto.origem,
       status: StatusEntrega.PENDENTE,
       itens,
-      valorTotalCentavos: dto.valorTotalCentavos,
+      valorTotalCentavos,
       notaFiscal: dto.notaFiscal,
       observacoes: dto.observacoes,
     });
@@ -83,6 +85,21 @@ export class EntregasService {
     });
 
     return entrega;
+  }
+
+  /** Total = soma de quantidade × valor unitário de cada item; o informado (item e entrega) tem de bater. */
+  private totalConferido(dto: CreateEntregaDto): number {
+    let total = 0;
+    dto.itens.forEach((item, i) => {
+      const esperado = item.quantidade * item.valorUnitarioCentavos;
+      if (item.valorTotalCentavos !== esperado) {
+        throw new BadRequestException(`Total do item ${i + 1} nao confere com quantidade x valor unitario.`);
+      }
+      total += esperado;
+    });
+    if (!Number.isSafeInteger(total)) throw new BadRequestException('Total da entrega invalido.');
+    if (dto.valorTotalCentavos !== total) throw new BadRequestException('Total da entrega nao confere com a soma dos itens.');
+    return total;
   }
 
   /**

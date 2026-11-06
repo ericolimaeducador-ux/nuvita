@@ -47,7 +47,7 @@ import { ConsentimentosImagemController, LesoesController } from '../presentatio
 import { LesaoMongoRepository } from '../infrastructure/mongo/lesao-mongo.repository';
 import { ConsentimentoImagem, Lesao } from '../domain/lesao.entity';
 import { ProdutosService } from '../../produtos/application/produtos.service';
-import { CreateAdendoConsultaDto, CreateConsultaDto, DiagnosticoDto, PresignAnexoConsultaDto } from './dto/consulta.dto';
+import { AssinarConsultaDto, CreateAdendoConsultaDto, CreateConsultaDto, DiagnosticoDto, PresignAnexoConsultaDto, UpdateConsultaDto } from './dto/consulta.dto';
 
 const PACIENTE = '65f000000000000000000001';
 const CLINICA = 'clinica-1';
@@ -65,9 +65,9 @@ function consultasEmMemoria() {
   const adendos: AdendoConsulta[] = [];
   const anexos: AnexoConsulta[] = [];
   let seq = 0;
-  const repo: ConsultaRepository & { forcarCorridaAdendo?: number } = {
+  const repo: ConsultaRepository & { forcarCorridaAdendo?: number; aoAssinar?: () => Promise<void> } = {
     async create(data) {
-      const c = { ...data, id: `c${++seq}`, criadoEm: new Date(), atualizadoEm: new Date() } as ConsultaEnfermagem;
+      const c = { ...data, id: `c${++seq}`, versao: 1, criadoEm: new Date(), atualizadoEm: new Date() } as ConsultaEnfermagem;
       consultas.push(c);
       return { ...c };
     },
@@ -78,16 +78,24 @@ function consultasEmMemoria() {
     async listByPaciente(clinicaId, pacienteId) {
       return consultas.filter((c) => c.clinicaId === clinicaId && c.pacienteId === pacienteId).map((c) => ({ ...c }));
     },
-    async updateRascunho(clinicaId, id, autorId, conteudo) {
-      const c = consultas.find((x) => x.id === id && x.clinicaId === clinicaId && x.enfermeiroId === autorId && x.status === StatusConsulta.RASCUNHO);
+    async updateRascunho(clinicaId, id, autorId, versao, conteudo) {
+      const c = consultas.find((x) => x.id === id && x.clinicaId === clinicaId && x.enfermeiroId === autorId && x.status === StatusConsulta.RASCUNHO && x.versao === versao);
       if (!c) return null;
-      Object.assign(c, conteudo);
+      Object.assign(c, conteudo, { versao: versao + 1 });
       return { ...c };
     },
-    async assinar(clinicaId, id, autorId, assinatura, cobranca) {
-      const c = consultas.find((x) => x.id === id && x.clinicaId === clinicaId && x.enfermeiroId === autorId && x.status === StatusConsulta.RASCUNHO);
+    async marcarAuditoriaAssinatura(clinicaId, id, pendente) {
+      const c = consultas.find((x) => x.id === id && x.clinicaId === clinicaId && x.status === StatusConsulta.ASSINADA);
+      if (!c) return;
+      if (pendente) c.auditoriaAssinaturaPendente = true;
+      else delete c.auditoriaAssinaturaPendente;
+    },
+    async assinar(clinicaId, id, autorId, versao, assinatura, cobranca, identificacoesLesoes) {
+      // R1: simula outra tela salvando ENTRE a leitura e a gravação condicional da assinatura.
+      if (repo.aoAssinar) { const f = repo.aoAssinar; repo.aoAssinar = undefined; await f(); }
+      const c = consultas.find((x) => x.id === id && x.clinicaId === clinicaId && x.enfermeiroId === autorId && x.status === StatusConsulta.RASCUNHO && x.versao === versao);
       if (!c) return null;
-      Object.assign(c, { status: StatusConsulta.ASSINADA, assinatura, cobranca });
+      Object.assign(c, { status: StatusConsulta.ASSINADA, assinatura, cobranca, ...(identificacoesLesoes ? { identificacoesLesoes } : {}) });
       return { ...c };
     },
     async atualizarCobranca(clinicaId, id, cobranca) {
@@ -261,6 +269,16 @@ function montar(opts: { coren?: string | null; valorPadrao?: number; modulos?: M
   return { service, lesoesService, les, c, cob, auditCreate, eventos };
 }
 
+/** Salva/assina com a versão GRAVADA (o que a tela faria depois de ler a consulta). */
+type Montado = { service: ConsultasService; c: { consultas: ConsultaEnfermagem[] } };
+const versaoDe = (m: Montado, id: string) => m.c.consultas.find((x) => x.id === id)?.versao ?? 1;
+function salvarAtual(m: Montado, id: string, dto: object, quem: ConsultaRequestContext) {
+  return m.service.atualizarRascunho(id, { ...dto, versao: versaoDe(m, id) } as UpdateConsultaDto, quem);
+}
+function assinarAtual(m: Montado, id: string, dto: Pick<AssinarConsultaDto, 'cobranca'>, clinicaId: string | undefined, quem: ConsultaRequestContext) {
+  return m.service.assinar(id, { ...dto, versao: versaoDe(m, id) } as AssinarConsultaDto, clinicaId, quem);
+}
+
 function storageFake() {
   return {
     createUploadUrl: jest.fn().mockImplementation(({ key }: { key: string }) => Promise.resolve({ uploadUrl: `https://r2/put/${key}`, privateUrl: `s3://bucket/${key}`, expiresInSeconds: 600 })),
@@ -278,7 +296,7 @@ const dtoBase = (over: Partial<CreateConsultaDto> = {}): CreateConsultaDto => ({
 
 async function criarEAssinar(m: ReturnType<typeof montar>, cobranca: { incluidaEmPacote: boolean; valorCentavos?: number }) {
   const consulta = await m.service.criar(dtoBase(), AUTOR);
-  const assinada = await m.service.assinar(consulta.id, { cobranca }, undefined, AUTOR);
+  const assinada = await assinarAtual(m, consulta.id, { cobranca }, undefined, AUTOR);
   return { consulta, assinada };
 }
 
@@ -299,7 +317,7 @@ describe('ConsultasService — criação, rascunho e trava pós-assinatura', () 
   it('editar rascunho substitui só as etapas enviadas; registros de implementação levam o autor', async () => {
     const m = montar();
     const c = await m.service.criar(dtoBase(), AUTOR);
-    const r = await m.service.atualizarRascunho(
+    const r = await salvarAtual(m, 
       c.id,
       { evolucao: { texto: 'melhora' }, implementacao: { registros: [{ padrao: PadraoImplementacao.AUTONOMO, descricao: 'curativo' }] } },
       AUTOR,
@@ -314,7 +332,7 @@ describe('ConsultasService — criação, rascunho e trava pós-assinatura', () 
     const m = montar();
     const { consulta } = await criarEAssinar(m, { incluidaEmPacote: true });
 
-    await expect(m.service.atualizarRascunho(consulta.id, { evolucao: { texto: 'mudou' } }, AUTOR)).rejects.toBeInstanceOf(ConflictException);
+    await expect(salvarAtual(m, consulta.id, { evolucao: { texto: 'mudou' } }, AUTOR)).rejects.toBeInstanceOf(ConflictException);
     expect(m.c.consultas[0].evolucao.texto).toBe('');
     expect(m.c.consultas[0].assinatura?.hash).toMatch(/^[0-9a-f]{64}$/);
   });
@@ -322,11 +340,11 @@ describe('ConsultasService — criação, rascunho e trava pós-assinatura', () 
   it('assinatura exige COREN no perfil (422) e é do autor; assinar 2x dá 409', async () => {
     const semCoren = montar({ coren: null });
     const c1 = await semCoren.service.criar(dtoBase(), AUTOR);
-    await expect(semCoren.service.assinar(c1.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR)).rejects.toBeInstanceOf(UnprocessableEntityException);
+    await expect(assinarAtual(semCoren, c1.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR)).rejects.toBeInstanceOf(UnprocessableEntityException);
 
     const m = montar();
     const { consulta } = await criarEAssinar(m, { incluidaEmPacote: true });
-    await expect(m.service.assinar(consulta.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR)).rejects.toBeInstanceOf(ConflictException);
+    await expect(assinarAtual(m, consulta.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR)).rejects.toBeInstanceOf(ConflictException);
   });
 });
 
@@ -405,7 +423,7 @@ describe('ConsultasService — cobrança na assinatura ("assina primeiro, cobra 
     await expect(m.service.gerarCobrancaPendente(rascunho.id, undefined, AUTOR)).rejects.toBeInstanceOf(ConflictException);
 
     m.cob.repo.falharCreate = 1;
-    await m.service.assinar(rascunho.id, { cobranca: { incluidaEmPacote: false } }, undefined, AUTOR);
+    await assinarAtual(m, rascunho.id, { cobranca: { incluidaEmPacote: false } }, undefined, AUTOR);
     await expect(m.service.gerarCobrancaPendente(rascunho.id, undefined, COLEGA)).rejects.toBeInstanceOf(ForbiddenException);
     await expect(m.service.gerarCobrancaPendente(rascunho.id, undefined, ctx(usuario(Papel.SECRETARIA, 'sec')))).rejects.toBeInstanceOf(ForbiddenException);
   });
@@ -418,7 +436,7 @@ describe('ConsultasService — adendos (número sequencial + motivo)', () => {
     const dto = { motivo: 'Correção da dose anotada', texto: 'Onde se lê X, leia-se Y.' };
     await expect(m.service.criarAdendo(rascunho.id, dto, undefined, AUTOR)).rejects.toBeInstanceOf(ConflictException);
 
-    await m.service.assinar(rascunho.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
+    await assinarAtual(m, rascunho.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
     const nums = [];
     for (let i = 0; i < 3; i += 1) nums.push((await m.service.criarAdendo(rascunho.id, dto, undefined, AUTOR)).numero);
     expect(nums).toEqual([1, 2, 3]);
@@ -457,8 +475,8 @@ describe('ConsultasService — permissão por papel e isolamento entre clínicas
     const evento = m.auditCreate.mock.calls.find((x) => x[0].event === AuditEvent.CONSULTA_ENFERMAGEM_VIEWED)![0];
     expect(evento.metadata).toEqual({ clinicaId: CLINICA, consultaId: c.id, pacienteId: PACIENTE, autor: false });
 
-    await expect(m.service.atualizarRascunho(c.id, { evolucao: { texto: 'x' } }, COLEGA)).rejects.toBeInstanceOf(ForbiddenException);
-    await expect(m.service.assinar(c.id, { cobranca: { incluidaEmPacote: true } }, undefined, COLEGA)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(salvarAtual(m, c.id, { evolucao: { texto: 'x' } }, COLEGA)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(assinarAtual(m, c.id, { cobranca: { incluidaEmPacote: true } }, undefined, COLEGA)).rejects.toBeInstanceOf(ForbiddenException);
 
     const lista = await m.service.listarPorPaciente({ pacienteId: PACIENTE }, COLEGA);
     expect(lista).toHaveLength(1);
@@ -693,10 +711,10 @@ describe('5b — disponibilidade por classificação do paciente (IU = incontin�
   it('o CONTEÚDO DOS MÓDULOS é coberto pela assinatura: alterar depois de assinar -> 409; o hash muda se o módulo muda', async () => {
     const m = montar({ modulos: registroReal() });
     const c = await m.service.criar(dtoBase({ avaliacao: { modulos: [{ area: AreaModuloAvaliacao.IU, dados: MODULO_IU_VALIDO }] } }), AUTOR);
-    await m.service.assinar(c.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
+    await assinarAtual(m, c.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
 
     await expect(
-      m.service.atualizarRascunho(c.id, { avaliacao: { modulos: [{ area: AreaModuloAvaliacao.IU, dados: {} }] } }, AUTOR),
+      salvarAtual(m, c.id, { avaliacao: { modulos: [{ area: AreaModuloAvaliacao.IU, dados: {} }] } }, AUTOR),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(m.c.consultas[0].avaliacao.modulos[0].dados).toEqual(MODULO_IU_VALIDO);
 
@@ -756,7 +774,7 @@ describe('5b — anexos da consulta (diário em papel)', () => {
     const m = montar();
     const c = await m.service.criar(dtoBase(), AUTOR);
     await expect(m.service.criarUploadAnexo(c.id, presign, undefined, COLEGA)).rejects.toBeInstanceOf(ForbiddenException);
-    await m.service.assinar(c.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
+    await assinarAtual(m, c.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
     await expect(m.service.criarUploadAnexo(c.id, presign, undefined, AUTOR)).rejects.toBeInstanceOf(ConflictException);
   });
 
@@ -765,8 +783,8 @@ describe('5b — anexos da consulta (diário em papel)', () => {
     const { c, anexoId } = await rascunhoComAnexo(m);
 
     const comAnexo = (ids: string[]) => ({ avaliacao: { modulos: [{ area: AreaModuloAvaliacao.IU, dados: { diarioMiccional: { anexos: ids } } }] } });
-    await expect(m.service.atualizarRascunho(c.id, comAnexo([anexoId]), AUTOR)).resolves.toBeDefined();
-    await expect(m.service.atualizarRascunho(c.id, comAnexo(['65f00000000000000000ffff']), AUTOR)).rejects.toThrow(/nao pertence a esta consulta/);
+    await expect(salvarAtual(m, c.id, comAnexo([anexoId]), AUTOR)).resolves.toBeDefined();
+    await expect(salvarAtual(m, c.id, comAnexo(['65f00000000000000000ffff']), AUTOR)).rejects.toThrow(/nao pertence a esta consulta/);
     await expect(m.service.criar(dtoBase(comAnexo([anexoId])), AUTOR)).rejects.toThrow(/nao pertence a esta consulta/);
   });
 
@@ -960,12 +978,12 @@ describe('5c — desfecho aplicado na ASSINATURA', () => {
     const c = await m.service.criar(dtoBase(moduloFerida([avaliacao(l.id, { desfecho: { situacao: 'CICATRIZADA' } })])), AUTOR);
     expect(m.les.lesoes[0].status).toBe('ABERTA');
 
-    await m.service.assinar(c.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
+    await assinarAtual(m, c.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
     expect(m.les.lesoes[0]).toMatchObject({ status: 'CICATRIZADA', statusConsultaId: c.id, statusAlteradoPor: 'enf-autor' });
     const ev = m.auditCreate.mock.calls.find((x) => x[0].event === AuditEvent.LESAO_STATUS_ALTERADO)![0];
     expect(ev.metadata).toMatchObject({ lesaoId: l.id, consultaId: c.id, de: 'ABERTA', para: 'CICATRIZADA' });
 
-    await expect(m.service.atualizarRascunho(c.id, moduloFerida([]), AUTOR)).rejects.toBeInstanceOf(ConflictException);
+    await expect(salvarAtual(m, c.id, moduloFerida([]), AUTOR)).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('ENCERRADA exige motivo e grava o motivo na lesão; EM_ACOMPANHAMENTO mantém ABERTA', async () => {
@@ -977,7 +995,7 @@ describe('5c — desfecho aplicado na ASSINATURA', () => {
       dtoBase(moduloFerida([avaliacao(a.id, { desfecho: { situacao: 'ENCERRADA', motivo: 'transferido de serviço' } }), avaliacao(b.id)])),
       AUTOR,
     );
-    await m.service.assinar(c.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
+    await assinarAtual(m, c.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
     expect(m.les.lesoes.map((l) => [l.status, l.motivoEncerramento])).toEqual([['ENCERRADA', 'transferido de serviço'], ['ABERTA', undefined]]);
   });
 
@@ -986,9 +1004,9 @@ describe('5c — desfecho aplicado na ASSINATURA', () => {
     const l = await m.lesoesService.criar(lesaoDto(), AUTOR);
     const rascunho = await m.service.criar(dtoBase(moduloFerida([avaliacao(l.id)])), AUTOR);
     const outra = await m.service.criar(dtoBase(moduloFerida([avaliacao(l.id, { desfecho: { situacao: 'CICATRIZADA' } })])), COLEGA);
-    await m.service.assinar(outra.id, { cobranca: { incluidaEmPacote: true } }, undefined, COLEGA);
+    await assinarAtual(m, outra.id, { cobranca: { incluidaEmPacote: true } }, undefined, COLEGA);
 
-    await expect(m.service.assinar(rascunho.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR)).rejects.toBeInstanceOf(ConflictException);
+    await expect(assinarAtual(m, rascunho.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR)).rejects.toBeInstanceOf(ConflictException);
     expect(m.c.consultas.find((x) => x.id === rascunho.id)!.status).toBe(StatusConsulta.RASCUNHO);
   });
 
@@ -1000,7 +1018,7 @@ describe('5c — desfecho aplicado na ASSINATURA', () => {
       dtoBase(moduloFerida([avaliacao(a.id, { desfecho: { situacao: 'CICATRIZADA' } }), avaliacao(b.id, { medidas: { manual: { comprimentoCm: 3, larguraCm: 2 } } })])),
       AUTOR,
     );
-    await m.service.assinar(assinada.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
+    await assinarAtual(m, assinada.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
     await m.service.criar(dtoBase(moduloFerida([avaliacao(b.id)])), AUTOR); // rascunho: fora do histórico
 
     const h = await m.lesoesService.historico({ pacienteId: PACIENTE }, COLEGA);
@@ -1091,20 +1109,20 @@ describe('5c — consentimento de imagem e fotos da ferida', () => {
       contorno: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }],
       resultado: { areaCm2: 999, comprimentoCm: 999, larguraCm: 999 },
     };
-    const r = await m.service.atualizarRascunho(c.id, moduloFerida([avaliacao(l.id, { medidas: { fotos: [medida] } })]), AUTOR);
+    const r = await salvarAtual(m, c.id, moduloFerida([avaliacao(l.id, { medidas: { fotos: [medida] } })]), AUTOR);
     const dados = r.avaliacao.modulos[0].dados as { avaliacoes: Array<{ medidas: { fotos: Array<{ resultado: unknown }> } }> };
     expect(dados.avaliacoes[0].medidas.fotos[0].resultado).toEqual({ areaCm2: 4, comprimentoCm: 2.83, larguraCm: 2.83 });
 
-    await expect(m.service.atualizarRascunho(c.id, moduloFerida([avaliacao(outraLesao.id, { medidas: { fotos: [medida] } })]), AUTOR)).rejects.toThrow(/mesma lesao/);
+    await expect(salvarAtual(m, c.id, moduloFerida([avaliacao(outraLesao.id, { medidas: { fotos: [medida] } })]), AUTOR)).rejects.toThrow(/mesma lesao/);
     const cruzado = { ...medida, contorno: [{ x: 0, y: 0 }, { x: 100, y: 100 }, { x: 100, y: 0 }, { x: 0, y: 100 }] };
-    await expect(m.service.atualizarRascunho(c.id, moduloFerida([avaliacao(l.id, { medidas: { fotos: [cruzado] } })]), AUTOR)).rejects.toThrow(/se cruza/);
+    await expect(salvarAtual(m, c.id, moduloFerida([avaliacao(l.id, { medidas: { fotos: [cruzado] } })]), AUTOR)).rejects.toThrow(/se cruza/);
   });
 });
 
 describe('5c — desfecho PENDENTE_APLICACAO e reaplicação (mesmo padrão da cobrança)', () => {
   const assinarComDesfecho = async (m: ReturnType<typeof montarFerida>, lesaoId: string, quem = AUTOR) => {
     const c = await m.service.criar(dtoBase(moduloFerida([avaliacao(lesaoId, { desfecho: { situacao: 'CICATRIZADA' } })])), quem);
-    return m.service.assinar(c.id, { cobranca: { incluidaEmPacote: true } }, undefined, quem);
+    return assinarAtual(m, c.id, { cobranca: { incluidaEmPacote: true } }, undefined, quem);
   };
 
   it('sucesso na assinatura -> APLICADO; consulta sem desfecho que fecha lesão não ganha o campo', async () => {
@@ -1154,7 +1172,7 @@ describe('5c — desfecho PENDENTE_APLICACAO e reaplicação (mesmo padrão da c
     const pendente = await assinarComDesfecho(m, l.id);
     // Outra consulta encerra a mesma lesão antes da reaplicação.
     const outra = await m.service.criar(dtoBase(moduloFerida([avaliacao(l.id, { desfecho: { situacao: 'ENCERRADA', motivo: 'alta do servico' } })])), COLEGA);
-    await m.service.assinar(outra.id, { cobranca: { incluidaEmPacote: true } }, undefined, COLEGA);
+    await assinarAtual(m, outra.id, { cobranca: { incluidaEmPacote: true } }, undefined, COLEGA);
 
     const r = await m.service.aplicarDesfechoLesoes(pendente.id, undefined, AUTOR);
     expect(r).toMatchObject({ aplicadas: [], conflitos: [l.id], desfechoLesoesStatus: 'APLICADO' });
@@ -1170,5 +1188,140 @@ describe('5c — desfecho PENDENTE_APLICACAO e reaplicação (mesmo padrão da c
     await expect(m.service.aplicarDesfechoLesoes(rascunho.id, undefined, AUTOR)).rejects.toBeInstanceOf(ConflictException);
     for (const quem of [SECRETARIA, ADMIN]) await expect(m.service.aplicarDesfechoLesoes(rascunho.id, undefined, quem)).rejects.toBeInstanceOf(ForbiddenException);
     await expect(m.service.aplicarDesfechoLesoes(rascunho.id, undefined, DE_OUTRA_CLINICA)).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe('R1.1 — assinatura não pode selar conteúdo diferente do gravado', () => {
+  it('assinatura de A + salvamento de B intercalados: um recebe 409 e o conteúdo gravado SEMPRE corresponde ao HMAC', async () => {
+    const m = montar();
+    const c = await m.service.criar(dtoBase(), AUTOR);
+    const lida = await m.service.obter(c.id, undefined, AUTOR);
+    const versao = (lida as unknown as { versao?: number }).versao;
+    m.c.repo.aoAssinar = async () => {
+      await m.service.atualizarRascunho(c.id, { evolucao: { texto: 'conteudo B salvo em outra tela' }, versao } as never, AUTOR);
+    };
+    const resultado = await m.service
+      .assinar(c.id, { cobranca: { incluidaEmPacote: true }, versao } as never, undefined, AUTOR)
+      .then(() => 'assinou', (e: unknown) => e);
+    const gravada = m.c.consultas[0];
+    if (resultado === 'assinou') {
+      expect(gravada.status).toBe(StatusConsulta.ASSINADA);
+      const recalculado = m.service.hashAssinatura(gravada, gravada.assinatura!.coren, gravada.assinatura!.dataAssinatura);
+      expect(recalculado).toBe(gravada.assinatura!.hash);
+    } else {
+      expect(resultado).toBeInstanceOf(ConflictException);
+      expect(gravada.status).toBe(StatusConsulta.RASCUNHO);
+    }
+  });
+});
+
+describe('R1.1 — versão do rascunho, selo de integridade e pendências pós-assinatura', () => {
+  it('salvar com versão divergente -> 409 "alterada em outra tela" e NADA é sobrescrito', async () => {
+    const m = montar();
+    const c = await m.service.criar(dtoBase(), AUTOR);
+    await m.service.atualizarRascunho(c.id, { evolucao: { texto: 'tela 1' }, versao: 1 }, AUTOR);
+    expect(m.c.consultas[0].versao).toBe(2);
+    await expect(m.service.atualizarRascunho(c.id, { evolucao: { texto: 'tela 2 (velha)' }, versao: 1 }, AUTOR)).rejects.toThrow('A consulta foi alterada em outra tela');
+    expect(m.c.consultas[0].evolucao.texto).toBe('tela 1');
+    await expect(m.service.assinar(c.id, { cobranca: { incluidaEmPacote: true }, versao: 1 }, undefined, AUTOR)).rejects.toThrow('A consulta foi alterada em outra tela');
+    expect(m.c.consultas[0].status).toBe(StatusConsulta.RASCUNHO);
+  });
+
+  it('ordem inversa: assinatura grava primeiro -> o salvamento da outra tela recebe 409 e o selo confere', async () => {
+    const m = montar();
+    const c = await m.service.criar(dtoBase(), AUTOR);
+    await m.service.assinar(c.id, { cobranca: { incluidaEmPacote: true }, versao: 1 }, undefined, AUTOR);
+    await expect(m.service.atualizarRascunho(c.id, { evolucao: { texto: 'B' }, versao: 1 }, AUTOR)).rejects.toBeInstanceOf(ConflictException);
+    const lida = await m.service.obter(c.id, undefined, AUTOR);
+    expect(lida.integridade).toBe('VALIDA');
+  });
+
+  it('selo de integridade: VALIDA na leitura; conteúdo adulterado -> FALHA + auditoria (sem chamar de assinatura digital)', async () => {
+    const m = montar();
+    const { consulta } = await criarEAssinar(m, { incluidaEmPacote: true });
+    expect((await m.service.obter(consulta.id, undefined, COLEGA)).integridade).toBe('VALIDA');
+    expect((await m.service.listarPorPaciente({ pacienteId: PACIENTE }, AUTOR))[0].integridade).toBe('VALIDA');
+
+    m.c.consultas[0].evolucao = { texto: 'alterado direto no banco' };
+    expect((await m.service.obter(consulta.id, undefined, COLEGA)).integridade).toBe('FALHA');
+    const ev = m.auditCreate.mock.calls.find((x) => x[0].event === AuditEvent.CONSULTA_INTEGRIDADE_FALHA)![0];
+    expect(ev.metadata).toEqual({ clinicaId: CLINICA, consultaId: consulta.id, pacienteId: PACIENTE });
+    // Rascunho não tem selo.
+    const rascunho = await m.service.criar(dtoBase(), AUTOR);
+    expect((await m.service.obter(rascunho.id, undefined, AUTOR)).integridade).toBeUndefined();
+  });
+
+  it('cópia da identificação da lesão gravada na assinatura e coberta pelo selo; corrigir a lesão depois não muda a consulta', async () => {
+    const m = montarFerida();
+    const l = await m.lesoesService.criar(lesaoDto({ etiologia: 'LESAO_UMIDADE', subtipoUmidade: 'PERIESTOMAL' }), AUTOR);
+    const c = await m.service.criar(dtoBase(moduloFerida([avaliacao(l.id)])), AUTOR);
+    const assinada = await assinarAtual(m, c.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
+    expect(assinada.identificacoesLesoes).toEqual([
+      { lesaoId: l.id, numero: 1, localizacaoAnatomica: 'região sacral', lado: 'CENTRAL', etiologia: 'LESAO_UMIDADE', subtipoUmidade: 'PERIESTOMAL', versaoCadastro: 1 },
+    ]);
+    await m.lesoesService.corrigir(l.id, { localizacaoAnatomica: 'calcâneo', lado: 'DIREITO', etiologia: 'ULCERA_VENOSA', motivo: 'erro de cadastro corrigido', versao: 1 } as CorrigirLesaoDto, AUTOR);
+    const lida = await m.service.obter(c.id, undefined, AUTOR);
+    expect(lida.identificacoesLesoes![0]).toMatchObject({ localizacaoAnatomica: 'região sacral', versaoCadastro: 1 });
+    expect(lida.integridade).toBe('VALIDA');
+    m.c.consultas[0].identificacoesLesoes![0].localizacaoAnatomica = 'adulterado';
+    expect((await m.service.obter(c.id, undefined, AUTOR)).integridade).toBe('FALHA');
+  });
+
+  it('falha da AUDITORIA depois de gravar a assinatura -> 200 com pendência persistida; a leitura regrava e limpa', async () => {
+    const m = montar();
+    m.auditCreate.mockImplementation((e: { event: string }) =>
+      e.event === AuditEvent.CONSULTA_ENFERMAGEM_SIGNED && !m.c.consultas[0].auditoriaAssinaturaPendente
+        ? Promise.reject(new Error('audit indisponivel'))
+        : Promise.resolve(undefined),
+    );
+    const c = await m.service.criar(dtoBase(), AUTOR);
+    const r = await assinarAtual(m, c.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
+    expect(r.status).toBe(StatusConsulta.ASSINADA);
+    expect(r.pendencias).toEqual(['AUDITORIA']);
+    expect(m.c.consultas[0].auditoriaAssinaturaPendente).toBe(true);
+
+    await m.service.obter(c.id, undefined, AUTOR);
+    expect(m.c.consultas[0].auditoriaAssinaturaPendente).toBeUndefined();
+    expect(m.auditCreate.mock.calls.filter((x) => x[0].event === AuditEvent.CONSULTA_ENFERMAGEM_SIGNED).pop()![0].metadata).toMatchObject({ regravado: true });
+  });
+
+  it('falha da COBRANÇA (inclusive da auditoria dela) depois de gravar -> 200 com pendência COBRANCA', async () => {
+    const m = montar();
+    m.cob.repo.falharCreate = 1;
+    m.auditCreate.mockImplementation((e: { event: string }) =>
+      e.event === AuditEvent.CONSULTA_COBRANCA_PENDENTE ? Promise.reject(new Error('audit indisponivel')) : Promise.resolve(undefined),
+    );
+    const c = await m.service.criar(dtoBase(), AUTOR);
+    const r = await assinarAtual(m, c.id, { cobranca: { incluidaEmPacote: false } }, undefined, AUTOR);
+    expect(r.status).toBe(StatusConsulta.ASSINADA);
+    expect(r.pendencias).toEqual(['COBRANCA']);
+    expect(m.c.consultas[0].cobranca?.status).toBe(StatusCobrancaConsulta.PENDENTE_GERACAO);
+  });
+
+  it('falha do DESFECHO das lesões (mesmo com a auditoria do desfecho falhando) -> 200 com pendência DESFECHO_LESOES', async () => {
+    const m = montarFerida();
+    const l = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    const c = await m.service.criar(dtoBase(moduloFerida([avaliacao(l.id, { desfecho: { situacao: 'CICATRIZADA' } })])), AUTOR);
+    m.les.repo.falharAlterarStatus = 1;
+    m.auditCreate.mockImplementation((e: { event: string }) =>
+      e.event === AuditEvent.LESAO_STATUS_NAO_APLICADO ? Promise.reject(new Error('audit indisponivel')) : Promise.resolve(undefined),
+    );
+    const r = await assinarAtual(m, c.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
+    expect(r.status).toBe(StatusConsulta.ASSINADA);
+    expect(r.pendencias).toEqual(['DESFECHO_LESOES']);
+    expect(m.c.consultas[0].desfechoLesoesStatus).toBe(StatusDesfechoLesoes.PENDENTE_APLICACAO);
+  });
+
+  it('sem nenhuma falha: pendências vazias', async () => {
+    const m = montar();
+    const c = await m.service.criar(dtoBase(), AUTOR);
+    expect((await assinarAtual(m, c.id, { cobranca: { incluidaEmPacote: false } }, undefined, AUTOR)).pendencias).toEqual([]);
+  });
+
+  it('DTOs exigem a versão (salvar e assinar)', async () => {
+    const errosDe = async (cls: new () => object, d: object) => (await validate(plainToInstance(cls, d))).map((e) => e.property);
+    expect(await errosDe(UpdateConsultaDto, { evolucao: { texto: 'x' } })).toContain('versao');
+    expect(await errosDe(AssinarConsultaDto, { cobranca: { incluidaEmPacote: true } })).toContain('versao');
+    expect(await errosDe(AssinarConsultaDto, { cobranca: { incluidaEmPacote: true }, versao: 2 })).toEqual([]);
   });
 });

@@ -161,6 +161,7 @@ export class AuthService {
     }
 
     this.assertTokenNotStale(payload, user.tokensValidosApartirDe);
+    this.assertVinculoAtual(payload, user);
 
     await this.tokenRevocation.revoke(payload.jti, REFRESH_TOKEN_TTL_SECONDS);
     const tokens = await this.issueTokens(user);
@@ -403,6 +404,7 @@ export class AuthService {
     }
 
     this.assertTokenNotStale(payload, user.tokensValidosApartirDe);
+    this.assertVinculoAtual(payload, user);
 
     // Enriquece request.user com o estado de conta que o AuthGatesGuard avalia
     // (mesmo findById acima — sem round-trip extra).
@@ -412,6 +414,28 @@ export class AuthService {
       termosAceitos: user.termosAceitos ?? null,
       faseTeste: user.faseTeste ?? false,
     };
+  }
+
+  /**
+   * R1 — revogação de acesso no servidor: o token só vale enquanto o papel e a clínica gravados NELE forem os ATUAIS do
+   * usuário no banco (o `findById` já é feito a cada requisição para checar `ativo` e `tokensValidosApartirDe`, então
+   * não há custo extra). Qualquer mudança administrativa de papel ou de clínica derruba as sessões abertas na próxima
+   * chamada (401), sem depender de cada caminho de alteração lembrar de atualizar um contador. As permissões por módulo
+   * não viajam no token; elas são lidas do usuário atual.
+   */
+  private assertVinculoAtual(payload: AuthTokenPayload, user: { papel: string; clinicaId?: string | null }): void {
+    const mudouPapel = payload.papel !== user.papel;
+    const mudouClinica = (payload.clinicaId ?? null) !== (user.clinicaId ?? null);
+    if (!mudouPapel && !mudouClinica) return;
+    this.logEventoObservabilidade('warn', {
+      msg: 'Token rejeitado: papel ou clinica do usuario mudaram desde a emissao.',
+      event: 'token_rejected_vinculo_alterado',
+      userId: payload.sub,
+      typ: payload.typ,
+      mudouPapel,
+      mudouClinica,
+    });
+    throw new UnauthorizedException('Sessao invalida: seu acesso foi alterado. Entre novamente.');
   }
 
   /**

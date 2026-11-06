@@ -270,3 +270,32 @@ describe('EntregasService.listByPaciente', () => {
     expect(listByPaciente).toHaveBeenCalledWith('clinica-1', 'paciente-1');
   });
 });
+
+describe('R1.6 — total da entrega recalculado no servidor', () => {
+  it('total enviado diferente da soma dos itens -> 400 e nada gravado', async () => {
+    const create = jest.fn();
+    const { service } = montar({ create }, jest.fn().mockResolvedValue(null));
+    await expect(service.create({ ...baseDto(100), valorTotalCentavos: 5 }, contexto)).rejects.toMatchObject({ status: 400 });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('total de item diferente de quantidade x unitário -> 400', async () => {
+    const create = jest.fn();
+    const { service } = montar({ create }, jest.fn().mockResolvedValue(null));
+    const dto = baseDto(100);
+    dto.itens[0].valorTotalCentavos = 150;
+    dto.valorTotalCentavos = 150;
+    await expect(service.create(dto, contexto)).rejects.toMatchObject({ status: 400 });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('total coerente é aceito e o gravado é o RECALCULADO', async () => {
+    const create = jest.fn().mockImplementation((data) => ({ id: 'e1', ...data }));
+    const { service } = montar({ create }, jest.fn().mockResolvedValue(null));
+    const dto = baseDto(100);
+    dto.itens.push({ codigo: 101, descricao: 'Outro', quantidade: 3, valorUnitarioCentavos: 50, valorTotalCentavos: 150 });
+    dto.valorTotalCentavos = 350;
+    await service.create(dto, contexto);
+    expect(create.mock.calls[0][0].valorTotalCentavos).toBe(350);
+  });
+});

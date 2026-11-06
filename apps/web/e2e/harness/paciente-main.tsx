@@ -1,5 +1,5 @@
-// Harness SOMENTE de teste: monta a PacienteDetailPage real (diálogos "Editar cadastro" e "Aplicar teste
-// psicológico"). Vive fora de `src/` e do index.html da app; o build de produção nunca o enxerga.
+// Harness SOMENTE de teste: monta a PacienteDetailPage real (diálogos "Editar cadastro", "Solicitar correção"
+// e "Novo documento"). Vive fora de `src/` e do index.html da app; o build de produção nunca o enxerga.
 // Sessão e API são simuladas pelo Playwright.
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';

@@ -19,6 +19,7 @@ import { pacientesApi, iaClinicaApi } from '@/api/resources';
 import { apiErrorMessage } from '@/api/client';
 import { SUGESTOES_CUIDADOS_POR_LINHA } from '@/lib/linhaTerapeutica';
 import { DecisaoUsoIA, LINHA_TERAPEUTICA_LABEL } from '@/types';
+import { RECURSOS_LEGADO } from '@/lib/recursos-legado';
 
 const CHECKLIST_FIXO = [
   'Exercícios de respiração/relaxamento',
@@ -156,26 +157,33 @@ export function PrescricaoCuidadosPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="textoLivre">Orientações adicionais</Label>
-                <Button
-                  type="button" size="sm" variant="outline"
-                  onClick={() => gerarIaMut.mutate()} disabled={gerarIaMut.isPending || !!sugestaoIa}
-                  title={sugestaoIa ? 'Decida sobre a sugestão atual antes de gerar outra.' : undefined}
-                >
-                  {gerarIaMut.isPending ? (
-                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-2 h-3.5 w-3.5" />
-                  )}
-                  Gerar com IA
-                </Button>
+                {/* R1: IA antiga desligada (o servidor responde 403 "Recurso desativado."). */}
+                {RECURSOS_LEGADO.iaClinicaAntiga && (
+                  <Button
+                    type="button" size="sm" variant="outline"
+                    onClick={() => gerarIaMut.mutate()} disabled={gerarIaMut.isPending || !!sugestaoIa}
+                    title={sugestaoIa ? 'Decida sobre a sugestão atual antes de gerar outra.' : undefined}
+                  >
+                    {gerarIaMut.isPending ? (
+                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="mr-2 h-3.5 w-3.5" />
+                    )}
+                    Gerar com IA
+                  </Button>
+                )}
               </div>
               <Textarea
                 id="textoLivre" rows={8} value={textoLivre} onChange={(e) => setTextoLivre(e.target.value)}
-                placeholder="Clique nas sugestões acima para adicionar, escreva livremente, ou gere um rascunho com IA."
+                placeholder={RECURSOS_LEGADO.iaClinicaAntiga
+                  ? 'Clique nas sugestões acima para adicionar, escreva livremente, ou gere um rascunho com IA.'
+                  : 'Clique nas sugestões acima para adicionar ou escreva livremente.'}
               />
-              <p className="text-xs text-muted-foreground">
-                A sugestão da IA é um rascunho — revise antes de imprimir.
-              </p>
+              {RECURSOS_LEGADO.iaClinicaAntiga && (
+                <p className="text-xs text-muted-foreground">
+                  A sugestão da IA é um rascunho — revise antes de imprimir.
+                </p>
+              )}
             </div>
 
             {sugestaoIa && (

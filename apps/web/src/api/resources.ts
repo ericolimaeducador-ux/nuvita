@@ -356,24 +356,7 @@ export const observacoesPacienteApi = {
     api.get<ObservacaoPaciente[]>('/observacoes-paciente', { params: { pacienteId } }).then((r) => comoLista<ObservacaoPaciente>(r.data) as ObservacaoPaciente[]),
 };
 
-// ---------- Testes psicológicos (placeholder — sem catálogo ainda) ----------
-export interface TestePsicologico {
-  id: string;
-  clinicaId: string;
-  pacienteId: string;
-  nomeTeste: string;
-  dataAplicacao: string;
-  resultado?: string;
-  aplicadoPor: string;
-  criadoEm: string;
-}
-
-export const testesPsicologicosApi = {
-  create: (payload: { pacienteId: string; nomeTeste: string; dataAplicacao: string; resultado?: string }) =>
-    api.post<TestePsicologico>('/testes-psicologicos', payload).then((r) => r.data),
-  listByPaciente: (pacienteId: string) =>
-    api.get<TestePsicologico[]>('/testes-psicologicos', { params: { pacienteId } }).then((r) => comoLista<TestePsicologico>(r.data) as TestePsicologico[]),
-};
+// R1.4: testes psicológicos (herdados do psi) removidos — a rota /testes-psicologicos não existe mais.
 
 // ---------- IA clínica (sugestão de abordagem + prescrição de exercícios) ----------
 export interface SugerirAbordagemPayload {
@@ -791,11 +774,12 @@ export const consultasApi = {
   get: (id: string) => api.get<ConsultaEnfermagem & { adendos: AdendoConsulta[] }>(`/consultas/${id}`).then((r) => r.data),
   create: (pacienteId: string, conteudo: ConteudoConsultaPayload = {}) =>
     api.post<ConsultaEnfermagem>('/consultas', { pacienteId, ...conteudo }).then((r) => r.data),
-  salvarRascunho: (id: string, conteudo: ConteudoConsultaPayload) =>
-    api.patch<ConsultaEnfermagem>(`/consultas/${id}`, conteudo).then((r) => r.data),
-  /** Assina (trava) e decide a cobrança: pacote (não cobra) ou valor em centavos. */
-  assinar: (id: string, cobranca: { incluidaEmPacote: boolean; valorCentavos?: number }) =>
-    api.post<ConsultaEnfermagem>(`/consultas/${id}/assinar`, { cobranca }).then((r) => r.data),
+  /** Salva o rascunho na `versao` lida; se outra tela salvou antes, a API responde 409 e nada é sobrescrito. */
+  salvarRascunho: (id: string, conteudo: ConteudoConsultaPayload, versao: number) =>
+    api.patch<ConsultaEnfermagem>(`/consultas/${id}`, { ...conteudo, versao }).then((r) => r.data),
+  /** Assina (trava) a `versao` informada e decide a cobrança. Falhas posteriores voltam em `pendencias` (nunca erro). */
+  assinar: (id: string, cobranca: { incluidaEmPacote: boolean; valorCentavos?: number }, versao: number) =>
+    api.post<ConsultaEnfermagem>(`/consultas/${id}/assinar`, { cobranca, versao }).then((r) => r.data),
   /** Gera a cobrança que ficou pendente após a assinatura (idempotente). */
   gerarCobranca: (id: string) =>
     api.post<{ consultaId: string; cobranca: NonNullable<ConsultaEnfermagem['cobranca']> }>(`/consultas/${id}/cobranca`).then((r) => r.data),

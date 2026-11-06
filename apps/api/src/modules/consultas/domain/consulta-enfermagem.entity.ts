@@ -102,6 +102,28 @@ export enum StatusDesfechoLesoes {
   PENDENTE_APLICACAO = 'PENDENTE_APLICACAO',
 }
 
+/**
+ * Cópia da identificação da lesão USADA neste atendimento, gravada na assinatura (e coberta pelo selo de integridade).
+ * A lesão pode ser corrigida depois; a consulta assinada mostra o que foi registrado e, se diferente, o atual.
+ */
+export interface IdentificacaoLesaoRegistrada {
+  lesaoId: string;
+  numero: number;
+  localizacaoAnatomica: string;
+  lado: string;
+  etiologia: string;
+  subtipoUmidade?: string;
+  etiologiaOutra?: string;
+  /** Versão do cadastro da lesão no momento da assinatura. */
+  versaoCadastro: number;
+}
+
+/** Resultado da verificação do selo de integridade (HMAC) de uma consulta assinada. NÃO é assinatura digital/ICP-Brasil. */
+export type IntegridadeConsulta = 'VALIDA' | 'FALHA';
+
+/** O que ficou pendente DEPOIS de a assinatura já estar gravada (nunca vira erro na resposta). */
+export type PendenciaAssinatura = 'AUDITORIA' | 'COBRANCA' | 'DESFECHO_LESOES';
+
 export interface ConsultaEnfermagem {
   id: string;
   clinicaId: string;
@@ -109,6 +131,8 @@ export interface ConsultaEnfermagem {
   /** Autor: só ele edita o rascunho, assina e faz adendo. */
   enfermeiroId: string;
   status: StatusConsulta;
+  /** Controle de concorrência: incrementada a cada gravação do rascunho; salvar e assinar exigem a versão lida. */
+  versao: number;
   avaliacao: Avaliacao;
   diagnosticos: Diagnostico[];
   planejamento: Planejamento;
@@ -118,6 +142,10 @@ export interface ConsultaEnfermagem {
   cobranca?: CobrancaConsulta;
   /** Só existe quando o módulo FERIDA tem desfecho que fecha lesão (CICATRIZADA/ENCERRADA). */
   desfechoLesoesStatus?: StatusDesfechoLesoes;
+  /** Identificação das lesões avaliadas, como estava na assinatura (módulo FERIDA). */
+  identificacoesLesoes?: IdentificacaoLesaoRegistrada[];
+  /** O evento de auditoria da assinatura não foi gravado; é regravado na próxima leitura. */
+  auditoriaAssinaturaPendente?: boolean;
   criadoEm: Date;
   atualizadoEm: Date;
 }

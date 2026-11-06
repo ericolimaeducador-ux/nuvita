@@ -35,7 +35,6 @@ import { ConsentimentosImagemController, LesoesController } from '../../modules/
 import { SuperAdminController } from '../../modules/super-admin/super-admin.controller';
 import { TelemedicinaController } from '../../modules/telemedicina/presentation/telemedicina.controller';
 import { TelemedicinaAcessoController } from '../../modules/telemedicina/presentation/telemedicina-acesso.controller';
-import { TestesPsicologicosController } from '../../modules/testes-psicologicos/presentation/testes-psicologicos.controller';
 import { TicketsController } from '../../modules/tickets/presentation/tickets.controller';
 
 /**
@@ -54,7 +53,7 @@ const CONTROLLERS = [
   ObservacoesPacienteController, PacientesController, ProntuariosController, SuperAdminController,
   EntregasController, ProdutosController, ChecklistDocumentosController, FollowUpController, CaptacaoController, AvaliacaoIUController, CobrancasController, ConsultasController,
   LesoesController, ConsentimentosImagemController,
-  TelemedicinaController, TelemedicinaAcessoController, TestesPsicologicosController, TicketsController,
+  TelemedicinaController, TelemedicinaAcessoController, TicketsController,
 ];
 
 const PAPEIS: Papel[] = [Papel.SUPER_ADMIN, Papel.ADMIN, Papel.ENFERMEIRO, Papel.SECRETARIA, Papel.PACIENTE];

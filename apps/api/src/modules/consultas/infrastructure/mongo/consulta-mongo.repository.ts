@@ -7,6 +7,7 @@ import {
   AssinaturaConsulta,
   CobrancaConsulta,
   ConsultaEnfermagem,
+  IdentificacaoLesaoRegistrada,
   StatusConsulta,
   StatusDesfechoLesoes,
 } from '../../domain/consulta-enfermagem.entity';
@@ -44,12 +45,12 @@ export class ConsultaMongoRepository implements ConsultaRepository {
     return docs.map((d) => this.toEntity(d));
   }
 
-  async updateRascunho(clinicaId: string, id: string, autorId: string, conteudo: ConteudoConsulta): Promise<ConsultaEnfermagem | null> {
+  async updateRascunho(clinicaId: string, id: string, autorId: string, versaoEsperada: number, conteudo: ConteudoConsulta): Promise<ConsultaEnfermagem | null> {
     if (!isValidObjectId(id)) return null;
     const doc = await this.model
       .findOneAndUpdate(
-        { _id: id, clinicaId, enfermeiroId: autorId, status: StatusConsulta.RASCUNHO },
-        { $set: { ...conteudo, atualizadoEm: new Date() } },
+        { _id: id, clinicaId, enfermeiroId: autorId, status: StatusConsulta.RASCUNHO, ...filtroVersao(versaoEsperada) },
+        { $set: { ...conteudo, versao: versaoEsperada + 1, atualizadoEm: new Date() } },
         { new: true },
       )
       .lean();
@@ -60,18 +61,36 @@ export class ConsultaMongoRepository implements ConsultaRepository {
     clinicaId: string,
     id: string,
     autorId: string,
+    versaoEsperada: number,
     assinatura: AssinaturaConsulta,
     cobranca: CobrancaConsulta,
+    identificacoesLesoes?: IdentificacaoLesaoRegistrada[],
   ): Promise<ConsultaEnfermagem | null> {
     if (!isValidObjectId(id)) return null;
     const doc = await this.model
       .findOneAndUpdate(
-        { _id: id, clinicaId, enfermeiroId: autorId, status: StatusConsulta.RASCUNHO },
-        { $set: { status: StatusConsulta.ASSINADA, assinatura, cobranca, atualizadoEm: new Date() } },
+        { _id: id, clinicaId, enfermeiroId: autorId, status: StatusConsulta.RASCUNHO, ...filtroVersao(versaoEsperada) },
+        {
+          $set: {
+            status: StatusConsulta.ASSINADA,
+            assinatura,
+            cobranca,
+            ...(identificacoesLesoes ? { identificacoesLesoes } : {}),
+            atualizadoEm: new Date(),
+          },
+        },
         { new: true },
       )
       .lean();
     return doc ? this.toEntity(doc) : null;
+  }
+
+  async marcarAuditoriaAssinatura(clinicaId: string, id: string, pendente: boolean): Promise<void> {
+    if (!isValidObjectId(id)) return;
+    await this.model.updateOne(
+      { _id: id, clinicaId, status: StatusConsulta.ASSINADA },
+      pendente ? { $set: { auditoriaAssinaturaPendente: true } } : { $unset: { auditoriaAssinaturaPendente: 1 } },
+    );
   }
 
   async atualizarCobranca(clinicaId: string, id: string, cobranca: CobrancaConsulta): Promise<ConsultaEnfermagem | null> {
@@ -144,11 +163,16 @@ export class ConsultaMongoRepository implements ConsultaRepository {
 
   private toEntity(doc: Record<string, unknown>): ConsultaEnfermagem {
     const { _id, ...rest } = doc as Record<string, unknown> & { _id: { toString(): string } };
-    return { id: _id.toString(), ...rest } as ConsultaEnfermagem;
+    return { id: _id.toString(), ...rest, versao: typeof rest.versao === 'number' ? rest.versao : 1 } as ConsultaEnfermagem;
   }
 
   private toAdendo(doc: Record<string, unknown>): AdendoConsulta {
     const { _id, ...rest } = doc as Record<string, unknown> & { _id: { toString(): string } };
     return { id: _id.toString(), ...rest } as AdendoConsulta;
   }
+}
+
+/** Documentos anteriores ao campo `versao` contam como versão 1. */
+function filtroVersao(versao: number): Record<string, unknown> {
+  return versao === 1 ? { $or: [{ versao: 1 }, { versao: { $exists: false } }] } : { versao };
 }

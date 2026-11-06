@@ -4,7 +4,7 @@ import { test, expect, type Page } from '@playwright/test';
 // digitado, e Cancelar com texto pede "Descartar alterações?". API simulada pelo Playwright.
 
 const ADMIN = { id: 'u1', nome: 'Admin', email: 'adm@clinica.example', papel: 'ADMIN', clinicaId: 'cli-1' };
-const ENFERMEIRO = { id: 'u2', nome: 'Psi', email: 'psi@clinica.example', papel: 'ENFERMEIRO', clinicaId: 'cli-1' };
+const ENFERMEIRO = { id: 'u2', nome: 'Enfermeira', email: 'enf@clinica.example', papel: 'ENFERMEIRO', clinicaId: 'cli-1', coren: 'COREN-SP 123456' };
 const SUPER = { id: 'sa1', nome: 'Erico', email: 'sa@nuvita.test', papel: 'SUPER_ADMIN', clinicaId: null };
 const PACIENTE = {
   id: 'p1', nome: 'Maria da Silva', cpf: '52998224725', dataNascimento: '1990-01-01T00:00:00.000Z',
@@ -36,11 +36,6 @@ async function abrirPaciente(page: Page, envios: Envio[], user: unknown = ADMIN)
     if (r.request().method() !== 'GET') envios.push({ url: r.request().url(), body: r.request().postDataJSON() });
     return r.fulfill({ json: PACIENTE });
   });
-  await page.route('**/testes-psicologicos', (r) => {
-    if (r.request().method() !== 'POST') return r.fallback();
-    envios.push({ url: r.request().url(), body: r.request().postDataJSON() });
-    return r.fulfill({ status: 201, json: { id: 't1' } });
-  });
   await page.goto('/paciente.html');
   await expect(page.getByText('Dados cadastrais')).toBeVisible();
 }
@@ -51,59 +46,7 @@ async function tentarFecharSemQuerer(page: Page) {
   await page.keyboard.press('Escape');
 }
 
-test.describe('Aplicar teste psicológico (prontuário do paciente)', () => {
-  async function abrirTeste(page: Page, envios: Envio[] = []) {
-    await abrirPaciente(page, envios, ENFERMEIRO);
-    await page.getByText('Testes Psicológicos').click(); // expande a seção (o diálogo vive dentro dela)
-    await page.getByRole('button', { name: 'Aplicar teste' }).click();
-    await expect(page.getByRole('dialog')).toContainText('Aplicar teste psicológico');
-  }
-
-  test('clique fora e ESC não fecham e o texto é preservado', async ({ page }) => {
-    await abrirTeste(page);
-    await page.getByLabel('Nome do teste').fill('BDI-II');
-    await page.getByLabel('Resultado (opcional)').fill('Escore 18, depressão leve.');
-    await tentarFecharSemQuerer(page);
-    await expect(page.getByRole('dialog')).toBeVisible();
-    await expect(page.getByLabel('Nome do teste')).toHaveValue('BDI-II');
-    await expect(page.getByLabel('Resultado (opcional)')).toHaveValue('Escore 18, depressão leve.');
-  });
-
-  test('Cancelar com texto pede confirmação; recusar mantém o texto, aceitar descarta', async ({ page }) => {
-    await abrirTeste(page);
-    await page.getByLabel('Resultado (opcional)').fill('anotação importante');
-    const mensagens: string[] = [];
-    page.once('dialog', (d) => { mensagens.push(d.message()); void d.dismiss(); });
-    await page.getByRole('button', { name: 'Cancelar' }).click();
-    expect(mensagens).toEqual(['Descartar alterações?']);
-    await expect(page.getByLabel('Resultado (opcional)')).toHaveValue('anotação importante');
-
-    page.once('dialog', (d) => void d.accept());
-    await page.getByRole('button', { name: 'Cancelar' }).click();
-    await expect(page.getByRole('dialog')).toBeHidden();
-  });
-
-  test('Cancelar sem texto fecha direto, sem confirmação', async ({ page }) => {
-    await abrirTeste(page);
-    let perguntou = false;
-    page.on('dialog', (d) => { perguntou = true; void d.dismiss(); });
-    await page.getByRole('button', { name: 'Cancelar' }).click();
-    await expect(page.getByRole('dialog')).toBeHidden();
-    expect(perguntou).toBe(false);
-  });
-
-  test('Registrar teste salva e fecha sem pedir confirmação', async ({ page }) => {
-    const envios: Envio[] = [];
-    await abrirTeste(page, envios);
-    let perguntou = false;
-    page.on('dialog', (d) => { perguntou = true; void d.dismiss(); });
-    await page.getByLabel('Nome do teste').fill('BAI');
-    await page.getByRole('button', { name: 'Registrar teste' }).click();
-    await expect(page.getByRole('dialog')).toBeHidden();
-    expect(perguntou).toBe(false);
-    expect(envios).toHaveLength(1);
-  });
-});
+// R1.7: o bloco "Aplicar teste psicológico" foi removido junto com a seção de testes psicológicos (R1.4).
 
 test.describe('Editar cadastro do paciente', () => {
   async function abrirEdicao(page: Page) {

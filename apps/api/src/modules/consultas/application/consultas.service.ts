@@ -9,7 +9,7 @@ import {
   BadRequestException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { createHmac, randomUUID } from 'crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
 import { AppConfigService } from '../../../common/security/config.service';
 import { resolveTenantClinicaId } from '../../../common/tenancy/resolve-clinica-id';
@@ -34,6 +34,8 @@ import {
   AnexoConsulta,
   CobrancaConsulta,
   ConsultaEnfermagem,
+  IntegridadeConsulta,
+  PendenciaAssinatura,
   StatusCobrancaConsulta,
   StatusConsulta,
   StatusDesfechoLesoes,
@@ -58,6 +60,14 @@ export interface ConsultaRequestContext {
   userAgent: string;
   user: AuthTokenPayload;
 }
+
+/** Consulta devolvida na leitura: com o resultado do selo de integridade quando assinada. */
+export type ConsultaLida = ConsultaEnfermagem & { integridade?: IntegridadeConsulta };
+
+/** Resposta da assinatura: a assinatura JÁ está gravada; o que falhou depois vem em `pendencias` (nunca como erro). */
+export type ConsultaAssinada = ConsultaEnfermagem & { pendencias: PendenciaAssinatura[] };
+
+const MSG_ALTERADA_EM_OUTRA_TELA = 'A consulta foi alterada em outra tela';
 
 export interface ResultadoDesfechoLesoesConsulta {
   consultaId: string;
@@ -150,10 +160,11 @@ export class ConsultasService {
     if (atual.status !== StatusConsulta.RASCUNHO) {
       throw new ConflictException('Consulta assinada: nao pode ser alterada. Use um adendo.');
     }
+    if (dto.versao !== atual.versao) throw new ConflictException(MSG_ALTERADA_EM_OUTRA_TELA);
 
     const conteudo = await this.montarConteudo(dto, context.user, { clinicaId, pacienteId: atual.pacienteId, consultaId: id }, atual);
-    const atualizada = await this.repo.updateRascunho(clinicaId, id, context.user.sub, conteudo);
-    if (!atualizada) throw new ConflictException('Consulta assinada: nao pode ser alterada. Use um adendo.');
+    const atualizada = await this.repo.updateRascunho(clinicaId, id, context.user.sub, dto.versao, conteudo);
+    if (!atualizada) await this.conflitoDeGravacao(clinicaId, id);
     await this.audit(AuditEvent.CONSULTA_ENFERMAGEM_UPDATED, context, {
       clinicaId,
       consultaId: id,
@@ -161,7 +172,7 @@ export class ConsultasService {
       etapas: Object.keys(conteudo),
       modulos: (conteudo.avaliacao?.modulos ?? []).map((m) => m.area),
     });
-    return atualizada;
+    return atualizada!;
   }
 
   // ---------------- assinatura + cobrança ("assina primeiro, cobra depois") ----------------
@@ -172,12 +183,13 @@ export class ConsultasService {
    *    cobranca.status = PENDENTE_GERACAO (auditado) e pode ser gerada depois em POST /consultas/:id/cobranca.
    * Assinar de novo dá 409 (não duplica nada).
    */
-  async assinar(id: string, dto: AssinarConsultaDto, clinicaIdQuery: string | undefined, context: ConsultaRequestContext): Promise<ConsultaEnfermagem> {
+  async assinar(id: string, dto: AssinarConsultaDto, clinicaIdQuery: string | undefined, context: ConsultaRequestContext): Promise<ConsultaAssinada> {
     this.assertEnfermeiro(context.user);
     const clinicaId = resolveTenantClinicaId(context.user, clinicaIdQuery);
     const atual = await this.obterOuFalhar(clinicaId, id);
     this.assertAutor(atual, context.user);
     if (atual.status !== StatusConsulta.RASCUNHO) throw new ConflictException('Consulta ja assinada.');
+    if (dto.versao !== atual.versao) throw new ConflictException(MSG_ALTERADA_EM_OUTRA_TELA);
 
     // Fonte única do COREN: o perfil do usuário (mesmo padrão do prontuário).
     const profissional = await this.users.findById(context.user.sub);
@@ -194,24 +206,78 @@ export class ConsultasService {
           status: StatusCobrancaConsulta.PENDENTE_GERACAO,
         };
 
+    // Identificação das lesões avaliadas, como está AGORA (vai junto e entra no selo).
+    const identificacoesLesoes = await this.lesoes.identificacoesParaAssinatura(atual);
+    const selada: ConsultaEnfermagem = identificacoesLesoes ? { ...atual, identificacoesLesoes } : atual;
+
+    // O selo é calculado sobre o conteúdo DESTA versão, e a gravação filtra por { RASCUNHO, versao }: se outra tela
+    // salvou no meio do caminho, nada é gravado (409) — o selo de A nunca fica com o conteúdo de B.
     const dataAssinatura = new Date();
-    const assinada = await this.repo.assinar(clinicaId, id, context.user.sub, {
-      enfermeiroId: context.user.sub,
-      coren,
-      dataAssinatura,
-      hash: this.hashAssinatura(atual, coren, dataAssinatura),
-    }, decisao);
-    if (!assinada) throw new ConflictException('Consulta ja assinada.');
+    const assinada = await this.repo.assinar(
+      clinicaId,
+      id,
+      context.user.sub,
+      dto.versao,
+      { enfermeiroId: context.user.sub, coren, dataAssinatura, hash: this.hashAssinatura(selada, coren, dataAssinatura) },
+      decisao,
+      identificacoesLesoes,
+    );
+    if (!assinada) await this.conflitoDeGravacao(clinicaId, id);
 
-    await this.audit(AuditEvent.CONSULTA_ENFERMAGEM_SIGNED, context, { clinicaId, consultaId: id, pacienteId: atual.pacienteId });
-    // Desfecho das lesões avaliadas (só agora, na assinatura; rascunho nunca muda a lesão).
-    const comDesfecho = await this.registrarDesfechoLesoes(assinada, await this.lesoes.aplicarDesfechos(assinada, context), context);
+    // A PARTIR DAQUI a assinatura está gravada: nenhuma falha vira erro na resposta. Cada etapa posterior que falhar
+    // fica como pendência persistida (padrão PENDENTE_*), e a resposta é 200 com a lista de pendências.
+    return this.posAssinatura(assinada!, decisao, context);
+  }
 
-    if (decisao.incluidaEmPacote) {
-      await this.audit(AuditEvent.CONSULTA_COBRANCA_INCLUIDA_EM_PACOTE, context, { clinicaId, consultaId: id, pacienteId: atual.pacienteId });
-      return comDesfecho;
+  private async posAssinatura(assinada: ConsultaEnfermagem, decisao: CobrancaConsulta, context: ConsultaRequestContext): Promise<ConsultaAssinada> {
+    const { clinicaId, id, pacienteId } = assinada;
+    let atual = assinada;
+    let auditoriaPendente = false;
+
+    try {
+      await this.audit(AuditEvent.CONSULTA_ENFERMAGEM_SIGNED, context, { clinicaId, consultaId: id, pacienteId });
+    } catch (erro) {
+      auditoriaPendente = true;
+      this.logger.error(`Auditoria da assinatura da consulta ${id} nao gravada: ${(erro as Error).message}`);
+      await this.repo.marcarAuditoriaAssinatura(clinicaId, id, true).catch((e: Error) =>
+        this.logger.error(`Pendencia de auditoria da consulta ${id} nao gravada: ${e.message}`),
+      );
     }
-    return (await this.tentarGerarCobranca(comDesfecho, context)) ?? comDesfecho;
+
+    // Desfecho das lesões avaliadas (só agora, na assinatura; rascunho nunca muda a lesão).
+    try {
+      atual = await this.registrarDesfechoLesoes(atual, await this.lesoes.aplicarDesfechos(atual, context), context);
+    } catch (erro) {
+      this.logger.error(`Desfecho das lesoes da consulta ${id} nao aplicado: ${(erro as Error).message}`);
+      atual = await this.repo
+        .atualizarDesfechoLesoes(clinicaId, id, StatusDesfechoLesoes.PENDENTE_APLICACAO)
+        .then((c) => c ?? { ...atual, desfechoLesoesStatus: StatusDesfechoLesoes.PENDENTE_APLICACAO })
+        .catch(() => ({ ...atual, desfechoLesoesStatus: StatusDesfechoLesoes.PENDENTE_APLICACAO }));
+    }
+
+    // Cobrança: pacote (só auditoria) ou geração idempotente; falha -> PENDENTE_GERACAO (já gravado na assinatura).
+    try {
+      if (decisao.incluidaEmPacote) {
+        await this.audit(AuditEvent.CONSULTA_COBRANCA_INCLUIDA_EM_PACOTE, context, { clinicaId, consultaId: id, pacienteId });
+      } else {
+        atual = (await this.tentarGerarCobranca(atual, context)) ?? atual;
+      }
+    } catch (erro) {
+      this.logger.error(`Pos-assinatura (cobranca) da consulta ${id}: ${(erro as Error).message}`);
+    }
+
+    const pendencias: PendenciaAssinatura[] = [];
+    if (auditoriaPendente) pendencias.push('AUDITORIA');
+    if (atual.cobranca?.status === StatusCobrancaConsulta.PENDENTE_GERACAO) pendencias.push('COBRANCA');
+    if (atual.desfechoLesoesStatus === StatusDesfechoLesoes.PENDENTE_APLICACAO) pendencias.push('DESFECHO_LESOES');
+    return { ...atual, ...(auditoriaPendente ? { auditoriaAssinaturaPendente: true } : {}), pendencias };
+  }
+
+  /** Gravação condicional recusada: assinada no meio do caminho ou alterada em outra tela. Sempre 409. */
+  private async conflitoDeGravacao(clinicaId: string, id: string): Promise<never> {
+    const agora = await this.repo.findById(clinicaId, id);
+    if (agora?.status === StatusConsulta.ASSINADA) throw new ConflictException('Consulta ja assinada.');
+    throw new ConflictException(MSG_ALTERADA_EM_OUTRA_TELA);
   }
 
   /**
@@ -309,7 +375,7 @@ export class ConsultasService {
       await this.audit(AuditEvent.CONSULTA_COBRANCA_PENDENTE, context, {
         clinicaId: consulta.clinicaId,
         consultaId: consulta.id,
-      });
+      }).catch((e: Error) => this.logger.error(`Auditoria da cobranca pendente da consulta ${consulta.id} nao gravada: ${e.message}`));
       return null;
     }
   }
@@ -354,11 +420,12 @@ export class ConsultasService {
 
   // ---------------- leitura (enfermeiros da clínica) ----------------
 
-  async obter(id: string, clinicaIdQuery: string | undefined, context: ConsultaRequestContext): Promise<ConsultaEnfermagem & { adendos: AdendoConsulta[] }> {
+  async obter(id: string, clinicaIdQuery: string | undefined, context: ConsultaRequestContext): Promise<ConsultaLida & { adendos: AdendoConsulta[] }> {
     this.assertEnfermeiro(context.user);
     const clinicaId = resolveTenantClinicaId(context.user, clinicaIdQuery);
     const consulta = await this.obterOuFalhar(clinicaId, id);
     const adendos = await this.repo.listAdendos(clinicaId, id);
+    await this.regravarAuditoriaPendente(consulta, context);
     if (consulta.enfermeiroId !== context.user.sub) {
       await this.audit(AuditEvent.CONSULTA_ENFERMAGEM_VIEWED, context, {
         clinicaId,
@@ -367,10 +434,10 @@ export class ConsultasService {
         autor: false,
       });
     }
-    return { ...consulta, adendos };
+    return { ...(await this.comIntegridade(consulta, context)), adendos };
   }
 
-  async listarPorPaciente(query: ListConsultasQueryDto, context: ConsultaRequestContext): Promise<ConsultaEnfermagem[]> {
+  async listarPorPaciente(query: ListConsultasQueryDto, context: ConsultaRequestContext): Promise<ConsultaLida[]> {
     this.assertEnfermeiro(context.user);
     const clinicaId = resolveTenantClinicaId(context.user, query.clinicaId);
     const consultas = await this.repo.listByPaciente(clinicaId, query.pacienteId);
@@ -381,7 +448,45 @@ export class ConsultasService {
       quantidade: consultas.length,
       deOutrosEnfermeiros: deOutros,
     });
-    return consultas;
+    return Promise.all(consultas.map((c) => this.comIntegridade(c, context)));
+  }
+
+  /**
+   * Selo de integridade (HMAC-SHA256 com segredo do servidor — NÃO é assinatura digital nem ICP-Brasil): recalcula sobre
+   * o conteúdo gravado e compara. FALHA é auditada e mostrada em destaque na tela.
+   */
+  verificarIntegridade(consulta: ConsultaEnfermagem): IntegridadeConsulta | undefined {
+    if (consulta.status !== StatusConsulta.ASSINADA || !consulta.assinatura) return undefined;
+    const { coren, dataAssinatura, hash } = consulta.assinatura;
+    const esperado = Buffer.from(this.hashAssinatura(consulta, coren, new Date(dataAssinatura)), 'utf8');
+    const gravado = Buffer.from(String(hash ?? ''), 'utf8');
+    return esperado.length === gravado.length && timingSafeEqual(esperado, gravado) ? 'VALIDA' : 'FALHA';
+  }
+
+  private async comIntegridade(consulta: ConsultaEnfermagem, context: ConsultaRequestContext): Promise<ConsultaLida> {
+    const integridade = this.verificarIntegridade(consulta);
+    if (integridade === 'FALHA') {
+      this.logger.error(`Selo de integridade da consulta ${consulta.id} nao confere.`);
+      await this.audit(AuditEvent.CONSULTA_INTEGRIDADE_FALHA, context, { clinicaId: consulta.clinicaId, consultaId: consulta.id, pacienteId: consulta.pacienteId });
+    }
+    return integridade ? { ...consulta, integridade } : consulta;
+  }
+
+  /** A auditoria da assinatura ficou pendente: regrava agora e limpa a pendência (sem nunca falhar a leitura). */
+  private async regravarAuditoriaPendente(consulta: ConsultaEnfermagem, context: ConsultaRequestContext): Promise<void> {
+    if (!consulta.auditoriaAssinaturaPendente || !consulta.assinatura) return;
+    try {
+      await this.auditLogs.create({
+        event: AuditEvent.CONSULTA_ENFERMAGEM_SIGNED,
+        userId: consulta.assinatura.enfermeiroId,
+        ip: context.ip,
+        userAgent: context.userAgent,
+        metadata: { clinicaId: consulta.clinicaId, consultaId: consulta.id, pacienteId: consulta.pacienteId, regravado: true, lidoPor: context.user.sub },
+      });
+      await this.repo.marcarAuditoriaAssinatura(consulta.clinicaId, consulta.id, false);
+    } catch (erro) {
+      this.logger.warn(`Auditoria pendente da consulta ${consulta.id} ainda nao regravada: ${(erro as Error).message}`);
+    }
   }
 
   // ---------------- internos ----------------
@@ -610,6 +715,8 @@ export class ConsultasService {
         planejamento: consulta.planejamento,
         implementacao: consulta.implementacao,
         evolucao: consulta.evolucao,
+        // Só entra quando existe (consultas sem módulo Ferida mantêm exatamente o mesmo selo de antes).
+        ...(consulta.identificacoesLesoes ? { identificacoesLesoes: consulta.identificacoesLesoes } : {}),
       },
       coren,
       dataAssinatura: dataAssinatura.toISOString(),
@@ -634,7 +741,9 @@ function stableStringify(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map((item) => stableStringify(item)).join(',')}]`;
   const object = value as Record<string, unknown>;
+  // Chave com valor undefined não existe depois de gravada no Mongo: fica fora do selo (senão a verificação falharia).
   return `{${Object.keys(object)
+    .filter((key) => object[key] !== undefined)
     .sort()
     .map((key) => `${JSON.stringify(key)}:${stableStringify(object[key])}`)
     .join(',')}}`;

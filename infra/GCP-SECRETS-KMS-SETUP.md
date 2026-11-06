@@ -1,5 +1,12 @@
 # 🔐 Google Secret Manager & KMS Setup Guide
 
+> 🔴 **MIGRAÇÃO NUVITA ESTOMATERAPIA (vale acima de tudo neste arquivo).** Na virada do serviço real do Nuvita
+> para esta base, as chaves **`PATIENT_DATA_ENCRYPTION_KEY`, `PATIENT_DATA_HASH_KEY` e `PRONTUARIO_SIGNATURE_SECRET`
+> são REAPROVEITADAS do serviço real do Nuvita** — copiadas do Secret Manager, **nunca geradas de novo e nunca
+> rotacionadas**. Gerar ou rotacionar qualquer uma delas deixa os dados reais indecifráveis (CPF e responsável legal),
+> quebra a busca/unicidade por CPF (`cpfHash`) e invalida a verificação de todos os prontuários e consultas já assinados.
+> O código não tem versão de chave: não existe rotação segura hoje. Ver `docs/seguranca/INVENTARIO-SEGREDOS.md`.
+
 ## Overview
 
 Nuvita usa um sistema enterprise de gerenciamento de secrets com:
@@ -53,7 +60,10 @@ Nuvita usa um sistema enterprise de gerenciamento de secrets com:
 cp .env.example .env.local
 ```
 
-### 2. Generate Encryption Keys
+### 2. Generate Encryption Keys (SÓ desenvolvimento local)
+
+> Valores gerados aqui servem apenas para o `.env` local. Em produção, as três chaves de dados de paciente e de
+> assinatura vêm do serviço real do Nuvita (ver o aviso no topo).
 
 ```bash
 # Generate 32-byte key in base64 format
@@ -176,20 +186,25 @@ gcloud secrets list --filter="labels.service=nuvita-api" --format=json | jq '.[]
 | `jwt-access-secret` | 90 days | No | Automatic rotation |
 | `jwt-refresh-secret` | 90 days | No | Automatic rotation |
 | `bootstrap-secret` | 90 days | Yes | Critical - requires review |
-| `patient-data-*` | 365 days | Yes | Annual - requires planning |
+| `patient-data-*` | **NUNCA** | — | Sem versão de chave no código: rotacionar torna CPF/responsável ilegíveis e quebra a busca por CPF |
+| `prontuario-signature-secret` | **NUNCA** | — | Rotacionar invalida a verificação de todos os prontuários/consultas já assinados |
 | `document-storage-*` | 180 days | Yes | Semi-annual - provider coordination |
 
 ### Manual Rotation
+
+> ⛔ **Não use este procedimento para `patient-data-encryption-key`, `patient-data-hash-key` nem
+> `prontuario-signature-secret`** (nem o `npm run gcp:rotate-secrets`, que hoje inclui duas delas). O exemplo abaixo
+> vale só para segredos sem dado cifrado dependente (JWT, provedores).
 
 ```bash
 # Generate new value
 NEW_VALUE=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")
 
 # Create new version
-gcloud secrets versions add patient-data-encryption-key --data-file=-  <<< "$NEW_VALUE"
+gcloud secrets versions add jwt-access-secret --data-file=-  <<< "$NEW_VALUE"
 
 # View version history
-gcloud secrets versions list patient-data-encryption-key
+gcloud secrets versions list jwt-access-secret
 ```
 
 ---

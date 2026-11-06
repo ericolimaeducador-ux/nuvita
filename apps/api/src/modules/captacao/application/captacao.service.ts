@@ -82,10 +82,7 @@ export class CaptacaoService {
         criadoEm: new Date(),
       });
     } catch (error) {
-      const mongoError = error as { code?: number };
-      if (mongoError.code === 11000) {
-        throw new ConflictException('Já existe uma captação pendente com este CPF.');
-      }
+      if ((error as { code?: number }).code === 11000) throw new ConflictException(mensagemDuplicidade(error));
       throw error;
     }
 
@@ -142,9 +139,7 @@ export class CaptacaoService {
     try {
       atualizada = await this.captacoes.findOneAndUpdate({ _id: id, status: 'pendente' }, { $set: set }, { new: true }).exec();
     } catch (error) {
-      if ((error as { code?: number }).code === 11000) {
-        throw new ConflictException('Já existe uma captação pendente com este CPF.');
-      }
+      if ((error as { code?: number }).code === 11000) throw new ConflictException(mensagemDuplicidade(error));
       throw error;
     }
 
@@ -319,4 +314,24 @@ export class CaptacaoService {
       criadoEm: doc.criadoEm.toISOString(),
     };
   }
+}
+
+/**
+ * R1.8 — mensagem de duplicidade pelo ÍNDICE violado (antes, todo E11000 virava "CPF"). O índice vem de `keyPattern`
+ * (driver atual), de `keyValue` ou do texto "index: <nome>". Índice desconhecido -> mensagem genérica, nunca "CPF".
+ */
+const MENSAGEM_POR_INDICE: Record<string, string> = {
+  cpfHash: 'Já existe uma captação pendente com este CPF.',
+};
+const MENSAGEM_DUPLICIDADE_GENERICA = 'Já existe uma captação pendente com estes dados.';
+
+export function mensagemDuplicidade(error: unknown): string {
+  const e = error as { keyPattern?: Record<string, unknown>; keyValue?: Record<string, unknown>; message?: string; errmsg?: string };
+  const campos = Object.keys(e.keyPattern ?? e.keyValue ?? {});
+  if (campos.length === 0) {
+    const nome = /index:\s+(\S+)/.exec(String(e.errmsg ?? e.message ?? ''))?.[1];
+    if (nome) campos.push(nome.replace(/_-?1$/, ''));
+  }
+  if (campos.length === 1 && MENSAGEM_POR_INDICE[campos[0]]) return MENSAGEM_POR_INDICE[campos[0]];
+  return MENSAGEM_DUPLICIDADE_GENERICA;
 }

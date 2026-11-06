@@ -33,6 +33,7 @@ import {
   TipoAgendamento, TipoAtendimento,
   TIPO_AGENDAMENTO_LABEL, TIPOS_POR_MODALIDADE, rotuloProximaSessao,
 } from '@/types';
+import { RECURSOS_LEGADO } from '@/lib/recursos-legado';
 
 /**
  * Textarea que cresce conforme o texto — o enfermeiro enxerga a anotação
@@ -418,8 +419,8 @@ export function RegistroSessao({
         )}
       </div>
 
-      {/* Sugestão de abordagem via IA — apoio ao enfermeiro, nunca decide por ele. */}
-      {!carregando && !historicoErro && (
+      {/* Sugestão de abordagem via IA — DESATIVADA (R1: IA antiga desligada no servidor). */}
+      {RECURSOS_LEGADO.iaClinicaAntiga && !carregando && !historicoErro && (
         <div className="rounded-xl border border-dashed bg-muted/20 p-4 space-y-2 text-sm">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -618,13 +619,18 @@ export function RegistroSessao({
       )}
       <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
         <Button variant="outline" onClick={fechar} disabled={salvarM.isPending}>Fechar</Button>
-        <Button variant="secondary" onClick={() => salvar(false)} disabled={salvarM.isPending || carregando || historicoErro}>
-          {salvarM.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Salvar rascunho
-        </Button>
-        <Button onClick={() => salvar(true)} disabled={salvarM.isPending || carregando || historicoErro || !temCoren(user?.coren)}>
-          {salvarM.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PenLine className="h-4 w-4 mr-2" />}
-          Salvar e assinar
-        </Button>
+        {/* R1: o prontuário antigo é somente leitura (o servidor responde 403). */}
+        {RECURSOS_LEGADO.escritaProntuarioAntigo && (
+          <>
+            <Button variant="secondary" onClick={() => salvar(false)} disabled={salvarM.isPending || carregando || historicoErro}>
+              {salvarM.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Salvar rascunho
+            </Button>
+            <Button onClick={() => salvar(true)} disabled={salvarM.isPending || carregando || historicoErro || !temCoren(user?.coren)}>
+              {salvarM.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PenLine className="h-4 w-4 mr-2" />}
+              Salvar e assinar
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1127,9 +1133,11 @@ export function AtendimentoPsicologicoPage() {
                 </Button>
                 {(a.status === StatusAgendamento.AGENDADO || a.status === StatusAgendamento.CONFIRMADO) && (
                   <>
-                    <Button variant="outline" size="sm" onClick={() => setRegistroDe(a)}>
-                      <ClipboardList className="h-4 w-4 mr-2" /> Prontuário
-                    </Button>
+                    {RECURSOS_LEGADO.escritaProntuarioAntigo && (
+                      <Button variant="outline" size="sm" onClick={() => setRegistroDe(a)}>
+                        <ClipboardList className="h-4 w-4 mr-2" /> Prontuário
+                      </Button>
+                    )}
                     <Button size="sm" disabled={salaCarregandoId === a.id} onClick={() => atender(a)}>
                       {salaCarregandoId === a.id
                         ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />

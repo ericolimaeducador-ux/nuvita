@@ -4,7 +4,7 @@ import { test, expect, type Page } from '@playwright/test';
 // API simulada; o servidor é o gate (400/422 par inválido, 409 duplicata).
 
 const SUPER = { id: 'sa1', nome: 'Erico', email: 'sa@nuvita.test', papel: 'SUPER_ADMIN', clinicaId: null };
-const ADMIN = { id: 'u1', nome: 'Admin', email: 'adm@mentesa.example', papel: 'ADMIN', clinicaId: 'cli-1' };
+const ADMIN = { id: 'u1', nome: 'Admin', email: 'adm@exemplo.example', papel: 'ADMIN', clinicaId: 'cli-1' };
 const CLINICA = {
   id: 'cli-1', nome: 'Clínica Teste', documento: '11222333000181', tipoDocumento: 'CNPJ',
   plano: 'basico', ativo: true, faseTeste: true, criadoEm: '2026-01-01T00:00:00.000Z', totalUsuarios: 2,

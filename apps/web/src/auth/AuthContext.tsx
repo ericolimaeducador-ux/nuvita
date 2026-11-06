@@ -7,6 +7,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { QueryClientContext } from '@tanstack/react-query';
+import { limparCacheDaSessao } from '@/lib/cache-sessao';
 import { getClinicaAtiva, getToken, setClinicaAtiva, setToken } from '@/api/client';
 import { authApi } from '@/api/resources';
 import { resolvePermissoes, type AuthUser, type Modulo } from '@/types';
@@ -43,21 +45,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTok] = useState<string | null>(getToken());
   const [loading] = useState(false);
   const [clinicaAtiva, setClinicaAtivaState] = useState<string | null>(getClinicaAtiva());
+  // Opcional: telas de teste montam o provider sem QueryClient. No app ele sempre existe (main.tsx).
+  const queryClient = useContext(QueryClientContext);
 
   const trocarClinica = useCallback((clinicaId: string | null) => {
+    // Dado da clínica anterior nunca aparece na nova: cancela o que está em andamento e limpa o cache (R1.3).
+    void limparCacheDaSessao(queryClient);
     setClinicaAtiva(clinicaId); // persiste no localStorage (lido pelo interceptor do axios)
     setClinicaAtivaState(clinicaId);
-  }, []);
+  }, [queryClient]);
 
   const login = useCallback(
     async (email: string, password: string, totpCode?: string) => {
       const res = await authApi.login(email, password, totpCode);
+      // Nova sessão começa sem nada em cache (mesmo que a anterior não tenha feito logout, ex.: sessão expirada).
+      await limparCacheDaSessao(queryClient);
       setToken(res.accessToken);
       localStorage.setItem(USER_KEY, JSON.stringify(res.user));
       setTok(res.accessToken);
       setUser(res.user);
     },
-    [],
+    [queryClient],
   );
 
   const atualizarUsuario = useCallback((u: AuthUser) => {
@@ -74,22 +82,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setClinicaAtiva(null);
     localStorage.removeItem(USER_KEY);
+    await limparCacheDaSessao(queryClient);
     setTok(null);
     setUser(null);
     setClinicaAtivaState(null);
-  }, []);
+  }, [queryClient]);
 
   // sincroniza logout entre abas
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === 'nuvita.accessToken' && !e.newValue) {
+        void limparCacheDaSessao(queryClient);
         setTok(null);
         setUser(null);
       }
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
-  }, []);
+  }, [queryClient]);
 
   const permissoes = useMemo<Modulo[]>(
     () => (user ? user.permissoes ?? resolvePermissoes(user.papel) : []),

@@ -4,17 +4,17 @@ import { test, expect, type Page } from '@playwright/test';
 // A sessão (localStorage) e o GET /clinicas/minha são simulados aqui; nada vai ao backend.
 
 const CLINICA = {
-  nome: 'Clínica Mente Sã',
+  nome: 'Clínica Exemplo',
   documento: '12.345.678/0001-95',
   tipoDocumento: 'CNPJ',
   endereco: { logradouro: 'Rua das Acácias', numero: '120', bairro: 'Centro', cidade: 'Belo Horizonte', estado: 'MG', cep: '30110-000' },
   telefone: '(31) 3333-4444',
-  emailContato: 'contato@mentesa.example',
+  emailContato: 'contato@exemplo.example',
   logoUrl: 'https://cdn.example/clinica-logo.png',
 };
 
-const ENFERMEIRO = { id: 'u1', nome: 'Dra. Ana Souza', email: 'ana@mentesa.example', papel: 'ENFERMEIRO', clinicaId: 'c1', coren: '06/12345' };
-const SECRETARIA = { id: 'u2', nome: 'Bia Secretaria', email: 'bia@mentesa.example', papel: 'SECRETARIA', clinicaId: 'c1' };
+const ENFERMEIRO = { id: 'u1', nome: 'Dra. Ana Souza', email: 'ana@exemplo.example', papel: 'ENFERMEIRO', clinicaId: 'c1', coren: '06/12345' };
+const SECRETARIA = { id: 'u2', nome: 'Bia Secretaria', email: 'bia@exemplo.example', papel: 'SECRETARIA', clinicaId: 'c1' };
 
 async function abrir(page: Page, user: Record<string, unknown>, clinica: Record<string, unknown> | null = CLINICA) {
   await page.addInitScript((u) => {
@@ -40,11 +40,11 @@ test.describe('timbre clínico dinâmico', () => {
   test('1. cabeçalho mostra a clínica: nome, CNPJ, endereço, telefone e e-mail', async ({ page }) => {
     await abrir(page, ENFERMEIRO);
     const cab = page.locator('header');
-    await expect(cab).toContainText('Clínica Mente Sã');
+    await expect(cab).toContainText('Clínica Exemplo');
     await expect(cab).toContainText('CNPJ: 12.345.678/0001-95');
     await expect(cab).toContainText('Rua das Acácias');
     await expect(cab).toContainText('(31) 3333-4444');
-    await expect(cab).toContainText('contato@mentesa.example');
+    await expect(cab).toContainText('contato@exemplo.example');
   });
 
   test('1b. clínica pessoa física (CPF) rotula "CPF:"', async ({ page }) => {
@@ -55,7 +55,7 @@ test.describe('timbre clínico dinâmico', () => {
 
   test('2. o documento não contém 7Safe, CNPJ da 7Safe, Nuvita nem Dealer', async ({ page }) => {
     await abrir(page, ENFERMEIRO);
-    await expect(page.locator('header')).toContainText('Clínica Mente Sã'); // espera o timbre carregar
+    await expect(page.locator('header')).toContainText('Clínica Exemplo'); // espera o timbre carregar
     const texto = await page.locator('.documento-clinico-print').innerText();
     for (const proibido of ['7Safe', '55.747.955/0001-07', 'Nuvita', 'Dealer']) {
       expect(texto, `contém "${proibido}"`).not.toContain(proibido);
@@ -73,7 +73,7 @@ test.describe('timbre clínico dinâmico', () => {
     const { logoUrl: _l, ...semLogo } = CLINICA;
     await abrir(page, ENFERMEIRO, semLogo);
     const cab = page.locator('header');
-    await expect(cab).toContainText('Clínica Mente Sã');
+    await expect(cab).toContainText('Clínica Exemplo');
     await expect(cab.locator('img')).toHaveCount(0);
     await expect(cab.locator('svg')).toHaveCount(0);
   });
@@ -87,7 +87,7 @@ test.describe('timbre clínico dinâmico', () => {
     const { telefone: _t, emailContato: _e, endereco: _a, ...parcial } = CLINICA;
     await abrir(page, ENFERMEIRO, parcial);
     const cab = page.locator('header');
-    await expect(cab).toContainText('Clínica Mente Sã');
+    await expect(cab).toContainText('Clínica Exemplo');
     await expect(cab).not.toContainText('Tel');
     await expect(cab).not.toContainText('E-mail');
     await expect(cab).not.toContainText('undefined');

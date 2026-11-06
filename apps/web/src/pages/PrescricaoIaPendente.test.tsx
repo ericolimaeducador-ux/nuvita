@@ -16,6 +16,10 @@ vi.mock('@/api/resources', async (importOriginal) => {
 });
 
 import { PrescricaoCuidadosPage } from './PrescricaoCuidadosPage';
+// R1: este teste cobre código herdado que está OCULTO por padrão (src/lib/recursos-legado.ts); liga as flags só aqui
+// para o código dormente continuar testado até sair na etapa de conteúdo.
+vi.mock('@/lib/recursos-legado', () => ({ RECURSOS_LEGADO: { escritaProntuarioAntigo: true, iaClinicaAntiga: true, edicaoModulosPorUsuario: true } }));
+
 
 function renderizar() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

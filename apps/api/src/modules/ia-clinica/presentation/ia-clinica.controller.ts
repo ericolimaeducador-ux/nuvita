@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { AuthTokenPayload, Papel } from '../../../../../../packages/shared/src/auth';
@@ -18,6 +18,11 @@ import { RegistrarDecisaoDto } from '../application/dto/registrar-decisao.dto';
 // clínicos. Throttle apertado: são chamadas pagas a um provedor externo,
 // o limite é uma trava de custo/abuso, não uma questão de segurança. O guard
 // de throttling é global (APP_GUARD); aqui fica só o @Throttle que aperta.
+// R1.4 (decisão do Erico): IA clínica antiga (herdada do psi) DESLIGADA. As rotas existem, mas toda chamada responde
+// 403 sem tocar o serviço nem o provedor de IA (nenhuma chamada paga, nenhum dado enviado). Telas herdadas escondem os
+// botões; saem na etapa de conteúdo.
+export const MSG_RECURSO_DESATIVADO = 'Recurso desativado.';
+
 @Controller('ia-clinica')
 @UseGuards(JwtAuthGuard, AuthGatesGuard, TenantRequiredGuard, RolesGuard)
 @Roles(Papel.ENFERMEIRO)
@@ -30,8 +35,9 @@ export class IaClinicaController {
     @Body() dto: SugerirAbordagemDto,
     @CurrentUser() user: AuthTokenPayload,
     @Req() request: Request,
-  ) {
-    return this.service.sugerirAbordagem(dto, this.contexto(request, user));
+  ): never {
+    void [dto, user, request];
+    throw new ForbiddenException(MSG_RECURSO_DESATIVADO);
   }
 
   @Post('gerar-prescricao')
@@ -39,8 +45,9 @@ export class IaClinicaController {
     @Body() dto: GerarPrescricaoDto,
     @CurrentUser() user: AuthTokenPayload,
     @Req() request: Request,
-  ) {
-    return this.service.gerarPrescricao(dto, this.contexto(request, user));
+  ): never {
+    void [dto, user, request];
+    throw new ForbiddenException(MSG_RECURSO_DESATIVADO);
   }
 
   @Post('registros/:id/decisao')
@@ -49,12 +56,9 @@ export class IaClinicaController {
     @Body() dto: RegistrarDecisaoDto,
     @CurrentUser() user: AuthTokenPayload,
     @Req() request: Request,
-  ) {
-    return this.service.registrarDecisao(
-      registroUsoIaId,
-      dto.decisao,
-      this.contexto(request, user),
-    );
+  ): never {
+    void [registroUsoIaId, dto, user, request];
+    throw new ForbiddenException(MSG_RECURSO_DESATIVADO);
   }
 
   private contexto(request: Request, user: AuthTokenPayload): IaClinicaRequestContext {

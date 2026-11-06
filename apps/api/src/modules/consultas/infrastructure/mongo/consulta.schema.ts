@@ -22,6 +22,10 @@ export class ConsultaMongo {
   status!: StatusConsulta;
 
   // As 5 etapas: estrutura livre validada pelos DTOs (os módulos da Avaliação, pela definição de cada área).
+  // Concorrência otimista do rascunho (salvar/assinar exigem a versão lida). Documentos antigos sem o campo = 1.
+  @Prop({ default: 1, min: 1 })
+  versao!: number;
+
   @Prop({ type: MongooseSchema.Types.Mixed, required: true })
   avaliacao!: Record<string, unknown>;
 
@@ -45,6 +49,12 @@ export class ConsultaMongo {
 
   @Prop({ enum: ['APLICADO', 'PENDENTE_APLICACAO'] })
   desfechoLesoesStatus?: string;
+
+  @Prop({ type: [MongooseSchema.Types.Mixed], default: undefined })
+  identificacoesLesoes?: Record<string, unknown>[];
+
+  @Prop()
+  auditoriaAssinaturaPendente?: boolean;
 
   @Prop({ default: Date.now, immutable: true })
   criadoEm!: Date;

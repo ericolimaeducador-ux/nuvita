@@ -1,5 +1,15 @@
 # Nuvita Psi — Checklist de Produção
 
+> 🔴 **MIGRAÇÃO NUVITA ESTOMATERAPIA (vale acima de tudo neste arquivo).** Na virada do serviço real do Nuvita
+> para esta base, as chaves **`PATIENT_DATA_ENCRYPTION_KEY`, `PATIENT_DATA_HASH_KEY` e `PRONTUARIO_SIGNATURE_SECRET`
+> são REAPROVEITADAS do serviço real do Nuvita** — copiadas do Secret Manager, **nunca geradas de novo e nunca
+> rotacionadas**. Gerar ou rotacionar qualquer uma delas deixa os dados reais indecifráveis (CPF e responsável legal),
+> quebra a busca/unicidade por CPF (`cpfHash`) e invalida a verificação de todos os prontuários e consultas já assinados.
+> O código não tem versão de chave: não existe rotação segura hoje. Ver `docs/seguranca/INVENTARIO-SEGREDOS.md`.
+
+> Tudo que está marcado **[específico do psi]** abaixo descreve o spin-off nuvita-psi (serviço `nuvita-psi-api`,
+> subdomínio `psi.`, banco `nuvita-psi`) e **não** se aplica à migração do Nuvita Estomaterapia.
+
 nuvita-psi é um spin-off do [Nuvita](https://github.com/ericolimaeducador-ux/nuvita)
 e roda como **subdomínio** do domínio já existente, **compartilhando o mesmo
 projeto GCP** (`nuvita-499800`) — não é um projeto/infra isolado do zero.
@@ -11,17 +21,15 @@ projeto GCP** (`nuvita-499800`) — não é um projeto/infra isolado do zero.
   com um banco separado (`nuvita-psi`, já configurado em `.env.example`), ou um
   cluster/projeto Atlas dedicado — decidir antes do 1º deploy.
 
-## ✅ Já feito (código)
+## ✅ Já feito (código) — [específico do psi]
 
 - Módulos e páginas específicos do pipeline de incontinência urinária/SUS
   removidos (avaliação IU, follow-up, laudo médico, entregas, produtos).
 - Papel `ENFERMEIRO` e módulos de permissão associados removidos.
 - Rebrand para "Nuvita Psi" (`apps/web/src/lib/brand.ts`, títulos, Swagger).
 - Nomes de workspace/pacote renomeados (`@nuvita-psi/api`, `@nuvita-psi/web`).
-- `KMS_KEY_RING`/`KMS_KEY` default trocados para `nuvita-psi-*` — **as chaves de
-  criptografia de dados de paciente (LGPD) devem ser próprias do nuvita-psi,
-  nunca reaproveitar as chaves/segredos do Nuvita original**, mesmo compartilhando
-  o projeto GCP.
+- `KMS_KEY_RING`/`KMS_KEY` default trocados para `nuvita-psi-*`. [específico do psi: chaves próprias do
+  nuvita-psi. Na migração do Nuvita Estomaterapia é o CONTRÁRIO — ver o aviso no topo.]
 - `docker-compose.yml` / `Dockerfile`s ajustados para os novos nomes de
   container/workspace (`nuvita-psi-api`, `nuvita-psi-web`).
 - Serviço Cloud Run renomeado para `nuvita-psi-api` em `deploy-api.yml` e
@@ -31,18 +39,26 @@ projeto GCP** (`nuvita-499800`) — não é um projeto/infra isolado do zero.
 
 ## 🔧 Pendências de nuvem (você precisa executar)
 
-### 1. Segredos PRÓPRIOS do nuvita-psi (não reaproveitar os do Nuvita original) 🔴
-Mesmo no mesmo projeto GCP, gere segredos **novos e distintos** para:
+### 1. Segredos 🔴
+
+**Migração Nuvita Estomaterapia (serviço real do Nuvita, pacientes reais):**
+- `PATIENT_DATA_ENCRYPTION_KEY`, `PATIENT_DATA_HASH_KEY`, `PRONTUARIO_SIGNATURE_SECRET`: **copiar os valores
+  ATUAIS do serviço real do Nuvita** (Secret Manager do projeto `nuvita-499800`) para o serviço novo. **Nunca
+  gerar, nunca rotacionar** (ver o aviso no topo). Conferir, antes do corte, que um CPF de teste conhecido é
+  decifrado e encontrado pela busca e que um prontuário assinado antigo continua verificável.
+- Os demais segredos (JWT, `BOOTSTRAP_SECRET`, tokens de provedores) seguem o procedimento normal.
+
+**[específico do psi]** — o spin-off nuvita-psi gerou segredos próprios e distintos do Nuvita original:
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
   (`node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`)
-- `PATIENT_DATA_ENCRYPTION_KEY` / `PATIENT_DATA_HASH_KEY` — **críticos**: dados
-  de paciente do nuvita-psi devem estar isolados dos dados do Nuvita original.
-- `PRONTUARIO_SIGNATURE_SECRET`, `BOOTSTRAP_SECRET`
+- [específico do psi] `PATIENT_DATA_ENCRYPTION_KEY` / `PATIENT_DATA_HASH_KEY` próprios, porque os dados de
+  paciente do psi ficam isolados dos do Nuvita original. **Não vale para a migração do Nuvita Estomaterapia.**
+- [específico do psi] `PRONTUARIO_SIGNATURE_SECRET` próprio; `BOOTSTRAP_SECRET`
 - Usuário/senha do MongoDB (banco `nuvita-psi`, mesmo cluster Atlas ou um novo)
 - Tokens Resend, Cloudflare R2 (bucket `nuvita-psi-documentos`), Z-API/WhatsApp
 - Depois: `node scripts/gen-cloudrun-env.cjs`
 
-### 2. GitHub Secrets do repo `nuvita-psi` (para o CD automático)
+### 2. GitHub Secrets do repo `nuvita-psi` (para o CD automático) — [específico do psi]
 Repo novo → secrets ainda não configurados em Settings > Secrets and variables > Actions:
 - `GCP_PROJECT_ID` = `nuvita-499800` (mesmo projeto do Nuvita original)
 - `GCP_WIF_PROVIDER` — pode reaproveitar o provider WIF já existente do Nuvita

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import type { ModuloFerida } from '@shared/consulta';
-import type { Lesao } from '@/types';
+import type { IdentificacaoLesaoRegistrada, Lesao } from '@/types';
 
 const mocks = vi.hoisted(() => ({
   listByPaciente: vi.fn(),
@@ -35,10 +35,10 @@ const lesao = (over: Partial<Lesao>): Lesao => ({
 });
 
 let ultimo: ModuloFerida = {};
-function Harness({ inicial = {}, editavel = true }: { inicial?: ModuloFerida; editavel?: boolean }) {
+function Harness({ inicial = {}, editavel = true, identificacoesLesoes }: { inicial?: ModuloFerida; editavel?: boolean; identificacoesLesoes?: IdentificacaoLesaoRegistrada[] }) {
   const [d, setD] = useState<ModuloFerida>(inicial);
   ultimo = d;
-  return <ModuloFeridaCampos consultaId="c1" pacienteId="p1" dados={d} editavel={editavel} onChange={(x) => { ultimo = x; setD(x); }} />;
+  return <ModuloFeridaCampos consultaId="c1" pacienteId="p1" dados={d} editavel={editavel} identificacoesLesoes={identificacoesLesoes} onChange={(x) => { ultimo = x; setD(x); }} />;
 }
 function montar(props: Parameters<typeof Harness>[0] = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -161,5 +161,25 @@ describe('Módulo Feridas (5c)', () => {
     expect(medicaoValida(base)).not.toBeNull();
     expect(medicaoValida({ ...base, calibracao: { ...base.calibracao, distanciaCm: undefined } })).toBeNull();
     expect(medicaoValida({ ...base, contorno: base.contorno.slice(0, 2) })).toBeNull();
+  });
+
+  it('R1: consulta assinada mostra a identificação REGISTRADA no atendimento e, se diferente, a atual', async () => {
+    mocks.listByPaciente.mockResolvedValue([lesao({ localizacaoAnatomica: 'calcâneo', etiologia: 'LESAO_POR_PRESSAO', versao: 2 })]);
+    const registrada: IdentificacaoLesaoRegistrada = { lesaoId: '65f00000000000000000b001', numero: 1, localizacaoAnatomica: 'sacral', lado: 'CENTRAL', etiologia: 'ULCERA_VENOSA', versaoCadastro: 1 };
+    montar({ editavel: false, identificacoesLesoes: [registrada], inicial: { avaliacoes: [{ lesaoId: '65f00000000000000000b001', desfecho: { situacao: 'EM_ACOMPANHAMENTO' } }] } });
+    const bloco = await screen.findByTestId('identificacao-65f00000000000000000b001');
+    expect(bloco).toHaveTextContent('Identificação registrada neste atendimento: Lesão 1 — sacral (central) · Úlcera venosa');
+    await waitFor(() => expect(bloco).toHaveTextContent('Identificação atual: Lesão 1 — calcâneo (central) · Lesão por pressão'));
+    // As condicionais seguem a etiologia registrada (úlcera venosa): sem bloco de LPP.
+    expect(screen.queryByRole('combobox', { name: 'Categoria *' })).not.toBeInTheDocument();
+  });
+
+  it('R1: identificação igual à atual não mostra "Identificação atual"', async () => {
+    mocks.listByPaciente.mockResolvedValue([lesao({})]);
+    const registrada: IdentificacaoLesaoRegistrada = { lesaoId: '65f00000000000000000b001', numero: 1, localizacaoAnatomica: 'sacral', lado: 'CENTRAL', etiologia: 'ULCERA_VENOSA', versaoCadastro: 1 };
+    montar({ editavel: false, identificacoesLesoes: [registrada], inicial: { avaliacoes: [{ lesaoId: '65f00000000000000000b001', desfecho: { situacao: 'EM_ACOMPANHAMENTO' } }] } });
+    await screen.findByTestId('identificacao-65f00000000000000000b001');
+    await waitFor(() => expect(mocks.listByPaciente).toHaveBeenCalled());
+    expect(screen.queryByText(/Identificação atual/)).not.toBeInTheDocument();
   });
 });

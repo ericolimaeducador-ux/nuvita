@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Papel } from '../../../../../packages/shared/src/auth';
 import { AgendamentosController } from '../../modules/agendamentos/presentation/agendamentos.controller';
 import { DocumentosController } from '../../modules/documentos/presentation/documentos.controller';
@@ -44,11 +44,11 @@ describe('controllers validam referências do payload (D4)', () => {
     expect(docs.createUploadUrl).not.toHaveBeenCalled();
   });
 
-  it('prontuário: create (paciente e agendamento)', async () => {
+  it('prontuário: create nunca grava com referência de outra clínica (R1.4: o legado é somente leitura -> 403 antes de tudo)', async () => {
     const ag = agendamentosRecusando();
     const pront = { create: jest.fn() };
-    const c = new ProntuariosController(pront as never, ag as never);
-    await expect(c.create({ pacienteId: 'p', agendamentoId: 'a' } as never, user, req)).rejects.toThrow(NotFoundException);
+    const c = new ProntuariosController(pront as never, ag as never, { create: jest.fn().mockResolvedValue(undefined) } as never);
+    await expect(c.create({ pacienteId: 'p', agendamentoId: 'a' } as never, user, req)).rejects.toThrow(ForbiddenException);
     expect(pront.create).not.toHaveBeenCalled();
   });
 });

@@ -246,6 +246,9 @@ UI (como o hack de captura de screenshot).
 **Achado:** durante o pré-merge de `feature/clinic-onboarding-and-auth-gates`
 (2026-09-10). **Não bloqueante.**
 
+> ⛔ **Migração Nuvita Estomaterapia:** este script NÃO pode ser usado para essas três chaves no serviço real — elas
+> são reaproveitadas do Nuvita (Secret Manager), nunca geradas de novo. Ver o aviso em `infra/PRODUCTION-CHECKLIST.md`.
+
 `scripts/gen-production-secrets.mjs` gera valores aleatórios para
 `PATIENT_DATA_ENCRYPTION_KEY`, `PATIENT_DATA_HASH_KEY` e
 `PRONTUARIO_SIGNATURE_SECRET`, mas **não** para `IA_USO_ENCRYPTION_KEY` (var

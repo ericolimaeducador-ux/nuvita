@@ -35,7 +35,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
 import { apiErrorMessage } from '@/api/client';
 import { consultasApi } from '@/api/resources';
-import type { AnexoConsulta } from '@/types';
+import type { AnexoConsulta, IdentificacaoLesaoRegistrada } from '@/types';
 import { ModuloFeridaCampos } from './ModuloFerida';
 
 /**
@@ -338,8 +338,8 @@ function ModuloAnalCampos({ consultaId, dados, onChange, editavel }: Comum & { c
 }
 
 export function ModulosAvaliacao({
-  consultaId, pacienteId = '', modulos, onChange, editavel, classificacoes,
-}: { consultaId: string; pacienteId?: string; modulos: ModuloForm[]; onChange: (m: ModuloForm[]) => void; editavel: boolean; classificacoes: string[] }) {
+  consultaId, pacienteId = '', modulos, onChange, editavel, classificacoes, identificacoesLesoes,
+}: { consultaId: string; pacienteId?: string; identificacoesLesoes?: IdentificacaoLesaoRegistrada[]; modulos: ModuloForm[]; onChange: (m: ModuloForm[]) => void; editavel: boolean; classificacoes: string[] }) {
   const [escolhendo, setEscolhendo] = useState(false);
   const presentes = new Set(modulos.map((m) => m.area));
   const disponiveis = modulosDisponiveis(classificacoes as ClassificacaoAreaShared[]).filter((a) => !presentes.has(a));
@@ -388,7 +388,7 @@ export function ModulosAvaliacao({
               <ModuloAnalCampos consultaId={consultaId} editavel={editavel} dados={m.dados as ModuloIncontinenciaAnal} onChange={(d) => atualizar(m.area, d as Record<string, unknown>)} />
             )}
             {m.area === AreaModuloAvaliacao.FERIDA && (
-              <ModuloFeridaCampos consultaId={consultaId} pacienteId={pacienteId} editavel={editavel} dados={m.dados as ModuloFerida} onChange={(d) => atualizar(m.area, d as Record<string, unknown>)} />
+              <ModuloFeridaCampos consultaId={consultaId} pacienteId={pacienteId} identificacoesLesoes={identificacoesLesoes} editavel={editavel} dados={m.dados as ModuloFerida} onChange={(d) => atualizar(m.area, d as Record<string, unknown>)} />
             )}
           </div>
         </details>

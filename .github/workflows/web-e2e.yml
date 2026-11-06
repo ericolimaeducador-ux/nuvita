@@ -1,10 +1,11 @@
 name: Web E2E
 
-# Checks Playwright do documento clínico renderizado (timbre da clínica, assinatura com CRP,
-# bloqueio sem CRP, "sem 7Safe/Nuvita/Dealer no corpo"). Só roda em PRs que tocam o web.
+# Checks Playwright da web num harness com API simulada (sem banco, sem segredo): documento clínico renderizado
+# (timbre da clínica, assinatura com COREN, bloqueio sem COREN), diálogos protegidos e matriz de rotas.
+# Roda em PRs que tocam o web, inclusive no fluxo da Estomaterapia (PRs para estomaterapia/integracao e estomaterapia/**).
 on:
   pull_request:
-    branches: [main]
+    branches: [main, 'estomaterapia/integracao', 'estomaterapia/**']
     paths:
       - 'apps/web/**'
       - 'package.json'

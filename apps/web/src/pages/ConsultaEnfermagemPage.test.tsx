@@ -23,7 +23,7 @@ vi.mock('@/auth/AuthContext', () => ({ useAuth: () => ({ user: { id: mocks.userI
 import { ConsultaEnfermagemPage } from './ConsultaEnfermagemPage';
 
 const rascunho = {
-  id: 'c1', clinicaId: 'cl1', pacienteId: 'p1', enfermeiroId: 'enf-autor', status: 'RASCUNHO',
+  id: 'c1', clinicaId: 'cl1', pacienteId: 'p1', enfermeiroId: 'enf-autor', status: 'RASCUNHO', versao: 3,
   avaliacao: { dadosSubjetivos: 'relato', dadosObjetivos: 'exame', modulos: [] },
   diagnosticos: [{ texto: 'diag livre', origem: 'MANUAL' }],
   planejamento: { prioridades: '', resultadosEsperados: '', prescricaoEnfermagem: [], examesSolicitados: '', encaminhamentos: '' },
@@ -56,7 +56,7 @@ describe('ConsultaEnfermagemPage', () => {
     mocks.userId.atual = 'enf-autor';
     mocks.get.mockResolvedValue(rascunho);
     mocks.config.mockResolvedValue({ valorConsultaCentavos: 22000 });
-    mocks.salvarRascunho.mockResolvedValue(rascunho);
+    mocks.salvarRascunho.mockResolvedValue({ ...rascunho, versao: 4 });
     mocks.paciente.mockResolvedValue({ id: 'p1', classificacoes: ['FA'] });
     mocks.listarAnexos.mockResolvedValue([]);
   });
@@ -80,7 +80,8 @@ describe('ConsultaEnfermagemPage', () => {
     await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
 
     await waitFor(() => expect(mocks.salvarRascunho).toHaveBeenCalled());
-    const [id, payload] = mocks.salvarRascunho.mock.calls[0];
+    const [id, payload, versaoEnviada] = mocks.salvarRascunho.mock.calls[0];
+    expect(versaoEnviada).toBe(3); // a versão lida vai junto
     expect(id).toBe('c1');
     expect(payload).toMatchObject({
       avaliacao: { dadosSubjetivos: 'relato novo', dadosObjetivos: 'exame' },
@@ -101,7 +102,7 @@ describe('ConsultaEnfermagemPage', () => {
     await user.type(campo, '180,50');
     await user.click(within(dialogo).getByRole('button', { name: 'Assinar' }));
 
-    await waitFor(() => expect(mocks.assinar).toHaveBeenCalledWith('c1', { incluidaEmPacote: false, valorCentavos: 18050 }));
+    await waitFor(() => expect(mocks.assinar).toHaveBeenCalledWith('c1', { incluidaEmPacote: false, valorCentavos: 18050 }, 4)); // assina a versão que acabou de salvar
     expect(mocks.salvarRascunho).toHaveBeenCalled(); // salva antes de assinar
   });
 
@@ -115,7 +116,7 @@ describe('ConsultaEnfermagemPage', () => {
     expect(within(dialogo).queryByLabelText('Valor (R$)')).not.toBeInTheDocument();
     await user.click(within(dialogo).getByRole('button', { name: 'Assinar' }));
 
-    await waitFor(() => expect(mocks.assinar).toHaveBeenCalledWith('c1', { incluidaEmPacote: true }));
+    await waitFor(() => expect(mocks.assinar).toHaveBeenCalledWith('c1', { incluidaEmPacote: true }, 4));
   });
 
   it('consulta assinada: somente leitura, lista de adendos e "Adicionar adendo" (motivo mínimo de 10)', async () => {
@@ -167,6 +168,37 @@ describe('ConsultaEnfermagemPage', () => {
     montar();
     await screen.findByRole('navigation', { name: 'Etapas da consulta' });
     expect(screen.queryByRole('button', { name: 'Aplicar desfecho nas lesões' })).not.toBeInTheDocument();
+  });
+
+  it('R1: 409 "alterada em outra tela" mantém o texto local, avisa e não grava; recarregar traz a versão atual', async () => {
+    const user = userEvent.setup();
+    const erro409 = Object.assign(new Error('409'), { isAxiosError: true, response: { status: 409, data: { message: 'A consulta foi alterada em outra tela' } } });
+    mocks.salvarRascunho.mockRejectedValueOnce(erro409);
+    montar();
+    await user.click(await screen.findByRole('button', { name: '5. Evolução' }));
+    await user.type(await screen.findByLabelText('Evolução'), 'texto que não pode sumir');
+    await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+
+    const alerta = await screen.findByRole('alert');
+    expect(alerta).toHaveTextContent('A consulta foi alterada em outra tela');
+    expect(screen.getByLabelText('Evolução')).toHaveValue('texto que não pode sumir');
+    expect(mocks.get).toHaveBeenCalledTimes(1); // não recarregou por conta própria
+
+    mocks.get.mockResolvedValue({ ...rascunho, versao: 9, evolucao: { texto: 'versão da outra tela' } });
+    await user.click(within(alerta).getByRole('button', { name: /Carregar versão atual/ }));
+    await waitFor(() => expect(screen.getByLabelText('Evolução')).toHaveValue('versão da outra tela'));
+    expect(screen.queryByText(/foi alterada em outra tela\. O texto desta tela/)).not.toBeInTheDocument();
+  });
+
+  it('R1: selo de integridade FALHA aparece em destaque; VALIDA mostra o selo conferido (nunca "assinatura digital")', async () => {
+    mocks.get.mockResolvedValue({ ...assinada, integridade: 'FALHA' });
+    const { unmount } = montar();
+    expect(await screen.findByText(/Selo de integridade NÃO confere/)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/assinatura digital|ICP/i);
+    unmount();
+    mocks.get.mockResolvedValue({ ...assinada, integridade: 'VALIDA' });
+    montar();
+    expect(await screen.findByText('Selo de integridade conferido')).toBeInTheDocument();
   });
 
   it('enfermeiro que NÃO é o autor vê o rascunho somente leitura (sem salvar/assinar)', async () => {

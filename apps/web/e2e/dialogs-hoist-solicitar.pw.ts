@@ -5,7 +5,7 @@ import { test, expect, type Page } from '@playwright/test';
 // API simulada pelo Playwright.
 
 const ADMIN = { id: 'u1', nome: 'Admin', email: 'adm@clinica.example', papel: 'ADMIN', clinicaId: 'cli-1' };
-const ENFERMEIRO = { id: 'u2', nome: 'Psi', email: 'psi@clinica.example', papel: 'ENFERMEIRO', clinicaId: 'cli-1' };
+const ENFERMEIRO = { id: 'u2', nome: 'Enfermeira', email: 'enf@clinica.example', papel: 'ENFERMEIRO', clinicaId: 'cli-1', coren: 'COREN-SP 123456' };
 const PACIENTE = {
   id: 'p1', nome: 'Maria da Silva', cpf: '52998224725', dataNascimento: '1990-01-01T00:00:00.000Z',
   sexo: 'F', telefone: '11999990000', email: 'maria@example.com', ativo: true,
@@ -26,22 +26,24 @@ async function abrirPaciente(page: Page, user: unknown) {
   await expect(page.getByText('Dados cadastrais')).toBeVisible();
 }
 
-test.describe('Dialog de Secao recolhida (Aplicar teste)', () => {
-  test('clicar em "Aplicar teste" com a seção recolhida abre o dialog', async ({ page }) => {
+// R1.7: antes este caso usava a seção "Testes Psicológicos" (herdada do psi e removida). Mesmo comportamento, agora
+// na seção Documentos, cujo botão "Novo documento" fica na barra da seção recolhida.
+test.describe('Dialog de Secao recolhida (Novo documento)', () => {
+  test('clicar em "Novo documento" com a seção recolhida abre o dialog', async ({ page }) => {
     await abrirPaciente(page, ENFERMEIRO);
-    await page.getByRole('button', { name: 'Aplicar teste' }).click();
-    await expect(page.getByRole('dialog')).toContainText('Aplicar teste psicológico');
+    await page.getByRole('button', { name: 'Novo documento' }).click();
+    await expect(page.getByRole('dialog')).toContainText('Novo documento');
   });
 
   test('recolher a seção com o dialog aberto não o desmonta nem perde o texto', async ({ page }) => {
     await abrirPaciente(page, ENFERMEIRO);
-    await page.getByText('Testes Psicológicos').click(); // expande
-    await page.getByRole('button', { name: 'Aplicar teste' }).click();
-    await page.getByLabel('Resultado (opcional)').fill('escore parcial');
+    await page.getByText('Documentos', { exact: true }).click(); // expande
+    await page.getByRole('button', { name: 'Novo documento' }).click();
+    await page.getByPlaceholder('Digite o título do documento').fill('Relatório de curativo');
     // recolhe a seção pelo cabeçalho (o overlay do dialog cobre a tela, então via DOM)
-    await page.getByText('Testes Psicológicos').first().dispatchEvent('click');
+    await page.getByText('Documentos', { exact: true }).first().dispatchEvent('click');
     await expect(page.getByRole('dialog')).toBeVisible();
-    await expect(page.getByLabel('Resultado (opcional)')).toHaveValue('escore parcial');
+    await expect(page.getByPlaceholder('Digite o título do documento')).toHaveValue('Relatório de curativo');
   });
 });
 

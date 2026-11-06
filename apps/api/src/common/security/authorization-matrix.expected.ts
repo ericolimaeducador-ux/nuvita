@@ -236,9 +236,6 @@ export const MATRIZ_API: Record<string, string> = {
   'GET /telemedicina/acesso/:token/sinais': 'PUBLICO',
   'POST /telemedicina/acesso/:token/eventos': 'PUBLICO',
 
-  'POST /testes-psicologicos': 'E',
-  'GET /testes-psicologicos': 'E',
-
   // tickets de correção de identidade
   'POST /tickets': 'AES',
   'GET /tickets': 'SUPER_ADMIN',

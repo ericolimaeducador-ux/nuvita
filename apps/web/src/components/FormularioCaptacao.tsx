@@ -86,7 +86,7 @@ export function FormularioCaptacao({
           id="cpf"
           name="cpf"
           inputMode="numeric"
-          placeholder="000.000.000-00"
+          placeholder="Deixe em branco se não souber"
           pattern="\d{3}\.?\d{3}\.?\d{3}-?\d{2}"
           title="Informe o CPF com 11 dígitos."
           value={values.cpf}

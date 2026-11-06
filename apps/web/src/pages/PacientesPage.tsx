@@ -428,7 +428,7 @@ export function PacientesPage() {
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="cpf">CPF (opcional)</Label>
-                <Input id="cpf" placeholder="000.000.000-00" {...register('cpf')} />
+                <Input id="cpf" placeholder="Deixe em branco se não souber" {...register('cpf')} />
                 {errors.cpf && <p className="text-sm text-destructive">{errors.cpf.message}</p>}
               </div>
               <div className="space-y-2">

@@ -1285,6 +1285,17 @@ export const STATUS_COBRANCA_CONSULTA_LABEL: Record<StatusCobrancaConsulta, stri
   [StatusCobrancaConsulta.PENDENTE_GERACAO]: 'Cobrança pendente',
 };
 
+export interface IdentificacaoLesaoRegistrada {
+  lesaoId: string;
+  numero: number;
+  localizacaoAnatomica: string;
+  lado: IdentificacaoLesao['lado'];
+  etiologia: IdentificacaoLesao['etiologia'];
+  subtipoUmidade?: IdentificacaoLesao['subtipoUmidade'];
+  etiologiaOutra?: string;
+  versaoCadastro: number;
+}
+
 export interface ConsultaEnfermagem {
   id: string;
   clinicaId: string;
@@ -1306,6 +1317,14 @@ export interface ConsultaEnfermagem {
   cobranca?: { incluidaEmPacote: boolean; valorCentavos?: number; status: StatusCobrancaConsulta; cobrancaId?: string };
   /** Feridas (5c): situação da aplicação do desfecho nas lesões (só quando algum desfecho fecha lesão). */
   desfechoLesoesStatus?: 'APLICADO' | 'PENDENTE_APLICACAO';
+  /** R1: versão do rascunho (salvar e assinar exigem a versão lida; divergente -> 409). */
+  versao: number;
+  /** R1: selo de integridade (HMAC do servidor) recalculado na leitura de consulta assinada. NÃO é assinatura digital. */
+  integridade?: 'VALIDA' | 'FALHA';
+  /** R1: identificação das lesões avaliadas, como estava na assinatura. */
+  identificacoesLesoes?: IdentificacaoLesaoRegistrada[];
+  /** R1: só na resposta da assinatura — o que ficou pendente depois de a assinatura já estar gravada. */
+  pendencias?: Array<'AUDITORIA' | 'COBRANCA' | 'DESFECHO_LESOES'>;
   criadoEm: string;
   atualizadoEm: string;
 }

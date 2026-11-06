@@ -107,7 +107,7 @@ export function CompletarLeadDialog({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="leadCpf">CPF</Label>
-            <Input id="leadCpf" inputMode="numeric" placeholder="000.000.000-00" value={form.cpf} onChange={(e) => set('cpf', e.target.value)} />
+            <Input id="leadCpf" inputMode="numeric" placeholder="Deixe em branco se não souber" value={form.cpf} onChange={(e) => set('cpf', e.target.value)} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="leadNasc">Data de nascimento</Label>

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
+import type { AxiosError } from 'axios';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { AlertTriangle, ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Plus, ShieldAlert, ShieldCheck, Trash2 } from 'lucide-react';
 import { ErroConsulta } from '@/components/ErroConsulta';
 import { PageHeader } from '@/components/PageHeader';
 import { Badge } from '@/components/ui/badge';
@@ -150,13 +151,16 @@ export function ConsultaEnfermagemPage() {
   const [adendoAberto, setAdendoAberto] = useState(false);
   const [motivo, setMotivo] = useState('');
   const [textoAdendo, setTextoAdendo] = useState('');
+  // R1: versão do rascunho que esta tela leu/salvou por último; conflito = outra tela salvou antes (texto local mantido).
+  const [versao, setVersao] = useState(1);
+  const [conflito, setConflito] = useState(false);
 
   const consultaQ = useQuery({ queryKey: ['consulta', consultaId], queryFn: () => consultasApi.get(consultaId), enabled: !!consultaId });
   const configQ = useQuery({ queryKey: ['cobrancas-config'], queryFn: () => cobrancasApi.config(), enabled: assinando });
   const consulta = consultaQ.data;
   const pacienteQ = useQuery({ queryKey: ['paciente', pacienteId], queryFn: () => pacientesApi.get(pacienteId), enabled: !!pacienteId });
 
-  useEffect(() => { if (consulta) setForm(doServidor(consulta)); }, [consulta]);
+  useEffect(() => { if (consulta) { setForm(doServidor(consulta)); setVersao(consulta.versao ?? 1); } }, [consulta]);
   useEffect(() => { if (configQ.data) setValor(centavosParaInput(configQ.data.valorConsultaCentavos)); }, [configQ.data]);
 
   const ehAutor = !!consulta && consulta.enfermeiroId === user?.id;
@@ -170,25 +174,43 @@ export function ConsultaEnfermagemPage() {
     void qc.invalidateQueries({ queryKey: ['cobrancas', pacienteId] });
   };
 
+  const tratarConflito = (e: unknown, titulo: string) => {
+    if (ehAlteradaEmOutraTela(e)) {
+      // NÃO revalida: o formulário fica com o texto desta tela até o enfermeiro decidir recarregar.
+      setConflito(true);
+      setAssinando(false);
+      toast.error('A consulta foi alterada em outra tela', 'Seu texto foi mantido nesta tela. Nada foi gravado.');
+      return;
+    }
+    toast.error(titulo, apiErrorMessage(e));
+  };
+  const recarregarVersaoAtual = async () => {
+    const r = await consultaQ.refetch();
+    if (r.data) { setForm(doServidor(r.data)); setVersao(r.data.versao ?? 1); }
+    setConflito(false);
+  };
+
   const salvarMut = useMutation({
-    mutationFn: () => consultasApi.salvarRascunho(consultaId, paraPayload(form!)),
-    onSuccess: () => { toast.success('Rascunho salvo.'); revalidar(); },
-    onError: (e) => toast.error('Erro ao salvar o rascunho', apiErrorMessage(e)),
+    mutationFn: () => consultasApi.salvarRascunho(consultaId, paraPayload(form!), versao),
+    onSuccess: (c) => { setVersao(c.versao); toast.success('Rascunho salvo.'); revalidar(); },
+    onError: (e) => tratarConflito(e, 'Erro ao salvar o rascunho'),
   });
   const valorCentavos = reaisParaCentavos(valor);
   const assinarMut = useMutation({
     mutationFn: async () => {
-      await consultasApi.salvarRascunho(consultaId, paraPayload(form!));
-      return consultasApi.assinar(consultaId, pacote ? { incluidaEmPacote: true } : { incluidaEmPacote: false, valorCentavos });
+      const salva = await consultasApi.salvarRascunho(consultaId, paraPayload(form!), versao);
+      setVersao(salva.versao);
+      return consultasApi.assinar(consultaId, pacote ? { incluidaEmPacote: true } : { incluidaEmPacote: false, valorCentavos }, salva.versao);
     },
     onSuccess: (c) => {
       setAssinando(false);
       if (c.cobranca?.status === StatusCobrancaConsulta.PENDENTE_GERACAO) toast.error('Consulta assinada, mas a cobrança ficou pendente', 'Use "Gerar cobrança".');
       else if (c.desfechoLesoesStatus === 'PENDENTE_APLICACAO') toast.error('Consulta assinada, mas o desfecho não foi aplicado nas lesões', 'Use "Aplicar desfecho nas lesões".');
+      else if (c.pendencias?.includes('AUDITORIA')) toast.success('Consulta assinada.', 'O registro de auditoria será concluído automaticamente.');
       else toast.success('Consulta assinada.');
       revalidar();
     },
-    onError: (e) => toast.error('Erro ao assinar', apiErrorMessage(e)),
+    onError: (e) => tratarConflito(e, 'Erro ao assinar'),
   });
   const gerarMut = useMutation({
     mutationFn: () => consultasApi.gerarCobranca(consultaId),
@@ -241,6 +263,9 @@ export function ConsultaEnfermagemPage() {
             Assinada em {dayjs(consulta.assinatura.dataAssinatura).format('DD/MM/YYYY HH:mm')} · COREN {consulta.assinatura.coren}
           </span>
         )}
+        {assinada && consulta.integridade === 'VALIDA' && (
+          <Badge variant="outline" className="gap-1"><ShieldCheck className="h-3 w-3" /> Selo de integridade conferido</Badge>
+        )}
         {consulta.cobranca && (
           <Badge variant="outline">
             {STATUS_COBRANCA_CONSULTA_LABEL[consulta.cobranca.status]}
@@ -258,6 +283,24 @@ export function ConsultaEnfermagemPage() {
               {gerarMut.isPending ? 'Gerando…' : 'Gerar cobrança'}
             </Button>
           )}
+        </div>
+      )}
+
+      {conflito && (
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive bg-destructive/10 p-3 text-sm">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
+          <span className="flex-1">
+            A consulta foi alterada em outra tela. O texto desta tela foi mantido e nada foi gravado: copie o que precisar antes de
+            carregar a versão atual.
+          </span>
+          <Button size="sm" variant="outline" onClick={() => void recarregarVersaoAtual()}>Carregar versão atual (descarta o texto desta tela)</Button>
+        </div>
+      )}
+
+      {assinada && consulta.integridade === 'FALHA' && (
+        <div role="alert" className="flex items-center gap-3 rounded-lg border-2 border-destructive bg-destructive/10 p-3 text-sm font-medium text-destructive">
+          <ShieldAlert className="h-5 w-5 shrink-0" />
+          <span>Selo de integridade NÃO confere: o conteúdo gravado difere do que foi selado na assinatura. Comunique o responsável técnico.</span>
         </div>
       )}
 
@@ -288,6 +331,7 @@ export function ConsultaEnfermagemPage() {
             <ModulosAvaliacao
               consultaId={consultaId}
               pacienteId={pacienteId}
+              identificacoesLesoes={assinada ? consulta.identificacoesLesoes : undefined}
               modulos={form.modulos}
               editavel={editavel}
               classificacoes={(pacienteQ.data?.classificacoes ?? []) as string[]}
@@ -442,4 +486,10 @@ export function ConsultaEnfermagemPage() {
       </Dialog>
     </div>
   );
+}
+
+/** 409 de concorrência do rascunho (a API usa esta mensagem só para "outra tela salvou antes"). */
+function ehAlteradaEmOutraTela(e: unknown): boolean {
+  const r = (e as AxiosError<{ message?: string }>)?.response;
+  return r?.status === 409 && /alterada em outra tela/i.test(String(r.data?.message ?? ''));
 }

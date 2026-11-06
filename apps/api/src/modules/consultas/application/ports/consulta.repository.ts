@@ -4,10 +4,14 @@ import {
   AssinaturaConsulta,
   CobrancaConsulta,
   ConsultaEnfermagem,
+  IdentificacaoLesaoRegistrada,
   StatusDesfechoLesoes,
 } from '../../domain/consulta-enfermagem.entity';
 
-export type NovaConsulta = Omit<ConsultaEnfermagem, 'id' | 'criadoEm' | 'atualizadoEm' | 'assinatura' | 'cobranca' | 'desfechoLesoesStatus'>;
+export type NovaConsulta = Omit<
+  ConsultaEnfermagem,
+  'id' | 'criadoEm' | 'atualizadoEm' | 'assinatura' | 'cobranca' | 'desfechoLesoesStatus' | 'versao' | 'identificacoesLesoes' | 'auditoriaAssinaturaPendente'
+>;
 
 export type ConteudoConsulta = Partial<
   Pick<ConsultaEnfermagem, 'avaliacao' | 'diagnosticos' | 'planejamento' | 'implementacao' | 'evolucao'>
@@ -17,16 +21,26 @@ export interface ConsultaRepository {
   create(data: NovaConsulta): Promise<ConsultaEnfermagem>;
   findById(clinicaId: string, id: string): Promise<ConsultaEnfermagem | null>;
   listByPaciente(clinicaId: string, pacienteId: string): Promise<ConsultaEnfermagem[]>;
-  /** Só RASCUNHO e só do autor (condicional: rascunho assinado no meio do caminho não é alterado). */
-  updateRascunho(clinicaId: string, id: string, autorId: string, conteudo: ConteudoConsulta): Promise<ConsultaEnfermagem | null>;
-  /** Assinatura condicional: só RASCUNHO do autor vira ASSINADA (trava). Grava a decisão de cobrança junto. */
+  /**
+   * Só RASCUNHO, só do autor e só na VERSÃO esperada (condicional); incrementa a versão. null = assinada no meio do
+   * caminho ou alterada em outra tela (nada é sobrescrito).
+   */
+  updateRascunho(clinicaId: string, id: string, autorId: string, versaoEsperada: number, conteudo: ConteudoConsulta): Promise<ConsultaEnfermagem | null>;
+  /**
+   * Assinatura condicional: só RASCUNHO do autor NA VERSÃO cujo conteúdo foi selado vira ASSINADA (trava). Grava a
+   * decisão de cobrança e a identificação das lesões junto. Impossível gravar o selo de A com o conteúdo de B.
+   */
   assinar(
     clinicaId: string,
     id: string,
     autorId: string,
+    versaoEsperada: number,
     assinatura: AssinaturaConsulta,
     cobranca: CobrancaConsulta,
+    identificacoesLesoes?: IdentificacaoLesaoRegistrada[],
   ): Promise<ConsultaEnfermagem | null>;
+  /** Marca/limpa a pendência de auditoria da assinatura (consulta assinada). */
+  marcarAuditoriaAssinatura(clinicaId: string, id: string, pendente: boolean): Promise<void>;
   /** Pós-assinatura, só a situação da COBRANÇA muda (o conteúdo clínico continua travado). */
   atualizarCobranca(clinicaId: string, id: string, cobranca: CobrancaConsulta): Promise<ConsultaEnfermagem | null>;
   /** Pós-assinatura: situação da aplicação do desfecho nas lesões (o conteúdo clínico continua travado). */

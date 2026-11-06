@@ -27,7 +27,7 @@ import { AuditEvent } from '../../auth/domain/audit-event.enum';
 import { PacientesService } from '../../pacientes/application/pacientes.service';
 import { ProdutosService } from '../../produtos/application/produtos.service';
 import { CONSULTA_REPOSITORY, LESAO_REPOSITORY } from '../consultas.constants';
-import { ConsultaEnfermagem, StatusConsulta } from '../domain/consulta-enfermagem.entity';
+import { ConsultaEnfermagem, IdentificacaoLesaoRegistrada, StatusConsulta } from '../domain/consulta-enfermagem.entity';
 import { ConsentimentoImagem, IdentificacaoLesao, Lesao } from '../domain/lesao.entity';
 import { ConsultaRepository } from './ports/consulta.repository';
 import { LesaoRepository } from './ports/lesao.repository';
@@ -299,6 +299,29 @@ export class LesoesService {
       }
     }
     return resultado;
+  }
+
+  /** Cópia da identificação de cada lesão avaliada, para gravar na assinatura (sem campos indefinidos). */
+  async identificacoesParaAssinatura(consulta: ConsultaEnfermagem): Promise<IdentificacaoLesaoRegistrada[] | undefined> {
+    const dados = this.moduloFerida(consulta);
+    const avaliacoes = dados?.avaliacoes ?? [];
+    if (avaliacoes.length === 0) return undefined;
+    const lista: IdentificacaoLesaoRegistrada[] = [];
+    for (const av of avaliacoes) {
+      const l = await this.repo.findById(consulta.clinicaId, av.lesaoId);
+      if (!l) throw new ConflictException('Lesao avaliada nao encontrada. Revise o modulo Ferida antes de assinar.');
+      lista.push({
+        lesaoId: l.id,
+        numero: l.numero,
+        localizacaoAnatomica: l.localizacaoAnatomica,
+        lado: l.lado,
+        etiologia: l.etiologia,
+        ...(l.subtipoUmidade ? { subtipoUmidade: l.subtipoUmidade } : {}),
+        ...(l.etiologiaOutra ? { etiologiaOutra: l.etiologiaOutra } : {}),
+        versaoCadastro: l.versao,
+      });
+    }
+    return lista;
   }
 
   /** A lesão é deste paciente na clínica? (fotos da consulta são vinculadas a uma lesão) */

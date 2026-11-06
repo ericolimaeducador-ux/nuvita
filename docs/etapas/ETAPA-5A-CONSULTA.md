@@ -56,3 +56,9 @@ _INCLUIDA_EM_PACOTE. Metadata: ids, step names, counts — never clinical text.
   when PENDENTE_GERACAO.
 - Patient page: chronological, read-only list of consultations (ENFERMEIRO only).
 - Legacy prontuários are untouched and read-only.
+
+## Stage R1 changes (reliability)
+- `versao` on the consultation; save and sign require it (409 "A consulta foi alterada em outra tela" when divergent, nothing overwritten).
+- The HMAC is computed over the content of the version being signed; the conditional write filters `{ status: RASCUNHO, versao }`.
+- Signing stores `identificacoesLesoes` (FERIDA module), covered by the seal. Reads expose `integridade: VALIDA | FALHA` ("selo de integridade",
+  never "assinatura digital"). Failures after the signature is persisted become pendings (`pendencias` in the 200 response).

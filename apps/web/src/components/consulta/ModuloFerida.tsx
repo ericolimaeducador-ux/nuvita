@@ -43,7 +43,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
 import { apiErrorMessage } from '@/api/client';
 import { consultasApi, lesoesApi, produtosApi } from '@/api/resources';
-import type { Lesao } from '@/types';
+import type { IdentificacaoLesaoRegistrada, Lesao } from '@/types';
 import { MedicaoFoto, fmt, medicaoValida, type RascunhoMedicao } from './MedicaoFoto';
 
 /**
@@ -246,12 +246,19 @@ function FotosLesao({ consultaId, lesaoId, fotos, editavel, onChange }: Comum & 
 
 // ---------------- avaliação de uma lesão ----------------
 
-function AvaliacaoLesaoCampos({ consultaId, lesao, av, onChange, onRemover, editavel }: Comum & {
-  consultaId: string; lesao?: Lesao; av: AvaliacaoLesao; onChange: (a: AvaliacaoLesao) => void; onRemover: () => void;
+/** Mesma identificação? (compara só os campos clínicos da identificação) */
+function mesmaIdentificacao(a: IdentificacaoLesaoRegistrada, l: Lesao): boolean {
+  return a.localizacaoAnatomica === l.localizacaoAnatomica && a.lado === l.lado && a.etiologia === l.etiologia
+    && (a.subtipoUmidade ?? '') === (l.subtipoUmidade ?? '') && (a.etiologiaOutra ?? '') === (l.etiologiaOutra ?? '');
+}
+
+function AvaliacaoLesaoCampos({ consultaId, lesao, registrada, av, onChange, onRemover, editavel }: Comum & {
+  consultaId: string; lesao?: Lesao; registrada?: IdentificacaoLesaoRegistrada; av: AvaliacaoLesao; onChange: (a: AvaliacaoLesao) => void; onRemover: () => void;
 }) {
   const set = <K extends keyof AvaliacaoLesao>(k: K, v: AvaliacaoLesao[K]) => onChange({ ...av, [k]: v });
   const id = av.lesaoId;
-  const etiologia = lesao?.etiologia;
+  // Consulta assinada: as condicionais seguem a etiologia REGISTRADA no atendimento (não a corrigida depois).
+  const etiologia = registrada?.etiologia ?? lesao?.etiologia;
   const percentuais = av.tecido?.percentuais ?? {};
   const soma = TECIDOS.reduce((s, t) => s + (percentuais[t] ?? 0), 0);
   const algumPercentual = TECIDOS.some((t) => percentuais[t] !== undefined);
@@ -266,7 +273,7 @@ function AvaliacaoLesaoCampos({ consultaId, lesao, av, onChange, onRemover, edit
   return (
     <details open className="rounded-lg border border-border p-3" data-testid={`avaliacao-lesao-${id}`}>
       <summary className="flex cursor-pointer items-center gap-2 font-medium">
-        <span className="flex-1">{lesao ? descreverLesao(lesao) : 'Lesão'}</span>
+        <span className="flex-1">{registrada ? descreverLesao(registrada) : lesao ? descreverLesao(lesao) : 'Lesão'}</span>
         {editavel && (
           <Button type="button" variant="ghost" size="icon" aria-label="Remover esta lesão da avaliação" onClick={(e) => { e.preventDefault(); onRemover(); }}>
             <Trash2 className="h-4 w-4" />
@@ -274,6 +281,14 @@ function AvaliacaoLesaoCampos({ consultaId, lesao, av, onChange, onRemover, edit
         )}
       </summary>
       <div className="space-y-3 pt-3">
+        {registrada && (
+          <div className="space-y-0.5 rounded border border-border bg-muted/40 p-2 text-xs" data-testid={`identificacao-${id}`}>
+            <p><span className="font-medium">Identificação registrada neste atendimento:</span> {descreverLesao(registrada)}{registrada.subtipoUmidade ? ` · ${r(registrada.subtipoUmidade)}` : ''}</p>
+            {lesao && !mesmaIdentificacao(registrada, lesao) && (
+              <p><span className="font-medium">Identificação atual:</span> {descreverLesao(lesao)}{lesao.subtipoUmidade ? ` · ${r(lesao.subtipoUmidade)}` : ''}</p>
+            )}
+          </div>
+        )}
         {etiologia === 'LESAO_POR_PRESSAO' && (
           <fieldset className="space-y-2 rounded border border-border p-2">
             <legend className="px-1 text-sm font-medium">Lesão por pressão</legend>
@@ -516,8 +531,8 @@ function ItbCampos({ itb, onChange, editavel }: Comum & { itb: MedidaITB[]; onCh
 
 // ---------------- módulo ----------------
 
-export function ModuloFeridaCampos({ consultaId, pacienteId, dados, onChange, editavel }: Comum & {
-  consultaId: string; pacienteId: string; dados: ModuloFerida; onChange: (d: ModuloFerida) => void;
+export function ModuloFeridaCampos({ consultaId, pacienteId, dados, onChange, editavel, identificacoesLesoes }: Comum & {
+  consultaId: string; pacienteId: string; dados: ModuloFerida; onChange: (d: ModuloFerida) => void; identificacoesLesoes?: IdentificacaoLesaoRegistrada[];
 }) {
   const lesoesQ = useQuery({ queryKey: ['lesoes', pacienteId], queryFn: () => lesoesApi.listByPaciente(pacienteId), enabled: !!pacienteId });
   const [cadastrando, setCadastrando] = useState(false);
@@ -554,6 +569,7 @@ export function ModuloFeridaCampos({ consultaId, pacienteId, dados, onChange, ed
       {avaliacoes.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma lesão avaliada nesta consulta.</p>}
       {avaliacoes.map((av, i) => (
         <AvaliacaoLesaoCampos key={av.lesaoId} consultaId={consultaId} lesao={porId.get(av.lesaoId)} av={av} editavel={editavel}
+          registrada={identificacoesLesoes?.find((x) => x.lesaoId === av.lesaoId)}
           onChange={(a) => onChange({ ...dados, avaliacoes: avaliacoes.map((x, j) => (j === i ? a : x)) })}
           onRemover={() => onChange({ ...dados, avaliacoes: avaliacoes.filter((_, j) => j !== i) })} />
       ))}

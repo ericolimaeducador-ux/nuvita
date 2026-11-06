@@ -165,7 +165,9 @@ docker compose up -d mongodb redis
 cp .env.example apps/api/.env
 #    Preencha ao menos JWT_*_SECRET, PATIENT_DATA_ENCRYPTION_KEY (32 bytes
 #    base64), PATIENT_DATA_HASH_KEY, PRONTUARIO_SIGNATURE_SECRET e
-#    BOOTSTRAP_SECRET. Gerador rápido:
+#    BOOTSTRAP_SECRET. Gerador rápido (SÓ desenvolvimento local; em produção, a migração do Nuvita Estomaterapia
+#    REAPROVEITA PATIENT_DATA_ENCRYPTION_KEY, PATIENT_DATA_HASH_KEY e PRONTUARIO_SIGNATURE_SECRET do serviço real
+#    — nunca gerar nem rotacionar; ver infra/PRODUCTION-CHECKLIST.md):
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 # 3) API (http://localhost:3000 — Swagger em /docs no modo development)

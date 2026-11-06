@@ -3,15 +3,15 @@ import { test, expect, type Page } from '@playwright/test';
 // Página INTEIRA do atestado (rota real, fluxo "Gerar atestado"), não só o DocumentoTimbre.
 // Sessão e API simuladas; nada vai ao backend.
 
-const ENFERMEIRO = { id: 'u1', nome: 'Dra. Ana Souza', email: 'ana@mentesa.example', papel: 'ENFERMEIRO', clinicaId: 'c1', coren: '06/12345' };
+const ENFERMEIRO = { id: 'u1', nome: 'Dra. Ana Souza', email: 'ana@exemplo.example', papel: 'ENFERMEIRO', clinicaId: 'c1', coren: '06/12345' };
 
 const CLINICA_CNPJ = {
-  nome: 'Clínica Mente Sã',
+  nome: 'Clínica Exemplo',
   documento: '12345678000195',
   tipoDocumento: 'CNPJ',
   endereco: { logradouro: 'Rua das Acácias', numero: '120', cidade: 'Belo Horizonte', estado: 'MG' },
   telefone: '(31) 3333-4444',
-  emailContato: 'contato@mentesa.example',
+  emailContato: 'contato@exemplo.example',
 };
 
 async function abrirAtestado(page: Page, clinica: Record<string, unknown>) {
@@ -32,9 +32,9 @@ async function abrirAtestado(page: Page, clinica: Record<string, unknown>) {
     route.fulfill({
       json: {
         id: 'doc-1', protocolo: 'NV-ABC12345', tipo: 'ATESTADO_COMPARECIMENTO', titulo: 'Atestado de Comparecimento',
-        corpo: 'Atesto para os devidos fins que Paciente Fictício compareceu a atendimento psicológico em 20/10/2026, às 14:00.',
+        corpo: 'Atesto para os devidos fins que Paciente Fictício compareceu a consulta de enfermagem em 20/10/2026, às 14:00.',
         atendimento: { data: '20/10/2026', horaInicio: '14:00', horaFim: '15:00' },
-        emissor: { nome: 'Dra. Ana Souza', coren: '06/12345' }, clinica: { nome: 'Clínica Mente Sã' },
+        emissor: { nome: 'Dra. Ana Souza', coren: '06/12345' }, clinica: { nome: 'Clínica Exemplo' },
         emitidoEm: '2026-10-23T12:00:00.000Z',
       },
     }),
@@ -48,11 +48,11 @@ test.describe('atestado — página inteira', () => {
   test('1. compõe o documento completo: timbre, corpo, assinatura e rodapé', async ({ page }) => {
     await abrirAtestado(page, CLINICA_CNPJ);
     const doc = page.locator('.documento-clinico-print');
-    await expect(doc.locator('header')).toContainText('Clínica Mente Sã');
+    await expect(doc.locator('header')).toContainText('Clínica Exemplo');
     await expect(doc).toContainText('Atestado de Comparecimento');
     await expect(doc).toContainText('Paciente Fictício');
     await expect(page.getByTestId('assinatura')).toContainText('Dra. Ana Souza — COREN 06/12345');
-    await expect(doc.locator('footer')).toContainText('Clínica Mente Sã');
+    await expect(doc.locator('footer')).toContainText('Clínica Exemplo');
   });
 
   test('2. CNPJ sai com máscara 00.000.000/0000-00 no cabeçalho e no rodapé', async ({ page }) => {

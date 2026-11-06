@@ -105,6 +105,8 @@ export class CreateConsultaDto extends ConteudoConsultaDto {
 
 export class UpdateConsultaDto extends ConteudoConsultaDto {
   @IsOptional() @IsString() clinicaId?: string;
+  /** Versão lida pela tela; divergente -> 409 (alterada em outra tela), nada é sobrescrito. */
+  @IsInt() @Min(1) versao!: number;
 }
 
 export class CobrancaAssinaturaDto {
@@ -116,6 +118,8 @@ export class CobrancaAssinaturaDto {
 
 export class AssinarConsultaDto {
   @ValidateNested() @Type(() => CobrancaAssinaturaDto) cobranca!: CobrancaAssinaturaDto;
+  /** Versão cujo conteúdo será selado; divergente -> 409. */
+  @IsInt() @Min(1) versao!: number;
 }
 
 export class CreateAdendoConsultaDto {

@@ -52,6 +52,7 @@ function makeService(user: User) {
       sub: user.id,
       email: user.email,
       papel: user.papel,
+      clinicaId: user.clinicaId,
     }),
   };
 
@@ -142,6 +143,8 @@ describe('AuthService.validateAccessPayload — enriquece request.user (Fase 2b)
     sub: 'u1',
     email: 'fulana@nuvita.test',
     papel: Papel.ENFERMEIRO,
+    // Token coerente com o usuário de teste (R1: papel e clínica do token precisam ser os atuais).
+    clinicaId: 'c1',
   };
 
   it('anexa deveTrocarSenha e termosAceitos ao que retorna', async () => {
@@ -158,7 +161,7 @@ describe('AuthService.validateAccessPayload — enriquece request.user (Fase 2b)
   });
 
   it('normaliza ausência para false / null', async () => {
-    const user = makeUser({ deveTrocarSenha: false, termosAceitos: null });
+    const user = makeUser({ papel: Papel.ENFERMEIRO, deveTrocarSenha: false, termosAceitos: null });
     const { service } = makeService(user);
 
     const result = await service.validateAccessPayload(accessPayload);
@@ -395,6 +398,8 @@ describe('AuthService — revogação de sessão na troca de senha (Fase 3)', ()
     sub: 'u1',
     email: 'fulana@nuvita.test',
     papel: Papel.ENFERMEIRO,
+    // Token coerente com o usuário de teste (R1: papel e clínica do token precisam ser os atuais).
+    clinicaId: 'c1',
   };
 
   const cutoff = new Date('2026-09-12T10:00:00.000Z');
@@ -448,6 +453,7 @@ describe('AuthService — revogação de sessão na troca de senha (Fase 3)', ()
         sub: user.id,
         email: user.email,
         papel: user.papel,
+        clinicaId: user.clinicaId,
         iat: cutoffEpoch - 60,
       });
 
@@ -463,6 +469,7 @@ describe('AuthService — revogação de sessão na troca de senha (Fase 3)', ()
         sub: user.id,
         email: user.email,
         papel: user.papel,
+        clinicaId: user.clinicaId,
         iat: cutoffEpoch + 60,
       });
 
@@ -480,6 +487,7 @@ describe('AuthService — revogação de sessão na troca de senha (Fase 3)', ()
         sub: user.id,
         email: user.email,
         papel: user.papel,
+        clinicaId: user.clinicaId,
         iat: 1,
       });
 
@@ -497,6 +505,7 @@ describe('AuthService — revogação de sessão na troca de senha (Fase 3)', ()
         sub: user.id,
         email: user.email,
         papel: user.papel,
+        clinicaId: user.clinicaId,
         iat: 1,
       });
 
@@ -563,6 +572,8 @@ describe('AuthService — visibilidade e isolamento da revogação de sessão (F
     sub: 'u1',
     email: 'fulana@nuvita.test',
     papel: Papel.ENFERMEIRO,
+    // Token coerente com o usuário de teste (R1: papel e clínica do token precisam ser os atuais).
+    clinicaId: 'c1',
   };
   const cutoff = new Date('2026-09-12T10:00:00.000Z');
   const cutoffEpoch = Math.floor(cutoff.getTime() / 1000);
@@ -641,6 +652,7 @@ describe('AuthService — visibilidade e isolamento da revogação de sessão (F
         sub: user.id,
         email: user.email,
         papel: user.papel,
+        clinicaId: user.clinicaId,
         iat: cutoffEpoch - 60,
       });
 
@@ -694,5 +706,31 @@ describe('AuthService.aceitarTermos — fase de teste (C3, 2026-10-15)', () => {
   it('usuário fora do teste NÃO aceita o Termo de Teste', async () => {
     const { service } = makeService(makeUser({ papel: Papel.ENFERMEIRO, termosAceitos: null, faseTeste: false }));
     await expect(service.aceitarTermos('u1', TERMO_DE_TESTE_VERSAO_ATUAL, context)).rejects.toThrow(BadRequestException);
+  });
+});
+
+describe('R1.2 — revogação de acesso no servidor (papel/clínica atuais do banco)', () => {
+  const payload = { typ: 'access' as const, jti: 'jti-r1', sub: 'u1', email: 'fulana@nuvita.test', papel: Papel.ENFERMEIRO, clinicaId: 'c1' };
+
+  it('sessão aberta + mudança de PAPEL -> próxima chamada recusada (401)', async () => {
+    const { service } = makeService(makeUser({ papel: Papel.ADMIN, clinicaId: 'c1' }));
+    await expect(service.validateAccessPayload(payload)).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('sessão aberta + mudança de CLÍNICA -> próxima chamada recusada (401)', async () => {
+    const { service } = makeService(makeUser({ papel: Papel.ENFERMEIRO, clinicaId: 'c2' }));
+    await expect(service.validateAccessPayload(payload)).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('sessão aberta + usuário desativado -> recusada; sem mudança -> aceita', async () => {
+    await expect(makeService(makeUser({ papel: Papel.ENFERMEIRO, clinicaId: 'c1', ativo: false })).service.validateAccessPayload(payload)).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(makeService(makeUser({ papel: Papel.ENFERMEIRO, clinicaId: 'c1' })).service.validateAccessPayload(payload)).resolves.toMatchObject({ papel: Papel.ENFERMEIRO, clinicaId: 'c1' });
+  });
+
+  it('refresh também recusa token de papel/clínica antigos', async () => {
+    const { service } = makeService(makeUser({ papel: Papel.ADMIN, clinicaId: 'c1' }));
+    const s = service as unknown as { verifyRefreshToken: (t: string) => Promise<unknown> };
+    s.verifyRefreshToken = jest.fn().mockResolvedValue({ ...payload, typ: 'refresh' });
+    await expect(service.refresh('tok', { ip: '1', userAgent: 'j' })).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });

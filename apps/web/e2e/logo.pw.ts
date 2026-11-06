@@ -5,12 +5,12 @@ import { test, expect, type Page } from '@playwright/test';
 // cartão do SUPER_ADMIN). A API e o R2 são simulados aqui; nada vai ao backend.
 
 const CLINICA = {
-  nome: 'Clínica Mente Sã',
+  nome: 'Clínica Exemplo',
   documento: '12.345.678/0001-95',
   tipoDocumento: 'CNPJ',
 };
 const LOGO_URL = 'https://cdn.example/clinica-logo.png';
-const ADMIN = { id: 'u1', nome: 'Admin Mente Sã', email: 'adm@mentesa.example', papel: 'ADMIN', clinicaId: 'cli-A' };
+const ADMIN = { id: 'u1', nome: 'Admin Exemplo', email: 'adm@exemplo.example', papel: 'ADMIN', clinicaId: 'cli-A' };
 
 const PNG_1x1 = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',

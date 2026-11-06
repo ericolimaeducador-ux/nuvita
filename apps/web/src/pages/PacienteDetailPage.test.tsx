@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   agendaList: vi.fn(),
   documentosList: vi.fn(),
   observacoesList: vi.fn(),
-  testesList: vi.fn(),
   papel: 'ENFERMEIRO',
 }));
 
@@ -28,7 +27,6 @@ vi.mock('@/api/resources', async (importOriginal) => {
     agendaApi: { ...original.agendaApi, list: mocks.agendaList },
     documentosApi: { ...original.documentosApi, list: mocks.documentosList },
     observacoesPacienteApi: { ...original.observacoesPacienteApi, listByPaciente: mocks.observacoesList },
-    testesPsicologicosApi: { ...original.testesPsicologicosApi, listByPaciente: mocks.testesList },
   };
 });
 
@@ -82,7 +80,6 @@ describe('PacienteDetailPage — falha explícita', () => {
     mocks.agendaList.mockResolvedValue([]);
     mocks.documentosList.mockResolvedValue([]);
     mocks.observacoesList.mockResolvedValue([]);
-    mocks.testesList.mockResolvedValue([]);
   });
 
   it('lista vazia legítima continua mostrando "Nenhum atendimento"', async () => {
@@ -144,7 +141,6 @@ describe('PacienteDetailPage — falha explícita', () => {
   // Estas seções começam fechadas (abre pelo título) e algumas só existem fora do papel de enfermeiro.
   it.each([
     ['documentos', () => mocks.documentosList, 'Documentos', 'os documentos deste paciente', 'ENFERMEIRO'],
-    ['testes psicológicos', () => mocks.testesList, 'Testes Psicológicos', 'os testes psicológicos', 'ENFERMEIRO'],
     ['observações', () => mocks.observacoesList, 'Observações', 'as observações', 'ADMIN'],
     ['histórico de agenda', () => mocks.agendaList, 'Histórico de agenda', 'o histórico de agenda', 'ADMIN'],
   ])('erro em %s mostra alerta explícito no lugar de lista vazia', async (_nome, mock, titulo, recurso, papel) => {
@@ -156,5 +152,12 @@ describe('PacienteDetailPage — falha explícita', () => {
       const alertas = screen.getAllByRole('alert');
       expect(alertas.some((a) => a.textContent?.includes(recurso))).toBe(true);
     });
+  });
+
+  it('R1.4: a seção de testes psicológicos (herdada do psi) não existe mais', async () => {
+    mocks.papel = 'ENFERMEIRO';
+    renderizar();
+    await screen.findByText('Documentos');
+    expect(screen.queryByText(/Testes Psicológicos/i)).not.toBeInTheDocument();
   });
 });

@@ -1,5 +1,13 @@
 # Inventário de segredos do nuvita-psi
 
+> 🔴 **MIGRAÇÃO NUVITA ESTOMATERAPIA (vale acima de tudo neste arquivo).** Na virada do serviço real do Nuvita
+> para esta base, as chaves **`PATIENT_DATA_ENCRYPTION_KEY`, `PATIENT_DATA_HASH_KEY` e `PRONTUARIO_SIGNATURE_SECRET`
+> são REAPROVEITADAS do serviço real do Nuvita** — copiadas do Secret Manager, **nunca geradas de novo e nunca
+> rotacionadas**. Gerar ou rotacionar qualquer uma delas deixa os dados reais indecifráveis (CPF e responsável legal),
+> quebra a busca/unicidade por CPF (`cpfHash`) e invalida a verificação de todos os prontuários e consultas já assinados.
+> O código não tem versão de chave: não existe rotação segura hoje. Ver `docs/seguranca/INVENTARIO-SEGREDOS.md`.
+
+
 Levantado em 2026-10-22. **Este arquivo não contém nenhum valor de segredo**: só nome, onde mora, para que serve e
 o que acontece se for perdido. Nunca cole valores aqui. (Escrito em PT-BR a pedido do Erico, por ser material de
 operação dele; as regras de `enforces-english` valem para os demais docs de engenharia.)

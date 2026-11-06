@@ -19,7 +19,7 @@ createRoot(document.getElementById('root')!).render(
         <MemoryRouter>
           <DocumentoClinicoLayout rotulo="Atestado de Comparecimento" onVoltar={() => undefined}>
             <p data-testid="corpo-clinico">
-              Atesto para os devidos fins que <strong>Paciente Fictício</strong> compareceu a atendimento psicológico.
+              Atesto para os devidos fins que <strong>Paciente Fictício</strong> compareceu a consulta de enfermagem.
             </p>
             <DocumentoAssinatura />
           </DocumentoClinicoLayout>

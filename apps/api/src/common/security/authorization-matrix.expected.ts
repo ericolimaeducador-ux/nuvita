@@ -108,11 +108,23 @@ export const MATRIZ_API: Record<string, string> = {
   'POST /consultas/:id/assinar': 'E',
   'POST /consultas/:id/cobranca': 'AE',
   'POST /consultas/:id/adendos': 'E',
+  // etapa 5c: reaplicar o desfecho do módulo Ferida nas lesões (consulta assinada; idempotente; sem conteúdo clínico)
+  'POST /consultas/:id/lesoes/aplicar-desfecho': 'E',
   // anexos da consulta (etapa 5b): conteúdo clínico — enviar/confirmar só o autor em rascunho, ler = quem lê a consulta (regra no serviço)
   'POST /consultas/:id/anexos/presign-upload': 'E',
   'POST /consultas/:id/anexos/:anexoId/confirmar-upload': 'E',
   'GET /consultas/:id/anexos': 'E',
   'GET /consultas/:id/anexos/:anexoId/access-url': 'E',
+  // feridas (etapa 5c): lesões e consentimento de imagem — conteúdo clínico, só ENFERMEIRO da clínica (regra no serviço).
+  // Sem rota de status (muda só pela assinatura da consulta) e sem exclusão.
+  'POST /lesoes': 'E',
+  'GET /lesoes': 'E',
+  'GET /lesoes/historico': 'E',
+  'GET /lesoes/:id': 'E',
+  'PATCH /lesoes/:id': 'E',
+  'GET /consentimentos-imagem': 'E',
+  'POST /consentimentos-imagem': 'E',
+  'POST /consentimentos-imagem/:id/revogar': 'E',
   // financeiro de paciente (etapa 4b): registro de cobranças + avisos (sem processar pagamento). Equipe da clínica;
   // o valor padrão da consulta (configuração) só o ADMIN altera. PACIENTE nunca.
   'POST /cobrancas': 'AES',

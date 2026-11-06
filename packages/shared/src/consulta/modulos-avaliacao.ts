@@ -1,6 +1,7 @@
 import { ClassificacaoArea } from '../paciente/classificacao';
 import { ModuloIncontinenciaAnal, validarModuloIncontinenciaAnal } from './modulo-incontinencia-anal';
 import { ModuloIU, validarModuloIU } from './modulo-iu';
+import { ModuloFerida, anexosDoModuloFerida, validarModuloFerida } from './modulo-ferida';
 
 /** Áreas do slot `avaliacao.modulos` da consulta de enfermagem (união discriminada por `area`). */
 export enum AreaModuloAvaliacao {
@@ -12,11 +13,12 @@ export enum AreaModuloAvaliacao {
 
 export type ModuloAvaliacaoTipado =
   | { area: AreaModuloAvaliacao.IU; dados: ModuloIU }
-  | { area: AreaModuloAvaliacao.INCONTINENCIA_ANAL; dados: ModuloIncontinenciaAnal };
+  | { area: AreaModuloAvaliacao.INCONTINENCIA_ANAL; dados: ModuloIncontinenciaAnal }
+  | { area: AreaModuloAvaliacao.FERIDA; dados: ModuloFerida };
 
 /**
  * Classificação do paciente que libera cada módulo (decisão do Erico, 05/11/2026): IU = incontinência urinária E anal;
- * FA = feridas; OT = ostomias. FERIDA e OSTOMIA já mapeados para a 5c/5d, mas sem módulo registrado ainda.
+ * FA = feridas; OT = ostomias. FERIDA tem módulo desde a 5c; OSTOMIA já mapeado para a 5d, sem módulo ainda.
  */
 export const CLASSIFICACAO_DO_MODULO: Record<AreaModuloAvaliacao, ClassificacaoArea> = {
   [AreaModuloAvaliacao.IU]: ClassificacaoArea.IU,
@@ -29,6 +31,7 @@ export const CLASSIFICACAO_DO_MODULO: Record<AreaModuloAvaliacao, ClassificacaoA
 export const VALIDADORES_MODULO: Partial<Record<AreaModuloAvaliacao, (dados: unknown) => string[]>> = {
   [AreaModuloAvaliacao.IU]: validarModuloIU,
   [AreaModuloAvaliacao.INCONTINENCIA_ANAL]: validarModuloIncontinenciaAnal,
+  [AreaModuloAvaliacao.FERIDA]: validarModuloFerida,
 };
 
 /** A classificação do paciente libera a área? (Só o mapeamento; se o módulo tem conteúdo é outra pergunta.) */
@@ -45,10 +48,11 @@ export function modulosDisponiveis(classificacoes: readonly ClassificacaoArea[] 
   return Object.values(AreaModuloAvaliacao).filter((a) => moduloDisponivelPara(a, classificacoes));
 }
 
-/** Ids de anexos referenciados pelos diários do módulo (para validar que são da própria consulta). */
+/** Ids de anexos referenciados pelo módulo (diários; fotos da ferida) — para validar que são da própria consulta. */
 export function anexosReferenciados(modulo: { area: AreaModuloAvaliacao; dados: unknown }): string[] {
   const d = modulo.dados as { diarioMiccional?: { anexos?: string[] }; diarioIntestinal?: { anexos?: string[] } } | undefined;
   if (modulo.area === AreaModuloAvaliacao.IU) return d?.diarioMiccional?.anexos ?? [];
   if (modulo.area === AreaModuloAvaliacao.INCONTINENCIA_ANAL) return d?.diarioIntestinal?.anexos ?? [];
+  if (modulo.area === AreaModuloAvaliacao.FERIDA) return anexosDoModuloFerida(modulo.dados as ModuloFerida).map((f) => f.anexoId);
   return [];
 }

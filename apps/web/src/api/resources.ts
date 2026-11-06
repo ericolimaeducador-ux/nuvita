@@ -1,3 +1,4 @@
+import type { IdentificacaoLesao } from '@shared/consulta';
 import { api } from './client';
 import { comoLista, comoObjetoComLista } from '@/lib/consulta';
 import { sha256Hex } from '@/lib/sha256';
@@ -10,6 +11,9 @@ import type {
   Entrega,
   AdendoConsulta,
   AnexoConsulta,
+  ConsentimentoImagem,
+  HistoricoLesao,
+  Lesao,
   AvaliacaoIU,
   ConsultaEnfermagem,
   ChecklistItem,
@@ -795,6 +799,13 @@ export const consultasApi = {
   /** Gera a cobrança que ficou pendente após a assinatura (idempotente). */
   gerarCobranca: (id: string) =>
     api.post<{ consultaId: string; cobranca: NonNullable<ConsultaEnfermagem['cobranca']> }>(`/consultas/${id}/cobranca`).then((r) => r.data),
+  /** Reaplica o desfecho do módulo Ferida nas lesões (idempotente; lesão fechada por outra consulta volta em `conflitos`). */
+  aplicarDesfechoLesoes: (id: string) =>
+    api
+      .post<{ consultaId: string; desfechoLesoesStatus?: 'APLICADO' | 'PENDENTE_APLICACAO'; aplicadas: string[]; jaAplicadas: string[]; conflitos: string[]; falhas: string[] }>(
+        `/consultas/${id}/lesoes/aplicar-desfecho`,
+      )
+      .then((r) => r.data),
   listarAnexos: (id: string) =>
     api.get<AnexoConsulta[]>(`/consultas/${id}/anexos`).then((r) => comoLista<AnexoConsulta>(r.data) as AnexoConsulta[]),
   urlAnexo: (id: string, anexoId: string) =>
@@ -803,13 +814,15 @@ export const consultasApi = {
    * Envia um anexo (PDF/JPG/PNG) da consulta: presign -> PUT direto no R2 (fetch puro, com os headers assinados) -> confirmar.
    * Só o autor, só em rascunho (regra da API).
    */
-  enviarAnexo: async (id: string, file: File): Promise<AnexoConsulta> => {
+  enviarAnexo: async (id: string, file: File, lesaoId?: string): Promise<AnexoConsulta> => {
     const hash = await sha256Hex(file);
     const presign = await api
       .post<{ anexo: AnexoConsulta; uploadUrl: string; requiredHeaders: Record<string, string> }>(`/consultas/${id}/anexos/presign-upload`, {
         mimeType: file.type,
         tamanho: file.size,
         hash,
+        // Foto de ferida (5c): exige consentimento de imagem vigente (regra da API).
+        ...(lesaoId ? { lesaoId } : {}),
       })
       .then((r) => r.data);
     // NÃO usar a instância `api` (axios) no PUT: ela anexaria Authorization e quebraria a assinatura da URL do R2.
@@ -819,4 +832,26 @@ export const consultasApi = {
   },
   criarAdendo: (id: string, motivo: string, texto: string) =>
     api.post<AdendoConsulta>(`/consultas/${id}/adendos`, { motivo, texto }).then((r) => r.data),
+};
+
+// ---------- Feridas (etapa 5c): lesões e consentimento de imagem (só ENFERMEIRO) ----------
+export type NovaLesaoPayload = IdentificacaoLesao & { dataIdentificacao: string };
+
+export const lesoesApi = {
+  listByPaciente: (pacienteId: string) =>
+    api.get<Lesao[]>('/lesoes', { params: { pacienteId } }).then((r) => comoLista<Lesao>(r.data) as Lesao[]),
+  historico: (pacienteId: string) =>
+    api.get<HistoricoLesao[]>('/lesoes/historico', { params: { pacienteId } }).then((r) => comoLista<HistoricoLesao>(r.data) as HistoricoLesao[]),
+  create: (pacienteId: string, payload: NovaLesaoPayload) => api.post<Lesao>('/lesoes', { pacienteId, ...payload }).then((r) => r.data),
+  /** Correção versionada (motivo obrigatório; `versao` = a que estava na tela). */
+  corrigir: (id: string, payload: IdentificacaoLesao & { motivo: string; versao: number }) =>
+    api.patch<Lesao>(`/lesoes/${id}`, payload).then((r) => r.data),
+};
+
+export const consentimentoImagemApi = {
+  get: (pacienteId: string) =>
+    api.get<{ vigente: ConsentimentoImagem | null; historico: ConsentimentoImagem[] }>('/consentimentos-imagem', { params: { pacienteId } }).then((r) => r.data),
+  registrar: (pacienteId: string, obtidoEm: string) =>
+    api.post<ConsentimentoImagem>('/consentimentos-imagem', { pacienteId, obtidoEm }).then((r) => r.data),
+  revogar: (id: string) => api.post<ConsentimentoImagem>(`/consentimentos-imagem/${id}/revogar`).then((r) => r.data),
 };

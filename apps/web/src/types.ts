@@ -1,3 +1,4 @@
+import type { AvaliacaoLesao, IdentificacaoLesao, PontoMedida, StatusLesao } from '@shared/consulta';
 // Enums e tipos espelhados da API NestJS (packages/shared + domain entities).
 
 export enum Papel {
@@ -1303,6 +1304,8 @@ export interface ConsultaEnfermagem {
   evolucao: { texto: string };
   assinatura?: { enfermeiroId: string; coren: string; dataAssinatura: string };
   cobranca?: { incluidaEmPacote: boolean; valorCentavos?: number; status: StatusCobrancaConsulta; cobrancaId?: string };
+  /** Feridas (5c): situação da aplicação do desfecho nas lesões (só quando algum desfecho fecha lesão). */
+  desfechoLesoesStatus?: 'APLICADO' | 'PENDENTE_APLICACAO';
   criadoEm: string;
   atualizadoEm: string;
 }
@@ -1314,6 +1317,8 @@ export interface AnexoConsulta {
   mimeType: 'application/pdf' | 'image/jpeg' | 'image/png';
   tamanho: number;
   enviadoPor: string;
+  /** Foto de ferida (5c): lesão a que pertence. */
+  lesaoId?: string;
   confirmadoEm: string | null;
   criadoEm: string;
 }
@@ -1326,4 +1331,43 @@ export interface AdendoConsulta {
   motivo: string;
   texto: string;
   criadoEm: string;
+}
+
+// ---------- Feridas (etapa 5c) ----------
+export interface CorrecaoLesao {
+  em: string;
+  por: string;
+  motivo: string;
+  anterior: IdentificacaoLesao;
+}
+
+export interface Lesao extends IdentificacaoLesao {
+  id: string;
+  clinicaId: string;
+  pacienteId: string;
+  numero: number;
+  dataIdentificacao: string;
+  status: StatusLesao;
+  motivoEncerramento?: string;
+  statusConsultaId?: string;
+  statusAlteradoEm?: string;
+  correcoes: CorrecaoLesao[];
+  versao: number;
+  criadaPor: string;
+  criadaEm: string;
+}
+
+export interface ConsentimentoImagem {
+  id: string;
+  pacienteId: string;
+  obtidoEm: string;
+  registradoPor: string;
+  revogadoEm: string | null;
+  revogadoPor: string | null;
+  criadoEm: string;
+}
+
+export interface HistoricoLesao {
+  lesao: Lesao;
+  avaliacoes: Array<{ consultaId: string; assinadaEm: string; enfermeiroId: string; avaliacao: AvaliacaoLesao; medidas: PontoMedida[] }>;
 }

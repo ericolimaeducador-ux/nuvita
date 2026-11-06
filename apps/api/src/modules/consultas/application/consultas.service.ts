@@ -19,7 +19,13 @@ import { UserRepository } from '../../auth/application/ports/user.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
 import { CobrancasService } from '../../cobrancas/application/cobrancas.service';
 import { PacientesService } from '../../pacientes/application/pacientes.service';
-import { anexosReferenciados, classificacaoLiberaModulo } from '../../../../../../packages/shared/src/consulta';
+import {
+  AreaModuloAvaliacao,
+  ModuloFerida,
+  anexosDoModuloFerida,
+  anexosReferenciados,
+  classificacaoLiberaModulo,
+} from '../../../../../../packages/shared/src/consulta';
 import { DocumentStorage } from '../../documentos/application/ports/document-storage';
 import { DOCUMENT_ACCESS_URL_TTL_SECONDS, MAX_DOCUMENT_SIZE_BYTES } from '../../documentos/documentos.constants';
 import { CONSULTA_ANEXO_STORAGE, CONSULTA_REPOSITORY } from '../consultas.constants';
@@ -30,10 +36,12 @@ import {
   ConsultaEnfermagem,
   StatusCobrancaConsulta,
   StatusConsulta,
+  StatusDesfechoLesoes,
   avaliacaoVazia,
   planejamentoVazio,
 } from '../domain/consulta-enfermagem.entity';
 import { ModulosAvaliacaoRegistry } from '../domain/modulos-avaliacao.registry';
+import { LesoesService, ResultadoDesfechos } from './lesoes.service';
 import { ConsultaRepository, ConteudoConsulta } from './ports/consulta.repository';
 import {
   AssinarConsultaDto,
@@ -49,6 +57,16 @@ export interface ConsultaRequestContext {
   ip: string;
   userAgent: string;
   user: AuthTokenPayload;
+}
+
+export interface ResultadoDesfechoLesoesConsulta {
+  consultaId: string;
+  desfechoLesoesStatus?: StatusDesfechoLesoes;
+  aplicadas: string[];
+  jaAplicadas: string[];
+  /** Lesões fechadas por OUTRA consulta: o desfecho desta não foi aplicado (não sobrescreve). */
+  conflitos: string[];
+  falhas: string[];
 }
 
 export interface ResultadoCobrancaConsulta {
@@ -90,6 +108,7 @@ export class ConsultasService {
     private readonly cobrancasService: CobrancasService,
     private readonly modulos: ModulosAvaliacaoRegistry,
     @Inject(CONSULTA_ANEXO_STORAGE) private readonly storage: DocumentStorage,
+    private readonly lesoes: LesoesService,
   ) {}
 
   // ---------------- criação e rascunho (só o enfermeiro autor) ----------------
@@ -164,6 +183,8 @@ export class ConsultasService {
     const profissional = await this.users.findById(context.user.sub);
     const coren = profissional?.coren?.trim();
     if (!coren) throw new UnprocessableEntityException('Informe o COREN no seu perfil para assinar a consulta.');
+    // Ferida (5c): as lesões avaliadas precisam continuar abertas (outra consulta pode ter encerrado alguma).
+    await this.lesoes.assertLesoesAbertasParaAssinar(atual);
 
     const decisao: CobrancaConsulta = dto.cobranca.incluidaEmPacote
       ? { incluidaEmPacote: true, status: StatusCobrancaConsulta.INCLUIDA_EM_PACOTE }
@@ -183,12 +204,61 @@ export class ConsultasService {
     if (!assinada) throw new ConflictException('Consulta ja assinada.');
 
     await this.audit(AuditEvent.CONSULTA_ENFERMAGEM_SIGNED, context, { clinicaId, consultaId: id, pacienteId: atual.pacienteId });
+    // Desfecho das lesões avaliadas (só agora, na assinatura; rascunho nunca muda a lesão).
+    const comDesfecho = await this.registrarDesfechoLesoes(assinada, await this.lesoes.aplicarDesfechos(assinada, context), context);
 
     if (decisao.incluidaEmPacote) {
       await this.audit(AuditEvent.CONSULTA_COBRANCA_INCLUIDA_EM_PACOTE, context, { clinicaId, consultaId: id, pacienteId: atual.pacienteId });
-      return assinada;
+      return comDesfecho;
     }
-    return (await this.tentarGerarCobranca(assinada, context)) ?? assinada;
+    return (await this.tentarGerarCobranca(comDesfecho, context)) ?? comDesfecho;
+  }
+
+  /**
+   * Reaplica EXATAMENTE os desfechos gravados na consulta ASSINADA (mesmo padrão da cobrança pendente). Idempotente:
+   * lesão já fechada por esta consulta não muda; fechada por OUTRA consulta não é sobrescrita (conflito auditado e
+   * devolvido). Acesso: ENFERMEIRO da clínica (só reaplica o que o autor assinou). Não devolve conteúdo clínico.
+   */
+  async aplicarDesfechoLesoes(id: string, clinicaIdQuery: string | undefined, context: ConsultaRequestContext): Promise<ResultadoDesfechoLesoesConsulta> {
+    this.assertEnfermeiro(context.user);
+    const clinicaId = resolveTenantClinicaId(context.user, clinicaIdQuery);
+    const consulta = await this.obterOuFalhar(clinicaId, id);
+    if (consulta.status !== StatusConsulta.ASSINADA) throw new ConflictException('O desfecho so e aplicado em consulta assinada.');
+    const resultado = await this.lesoes.aplicarDesfechos(consulta, context);
+    const atualizada = await this.registrarDesfechoLesoes(consulta, resultado, context);
+    await this.audit(AuditEvent.CONSULTA_DESFECHO_LESOES_REAPLICADO, context, {
+      clinicaId,
+      consultaId: id,
+      aplicadas: resultado.aplicadas.length,
+      jaAplicadas: resultado.jaAplicadas.length,
+      conflitos: resultado.conflitos.length,
+      falhas: resultado.falhas.length,
+    });
+    return {
+      consultaId: id,
+      desfechoLesoesStatus: atualizada.desfechoLesoesStatus,
+      aplicadas: resultado.aplicadas,
+      jaAplicadas: resultado.jaAplicadas,
+      conflitos: resultado.conflitos,
+      falhas: resultado.falhas,
+    };
+  }
+
+  /** Grava APLICADO / PENDENTE_APLICACAO na consulta (só quando há desfecho que fecha lesão). Conflito não é falha. */
+  private async registrarDesfechoLesoes(consulta: ConsultaEnfermagem, r: ResultadoDesfechos, context: ConsultaRequestContext): Promise<ConsultaEnfermagem> {
+    if (r.aSerAplicadas === 0) return consulta;
+    const status = r.falhas.length > 0 ? StatusDesfechoLesoes.PENDENTE_APLICACAO : StatusDesfechoLesoes.APLICADO;
+    if (status === StatusDesfechoLesoes.PENDENTE_APLICACAO) {
+      await this.audit(AuditEvent.CONSULTA_DESFECHO_LESOES_PENDENTE, context, { clinicaId: consulta.clinicaId, consultaId: consulta.id, falhas: r.falhas.length });
+    }
+    if (consulta.desfechoLesoesStatus === status) return consulta;
+    try {
+      return (await this.repo.atualizarDesfechoLesoes(consulta.clinicaId, consulta.id, status)) ?? { ...consulta, desfechoLesoesStatus: status };
+    } catch (erro) {
+      // Se nem isso gravar, os eventos de auditoria ficam como rastro; a rota de reaplicar continua valendo.
+      this.logger.warn(`Situacao do desfecho da consulta ${consulta.id} nao gravada: ${(erro as Error).message}`);
+      return { ...consulta, desfechoLesoesStatus: status };
+    }
   }
 
   /**
@@ -366,12 +436,26 @@ export class ConsultasService {
       }
     }
     const validados = await this.modulos.validar(modulos);
+    // Ferida (5c): regras que dependem das lesões + medidas por foto RECALCULADAS no servidor.
+    for (const m of validados) {
+      if (m.area === AreaModuloAvaliacao.FERIDA) {
+        m.dados = (await this.lesoes.validarModuloDaConsulta(alvo.clinicaId, alvo.pacienteId, m.dados as ModuloFerida)) as Record<string, unknown>;
+      }
+    }
     const citados = new Set(validados.flatMap((m) => anexosReferenciados(m)));
     if (citados.size > 0) {
       const existentes = alvo.consultaId ? await this.repo.listAnexos(alvo.clinicaId, alvo.consultaId) : [];
-      const confirmados = new Set(existentes.filter((a) => a.confirmadoEm != null).map((a) => a.id));
+      const confirmados = new Map(existentes.filter((a) => a.confirmadoEm != null).map((a) => [a.id, a]));
       for (const idAnexo of citados) {
-        if (!confirmados.has(idAnexo)) throw new BadRequestException('Anexo citado no diario nao pertence a esta consulta.');
+        if (!confirmados.has(idAnexo)) throw new BadRequestException('Anexo citado no modulo nao pertence a esta consulta.');
+      }
+      // Foto de medição: imagem enviada para a MESMA lesão.
+      const ferida = validados.find((m) => m.area === AreaModuloAvaliacao.FERIDA);
+      for (const { anexoId, lesaoId } of anexosDoModuloFerida(ferida?.dados as ModuloFerida | undefined)) {
+        const anexo = confirmados.get(anexoId)!;
+        if (anexo.lesaoId !== lesaoId || anexo.mimeType === 'application/pdf') {
+          throw new BadRequestException('A foto da medicao deve ser uma imagem enviada para a mesma lesao.');
+        }
       }
     }
     return validados;
@@ -382,6 +466,12 @@ export class ConsultasService {
   /** Envio: só o AUTOR, só em RASCUNHO; PDF/JPG/PNG no limite do módulo de documentos. Chave sem dado pessoal. */
   async criarUploadAnexo(id: string, dto: PresignAnexoConsultaDto, clinicaIdQuery: string | undefined, context: ConsultaRequestContext) {
     const { clinicaId, consulta } = await this.consultaDoAutorEmRascunho(id, clinicaIdQuery, context);
+    if (dto.lesaoId) {
+      // Foto de ferida (5c): só JPG/PNG, lesão deste paciente e consentimento de imagem vigente.
+      if (dto.mimeType === 'application/pdf') throw new BadRequestException('Foto de ferida deve ser JPG ou PNG.');
+      await this.lesoes.lesaoDoPaciente(clinicaId, consulta.pacienteId, dto.lesaoId);
+      await this.lesoes.assertConsentimentoVigente(clinicaId, consulta.pacienteId, context, { consultaId: id, lesaoId: dto.lesaoId });
+    }
     if (dto.tamanho > MAX_DOCUMENT_SIZE_BYTES) {
       throw new BadRequestException(`Arquivo acima do limite de ${Math.round(MAX_DOCUMENT_SIZE_BYTES / 1024 / 1024)}MB.`);
     }
@@ -397,6 +487,7 @@ export class ConsultasService {
       hash,
       url: presigned.privateUrl,
       enviadoPor: context.user.sub,
+      ...(dto.lesaoId ? { lesaoId: dto.lesaoId } : {}),
       confirmadoEm: null,
     });
     await this.audit(AuditEvent.CONSULTA_ANEXO_UPLOAD_URL_CREATED, context, {
@@ -405,6 +496,7 @@ export class ConsultasService {
       anexoId: anexo.id,
       mimeType: dto.mimeType,
       tamanho: dto.tamanho,
+      foto: !!dto.lesaoId,
     });
     return {
       anexo: this.anexoPublico(anexo),
@@ -417,10 +509,12 @@ export class ConsultasService {
 
   /** Confirma que o objeto existe no storage com o tamanho declarado (HeadObject), como no módulo de documentos. */
   async confirmarUploadAnexo(id: string, anexoId: string, clinicaIdQuery: string | undefined, context: ConsultaRequestContext): Promise<AnexoPublico> {
-    const { clinicaId } = await this.consultaDoAutorEmRascunho(id, clinicaIdQuery, context);
+    const { clinicaId, consulta } = await this.consultaDoAutorEmRascunho(id, clinicaIdQuery, context);
     const anexo = await this.repo.findAnexo(clinicaId, id, anexoId);
     if (!anexo) throw new NotFoundException('Anexo nao encontrado.');
     if (anexo.confirmadoEm) return this.anexoPublico(anexo);
+    // Consentimento revogado entre o presign e a confirmação: a foto não é confirmada.
+    if (anexo.lesaoId) await this.lesoes.assertConsentimentoVigente(clinicaId, consulta.pacienteId, context, { consultaId: id, anexoId });
 
     let head: { tamanho: number } | undefined;
     try {

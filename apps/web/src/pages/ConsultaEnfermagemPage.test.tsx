@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 const mocks = vi.hoisted(() => ({
-  get: vi.fn(), salvarRascunho: vi.fn(), assinar: vi.fn(), gerarCobranca: vi.fn(), criarAdendo: vi.fn(),
+  get: vi.fn(), salvarRascunho: vi.fn(), assinar: vi.fn(), gerarCobranca: vi.fn(), criarAdendo: vi.fn(), aplicarDesfechoLesoes: vi.fn(),
   config: vi.fn(), paciente: vi.fn(), listarAnexos: vi.fn(), userId: { atual: 'enf-autor' },
 }));
 
@@ -13,7 +13,7 @@ vi.mock('@/api/resources', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/api/resources')>();
   return {
     ...original,
-    consultasApi: { ...original.consultasApi, get: mocks.get, salvarRascunho: mocks.salvarRascunho, assinar: mocks.assinar, gerarCobranca: mocks.gerarCobranca, criarAdendo: mocks.criarAdendo, listarAnexos: mocks.listarAnexos },
+    consultasApi: { ...original.consultasApi, get: mocks.get, salvarRascunho: mocks.salvarRascunho, assinar: mocks.assinar, gerarCobranca: mocks.gerarCobranca, criarAdendo: mocks.criarAdendo, aplicarDesfechoLesoes: mocks.aplicarDesfechoLesoes, listarAnexos: mocks.listarAnexos },
     pacientesApi: { ...original.pacientesApi, get: mocks.paciente },
     cobrancasApi: { ...original.cobrancasApi, config: mocks.config },
   };
@@ -61,7 +61,8 @@ describe('ConsultaEnfermagemPage', () => {
     mocks.listarAnexos.mockResolvedValue([]);
   });
 
-  it('mostra as 5 etapas em stepper e a área dos módulos (paciente FA: nenhum módulo disponível ainda)', async () => {
+  it('mostra as 5 etapas em stepper e a área dos módulos (paciente OT: nenhum módulo disponível ainda)', async () => {
+    mocks.paciente.mockResolvedValue({ id: 'p1', classificacoes: ['OT'] });
     montar();
     const nav = await screen.findByRole('navigation', { name: 'Etapas da consulta' });
     expect(within(nav).getAllByRole('button').map((b) => b.textContent)).toEqual([
@@ -149,6 +150,23 @@ describe('ConsultaEnfermagemPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('a cobrança ainda não foi gerada');
     await user.click(screen.getByRole('button', { name: 'Gerar cobrança' }));
     await waitFor(() => expect(mocks.gerarCobranca).toHaveBeenCalledWith('c1'));
+  });
+
+  it('desfecho PENDENTE_APLICACAO: aviso + "Aplicar desfecho nas lesões"; sem pendência, sem aviso', async () => {
+    const user = userEvent.setup();
+    mocks.get.mockResolvedValue({ ...assinada, desfechoLesoesStatus: 'PENDENTE_APLICACAO' });
+    mocks.aplicarDesfechoLesoes.mockResolvedValue({ consultaId: 'c1', desfechoLesoesStatus: 'APLICADO', aplicadas: ['l1'], jaAplicadas: [], conflitos: [], falhas: [] });
+    const { unmount } = montar();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('o desfecho do módulo Feridas ainda não foi aplicado nas lesões');
+    await user.click(screen.getByRole('button', { name: 'Aplicar desfecho nas lesões' }));
+    await waitFor(() => expect(mocks.aplicarDesfechoLesoes).toHaveBeenCalledWith('c1'));
+    unmount();
+
+    mocks.get.mockResolvedValue({ ...assinada, desfechoLesoesStatus: 'APLICADO' });
+    montar();
+    await screen.findByRole('navigation', { name: 'Etapas da consulta' });
+    expect(screen.queryByRole('button', { name: 'Aplicar desfecho nas lesões' })).not.toBeInTheDocument();
   });
 
   it('enfermeiro que NÃO é o autor vê o rascunho somente leitura (sem salvar/assinar)', async () => {

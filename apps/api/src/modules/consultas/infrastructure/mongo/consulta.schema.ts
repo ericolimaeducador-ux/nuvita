@@ -43,6 +43,9 @@ export class ConsultaMongo {
   @Prop({ type: MongooseSchema.Types.Mixed })
   cobranca?: Record<string, unknown>;
 
+  @Prop({ enum: ['APLICADO', 'PENDENTE_APLICACAO'] })
+  desfechoLesoesStatus?: string;
+
   @Prop({ default: Date.now, immutable: true })
   criadoEm!: Date;
 
@@ -112,6 +115,10 @@ export class AnexoConsultaMongo {
 
   @Prop({ required: true })
   enviadoPor!: string;
+
+  // Foto de ferida (5c): lesão a que a foto pertence.
+  @Prop()
+  lesaoId?: string;
 
   @Prop({ type: Date, default: null })
   confirmadoEm!: Date | null;

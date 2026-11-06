@@ -74,6 +74,17 @@ export class ConsultasController {
     return this.service.gerarCobrancaPendente(id, clinicaId, this.contexto(request, user));
   }
 
+  // Reaplica o desfecho do módulo Ferida nas lesões (consulta assinada com PENDENTE_APLICACAO). Idempotente.
+  @Post(':id/lesoes/aplicar-desfecho')
+  aplicarDesfechoLesoes(
+    @Param('id') id: string,
+    @Query('clinicaId') clinicaId: string | undefined,
+    @CurrentUser() user: AuthTokenPayload,
+    @Req() request: Request,
+  ) {
+    return this.service.aplicarDesfechoLesoes(id, clinicaId, this.contexto(request, user));
+  }
+
   @Post(':id/adendos')
   criarAdendo(
     @Param('id') id: string,

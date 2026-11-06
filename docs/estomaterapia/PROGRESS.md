@@ -1,6 +1,6 @@
 # Nuvita Estomaterapia — Integration Progress & Handoff
 
-Last updated: 2026-11-05 (stage 5b)
+Last updated: 2026-11-06 (stage 5c)
 
 ## What this project is
 Turning the production `nuvita` repo (real patients, GitHub ericolimaeducador-ux/nuvita) into the new Nuvita Estomaterapia, using the nuvita-psi codebase as the FULL base (security, access rules, tenancy, audit, redirects, automatic messages, screen structure). Only clinical/typing screens and clinical content change from Psychology to Stomatherapy. nuvita-psi is the premium reference. Master plan (source of truth) lives in the Claude.ai project doc "Plano mestre"; THIS file is the engineering handoff — read it FIRST.
@@ -32,14 +32,17 @@ Turning the production `nuvita` repo (real patients, GitHub ericolimaeducador-ux
 - PR #28 merged: commit 044deb6 (clinic-level charge list + payment method on mark-paid), merged with integracao, no conflicts.
 - PR #29 merged: charge type `consulta_enfermagem`; manual "consulta de avaliação" charge REMOVED (double-charge risk); setting renamed
   to `valorConsultaCentavos` (default `VALOR_CONSULTA_PADRAO_CENTAVOS` = 22000).
-- Stage 5b PR (branch `estomaterapia/etapa5b-iu-anal`): IU and anal-incontinence assessment modules + consultation attachments —
-  see docs/etapas/ETAPA-5B-IU-ANAL.md.
+- PR #30 merged: stage 5b — IU and anal-incontinence assessment modules + consultation attachments (docs/etapas/ETAPA-5B-IU-ANAL.md).
+- Stage 5c PR (branch `estomaterapia/etapa5c-feridas`): lesion registry (`lesoes`), FERIDA module (classification FA), ABI, image consent
+  (`consentimentos_imagem`), photo measurement (geometry only, zero AI), read-only lesion history — see docs/etapas/ETAPA-5C-FERIDAS.md.
 - CLASSIFICATION MEANING (corrected in 5b, confirmed by Erico): IU = incontinência urinária E anal; FA = feridas; OT = ostomias.
   Stage 2 had recorded FA = "incontinência fecal" and OT = "outras áreas" (a deduction). Enum values/data unchanged.
 
 ## NEXT ACTIONS (in order)
-1. Review/merge the stage 5a PR into estomaterapia/integracao (merge commit). Decide whether to PR commit 044deb6 (see #25 note).
-2. Stages 5c–5d: assessment modules FERIDA (classification FA) and OSTOMIA (classification OT) — already mapped in CLASSIFICACAO_DO_MODULO, no module registered yet. Content only from a cited source; otherwise TODO(conteudo). Stage 5e: itemised instruments (ICIQ, Wexner…) — licensing first.
+1. Review/merge the stage 5c PR (#31) into estomaterapia/integracao (merge commit). ABI boundaries approved (compêndio cap. 27, quadros 28/29).
+   Pending: image-consent term text (TODO(legal)).
+2. Stage 5d: OSTOMIA module (classification OT) — mapped in CLASSIFICACAO_DO_MODULO, no module yet. Content only from a cited source; otherwise
+   TODO(conteudo). Stage 5e: itemised instruments (ICIQ, Wexner, PUSH, RESVECH, Braden…) — licensing first.
 3. Stage 5f: AI suggestions for diagnoses (origem IA_ACEITA / IA_EDITADA already modelled, not writable yet).
 4. Automatic trigger: evaluation-appointment charge on the first consultation (CobrancasService.criarConsultaAvaliacao is ready).
 5. Stage 6: laudo-medico (decide Gemini vs PSI Anthropic AI infra). Server-side recompute of delivery totals is still open.
@@ -60,6 +63,13 @@ Turning the production `nuvita` repo (real patients, GitHub ericolimaeducador-ux
   - consultas_enfermagem: { clinicaId: 1, pacienteId: 1, criadoEm: -1 }, { clinicaId: 1, 'cobranca.status': 1 } (5a).
   - consultas_enfermagem_adendos: { consultaId: 1, numero: 1 } unique (5a).
   - consultas_enfermagem_anexos: { clinicaId: 1, consultaId: 1, criadoEm: 1 } (5b).
+  - lesoes: { pacienteId: 1, numero: 1 } unique; { clinicaId: 1, pacienteId: 1, status: 1 }; { clinicaId: 1 } (5c).
+  - consentimentos_imagem: { clinicaId: 1, pacienteId: 1 } unique, partialFilterExpression { revogadoEm: { $type: 'null' } }, name
+    consentimento_vigente_unico; { clinicaId: 1, pacienteId: 1, criadoEm: -1 }; { clinicaId: 1 } (5c).
 - Documents size limit: `MAX_DOCUMENT_SIZE_BYTES` is 10 MB but the documents module's error message says "50MB". Consultation attachments use the constant (10 MB). Fix the message (documents module) when convenient.
 - Legacy prontuarios (registroPsicologico, relatorioJudicial, old records) stay READ-ONLY in the old `prontuarios` collection; the new consultation lives in `consultas_enfermagem`. Nothing was migrated or deleted.
 - registroPsicologico exists in 1 old prontuario; fichaAvaliacaoIU/registroEnfermagem/relatorioJudicial exist in old data but not in the PSI schema (strict mode ignores, does not delete) — handle in Phase 3.
+- Stage 5c: lesion status is applied AFTER the signature without a transaction (same pattern as the charge). A failed write leaves the
+  consultation signed with desfechoLesoesStatus = PENDENTE_APLICACAO; POST /consultas/:id/lesoes/aplicar-desfecho re-applies it idempotently
+  (never overwrites a lesion closed by another consultation — returned as a conflict).
+- Stage 5c: the measurement tool draws on an SVG layer over the photo (not a <canvas>): same interactions, native image coordinates, testable.

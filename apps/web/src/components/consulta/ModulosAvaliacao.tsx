@@ -21,6 +21,7 @@ import {
   type Diario,
   type ItemExame,
   type ModuloIU,
+  type ModuloFerida,
   type ModuloIncontinenciaAnal,
   type TipoIU,
 } from '@shared/consulta';
@@ -35,10 +36,11 @@ import { toast } from '@/components/ui/use-toast';
 import { apiErrorMessage } from '@/api/client';
 import { consultasApi } from '@/api/resources';
 import type { AnexoConsulta } from '@/types';
+import { ModuloFeridaCampos } from './ModuloFerida';
 
 /**
- * Módulos da etapa Avaliação (5b): Incontinência urinária e Incontinência anal, oferecidos só para a classificação do
- * paciente que os libera (IU). Só registro: nenhum instrumento com itens, nenhuma conduta automática, nenhuma gravidade.
+ * Módulos da etapa Avaliação: Incontinência urinária e Incontinência anal (5b, classificação IU) e Feridas (5c,
+ * classificação FA), oferecidos só para a classificação do paciente que os libera. Só registro: nenhum instrumento com itens, nenhuma conduta automática, nenhuma gravidade.
  * TODO(conteudo): todos os rótulos abaixo são provisórios e precisam de revisão.
  */
 
@@ -51,6 +53,7 @@ export interface ModuloForm {
 const NOME_MODULO: Partial<Record<AreaModuloAvaliacao, string>> = {
   [AreaModuloAvaliacao.IU]: 'Incontinência urinária',
   [AreaModuloAvaliacao.INCONTINENCIA_ANAL]: 'Incontinência anal',
+  [AreaModuloAvaliacao.FERIDA]: 'Feridas',
 };
 const ROTULO: Record<string, string> = {
   ESFORCO: 'Esforço', URGENCIA: 'Urgência', MISTA: 'Mista', INDEFINIDA: 'Indefinida',
@@ -335,8 +338,8 @@ function ModuloAnalCampos({ consultaId, dados, onChange, editavel }: Comum & { c
 }
 
 export function ModulosAvaliacao({
-  consultaId, modulos, onChange, editavel, classificacoes,
-}: { consultaId: string; modulos: ModuloForm[]; onChange: (m: ModuloForm[]) => void; editavel: boolean; classificacoes: string[] }) {
+  consultaId, pacienteId = '', modulos, onChange, editavel, classificacoes,
+}: { consultaId: string; pacienteId?: string; modulos: ModuloForm[]; onChange: (m: ModuloForm[]) => void; editavel: boolean; classificacoes: string[] }) {
   const [escolhendo, setEscolhendo] = useState(false);
   const presentes = new Set(modulos.map((m) => m.area));
   const disponiveis = modulosDisponiveis(classificacoes as ClassificacaoAreaShared[]).filter((a) => !presentes.has(a));
@@ -383,6 +386,9 @@ export function ModulosAvaliacao({
             )}
             {m.area === AreaModuloAvaliacao.INCONTINENCIA_ANAL && (
               <ModuloAnalCampos consultaId={consultaId} editavel={editavel} dados={m.dados as ModuloIncontinenciaAnal} onChange={(d) => atualizar(m.area, d as Record<string, unknown>)} />
+            )}
+            {m.area === AreaModuloAvaliacao.FERIDA && (
+              <ModuloFeridaCampos consultaId={consultaId} pacienteId={pacienteId} editavel={editavel} dados={m.dados as ModuloFerida} onChange={(d) => atualizar(m.area, d as Record<string, unknown>)} />
             )}
           </div>
         </details>

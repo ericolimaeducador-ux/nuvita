@@ -4,9 +4,10 @@ import {
   AssinaturaConsulta,
   CobrancaConsulta,
   ConsultaEnfermagem,
+  StatusDesfechoLesoes,
 } from '../../domain/consulta-enfermagem.entity';
 
-export type NovaConsulta = Omit<ConsultaEnfermagem, 'id' | 'criadoEm' | 'atualizadoEm' | 'assinatura' | 'cobranca'>;
+export type NovaConsulta = Omit<ConsultaEnfermagem, 'id' | 'criadoEm' | 'atualizadoEm' | 'assinatura' | 'cobranca' | 'desfechoLesoesStatus'>;
 
 export type ConteudoConsulta = Partial<
   Pick<ConsultaEnfermagem, 'avaliacao' | 'diagnosticos' | 'planejamento' | 'implementacao' | 'evolucao'>
@@ -28,6 +29,8 @@ export interface ConsultaRepository {
   ): Promise<ConsultaEnfermagem | null>;
   /** Pós-assinatura, só a situação da COBRANÇA muda (o conteúdo clínico continua travado). */
   atualizarCobranca(clinicaId: string, id: string, cobranca: CobrancaConsulta): Promise<ConsultaEnfermagem | null>;
+  /** Pós-assinatura: situação da aplicação do desfecho nas lesões (o conteúdo clínico continua travado). */
+  atualizarDesfechoLesoes(clinicaId: string, id: string, status: StatusDesfechoLesoes): Promise<ConsultaEnfermagem | null>;
   listAdendos(clinicaId: string, consultaId: string): Promise<AdendoConsulta[]>;
   ultimoNumeroAdendo(clinicaId: string, consultaId: string): Promise<number>;
   /** Insere com o número informado; o índice único (consultaId, numero) faz a corrida falhar com E11000. */

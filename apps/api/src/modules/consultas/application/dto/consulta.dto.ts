@@ -131,6 +131,8 @@ export class PresignAnexoConsultaDto {
   @IsInt() @Min(1) tamanho!: number;
   // SHA-256 do arquivo (hex), assinado na URL de upload como no módulo de documentos.
   @Matches(/^[a-f0-9]{64}$/i) hash!: string;
+  // Foto de ferida (5c): lesão do paciente da consulta. Só JPG/PNG e só com consentimento de imagem vigente.
+  @IsOptional() @IsMongoId() lesaoId?: string;
 }
 
 export class ListConsultasQueryDto {

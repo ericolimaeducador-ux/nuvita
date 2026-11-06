@@ -260,6 +260,7 @@ export function ConsultaEnfermagemPage() {
             <CampoTexto id="cObj" rotulo="Dados objetivos (exame físico)" valor={form.dadosObjetivos} editavel={editavel} onChange={(v) => set('dadosObjetivos', v)} rows={6} />
             <ModulosAvaliacao
               consultaId={consultaId}
+              pacienteId={pacienteId}
               modulos={form.modulos}
               editavel={editavel}
               classificacoes={(pacienteQ.data?.classificacoes ?? []) as string[]}

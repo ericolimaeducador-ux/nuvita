@@ -113,6 +113,10 @@ export class AnexoConsultaMongo {
   @Prop({ required: true })
   enviadoPor!: string;
 
+  // Foto de ferida (5c): lesão a que a foto pertence.
+  @Prop()
+  lesaoId?: string;
+
   @Prop({ type: Date, default: null })
   confirmadoEm!: Date | null;
 

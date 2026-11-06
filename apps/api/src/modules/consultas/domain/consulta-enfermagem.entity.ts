@@ -145,6 +145,8 @@ export interface AnexoConsulta {
   /** URL privada no storage (s3://bucket/chave); a chave não tem dado pessoal. */
   url: string;
   enviadoPor: string;
+  /** Foto de ferida (5c): lesão a que a foto pertence. Só imagem, só com consentimento de imagem vigente. */
+  lesaoId?: string;
   /** null = upload ainda não confirmado (HeadObject). */
   confirmadoEm: Date | null;
   criadoEm: Date;

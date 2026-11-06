@@ -61,7 +61,8 @@ describe('ConsultaEnfermagemPage', () => {
     mocks.listarAnexos.mockResolvedValue([]);
   });
 
-  it('mostra as 5 etapas em stepper e a área dos módulos (paciente FA: nenhum módulo disponível ainda)', async () => {
+  it('mostra as 5 etapas em stepper e a área dos módulos (paciente OT: nenhum módulo disponível ainda)', async () => {
+    mocks.paciente.mockResolvedValue({ id: 'p1', classificacoes: ['OT'] });
     montar();
     const nav = await screen.findByRole('navigation', { name: 'Etapas da consulta' });
     expect(within(nav).getAllByRole('button').map((b) => b.textContent)).toEqual([

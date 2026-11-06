@@ -39,8 +39,16 @@ describe('ModulosAvaliacao (5b)', () => {
     expect(within(grupo).getAllByRole('button').map((b) => b.textContent)).toEqual(['Incontinência urinária', 'Incontinência anal']);
   });
 
-  it('paciente FA/OT: nenhum módulo disponível (sem botão de adicionar)', () => {
+  it('paciente FA: "Adicionar módulo" oferece só Feridas (5c)', async () => {
+    const user = userEvent.setup();
     montar({ classificacoes: ['FA', 'OT'] });
+    await user.click(screen.getByRole('button', { name: /Adicionar módulo/ }));
+    const grupo = screen.getByRole('group', { name: 'Módulos disponíveis' });
+    expect(within(grupo).getAllByRole('button').map((b) => b.textContent)).toEqual(['Feridas']);
+  });
+
+  it('paciente só OT: nenhum módulo disponível (sem botão de adicionar)', () => {
+    montar({ classificacoes: ['OT'] });
     expect(screen.queryByRole('button', { name: /Adicionar módulo/ })).not.toBeInTheDocument();
     expect(screen.getByText('Nenhum módulo de avaliação disponível para a classificação deste paciente.')).toBeInTheDocument();
   });

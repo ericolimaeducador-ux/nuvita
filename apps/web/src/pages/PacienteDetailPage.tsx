@@ -35,6 +35,7 @@ import { ClassificacaoAreaSelector } from '@/components/ClassificacaoAreaSelecto
 import { AvaliacaoIuSecao } from '@/components/AvaliacaoIuSecao';
 import { CobrancasSecao } from '@/components/CobrancasSecao';
 import { ConsultasSecao } from '@/components/ConsultasSecao';
+import { LesoesSecao } from '@/components/LesoesSecao';
 import { ChecklistSecao } from '@/components/ChecklistSecao';
 import { EntregasSecao } from '@/components/EntregasSecao';
 import { FollowupSecao } from '@/components/FollowupSecao';
@@ -324,6 +325,13 @@ export function PacienteDetailPage() {
       {ehEnfermeiro && (
         <SectionErrorBoundary secao="Consultas de enfermagem">
           <ConsultasSecao pacienteId={id} />
+        </SectionErrorBoundary>
+      )}
+
+      {/* Lesões (feridas, etapa 5c): histórico somente leitura + consentimento de imagem; só enfermeiro, paciente FA. */}
+      {ehEnfermeiro && ((pacQ.data?.classificacoes ?? []) as string[]).includes('FA') && (
+        <SectionErrorBoundary secao="Lesões">
+          <LesoesSecao pacienteId={id} />
         </SectionErrorBoundary>
       )}
 

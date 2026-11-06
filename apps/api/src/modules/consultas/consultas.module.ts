@@ -10,6 +10,12 @@ import { JwtAuthGuard } from '../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/presentation/guards/roles.guard';
 import { CobrancasModule } from '../cobrancas/cobrancas.module';
 import { PacientesModule } from '../pacientes/pacientes.module';
+import { ProdutosModule } from '../produtos/produtos.module';
+import { LesoesService } from './application/lesoes.service';
+import { LESAO_REPOSITORY } from './consultas.constants';
+import { LesaoMongoRepository } from './infrastructure/mongo/lesao-mongo.repository';
+import { ConsentimentoImagemMongo, ConsentimentoImagemSchema, LesaoMongo, LesaoSchema } from './infrastructure/mongo/lesao.schema';
+import { ConsentimentosImagemController, LesoesController } from './presentation/lesoes.controller';
 import { ConsultasService } from './application/consultas.service';
 import { CONSULTA_REPOSITORY } from './consultas.constants';
 import { AreaModuloAvaliacao, VALIDADORES_MODULO } from '../../../../../packages/shared/src/consulta';
@@ -34,18 +40,22 @@ import { ConsultasController } from './presentation/consultas.controller';
       { name: ConsultaMongo.name, schema: ConsultaSchema },
       { name: AdendoConsultaMongo.name, schema: AdendoConsultaSchema },
       { name: AnexoConsultaMongo.name, schema: AnexoConsultaSchema },
+      { name: LesaoMongo.name, schema: LesaoSchema },
+      { name: ConsentimentoImagemMongo.name, schema: ConsentimentoImagemSchema },
       { name: AuditLogMongo.name, schema: AuditLogSchema },
       { name: UserMongo.name, schema: UserSchema },
     ]),
     PacientesModule,
     CobrancasModule,
+    ProdutosModule,
   ],
-  controllers: [ConsultasController],
+  controllers: [ConsultasController, LesoesController, ConsentimentosImagemController],
   providers: [
     ConsultasService,
+    LesoesService,
     JwtAuthGuard,
     RolesGuard,
-    // Módulos da Avaliação com conteúdo: IU e incontinência anal (5b). Ferida (5c) e ostomia (5d) ainda sem módulo.
+    // Módulos da Avaliação com conteúdo: IU e incontinência anal (5b), ferida (5c). Ostomia (5d) ainda sem módulo.
     {
       provide: ModulosAvaliacaoRegistry,
       useFactory: () =>
@@ -57,6 +67,7 @@ import { ConsultasController } from './presentation/consultas.controller';
     S3DocumentStorageService,
     { provide: CONSULTA_ANEXO_STORAGE, useExisting: S3DocumentStorageService },
     { provide: CONSULTA_REPOSITORY, useClass: ConsultaMongoRepository },
+    { provide: LESAO_REPOSITORY, useClass: LesaoMongoRepository },
     { provide: AUDIT_LOG_REPOSITORY, useClass: AuditLogMongoRepository },
     { provide: USER_REPOSITORY, useClass: UserMongoRepository },
   ],

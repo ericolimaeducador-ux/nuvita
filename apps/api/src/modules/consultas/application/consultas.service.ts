@@ -19,7 +19,13 @@ import { UserRepository } from '../../auth/application/ports/user.repository';
 import { AuditEvent } from '../../auth/domain/audit-event.enum';
 import { CobrancasService } from '../../cobrancas/application/cobrancas.service';
 import { PacientesService } from '../../pacientes/application/pacientes.service';
-import { anexosReferenciados, classificacaoLiberaModulo } from '../../../../../../packages/shared/src/consulta';
+import {
+  AreaModuloAvaliacao,
+  ModuloFerida,
+  anexosDoModuloFerida,
+  anexosReferenciados,
+  classificacaoLiberaModulo,
+} from '../../../../../../packages/shared/src/consulta';
 import { DocumentStorage } from '../../documentos/application/ports/document-storage';
 import { DOCUMENT_ACCESS_URL_TTL_SECONDS, MAX_DOCUMENT_SIZE_BYTES } from '../../documentos/documentos.constants';
 import { CONSULTA_ANEXO_STORAGE, CONSULTA_REPOSITORY } from '../consultas.constants';
@@ -34,6 +40,7 @@ import {
   planejamentoVazio,
 } from '../domain/consulta-enfermagem.entity';
 import { ModulosAvaliacaoRegistry } from '../domain/modulos-avaliacao.registry';
+import { LesoesService } from './lesoes.service';
 import { ConsultaRepository, ConteudoConsulta } from './ports/consulta.repository';
 import {
   AssinarConsultaDto,
@@ -90,6 +97,7 @@ export class ConsultasService {
     private readonly cobrancasService: CobrancasService,
     private readonly modulos: ModulosAvaliacaoRegistry,
     @Inject(CONSULTA_ANEXO_STORAGE) private readonly storage: DocumentStorage,
+    private readonly lesoes: LesoesService,
   ) {}
 
   // ---------------- criação e rascunho (só o enfermeiro autor) ----------------
@@ -164,6 +172,8 @@ export class ConsultasService {
     const profissional = await this.users.findById(context.user.sub);
     const coren = profissional?.coren?.trim();
     if (!coren) throw new UnprocessableEntityException('Informe o COREN no seu perfil para assinar a consulta.');
+    // Ferida (5c): as lesões avaliadas precisam continuar abertas (outra consulta pode ter encerrado alguma).
+    await this.lesoes.assertLesoesAbertasParaAssinar(atual);
 
     const decisao: CobrancaConsulta = dto.cobranca.incluidaEmPacote
       ? { incluidaEmPacote: true, status: StatusCobrancaConsulta.INCLUIDA_EM_PACOTE }
@@ -183,6 +193,8 @@ export class ConsultasService {
     if (!assinada) throw new ConflictException('Consulta ja assinada.');
 
     await this.audit(AuditEvent.CONSULTA_ENFERMAGEM_SIGNED, context, { clinicaId, consultaId: id, pacienteId: atual.pacienteId });
+    // Desfecho das lesões avaliadas (só agora, na assinatura; rascunho nunca muda a lesão).
+    await this.lesoes.aplicarDesfechos(assinada, context);
 
     if (decisao.incluidaEmPacote) {
       await this.audit(AuditEvent.CONSULTA_COBRANCA_INCLUIDA_EM_PACOTE, context, { clinicaId, consultaId: id, pacienteId: atual.pacienteId });
@@ -366,12 +378,26 @@ export class ConsultasService {
       }
     }
     const validados = await this.modulos.validar(modulos);
+    // Ferida (5c): regras que dependem das lesões + medidas por foto RECALCULADAS no servidor.
+    for (const m of validados) {
+      if (m.area === AreaModuloAvaliacao.FERIDA) {
+        m.dados = (await this.lesoes.validarModuloDaConsulta(alvo.clinicaId, alvo.pacienteId, m.dados as ModuloFerida)) as Record<string, unknown>;
+      }
+    }
     const citados = new Set(validados.flatMap((m) => anexosReferenciados(m)));
     if (citados.size > 0) {
       const existentes = alvo.consultaId ? await this.repo.listAnexos(alvo.clinicaId, alvo.consultaId) : [];
-      const confirmados = new Set(existentes.filter((a) => a.confirmadoEm != null).map((a) => a.id));
+      const confirmados = new Map(existentes.filter((a) => a.confirmadoEm != null).map((a) => [a.id, a]));
       for (const idAnexo of citados) {
-        if (!confirmados.has(idAnexo)) throw new BadRequestException('Anexo citado no diario nao pertence a esta consulta.');
+        if (!confirmados.has(idAnexo)) throw new BadRequestException('Anexo citado no modulo nao pertence a esta consulta.');
+      }
+      // Foto de medição: imagem enviada para a MESMA lesão.
+      const ferida = validados.find((m) => m.area === AreaModuloAvaliacao.FERIDA);
+      for (const { anexoId, lesaoId } of anexosDoModuloFerida(ferida?.dados as ModuloFerida | undefined)) {
+        const anexo = confirmados.get(anexoId)!;
+        if (anexo.lesaoId !== lesaoId || anexo.mimeType === 'application/pdf') {
+          throw new BadRequestException('A foto da medicao deve ser uma imagem enviada para a mesma lesao.');
+        }
       }
     }
     return validados;
@@ -382,6 +408,12 @@ export class ConsultasService {
   /** Envio: só o AUTOR, só em RASCUNHO; PDF/JPG/PNG no limite do módulo de documentos. Chave sem dado pessoal. */
   async criarUploadAnexo(id: string, dto: PresignAnexoConsultaDto, clinicaIdQuery: string | undefined, context: ConsultaRequestContext) {
     const { clinicaId, consulta } = await this.consultaDoAutorEmRascunho(id, clinicaIdQuery, context);
+    if (dto.lesaoId) {
+      // Foto de ferida (5c): só JPG/PNG, lesão deste paciente e consentimento de imagem vigente.
+      if (dto.mimeType === 'application/pdf') throw new BadRequestException('Foto de ferida deve ser JPG ou PNG.');
+      await this.lesoes.lesaoDoPaciente(clinicaId, consulta.pacienteId, dto.lesaoId);
+      await this.lesoes.assertConsentimentoVigente(clinicaId, consulta.pacienteId, context, { consultaId: id, lesaoId: dto.lesaoId });
+    }
     if (dto.tamanho > MAX_DOCUMENT_SIZE_BYTES) {
       throw new BadRequestException(`Arquivo acima do limite de ${Math.round(MAX_DOCUMENT_SIZE_BYTES / 1024 / 1024)}MB.`);
     }
@@ -397,6 +429,7 @@ export class ConsultasService {
       hash,
       url: presigned.privateUrl,
       enviadoPor: context.user.sub,
+      ...(dto.lesaoId ? { lesaoId: dto.lesaoId } : {}),
       confirmadoEm: null,
     });
     await this.audit(AuditEvent.CONSULTA_ANEXO_UPLOAD_URL_CREATED, context, {
@@ -405,6 +438,7 @@ export class ConsultasService {
       anexoId: anexo.id,
       mimeType: dto.mimeType,
       tamanho: dto.tamanho,
+      foto: !!dto.lesaoId,
     });
     return {
       anexo: this.anexoPublico(anexo),
@@ -417,10 +451,12 @@ export class ConsultasService {
 
   /** Confirma que o objeto existe no storage com o tamanho declarado (HeadObject), como no módulo de documentos. */
   async confirmarUploadAnexo(id: string, anexoId: string, clinicaIdQuery: string | undefined, context: ConsultaRequestContext): Promise<AnexoPublico> {
-    const { clinicaId } = await this.consultaDoAutorEmRascunho(id, clinicaIdQuery, context);
+    const { clinicaId, consulta } = await this.consultaDoAutorEmRascunho(id, clinicaIdQuery, context);
     const anexo = await this.repo.findAnexo(clinicaId, id, anexoId);
     if (!anexo) throw new NotFoundException('Anexo nao encontrado.');
     if (anexo.confirmadoEm) return this.anexoPublico(anexo);
+    // Consentimento revogado entre o presign e a confirmação: a foto não é confirmada.
+    if (anexo.lesaoId) await this.lesoes.assertConsentimentoVigente(clinicaId, consulta.pacienteId, context, { consultaId: id, anexoId });
 
     let head: { tamanho: number } | undefined;
     try {

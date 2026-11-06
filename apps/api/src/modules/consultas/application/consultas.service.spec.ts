@@ -39,6 +39,13 @@ import { ConsultaMongoRepository } from '../infrastructure/mongo/consulta-mongo.
 import { ConsultasController } from '../presentation/consultas.controller';
 import { ConsultaRequestContext, ConsultasService } from './consultas.service';
 import { ConsultaRepository } from './ports/consulta.repository';
+import { LesaoRepository } from './ports/lesao.repository';
+import { LesoesService } from './lesoes.service';
+import { CorrigirLesaoDto, CreateLesaoDto } from './dto/lesao.dto';
+import { ConsentimentosImagemController, LesoesController } from '../presentation/lesoes.controller';
+import { LesaoMongoRepository } from '../infrastructure/mongo/lesao-mongo.repository';
+import { ConsentimentoImagem, Lesao } from '../domain/lesao.entity';
+import { ProdutosService } from '../../produtos/application/produtos.service';
 import { CreateAdendoConsultaDto, CreateConsultaDto, DiagnosticoDto, PresignAnexoConsultaDto } from './dto/consulta.dto';
 
 const PACIENTE = '65f000000000000000000001';
@@ -124,6 +131,65 @@ function consultasEmMemoria() {
   return { repo, consultas, adendos, anexos };
 }
 
+/** Lesões e consentimentos em memória com as MESMAS condições do Mongo (status só de ABERTA; versão; índice único). */
+function lesoesEmMemoria() {
+  const lesoes: Lesao[] = [];
+  const consentimentos: ConsentimentoImagem[] = [];
+  let seq = 0;
+  const repo: LesaoRepository & { forcarCorridaNumero?: number } = {
+    async create(data) {
+      if (lesoes.some((l) => l.pacienteId === data.pacienteId && l.numero === data.numero)) throw Object.assign(new Error('dup'), { code: 11000 });
+      const l = { ...data, id: `65f00000000000000000b${String(++seq).padStart(3, '0')}`, status: 'ABERTA', correcoes: [], versao: 1, criadaEm: new Date(), atualizadaEm: new Date() } as Lesao;
+      lesoes.push(l);
+      return { ...l };
+    },
+    async ultimoNumero(clinicaId, pacienteId) {
+      if (repo.forcarCorridaNumero && repo.forcarCorridaNumero-- > 0) return 0;
+      return Math.max(0, ...lesoes.filter((l) => l.clinicaId === clinicaId && l.pacienteId === pacienteId).map((l) => l.numero));
+    },
+    async findById(clinicaId, id) {
+      const l = lesoes.find((x) => x.id === id && x.clinicaId === clinicaId);
+      return l ? { ...l } : null;
+    },
+    async listByPaciente(clinicaId, pacienteId) {
+      return lesoes.filter((l) => l.clinicaId === clinicaId && l.pacienteId === pacienteId).map((l) => ({ ...l }));
+    },
+    async corrigir(clinicaId, id, versao, identificacao, correcao) {
+      const l = lesoes.find((x) => x.id === id && x.clinicaId === clinicaId && x.versao === versao);
+      if (!l) return null;
+      delete l.subtipoUmidade;
+      delete l.etiologiaOutra;
+      Object.assign(l, identificacao, { versao: l.versao + 1, correcoes: [...l.correcoes, correcao] });
+      return { ...l };
+    },
+    async alterarStatus(clinicaId, id, m) {
+      const l = lesoes.find((x) => x.id === id && x.clinicaId === clinicaId && x.status === 'ABERTA');
+      if (!l) return null;
+      Object.assign(l, { status: m.status, motivoEncerramento: m.motivoEncerramento, statusConsultaId: m.consultaId, statusAlteradoPor: m.por, statusAlteradoEm: m.em });
+      return { ...l };
+    },
+    async createConsentimento(data) {
+      if (consentimentos.some((c) => c.pacienteId === data.pacienteId && c.revogadoEm == null)) throw Object.assign(new Error('dup'), { code: 11000 });
+      const c = { ...data, id: `65f0000000000000000c${String(consentimentos.length + 1).padStart(4, '0')}`, revogadoEm: null, revogadoPor: null, criadoEm: new Date() };
+      consentimentos.push(c);
+      return { ...c };
+    },
+    async consentimentoVigente(clinicaId, pacienteId) {
+      return consentimentos.find((c) => c.clinicaId === clinicaId && c.pacienteId === pacienteId && c.revogadoEm == null) ?? null;
+    },
+    async listConsentimentos(clinicaId, pacienteId) {
+      return consentimentos.filter((c) => c.clinicaId === clinicaId && c.pacienteId === pacienteId).reverse();
+    },
+    async revogarConsentimento(clinicaId, id, por, em) {
+      const c = consentimentos.find((x) => x.id === id && x.clinicaId === clinicaId && x.revogadoEm == null);
+      if (!c) return null;
+      Object.assign(c, { revogadoEm: em, revogadoPor: por });
+      return { ...c };
+    },
+  };
+  return { repo, lesoes, consentimentos };
+}
+
 /** Cobranças em memória com o índice único parcial de consultaId. */
 function cobrancasEmMemoria() {
   const cobrancas: Cobranca[] = [];
@@ -163,6 +229,15 @@ function montar(opts: { coren?: string | null; valorPadrao?: number; modulos?: M
     {} as NotificacoesService,
   );
   const users = { findById: jest.fn().mockResolvedValue(opts.coren === null ? { coren: '' } : { coren: opts.coren ?? 'COREN-SP 123' }) };
+  const les = lesoesEmMemoria();
+  const produtos = { buscarPorCodigo: jest.fn().mockImplementation((codigo: number) => Promise.resolve(codigo === 101 ? { codigo: 101 } : null)) };
+  const lesoesService = new LesoesService(
+    les.repo,
+    c.repo,
+    { create: auditCreate } as unknown as AuditLogRepository,
+    pacientes as unknown as PacientesService,
+    produtos as unknown as ProdutosService,
+  );
   const service = new ConsultasService(
     c.repo,
     { create: auditCreate } as unknown as AuditLogRepository,
@@ -172,9 +247,10 @@ function montar(opts: { coren?: string | null; valorPadrao?: number; modulos?: M
     cobrancasService,
     opts.modulos ?? new ModulosAvaliacaoRegistry([]),
     (opts.storage ?? storageFake()) as never,
+    lesoesService,
   );
   const eventos = () => auditCreate.mock.calls.map((x) => x[0].event);
-  return { service, c, cob, auditCreate, eventos };
+  return { service, lesoesService, les, c, cob, auditCreate, eventos };
 }
 
 function storageFake() {
@@ -565,10 +641,11 @@ describe('5b — validação compartilhada do módulo de incontinência anal', (
 });
 
 describe('5b — disponibilidade por classificação do paciente (IU = incontinência urinária e anal)', () => {
-  it('a tela oferece IU e incontinência anal só para paciente com IU; ferida/ostomia ainda sem módulo', () => {
+  it('a tela oferece IU e incontinência anal só para paciente com IU; ferida só para FA; ostomia ainda sem módulo', () => {
     expect(modulosDisponiveis([ClassificacaoArea.IU])).toEqual(['IU', 'INCONTINENCIA_ANAL']);
-    expect(modulosDisponiveis([ClassificacaoArea.FA, ClassificacaoArea.OT])).toEqual([]);
-    expect(modulosDisponiveis([ClassificacaoArea.IU, ClassificacaoArea.FA])).toEqual(['IU', 'INCONTINENCIA_ANAL']);
+    expect(modulosDisponiveis([ClassificacaoArea.FA, ClassificacaoArea.OT])).toEqual(['FERIDA']);
+    expect(modulosDisponiveis([ClassificacaoArea.OT])).toEqual([]);
+    expect(modulosDisponiveis([ClassificacaoArea.IU, ClassificacaoArea.FA])).toEqual(['IU', 'INCONTINENCIA_ANAL', 'FERIDA']);
   });
 
   const registroReal = () =>
@@ -709,5 +786,309 @@ describe('5b — anexos da consulta (diário em papel)', () => {
     expect(metodos).not.toMatch(/excluir|delete|remover/i);
     const repoMetodos = Object.getOwnPropertyNames(ConsultaMongoRepository.prototype).join(',');
     expect(repoMetodos).not.toMatch(/delete|remove|excluir/i);
+  });
+});
+
+// ======================================================================================================================
+// Etapa 5c — FERIDAS: lesões, módulo FERIDA, desfecho na assinatura, consentimento e medição por foto.
+// ======================================================================================================================
+
+const OUTRO_PACIENTE = '65f000000000000000000002';
+const SECRETARIA = ctx(usuario(Papel.SECRETARIA, 'sec'));
+const ADMIN = ctx(usuario(Papel.ADMIN, 'adm'));
+const SUPER = ctx(usuario(Papel.SUPER_ADMIN, 'root'));
+const DE_OUTRA_CLINICA = ctx(usuario(Papel.ENFERMEIRO, 'enf-x', 'clinica-2'));
+
+const registroComFerida = () =>
+  new ModulosAvaliacaoRegistry(
+    (Object.entries(VALIDADORES_MODULO) as Array<[AreaModuloAvaliacao, (d: unknown) => string[]]>).map(([area, validar]) => ({ area, validar })),
+  );
+
+const lesaoDto = (over: Record<string, unknown> = {}) =>
+  ({
+    pacienteId: PACIENTE,
+    localizacaoAnatomica: 'região sacral',
+    lado: 'CENTRAL',
+    etiologia: 'ULCERA_VENOSA',
+    dataIdentificacao: '2026-11-01',
+    ...over,
+  }) as CreateLesaoDto;
+
+const montarFerida = (opts: Parameters<typeof montar>[0] = {}) => montar({ modulos: registroComFerida(), classificacoes: ['FA'], ...opts });
+
+const moduloFerida = (avaliacoes: unknown[], itb?: unknown[]) => ({
+  avaliacao: { modulos: [{ area: AreaModuloAvaliacao.FERIDA, dados: { avaliacoes, ...(itb ? { itb } : {}) } as Record<string, unknown> }] },
+});
+const avaliacao = (lesaoId: string, over: Record<string, unknown> = {}) => ({ lesaoId, desfecho: { situacao: 'EM_ACOMPANHAMENTO' }, ...over });
+
+describe('5c — cadastro de lesões', () => {
+  it('ENFERMEIRO cadastra com número sequencial por paciente (1, 2…), status ABERTA; auditado sem conteúdo clínico', async () => {
+    const m = montarFerida();
+    const l1 = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    const l2 = await m.lesoesService.criar(lesaoDto({ etiologia: 'LESAO_UMIDADE', subtipoUmidade: 'PERIESTOMAL' }), COLEGA);
+    expect([l1.numero, l2.numero]).toEqual([1, 2]);
+    expect(l1).toMatchObject({ status: 'ABERTA', clinicaId: CLINICA, criadaPor: 'enf-autor', versao: 1, correcoes: [] });
+    const ev = m.auditCreate.mock.calls.find((x) => x[0].event === AuditEvent.LESAO_CREATED)![0];
+    expect(JSON.stringify(ev.metadata)).not.toMatch(/sacral|VENOSA/);
+  });
+
+  it('número sem corrida: leitura atrasada bate no índice único e o serviço tenta o próximo', async () => {
+    const m = montarFerida();
+    await m.lesoesService.criar(lesaoDto(), AUTOR);
+    m.les.repo.forcarCorridaNumero = 1;
+    const l = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    expect(l.numero).toBe(2);
+  });
+
+  it.each([
+    ['OUTRA sem texto', { etiologia: 'OUTRA' }, /etiologiaOutra: obrigatorio/],
+    ['umidade sem subtipo', { etiologia: 'LESAO_UMIDADE' }, /subtipoUmidade: obrigatorio/],
+    ['subtipo fora de umidade', { subtipoUmidade: 'PERIESTOMAL' }, /subtipoUmidade/],
+    ['localização vazia', { localizacaoAnatomica: '  ' }, /localizacaoAnatomica: obrigatorio/],
+  ])('%s -> 400', async (_n, over, erro) => {
+    const m = montarFerida();
+    await expect(m.lesoesService.criar(lesaoDto(over), AUTOR)).rejects.toThrow(erro);
+  });
+
+  it('OUTRA com texto é aceita; paciente sem FA -> 400; outra clínica -> 404; SECRETARIA/ADMIN/SUPER_ADMIN -> 403', async () => {
+    const m = montarFerida();
+    await expect(m.lesoesService.criar(lesaoDto({ etiologia: 'OUTRA', etiologiaOutra: 'queimadura' }), AUTOR)).resolves.toMatchObject({ etiologiaOutra: 'queimadura' });
+    await expect(montarFerida({ classificacoes: ['IU'] }).lesoesService.criar(lesaoDto(), AUTOR)).rejects.toThrow(/classificacao FA/);
+    await expect(m.lesoesService.criar(lesaoDto(), DE_OUTRA_CLINICA)).rejects.toBeInstanceOf(NotFoundException);
+    for (const quem of [SECRETARIA, ADMIN, SUPER]) await expect(m.lesoesService.criar(lesaoDto(), quem)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('correção de etiologia/localização é VERSIONADA (autor, data, motivo, valores anteriores); versão velha -> 409', async () => {
+    const m = montarFerida();
+    const l = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    const corr = { localizacaoAnatomica: 'calcâneo', lado: 'DIREITO', etiologia: 'LESAO_POR_PRESSAO', motivo: 'erro de cadastro na triagem', versao: 1 } as CorrigirLesaoDto;
+    const c = await m.lesoesService.corrigir(l.id, corr, COLEGA);
+    expect(c).toMatchObject({ etiologia: 'LESAO_POR_PRESSAO', localizacaoAnatomica: 'calcâneo', versao: 2 });
+    expect(c.correcoes).toHaveLength(1);
+    expect(c.correcoes[0]).toMatchObject({
+      por: 'enf-colega',
+      motivo: 'erro de cadastro na triagem',
+      anterior: { etiologia: 'ULCERA_VENOSA', localizacaoAnatomica: 'região sacral', lado: 'CENTRAL' },
+    });
+    expect(c.correcoes[0].em).toBeInstanceOf(Date);
+    const ev = m.auditCreate.mock.calls.find((x) => x[0].event === AuditEvent.LESAO_CORRIGIDA)![0];
+    expect(ev.metadata.campos).toEqual(expect.arrayContaining(['etiologia', 'localizacaoAnatomica', 'lado']));
+    expect(JSON.stringify(ev.metadata)).not.toMatch(/calcâneo|triagem/);
+
+    await expect(m.lesoesService.corrigir(l.id, { ...lesaoDto(), motivo: 'outra correção qualquer', versao: 1 } as CorrigirLesaoDto, AUTOR)).rejects.toBeInstanceOf(ConflictException);
+    await expect(m.lesoesService.corrigir(l.id, { ...corr, motivo: 'nada mudou aqui', versao: 2 }, AUTOR)).rejects.toThrow(/Nada mudou/);
+  });
+
+  it('LER: enfermeiro da clínica lê (não autor auditado); SECRETARIA/ADMIN/SUPER_ADMIN 403; outra clínica 404', async () => {
+    const m = montarFerida();
+    const l = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    await expect(m.lesoesService.obter(l.id, undefined, COLEGA)).resolves.toMatchObject({ id: l.id });
+    expect(m.auditCreate.mock.calls.find((x) => x[0].event === AuditEvent.LESAO_VIEWED)![0].metadata).toMatchObject({ lesaoId: l.id, autor: false });
+    expect(await m.lesoesService.listar({ pacienteId: PACIENTE }, COLEGA)).toHaveLength(1);
+    for (const quem of [SECRETARIA, ADMIN, SUPER]) {
+      await expect(m.lesoesService.obter(l.id, undefined, quem)).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(m.lesoesService.listar({ pacienteId: PACIENTE }, quem)).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(m.lesoesService.historico({ pacienteId: PACIENTE }, quem)).rejects.toBeInstanceOf(ForbiddenException);
+    }
+    await expect(m.lesoesService.obter(l.id, undefined, DE_OUTRA_CLINICA)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(m.lesoesService.listar({ pacienteId: PACIENTE }, DE_OUTRA_CLINICA)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('não há método de status nem de exclusão de lesão no serviço nem nos controllers', () => {
+    const nomes = [LesoesService.prototype, LesoesController.prototype, ConsentimentosImagemController.prototype, LesaoMongoRepository.prototype]
+      .flatMap((p) => Object.getOwnPropertyNames(p))
+      .join(',');
+    expect(nomes).not.toMatch(/excluir|delete|remover|remove/i);
+    expect(Object.getOwnPropertyNames(LesoesController.prototype).join(',')).not.toMatch(/status/i);
+  });
+});
+
+describe('5c — módulo FERIDA na consulta', () => {
+  it('disponível só para FA: paciente [IU] recebe 400', async () => {
+    const m = montarFerida({ classificacoes: ['IU'] });
+    await expect(m.service.criar(dtoBase(moduloFerida([])), AUTOR)).rejects.toThrow(/nao disponivel para a classificacao/);
+  });
+
+  it('LPP sem categoria -> 400; com categoria aceita; lpp em lesão que não é LPP -> 400', async () => {
+    const m = montarFerida();
+    const lpp = await m.lesoesService.criar(lesaoDto({ etiologia: 'LESAO_POR_PRESSAO' }), AUTOR);
+    const venosa = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    await expect(m.service.criar(dtoBase(moduloFerida([avaliacao(lpp.id)])), AUTOR)).rejects.toThrow(/lpp\.categoria: obrigatorio/);
+    await expect(m.service.criar(dtoBase(moduloFerida([avaliacao(lpp.id, { lpp: { categoria: 'MUCOSA' } })])), AUTOR)).resolves.toBeDefined();
+    await expect(m.service.criar(dtoBase(moduloFerida([avaliacao(venosa.id, { lpp: { categoria: 'II' } })])), AUTOR)).rejects.toThrow(/so se aplica a lesao por pressao/);
+  });
+
+  it('adesivo médico: obrigatório; segunda observação com menos de 30 min -> erro com o texto especificado', async () => {
+    const m = montarFerida();
+    const ad = await m.lesoesService.criar(lesaoDto({ etiologia: 'LESAO_ADESIVO_MEDICO' }), AUTOR);
+    const obs = (min: number) => ({
+      observacaoRemocao: { em: '2026-11-06T10:00:00.000Z', achado: 'a' },
+      observacao30min: { em: new Date(Date.parse('2026-11-06T10:00:00.000Z') + min * 60000).toISOString(), achado: 'b' },
+    });
+    await expect(m.service.criar(dtoBase(moduloFerida([avaliacao(ad.id)])), AUTOR)).rejects.toThrow(/observacaoRemocao: obrigatorio/);
+    await expect(m.service.criar(dtoBase(moduloFerida([avaliacao(ad.id, { lesaoAdesivo: obs(29) })])), AUTOR)).rejects.toThrow(
+      /Registre a segunda observação 30 minutos ou mais após a remoção do adesivo\./,
+    );
+    await expect(m.service.criar(dtoBase(moduloFerida([avaliacao(ad.id, { lesaoAdesivo: obs(30) })])), AUTOR)).resolves.toBeDefined();
+  });
+
+  it('lesão de outro paciente, lesão inexistente ou produto do catálogo inexistente -> 400', async () => {
+    const m = montarFerida();
+    const minha = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    const deOutro = await m.lesoesService.criar(lesaoDto({ pacienteId: OUTRO_PACIENTE }), AUTOR);
+    await expect(m.service.criar(dtoBase(moduloFerida([avaliacao(deOutro.id)])), AUTOR)).rejects.toThrow(/nao encontrada para este paciente/);
+    await expect(m.service.criar(dtoBase(moduloFerida([avaliacao('65f0000000000000000000ff')])), AUTOR)).rejects.toThrow(/nao encontrada/);
+    await expect(m.service.criar(dtoBase(moduloFerida([avaliacao(minha.id, { materiais: [{ produtoCodigo: 999 }] })])), AUTOR)).rejects.toThrow(/Produto do catalogo/);
+    await expect(
+      m.service.criar(dtoBase(moduloFerida([avaliacao(minha.id, { materiais: [{ produtoCodigo: 101 }, { descricao: 'gaze' }] })])), AUTOR),
+    ).resolves.toBeDefined();
+  });
+});
+
+describe('5c — desfecho aplicado na ASSINATURA', () => {
+  it('rascunho NÃO muda a lesão; assinar aplica CICATRIZADA com consultaId (auditado); alterar o módulo depois -> 409', async () => {
+    const m = montarFerida();
+    const l = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    const c = await m.service.criar(dtoBase(moduloFerida([avaliacao(l.id, { desfecho: { situacao: 'CICATRIZADA' } })])), AUTOR);
+    expect(m.les.lesoes[0].status).toBe('ABERTA');
+
+    await m.service.assinar(c.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
+    expect(m.les.lesoes[0]).toMatchObject({ status: 'CICATRIZADA', statusConsultaId: c.id, statusAlteradoPor: 'enf-autor' });
+    const ev = m.auditCreate.mock.calls.find((x) => x[0].event === AuditEvent.LESAO_STATUS_ALTERADO)![0];
+    expect(ev.metadata).toMatchObject({ lesaoId: l.id, consultaId: c.id, de: 'ABERTA', para: 'CICATRIZADA' });
+
+    await expect(m.service.atualizarRascunho(c.id, moduloFerida([]), AUTOR)).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('ENCERRADA exige motivo e grava o motivo na lesão; EM_ACOMPANHAMENTO mantém ABERTA', async () => {
+    const m = montarFerida();
+    const a = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    const b = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    await expect(m.service.criar(dtoBase(moduloFerida([avaliacao(a.id, { desfecho: { situacao: 'ENCERRADA' } })])), AUTOR)).rejects.toThrow(/desfecho\.motivo: obrigatorio/);
+    const c = await m.service.criar(
+      dtoBase(moduloFerida([avaliacao(a.id, { desfecho: { situacao: 'ENCERRADA', motivo: 'transferido de serviço' } }), avaliacao(b.id)])),
+      AUTOR,
+    );
+    await m.service.assinar(c.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
+    expect(m.les.lesoes.map((l) => [l.status, l.motivoEncerramento])).toEqual([['ENCERRADA', 'transferido de serviço'], ['ABERTA', undefined]]);
+  });
+
+  it('lesão encerrada por OUTRA consulta antes da assinatura -> 409 ao assinar (nada é assinado)', async () => {
+    const m = montarFerida();
+    const l = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    const rascunho = await m.service.criar(dtoBase(moduloFerida([avaliacao(l.id)])), AUTOR);
+    const outra = await m.service.criar(dtoBase(moduloFerida([avaliacao(l.id, { desfecho: { situacao: 'CICATRIZADA' } })])), COLEGA);
+    await m.service.assinar(outra.id, { cobranca: { incluidaEmPacote: true } }, undefined, COLEGA);
+
+    await expect(m.service.assinar(rascunho.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR)).rejects.toBeInstanceOf(ConflictException);
+    expect(m.c.consultas.find((x) => x.id === rascunho.id)!.status).toBe(StatusConsulta.RASCUNHO);
+  });
+
+  it('histórico: só consultas ASSINADAS, abertas primeiro, medidas com o método', async () => {
+    const m = montarFerida();
+    const a = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    const b = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    const assinada = await m.service.criar(
+      dtoBase(moduloFerida([avaliacao(a.id, { desfecho: { situacao: 'CICATRIZADA' } }), avaliacao(b.id, { medidas: { manual: { comprimentoCm: 3, larguraCm: 2 } } })])),
+      AUTOR,
+    );
+    await m.service.assinar(assinada.id, { cobranca: { incluidaEmPacote: true } }, undefined, AUTOR);
+    await m.service.criar(dtoBase(moduloFerida([avaliacao(b.id)])), AUTOR); // rascunho: fora do histórico
+
+    const h = await m.lesoesService.historico({ pacienteId: PACIENTE }, COLEGA);
+    expect(h.map((x) => [x.lesao.numero, x.lesao.status])).toEqual([[2, 'ABERTA'], [1, 'CICATRIZADA']]);
+    expect(h[0].avaliacoes).toHaveLength(1);
+    expect(h[0].avaliacoes[0].medidas).toEqual([{ metodo: 'MANUAL', comprimentoCm: 3, larguraCm: 2, profundidadeCm: undefined }]);
+    expect(m.eventos()).toContain(AuditEvent.LESAO_HISTORICO_VIEWED);
+  });
+});
+
+describe('5c — consentimento de imagem e fotos da ferida', () => {
+  const foto = { mimeType: 'image/png' as const, tamanho: 1234, hash: 'b'.repeat(64) };
+  const consentir = { pacienteId: PACIENTE, obtidoEm: '2026-11-06T09:00:00.000Z' };
+
+  async function cenario() {
+    const m = montarFerida();
+    const l = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    const c = await m.service.criar(dtoBase(), AUTOR);
+    return { m, l, c };
+  }
+
+  it('sem consentimento: upload de foto recusado (422, auditado); diário sem lesão segue sem consentimento', async () => {
+    const { m, l, c } = await cenario();
+    await expect(m.service.criarUploadAnexo(c.id, { ...foto, lesaoId: l.id }, undefined, AUTOR)).rejects.toBeInstanceOf(UnprocessableEntityException);
+    expect(m.eventos()).toContain(AuditEvent.CONSULTA_FOTO_RECUSADA_SEM_CONSENTIMENTO);
+    await expect(m.service.criarUploadAnexo(c.id, foto, undefined, AUTOR)).resolves.toBeDefined();
+  });
+
+  it('com consentimento: foto aceita (só JPG/PNG, lesão do paciente); revogado: recusado; fotos antigas continuam legíveis', async () => {
+    const { m, l, c } = await cenario();
+    const cons = await m.lesoesService.registrarConsentimento(consentir, AUTOR);
+    await expect(m.lesoesService.registrarConsentimento(consentir, AUTOR)).rejects.toBeInstanceOf(ConflictException);
+    await expect(m.service.criarUploadAnexo(c.id, { ...foto, mimeType: 'application/pdf', lesaoId: l.id }, undefined, AUTOR)).rejects.toThrow(/JPG ou PNG/);
+    const deOutro = await m.lesoesService.criar(lesaoDto({ pacienteId: OUTRO_PACIENTE }), AUTOR);
+    await expect(m.service.criarUploadAnexo(c.id, { ...foto, lesaoId: deOutro.id }, undefined, AUTOR)).rejects.toThrow(/nao encontrada para este paciente/);
+
+    const up = await m.service.criarUploadAnexo(c.id, { ...foto, lesaoId: l.id }, undefined, AUTOR);
+    expect(up.anexo).toMatchObject({ lesaoId: l.id });
+    await m.service.confirmarUploadAnexo(c.id, up.anexo.id, undefined, AUTOR);
+
+    await m.lesoesService.revogarConsentimento(cons.id, undefined, AUTOR);
+    await expect(m.service.criarUploadAnexo(c.id, { ...foto, lesaoId: l.id }, undefined, AUTOR)).rejects.toBeInstanceOf(UnprocessableEntityException);
+    await expect(m.service.urlAcessoAnexo(c.id, up.anexo.id, undefined, COLEGA)).resolves.toMatchObject({ accessUrl: 'https://r2/get/assinada' });
+    const r = await m.lesoesService.consentimentos({ pacienteId: PACIENTE }, COLEGA);
+    expect(r.vigente).toBeNull();
+    expect(r.historico[0]).toMatchObject({ revogadoPor: 'enf-autor' });
+    expect(m.eventos()).toEqual(expect.arrayContaining([AuditEvent.CONSENTIMENTO_IMAGEM_REGISTRADO, AuditEvent.CONSENTIMENTO_IMAGEM_REVOGADO]));
+  });
+
+  it('consentimento revogado entre o presign e a confirmação: a foto NÃO é confirmada', async () => {
+    const { m, l, c } = await cenario();
+    const cons = await m.lesoesService.registrarConsentimento(consentir, AUTOR);
+    const up = await m.service.criarUploadAnexo(c.id, { ...foto, lesaoId: l.id }, undefined, AUTOR);
+    await m.lesoesService.revogarConsentimento(cons.id, undefined, AUTOR);
+    await expect(m.service.confirmarUploadAnexo(c.id, up.anexo.id, undefined, AUTOR)).rejects.toBeInstanceOf(UnprocessableEntityException);
+  });
+
+  it('consentimento: SECRETARIA/ADMIN não; outra clínica 404; obtidoEm no futuro -> 400', async () => {
+    const m = montarFerida();
+    for (const quem of [SECRETARIA, ADMIN]) {
+      await expect(m.lesoesService.registrarConsentimento(consentir, quem)).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(m.lesoesService.consentimentos({ pacienteId: PACIENTE }, quem)).rejects.toBeInstanceOf(ForbiddenException);
+    }
+    await expect(m.lesoesService.consentimentos({ pacienteId: PACIENTE }, DE_OUTRA_CLINICA)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(m.lesoesService.registrarConsentimento({ pacienteId: PACIENTE, obtidoEm: '2999-01-01T00:00:00.000Z' }, AUTOR)).rejects.toThrow(/futuro/);
+  });
+
+  it('fotos da lesão: SECRETARIA/ADMIN não leem; outra clínica 404', async () => {
+    const { m, l, c } = await cenario();
+    await m.lesoesService.registrarConsentimento(consentir, AUTOR);
+    const up = await m.service.criarUploadAnexo(c.id, { ...foto, lesaoId: l.id }, undefined, AUTOR);
+    await m.service.confirmarUploadAnexo(c.id, up.anexo.id, undefined, AUTOR);
+    for (const quem of [SECRETARIA, ADMIN]) await expect(m.service.urlAcessoAnexo(c.id, up.anexo.id, undefined, quem)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(m.service.urlAcessoAnexo(c.id, up.anexo.id, undefined, DE_OUTRA_CLINICA)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('MEDIÇÃO: a API RECALCULA a partir dos pontos e ignora o número do cliente; foto de outra lesão / contorno cruzado -> 400', async () => {
+    const { m, l, c } = await cenario();
+    const outraLesao = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    await m.lesoesService.registrarConsentimento(consentir, AUTOR);
+    const up = await m.service.criarUploadAnexo(c.id, { ...foto, lesaoId: l.id }, undefined, AUTOR);
+    await m.service.confirmarUploadAnexo(c.id, up.anexo.id, undefined, AUTOR);
+
+    const medida = {
+      anexoId: up.anexo.id,
+      // 100 px da régua = 2 cm -> 0,02 cm/px; quadrado de 100 px de lado = 2 cm x 2 cm.
+      calibracao: { p1: { x: 0, y: 0 }, p2: { x: 100, y: 0 }, distanciaCm: 2 },
+      contorno: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }],
+      resultado: { areaCm2: 999, comprimentoCm: 999, larguraCm: 999 },
+    };
+    const r = await m.service.atualizarRascunho(c.id, moduloFerida([avaliacao(l.id, { medidas: { fotos: [medida] } })]), AUTOR);
+    const dados = r.avaliacao.modulos[0].dados as { avaliacoes: Array<{ medidas: { fotos: Array<{ resultado: unknown }> } }> };
+    expect(dados.avaliacoes[0].medidas.fotos[0].resultado).toEqual({ areaCm2: 4, comprimentoCm: 2.83, larguraCm: 2.83 });
+
+    await expect(m.service.atualizarRascunho(c.id, moduloFerida([avaliacao(outraLesao.id, { medidas: { fotos: [medida] } })]), AUTOR)).rejects.toThrow(/mesma lesao/);
+    const cruzado = { ...medida, contorno: [{ x: 0, y: 0 }, { x: 100, y: 100 }, { x: 100, y: 0 }, { x: 0, y: 100 }] };
+    await expect(m.service.atualizarRascunho(c.id, moduloFerida([avaliacao(l.id, { medidas: { fotos: [cruzado] } })]), AUTOR)).rejects.toThrow(/se cruza/);
   });
 });

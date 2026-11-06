@@ -23,6 +23,7 @@ import {
   PadraoImplementacao,
   StatusCobrancaConsulta,
   StatusConsulta,
+  StatusDesfechoLesoes,
 } from '../domain/consulta-enfermagem.entity';
 import { ModulosAvaliacaoRegistry } from '../domain/modulos-avaliacao.registry';
 import {
@@ -95,6 +96,12 @@ function consultasEmMemoria() {
       c.cobranca = cobranca;
       return { ...c };
     },
+    async atualizarDesfechoLesoes(clinicaId, id, status) {
+      const c = consultas.find((x) => x.id === id && x.clinicaId === clinicaId && x.status === StatusConsulta.ASSINADA);
+      if (!c) return null;
+      c.desfechoLesoesStatus = status;
+      return { ...c };
+    },
     async listAdendos(clinicaId, consultaId) {
       return adendos.filter((a) => a.clinicaId === clinicaId && a.consultaId === consultaId).sort((a, b) => a.numero - b.numero);
     },
@@ -136,7 +143,7 @@ function lesoesEmMemoria() {
   const lesoes: Lesao[] = [];
   const consentimentos: ConsentimentoImagem[] = [];
   let seq = 0;
-  const repo: LesaoRepository & { forcarCorridaNumero?: number } = {
+  const repo: LesaoRepository & { forcarCorridaNumero?: number; falharAlterarStatus?: number } = {
     async create(data) {
       if (lesoes.some((l) => l.pacienteId === data.pacienteId && l.numero === data.numero)) throw Object.assign(new Error('dup'), { code: 11000 });
       const l = { ...data, id: `65f00000000000000000b${String(++seq).padStart(3, '0')}`, status: 'ABERTA', correcoes: [], versao: 1, criadaEm: new Date(), atualizadaEm: new Date() } as Lesao;
@@ -163,6 +170,7 @@ function lesoesEmMemoria() {
       return { ...l };
     },
     async alterarStatus(clinicaId, id, m) {
+      if (repo.falharAlterarStatus && repo.falharAlterarStatus-- > 0) throw new Error('mongo indisponivel');
       const l = lesoes.find((x) => x.id === id && x.clinicaId === clinicaId && x.status === 'ABERTA');
       if (!l) return null;
       Object.assign(l, { status: m.status, motivoEncerramento: m.motivoEncerramento, statusConsultaId: m.consultaId, statusAlteradoPor: m.por, statusAlteradoEm: m.em });
@@ -1090,5 +1098,77 @@ describe('5c — consentimento de imagem e fotos da ferida', () => {
     await expect(m.service.atualizarRascunho(c.id, moduloFerida([avaliacao(outraLesao.id, { medidas: { fotos: [medida] } })]), AUTOR)).rejects.toThrow(/mesma lesao/);
     const cruzado = { ...medida, contorno: [{ x: 0, y: 0 }, { x: 100, y: 100 }, { x: 100, y: 0 }, { x: 0, y: 100 }] };
     await expect(m.service.atualizarRascunho(c.id, moduloFerida([avaliacao(l.id, { medidas: { fotos: [cruzado] } })]), AUTOR)).rejects.toThrow(/se cruza/);
+  });
+});
+
+describe('5c — desfecho PENDENTE_APLICACAO e reaplicação (mesmo padrão da cobrança)', () => {
+  const assinarComDesfecho = async (m: ReturnType<typeof montarFerida>, lesaoId: string, quem = AUTOR) => {
+    const c = await m.service.criar(dtoBase(moduloFerida([avaliacao(lesaoId, { desfecho: { situacao: 'CICATRIZADA' } })])), quem);
+    return m.service.assinar(c.id, { cobranca: { incluidaEmPacote: true } }, undefined, quem);
+  };
+
+  it('sucesso na assinatura -> APLICADO; consulta sem desfecho que fecha lesão não ganha o campo', async () => {
+    const m = montarFerida();
+    const l = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    const ok = await assinarComDesfecho(m, l.id);
+    expect(ok.desfechoLesoesStatus).toBe(StatusDesfechoLesoes.APLICADO);
+    const { assinada } = await criarEAssinar(m, { incluidaEmPacote: true });
+    expect(assinada.desfechoLesoesStatus).toBeUndefined();
+  });
+
+  it('FALHA simulada: consulta ASSINADA com PENDENTE_APLICACAO (auditado), lesão continua ABERTA', async () => {
+    const m = montarFerida();
+    const l = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    m.les.repo.falharAlterarStatus = 1;
+    const assinada = await assinarComDesfecho(m, l.id);
+    expect(assinada.status).toBe(StatusConsulta.ASSINADA);
+    expect(assinada.desfechoLesoesStatus).toBe(StatusDesfechoLesoes.PENDENTE_APLICACAO);
+    expect(m.c.consultas[0].desfechoLesoesStatus).toBe(StatusDesfechoLesoes.PENDENTE_APLICACAO);
+    expect(m.les.lesoes[0].status).toBe('ABERTA');
+    expect(m.eventos()).toEqual(expect.arrayContaining([AuditEvent.LESAO_STATUS_NAO_APLICADO, AuditEvent.CONSULTA_DESFECHO_LESOES_PENDENTE]));
+  });
+
+  it('reaplicar -> APLICADO com o desfecho GRAVADO; reaplicar 2x não tem efeito duplicado', async () => {
+    const m = montarFerida();
+    const l = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    m.les.repo.falharAlterarStatus = 1;
+    const assinada = await assinarComDesfecho(m, l.id);
+
+    const r1 = await m.service.aplicarDesfechoLesoes(assinada.id, undefined, COLEGA);
+    expect(r1).toMatchObject({ desfechoLesoesStatus: 'APLICADO', aplicadas: [l.id], jaAplicadas: [], conflitos: [], falhas: [] });
+    expect(m.les.lesoes[0]).toMatchObject({ status: 'CICATRIZADA', statusConsultaId: assinada.id });
+    const alteracoes = () => m.eventos().filter((e) => e === AuditEvent.LESAO_STATUS_ALTERADO).length;
+    expect(alteracoes()).toBe(1);
+
+    const r2 = await m.service.aplicarDesfechoLesoes(assinada.id, undefined, AUTOR);
+    expect(r2).toMatchObject({ desfechoLesoesStatus: 'APLICADO', aplicadas: [], jaAplicadas: [l.id], conflitos: [] });
+    expect(alteracoes()).toBe(1);
+    expect(m.les.lesoes[0].statusAlteradoPor).toBe('enf-colega');
+    expect(m.eventos()).toContain(AuditEvent.CONSULTA_DESFECHO_LESOES_REAPLICADO);
+  });
+
+  it('CONFLITO: lesão já fechada por OUTRA consulta não é sobrescrita; auditado e devolvido', async () => {
+    const m = montarFerida();
+    const l = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    m.les.repo.falharAlterarStatus = 1;
+    const pendente = await assinarComDesfecho(m, l.id);
+    // Outra consulta encerra a mesma lesão antes da reaplicação.
+    const outra = await m.service.criar(dtoBase(moduloFerida([avaliacao(l.id, { desfecho: { situacao: 'ENCERRADA', motivo: 'alta do servico' } })])), COLEGA);
+    await m.service.assinar(outra.id, { cobranca: { incluidaEmPacote: true } }, undefined, COLEGA);
+
+    const r = await m.service.aplicarDesfechoLesoes(pendente.id, undefined, AUTOR);
+    expect(r).toMatchObject({ aplicadas: [], conflitos: [l.id], desfechoLesoesStatus: 'APLICADO' });
+    expect(m.les.lesoes[0]).toMatchObject({ status: 'ENCERRADA', statusConsultaId: outra.id, motivoEncerramento: 'alta do servico' });
+    const ev = m.auditCreate.mock.calls.find((x) => x[0].event === AuditEvent.LESAO_DESFECHO_CONFLITO)![0];
+    expect(ev.metadata).toMatchObject({ consultaId: pendente.id, lesaoId: l.id, fechadaPorConsultaId: outra.id, statusAtual: 'ENCERRADA' });
+  });
+
+  it('reaplicar: rascunho -> 409; SECRETARIA/ADMIN -> 403; outra clínica -> 404', async () => {
+    const m = montarFerida();
+    const l = await m.lesoesService.criar(lesaoDto(), AUTOR);
+    const rascunho = await m.service.criar(dtoBase(moduloFerida([avaliacao(l.id)])), AUTOR);
+    await expect(m.service.aplicarDesfechoLesoes(rascunho.id, undefined, AUTOR)).rejects.toBeInstanceOf(ConflictException);
+    for (const quem of [SECRETARIA, ADMIN]) await expect(m.service.aplicarDesfechoLesoes(rascunho.id, undefined, quem)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(m.service.aplicarDesfechoLesoes(rascunho.id, undefined, DE_OUTRA_CLINICA)).rejects.toBeInstanceOf(NotFoundException);
   });
 });

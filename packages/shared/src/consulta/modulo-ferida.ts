@@ -155,14 +155,14 @@ export const AVISOS_ITB = {
 
 /**
  * Regiões INFORMATIVAS do ITB com finalidade SEGURANCA_COMPRESSAO. Nunca "pode comprimir"/"não comprimir".
- * FRONTEIRAS (em centésimos, para evitar erro de ponto flutuante — decisão do projeto, testada):
+ * FRONTEIRAS (em centésimos, para evitar erro de ponto flutuante; testadas). Fonte: Compêndio Científico de
+ * Estomaterapia, cap. 27, quadros 28 e 29 (fronteiras aprovadas pelo Erico em 06/11/2026):
  *   v < 0,60                -> FORA_ESCOPO
  *   0,60 <= v < 0,80        -> CONFLITO
  *   0,80 <= v <= 1,20       -> TODAS_ADMITEM   (as duas pontas inclusivas)
  *   1,20 <  v <= 1,30       -> CONFLITO
  *   1,30 <  v <= 1,40       -> FORA_FAIXA
  *   v > 1,40                -> nenhuma região (só o aviso de índice não confiável)
- * TODO(conteudo): confirmar com o Erico a inclusividade das fronteiras 0,80 / 1,20 / 1,30 / 1,40.
  */
 export type RegiaoItbCompressao = 'FORA_ESCOPO' | 'CONFLITO' | 'TODAS_ADMITEM' | 'FORA_FAIXA';
 

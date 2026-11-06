@@ -8,6 +8,7 @@ import {
   CobrancaConsulta,
   ConsultaEnfermagem,
   StatusConsulta,
+  StatusDesfechoLesoes,
 } from '../../domain/consulta-enfermagem.entity';
 import { ConsultaRepository, ConteudoConsulta, NovaConsulta } from '../../application/ports/consulta.repository';
 import {
@@ -79,6 +80,18 @@ export class ConsultaMongoRepository implements ConsultaRepository {
       .findOneAndUpdate(
         { _id: id, clinicaId, status: StatusConsulta.ASSINADA },
         { $set: { cobranca, atualizadoEm: new Date() } },
+        { new: true },
+      )
+      .lean();
+    return doc ? this.toEntity(doc) : null;
+  }
+
+  async atualizarDesfechoLesoes(clinicaId: string, id: string, status: StatusDesfechoLesoes): Promise<ConsultaEnfermagem | null> {
+    if (!isValidObjectId(id)) return null;
+    const doc = await this.model
+      .findOneAndUpdate(
+        { _id: id, clinicaId, status: StatusConsulta.ASSINADA },
+        { $set: { desfechoLesoesStatus: status, atualizadoEm: new Date() } },
         { new: true },
       )
       .lean();

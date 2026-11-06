@@ -799,6 +799,13 @@ export const consultasApi = {
   /** Gera a cobrança que ficou pendente após a assinatura (idempotente). */
   gerarCobranca: (id: string) =>
     api.post<{ consultaId: string; cobranca: NonNullable<ConsultaEnfermagem['cobranca']> }>(`/consultas/${id}/cobranca`).then((r) => r.data),
+  /** Reaplica o desfecho do módulo Ferida nas lesões (idempotente; lesão fechada por outra consulta volta em `conflitos`). */
+  aplicarDesfechoLesoes: (id: string) =>
+    api
+      .post<{ consultaId: string; desfechoLesoesStatus?: 'APLICADO' | 'PENDENTE_APLICACAO'; aplicadas: string[]; jaAplicadas: string[]; conflitos: string[]; falhas: string[] }>(
+        `/consultas/${id}/lesoes/aplicar-desfecho`,
+      )
+      .then((r) => r.data),
   listarAnexos: (id: string) =>
     api.get<AnexoConsulta[]>(`/consultas/${id}/anexos`).then((r) => comoLista<AnexoConsulta>(r.data) as AnexoConsulta[]),
   urlAnexo: (id: string, anexoId: string) =>

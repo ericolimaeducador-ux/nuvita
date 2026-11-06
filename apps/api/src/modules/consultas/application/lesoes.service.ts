@@ -48,6 +48,18 @@ export interface EntradaHistoricoLesao {
   medidas: PontoMedida[];
 }
 
+export interface ResultadoDesfechos {
+  /** Avaliações com desfecho que fecha lesão (CICATRIZADA / ENCERRADA). */
+  aSerAplicadas: number;
+  aplicadas: string[];
+  /** Já fechadas por esta mesma consulta (reaplicação sem efeito). */
+  jaAplicadas: string[];
+  /** Fechadas por OUTRA consulta: não sobrescritas. */
+  conflitos: string[];
+  /** Falha de escrita: a consulta fica PENDENTE_APLICACAO. */
+  falhas: string[];
+}
+
 export interface HistoricoLesao {
   lesao: Lesao;
   avaliacoes: EntradaHistoricoLesao[];
@@ -242,15 +254,18 @@ export class LesoesService {
   }
 
   /**
-   * Depois da ASSINATURA: aplica o desfecho de cada avaliação na lesão (CICATRIZADA / ENCERRADA com motivo), com o
-   * consultaId gravado. EM_ACOMPANHAMENTO não muda nada. Rascunho nunca chega aqui. Sem transação (mesma decisão da
-   * cobrança): se a escrita falhar, a consulta continua assinada e o evento LESAO_STATUS_NAO_APLICADO fica auditado.
+   * Depois da ASSINATURA: aplica EXATAMENTE o desfecho gravado em cada avaliação na lesão (CICATRIZADA / ENCERRADA com
+   * motivo), com o consultaId gravado. EM_ACOMPANHAMENTO não muda nada. Rascunho nunca chega aqui. Idempotente: lesão já
+   * fechada POR ESTA consulta = já aplicado (nada muda); fechada por OUTRA consulta = conflito (não sobrescreve, auditado).
+   * Sem transação (mesma decisão da cobrança): falha de escrita -> `falhas` (a consulta fica PENDENTE_APLICACAO).
    */
-  async aplicarDesfechos(consulta: ConsultaEnfermagem, context: LesaoRequestContext): Promise<void> {
+  async aplicarDesfechos(consulta: ConsultaEnfermagem, context: LesaoRequestContext): Promise<ResultadoDesfechos> {
+    const resultado: ResultadoDesfechos = { aSerAplicadas: 0, aplicadas: [], jaAplicadas: [], conflitos: [], falhas: [] };
     const dados = this.moduloFerida(consulta);
     for (const av of dados?.avaliacoes ?? []) {
       const situacao = av.desfecho?.situacao;
       if (situacao !== 'CICATRIZADA' && situacao !== 'ENCERRADA') continue;
+      resultado.aSerAplicadas += 1;
       const meta = { clinicaId: consulta.clinicaId, consultaId: consulta.id, lesaoId: av.lesaoId, pacienteId: consulta.pacienteId, para: situacao };
       try {
         const alterada = await this.repo.alterarStatus(consulta.clinicaId, av.lesaoId, {
@@ -260,12 +275,30 @@ export class LesoesService {
           por: context.user.sub,
           em: consulta.assinatura?.dataAssinatura ?? new Date(),
         });
-        await this.audit(alterada ? AuditEvent.LESAO_STATUS_ALTERADO : AuditEvent.LESAO_STATUS_NAO_APLICADO, context, { ...meta, de: 'ABERTA' });
+        if (alterada) {
+          resultado.aplicadas.push(av.lesaoId);
+          await this.audit(AuditEvent.LESAO_STATUS_ALTERADO, context, { ...meta, de: 'ABERTA' });
+          continue;
+        }
+        // Não estava ABERTA: já aplicado por esta consulta (idempotência) ou fechada por outra (conflito).
+        const atual = await this.repo.findById(consulta.clinicaId, av.lesaoId);
+        if (atual && atual.statusConsultaId === consulta.id) {
+          resultado.jaAplicadas.push(av.lesaoId);
+        } else {
+          resultado.conflitos.push(av.lesaoId);
+          await this.audit(AuditEvent.LESAO_DESFECHO_CONFLITO, context, {
+            ...meta,
+            statusAtual: atual?.status ?? null,
+            fechadaPorConsultaId: atual?.statusConsultaId ?? null,
+          });
+        }
       } catch (erro) {
         this.logger.warn(`Desfecho da lesao ${av.lesaoId} (consulta ${consulta.id}) nao aplicado: ${(erro as Error).message}`);
+        resultado.falhas.push(av.lesaoId);
         await this.audit(AuditEvent.LESAO_STATUS_NAO_APLICADO, context, meta);
       }
     }
+    return resultado;
   }
 
   /** A lesão é deste paciente na clínica? (fotos da consulta são vinculadas a uma lesão) */

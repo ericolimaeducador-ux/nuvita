@@ -36,11 +36,12 @@ import {
   ConsultaEnfermagem,
   StatusCobrancaConsulta,
   StatusConsulta,
+  StatusDesfechoLesoes,
   avaliacaoVazia,
   planejamentoVazio,
 } from '../domain/consulta-enfermagem.entity';
 import { ModulosAvaliacaoRegistry } from '../domain/modulos-avaliacao.registry';
-import { LesoesService } from './lesoes.service';
+import { LesoesService, ResultadoDesfechos } from './lesoes.service';
 import { ConsultaRepository, ConteudoConsulta } from './ports/consulta.repository';
 import {
   AssinarConsultaDto,
@@ -56,6 +57,16 @@ export interface ConsultaRequestContext {
   ip: string;
   userAgent: string;
   user: AuthTokenPayload;
+}
+
+export interface ResultadoDesfechoLesoesConsulta {
+  consultaId: string;
+  desfechoLesoesStatus?: StatusDesfechoLesoes;
+  aplicadas: string[];
+  jaAplicadas: string[];
+  /** Lesões fechadas por OUTRA consulta: o desfecho desta não foi aplicado (não sobrescreve). */
+  conflitos: string[];
+  falhas: string[];
 }
 
 export interface ResultadoCobrancaConsulta {
@@ -194,13 +205,60 @@ export class ConsultasService {
 
     await this.audit(AuditEvent.CONSULTA_ENFERMAGEM_SIGNED, context, { clinicaId, consultaId: id, pacienteId: atual.pacienteId });
     // Desfecho das lesões avaliadas (só agora, na assinatura; rascunho nunca muda a lesão).
-    await this.lesoes.aplicarDesfechos(assinada, context);
+    const comDesfecho = await this.registrarDesfechoLesoes(assinada, await this.lesoes.aplicarDesfechos(assinada, context), context);
 
     if (decisao.incluidaEmPacote) {
       await this.audit(AuditEvent.CONSULTA_COBRANCA_INCLUIDA_EM_PACOTE, context, { clinicaId, consultaId: id, pacienteId: atual.pacienteId });
-      return assinada;
+      return comDesfecho;
     }
-    return (await this.tentarGerarCobranca(assinada, context)) ?? assinada;
+    return (await this.tentarGerarCobranca(comDesfecho, context)) ?? comDesfecho;
+  }
+
+  /**
+   * Reaplica EXATAMENTE os desfechos gravados na consulta ASSINADA (mesmo padrão da cobrança pendente). Idempotente:
+   * lesão já fechada por esta consulta não muda; fechada por OUTRA consulta não é sobrescrita (conflito auditado e
+   * devolvido). Acesso: ENFERMEIRO da clínica (só reaplica o que o autor assinou). Não devolve conteúdo clínico.
+   */
+  async aplicarDesfechoLesoes(id: string, clinicaIdQuery: string | undefined, context: ConsultaRequestContext): Promise<ResultadoDesfechoLesoesConsulta> {
+    this.assertEnfermeiro(context.user);
+    const clinicaId = resolveTenantClinicaId(context.user, clinicaIdQuery);
+    const consulta = await this.obterOuFalhar(clinicaId, id);
+    if (consulta.status !== StatusConsulta.ASSINADA) throw new ConflictException('O desfecho so e aplicado em consulta assinada.');
+    const resultado = await this.lesoes.aplicarDesfechos(consulta, context);
+    const atualizada = await this.registrarDesfechoLesoes(consulta, resultado, context);
+    await this.audit(AuditEvent.CONSULTA_DESFECHO_LESOES_REAPLICADO, context, {
+      clinicaId,
+      consultaId: id,
+      aplicadas: resultado.aplicadas.length,
+      jaAplicadas: resultado.jaAplicadas.length,
+      conflitos: resultado.conflitos.length,
+      falhas: resultado.falhas.length,
+    });
+    return {
+      consultaId: id,
+      desfechoLesoesStatus: atualizada.desfechoLesoesStatus,
+      aplicadas: resultado.aplicadas,
+      jaAplicadas: resultado.jaAplicadas,
+      conflitos: resultado.conflitos,
+      falhas: resultado.falhas,
+    };
+  }
+
+  /** Grava APLICADO / PENDENTE_APLICACAO na consulta (só quando há desfecho que fecha lesão). Conflito não é falha. */
+  private async registrarDesfechoLesoes(consulta: ConsultaEnfermagem, r: ResultadoDesfechos, context: ConsultaRequestContext): Promise<ConsultaEnfermagem> {
+    if (r.aSerAplicadas === 0) return consulta;
+    const status = r.falhas.length > 0 ? StatusDesfechoLesoes.PENDENTE_APLICACAO : StatusDesfechoLesoes.APLICADO;
+    if (status === StatusDesfechoLesoes.PENDENTE_APLICACAO) {
+      await this.audit(AuditEvent.CONSULTA_DESFECHO_LESOES_PENDENTE, context, { clinicaId: consulta.clinicaId, consultaId: consulta.id, falhas: r.falhas.length });
+    }
+    if (consulta.desfechoLesoesStatus === status) return consulta;
+    try {
+      return (await this.repo.atualizarDesfechoLesoes(consulta.clinicaId, consulta.id, status)) ?? { ...consulta, desfechoLesoesStatus: status };
+    } catch (erro) {
+      // Se nem isso gravar, os eventos de auditoria ficam como rastro; a rota de reaplicar continua valendo.
+      this.logger.warn(`Situacao do desfecho da consulta ${consulta.id} nao gravada: ${(erro as Error).message}`);
+      return { ...consulta, desfechoLesoesStatus: status };
+    }
   }
 
   /**

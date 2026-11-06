@@ -39,8 +39,8 @@ Turning the production `nuvita` repo (real patients, GitHub ericolimaeducador-ux
   Stage 2 had recorded FA = "incontinência fecal" and OT = "outras áreas" (a deduction). Enum values/data unchanged.
 
 ## NEXT ACTIONS (in order)
-1. Review/merge the stage 5c PR into estomaterapia/integracao (merge commit). Owner to confirm the ABI boundary inclusivity (0.80/1.20/1.30/1.40)
-   and provide the image-consent term text (TODO(legal)).
+1. Review/merge the stage 5c PR (#31) into estomaterapia/integracao (merge commit). ABI boundaries approved (compêndio cap. 27, quadros 28/29).
+   Pending: image-consent term text (TODO(legal)).
 2. Stage 5d: OSTOMIA module (classification OT) — mapped in CLASSIFICACAO_DO_MODULO, no module yet. Content only from a cited source; otherwise
    TODO(conteudo). Stage 5e: itemised instruments (ICIQ, Wexner, PUSH, RESVECH, Braden…) — licensing first.
 3. Stage 5f: AI suggestions for diagnoses (origem IA_ACEITA / IA_EDITADA already modelled, not writable yet).
@@ -69,6 +69,7 @@ Turning the production `nuvita` repo (real patients, GitHub ericolimaeducador-ux
 - Documents size limit: `MAX_DOCUMENT_SIZE_BYTES` is 10 MB but the documents module's error message says "50MB". Consultation attachments use the constant (10 MB). Fix the message (documents module) when convenient.
 - Legacy prontuarios (registroPsicologico, relatorioJudicial, old records) stay READ-ONLY in the old `prontuarios` collection; the new consultation lives in `consultas_enfermagem`. Nothing was migrated or deleted.
 - registroPsicologico exists in 1 old prontuario; fichaAvaliacaoIU/registroEnfermagem/relatorioJudicial exist in old data but not in the PSI schema (strict mode ignores, does not delete) — handle in Phase 3.
-- Stage 5c: lesion status is applied AFTER the signature without a transaction (same decision as the charge). A failed write leaves the
-  consultation signed and audits LESAO_STATUS_NAO_APLICADO; there is no reprocessing route yet (fix by hand or add one if it ever happens).
+- Stage 5c: lesion status is applied AFTER the signature without a transaction (same pattern as the charge). A failed write leaves the
+  consultation signed with desfechoLesoesStatus = PENDENTE_APLICACAO; POST /consultas/:id/lesoes/aplicar-desfecho re-applies it idempotently
+  (never overwrites a lesion closed by another consultation — returned as a conflict).
 - Stage 5c: the measurement tool draws on an SVG layer over the photo (not a <canvas>): same interactions, native image coordinates, testable.

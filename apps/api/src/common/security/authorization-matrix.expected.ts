@@ -108,6 +108,8 @@ export const MATRIZ_API: Record<string, string> = {
   'POST /consultas/:id/assinar': 'E',
   'POST /consultas/:id/cobranca': 'AE',
   'POST /consultas/:id/adendos': 'E',
+  // etapa 5c: reaplicar o desfecho do módulo Ferida nas lesões (consulta assinada; idempotente; sem conteúdo clínico)
+  'POST /consultas/:id/lesoes/aplicar-desfecho': 'E',
   // anexos da consulta (etapa 5b): conteúdo clínico — enviar/confirmar só o autor em rascunho, ler = quem lê a consulta (regra no serviço)
   'POST /consultas/:id/anexos/presign-upload': 'E',
   'POST /consultas/:id/anexos/:anexoId/confirmar-upload': 'E',

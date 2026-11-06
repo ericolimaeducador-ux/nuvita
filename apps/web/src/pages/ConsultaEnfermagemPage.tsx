@@ -184,6 +184,7 @@ export function ConsultaEnfermagemPage() {
     onSuccess: (c) => {
       setAssinando(false);
       if (c.cobranca?.status === StatusCobrancaConsulta.PENDENTE_GERACAO) toast.error('Consulta assinada, mas a cobrança ficou pendente', 'Use "Gerar cobrança".');
+      else if (c.desfechoLesoesStatus === 'PENDENTE_APLICACAO') toast.error('Consulta assinada, mas o desfecho não foi aplicado nas lesões', 'Use "Aplicar desfecho nas lesões".');
       else toast.success('Consulta assinada.');
       revalidar();
     },
@@ -193,6 +194,22 @@ export function ConsultaEnfermagemPage() {
     mutationFn: () => consultasApi.gerarCobranca(consultaId),
     onSuccess: () => { toast.success('Cobrança gerada.'); revalidar(); },
     onError: (e) => toast.error('Erro ao gerar a cobrança', apiErrorMessage(e)),
+  });
+  const desfechoMut = useMutation({
+    mutationFn: () => consultasApi.aplicarDesfechoLesoes(consultaId),
+    onSuccess: (r) => {
+      if (r.conflitos.length > 0) {
+        toast.error(`${r.conflitos.length} lesão(ões) já tinham sido fechadas por outra consulta`, 'O desfecho desta consulta não foi aplicado nelas.');
+      } else if (r.desfechoLesoesStatus === 'PENDENTE_APLICACAO') {
+        toast.error('O desfecho ainda não pôde ser aplicado', 'Tente novamente.');
+      } else {
+        toast.success('Desfecho aplicado nas lesões.');
+      }
+      revalidar();
+      void qc.invalidateQueries({ queryKey: ['lesoes', pacienteId] });
+      void qc.invalidateQueries({ queryKey: ['lesoes-historico', pacienteId] });
+    },
+    onError: (e) => toast.error('Erro ao aplicar o desfecho', apiErrorMessage(e)),
   });
   const adendoMut = useMutation({
     mutationFn: () => consultasApi.criarAdendo(consultaId, motivo.trim(), textoAdendo),
@@ -241,6 +258,16 @@ export function ConsultaEnfermagemPage() {
               {gerarMut.isPending ? 'Gerando…' : 'Gerar cobrança'}
             </Button>
           )}
+        </div>
+      )}
+
+      {assinada && consulta.desfechoLesoesStatus === 'PENDENTE_APLICACAO' && (
+        <div role="alert" className="flex items-center gap-3 rounded-lg border border-amber-400 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span className="flex-1">A consulta foi assinada, mas o desfecho do módulo Feridas ainda não foi aplicado nas lesões.</span>
+          <Button size="sm" onClick={() => desfechoMut.mutate()} disabled={desfechoMut.isPending}>
+            {desfechoMut.isPending ? 'Aplicando…' : 'Aplicar desfecho nas lesões'}
+          </Button>
         </div>
       )}
 

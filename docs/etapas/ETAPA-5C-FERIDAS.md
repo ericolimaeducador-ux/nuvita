@@ -30,8 +30,13 @@ signature, locked after signing (correction by addendum).
   notice, "Suspeita de biofilme" with the fixed hint, clinical impression), measurements (manual and/or photo), materials (record only), outcome.
 - Outcome `desfecho` (required): EM_ACOMPANHAMENTO | CICATRIZADA | ENCERRADA (reason). Applied to the lesion ONLY when the consultation is signed
   (`LESAO_STATUS_ALTERADO`, consultaId stored); a draft never changes a lesion. Before signing, the evaluated lesions must still be ABERTA
-  (closed by another consultation → 409, nothing signed). No transaction (same decision as the charge): if the lesion write fails after the
-  signature, the consultation stays signed and `LESAO_STATUS_NAO_APLICADO` is audited.
+  (closed by another consultation → 409, nothing signed). No transaction (same pattern as the charge): the consultation gets
+  `desfechoLesoesStatus` APLICADO | PENDENTE_APLICACAO (only when some outcome closes a lesion). A failed lesion write leaves it signed with
+  PENDENTE_APLICACAO (`LESAO_STATUS_NAO_APLICADO` + `CONSULTA_DESFECHO_LESOES_PENDENTE`).
+- `POST /consultas/:id/lesoes/aplicar-desfecho` (ENFERMEIRO of the clinic, signed consultation only, idempotent) re-applies exactly the stored
+  outcomes: a lesion already closed by THIS consultation is a no-op; one closed by ANOTHER consultation is not overwritten — audited
+  (`LESAO_DESFECHO_CONFLITO`) and returned in `conflitos`. Conflicts are not failures (status becomes APLICADO). Web: a signed consultation
+  with PENDENTE_APLICACAO shows a warning and the "Aplicar desfecho nas lesões" button.
 
 ## ABI (ITB) — informative only
 Per limb (unique): value (2 decimals, 0.10–3.00), purpose DIAGNOSTICO_DAP | SEGURANCA_COMPRESSAO (**required**), method/equipment.
@@ -47,8 +52,8 @@ Compression regions, compared in hundredths (tested, `regiaoItbCompressao`):
 | 1.30 < v ≤ 1.40 | fora da faixa de compressão de todas as fontes compiladas |
 | v > 1.40 | no region (only the "não confiável" notice) |
 
-DIAGNOSTICO_DAP shows only "faixa de diagnóstico 0,90–1,40". Never "pode comprimir"/"não comprimir". Boundary inclusivity is a project choice
-pending the owner's confirmation (`TODO(conteudo)`).
+DIAGNOSTICO_DAP shows only "faixa de diagnóstico 0,90–1,40". Never "pode comprimir"/"não comprimir". Boundaries approved by the owner
+(2026-11-06); source: Compêndio Científico de Estomaterapia, cap. 27, quadros 28 and 29.
 
 ## Photos and measurement (zero AI)
 - Photos are consultation attachments (`consultas_enfermagem_anexos`, 5b rules: author in draft uploads, clinic nurses read, no delete) with
@@ -72,10 +77,11 @@ for FA patients.
 
 ## Routes (authorization matrix, all `E`)
 `POST /lesoes`, `GET /lesoes`, `GET /lesoes/historico`, `GET /lesoes/:id`, `PATCH /lesoes/:id`, `GET /consentimentos-imagem`,
-`POST /consentimentos-imagem`, `POST /consentimentos-imagem/:id/revogar`. `POST /consultas/:id/anexos/presign-upload` gained optional `lesaoId`.
+`POST /consentimentos-imagem`, `POST /consentimentos-imagem/:id/revogar`, `POST /consultas/:id/lesoes/aplicar-desfecho`. `POST /consultas/:id/anexos/presign-upload` gained optional `lesaoId`.
 
 ## Audit events
 LESAO_CREATED, LESAO_CORRIGIDA (field names), LESAO_VIEWED, LESAO_LISTED, LESAO_HISTORICO_VIEWED, LESAO_STATUS_ALTERADO, LESAO_STATUS_NAO_APLICADO,
+LESAO_DESFECHO_CONFLITO, CONSULTA_DESFECHO_LESOES_PENDENTE, CONSULTA_DESFECHO_LESOES_REAPLICADO,
 CONSENTIMENTO_IMAGEM_REGISTRADO, CONSENTIMENTO_IMAGEM_REVOGADO, CONSULTA_FOTO_RECUSADA_SEM_CONSENTIMENTO. Metadata: ids, status, field names, counts.
 
 ## Indexes to create by hand in Atlas (autoIndex is development-only)

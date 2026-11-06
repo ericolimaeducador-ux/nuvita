@@ -1304,6 +1304,8 @@ export interface ConsultaEnfermagem {
   evolucao: { texto: string };
   assinatura?: { enfermeiroId: string; coren: string; dataAssinatura: string };
   cobranca?: { incluidaEmPacote: boolean; valorCentavos?: number; status: StatusCobrancaConsulta; cobrancaId?: string };
+  /** Feridas (5c): situação da aplicação do desfecho nas lesões (só quando algum desfecho fecha lesão). */
+  desfechoLesoesStatus?: 'APLICADO' | 'PENDENTE_APLICACAO';
   criadoEm: string;
   atualizadoEm: string;
 }

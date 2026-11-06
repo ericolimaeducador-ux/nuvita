@@ -95,6 +95,13 @@ export interface CobrancaConsulta {
   cobrancaId?: string;
 }
 
+/** Situação da aplicação do desfecho do módulo FERIDA nas lesões (gravada na assinatura). */
+export enum StatusDesfechoLesoes {
+  APLICADO = 'APLICADO',
+  /** A consulta foi assinada mas a gravação do status de alguma lesão falhou: reaplicar depois. */
+  PENDENTE_APLICACAO = 'PENDENTE_APLICACAO',
+}
+
 export interface ConsultaEnfermagem {
   id: string;
   clinicaId: string;
@@ -109,6 +116,8 @@ export interface ConsultaEnfermagem {
   evolucao: Evolucao;
   assinatura?: AssinaturaConsulta;
   cobranca?: CobrancaConsulta;
+  /** Só existe quando o módulo FERIDA tem desfecho que fecha lesão (CICATRIZADA/ENCERRADA). */
+  desfechoLesoesStatus?: StatusDesfechoLesoes;
   criadoEm: Date;
   atualizadoEm: Date;
 }

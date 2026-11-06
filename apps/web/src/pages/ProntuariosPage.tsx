@@ -15,6 +15,7 @@ import { ErroConsulta } from '@/components/ErroConsulta';
 import { toast } from '@/components/ui/use-toast';
 import { ProntuarioDetailDialog } from '@/components/ProntuarioDialogs';
 import { TIPO_ATENDIMENTO_LABEL, type Prontuario, type Paciente } from '@/types';
+import { RECURSOS_LEGADO } from '@/lib/recursos-legado';
 
 export function ProntuariosPage() {
   const qc = useQueryClient();
@@ -76,7 +77,8 @@ export function ProntuariosPage() {
                       <Badge variant={p.assinado ? 'success' : 'warning'}>{p.assinado ? 'Assinado' : 'Rascunho'}</Badge>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      {!p.assinado && (
+                      {/* R1: prontuário antigo somente leitura (o servidor responde 403). */}
+                      {RECURSOS_LEGADO.escritaProntuarioAntigo && !p.assinado && (
                         <Button size="sm" variant="outline" disabled={assinarMut.isPending} onClick={() => assinarMut.mutate(p.id)}>
                           <PenLine className="mr-1 h-3 w-3" /> Assinar
                         </Button>

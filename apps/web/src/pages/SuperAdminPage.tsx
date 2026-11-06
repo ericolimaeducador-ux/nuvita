@@ -35,6 +35,7 @@ import type { UsuarioAdmin } from '@/types';
 import { rotuloDocumentoClinica } from '@/lib/documentoClinica';
 import { documentoFiscalValido, formatarDocumentoFiscal, normalizarDocumentoFiscal, TipoDocumentoFiscal } from '@/lib/documento-fiscal';
 import { SegredoDoisFatores } from '@/components/SegredoDoisFatores';
+import { RECURSOS_LEGADO } from '@/lib/recursos-legado';
 
 const PAPEL_BADGE: Record<Papel, string> = {
   [Papel.SUPER_ADMIN]: 'bg-purple-500/10 text-purple-600 border border-purple-500/20',
@@ -704,8 +705,13 @@ export function SuperAdminPage() {
                 ativo: v.ativo,
                 // Só faz sentido para papéis com conselho; limpa se o papel não tiver.
                 registroProfissional: papelTemRegistro(v.papel) ? (v.registroProfissional || '') : '',
-                modulosConcedidos: modulosSel.filter((m) => !padrao.includes(m)),
-                modulosRevogados: padrao.filter((m) => !modulosSel.includes(m)),
+                // R1: edição de módulos por usuário DESATIVADA — sem enviar os campos, a API não altera o que está gravado.
+                ...(RECURSOS_LEGADO.edicaoModulosPorUsuario
+                  ? {
+                      modulosConcedidos: modulosSel.filter((m) => !padrao.includes(m)),
+                      modulosRevogados: padrao.filter((m) => !modulosSel.includes(m)),
+                    }
+                  : {}),
               };
               editMut.mutate({ id: editTarget.id, payload });
             })}
@@ -773,7 +779,8 @@ export function SuperAdminPage() {
                 </div>
               )}
 
-              {/* Permissões de módulos */}
+              {/* Permissões de módulos — OCULTO (R1): o servidor controla só pelo papel; volta na etapa de conteúdo. */}
+              {RECURSOS_LEGADO.edicaoModulosPorUsuario && (
               <div className="col-span-2 space-y-2 pt-2 border-t border-border">
                 <div className="flex items-center justify-between">
                   <Label>Módulos liberados</Label>
@@ -808,6 +815,7 @@ export function SuperAdminPage() {
                   </div>
                 )}
               </div>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setEditTarget(null)}>Cancelar</Button>

@@ -40,9 +40,10 @@ Turning the production `nuvita` repo (real patients, GitHub ericolimaeducador-ux
   Stage 2 had recorded FA = "incontinência fecal" and OT = "outras áreas" (a deduction). Enum values/data unchanged.
 
 ## NEXT ACTIONS (in order)
-1. Review/merge the stage R1 PR into estomaterapia/integracao (merge commit). Owner decisions pending (R1 stops): backend per-module
-   permission guard (route→module mapping) and the removal of the legacy prontuário writes + ia-clinica (they feed AtendimentoPsicologicoPage).
-   Still pending from 5c: image-consent term text (TODO(legal)).
+1. Review/merge the stage R1 PR (#32) into estomaterapia/integracao (merge commit). Owner decisions for the R1 stops are applied (see the
+   "R1 — owner decisions" block below). Still pending from 5c: image-consent term text (TODO(legal)).
+2. Content stage: redesign the Estomaterapia module list + server guard (per-module permissions), and remove/rewrite the legacy psi screens
+   (Atendimento psicológico, Prescrição de cuidados, Prontuários) whose write/AI controls are now hidden and blocked.
 2. Stage 5d: OSTOMIA module (classification OT) — mapped in CLASSIFICACAO_DO_MODULO, no module yet. Content only from a cited source; otherwise
    TODO(conteudo). Stage 5e: itemised instruments (ICIQ, Wexner, PUSH, RESVECH, Braden…) — licensing first.
 3. Stage 5f: AI suggestions for diagnoses (origem IA_ACEITA / IA_EDITADA already modelled, not writable yet).
@@ -91,22 +92,16 @@ Turning the production `nuvita` repo (real patients, GitHub ericolimaeducador-ux
 2. **Server-side access revocation.** The JWT is accepted only while its `papel` and `clinicaId` are the user's CURRENT values in the DB (the
    per-request `findById` already existed for `ativo`/`tokensValidosApartirDe`); any administrative change of role or clinic -> 401 on the next
    call (access and refresh). Chosen over a session counter: no write path needs to remember to bump anything. Module permissions are NOT in the
-   token. STOPPED (owner decision): a backend per-module permission guard — 33 controllers, and most Estomaterapia modules (consultas, lesões,
-   cobranças, entregas, produtos, captação, checklist, follow-up, avaliação IU) have no `Modulo` value.
+   token. Per-module permissions: see the owner decision (A) below.
 3. **Web cache per session.** Login, logout, cross-tab logout and clinic switch cancel in-flight queries and clear the React Query cache; every
    query key is hashed with the session scope (user id + active clinic) through `queryKeyHashFn` (`apps/web/src/lib/cache-sessao.ts`), so all
    140 keys are covered and prefix invalidation keeps working.
-4. **Legacy read-only / old AI off — PARTIAL.** Done: `TestesPsicologicosModule` unregistered from AppModule (code kept), its 2 matrix rows
-   removed, the "Testes psicológicos" patient section and its client removed from the web. STOPPED (owner decision): removing the prontuário
-   write routes (POST /, PATCH /:id, POST /:id/assinar, POST /:id/addendums) and `IaClinicaModule` — they are called by
-   AtendimentoPsicologicoPage (1158 lines, ~10 test files; the same screen holds agenda, sessions and the psychology finance), and also by
-   PrescricaoCuidadosPage, ProntuariosPage and ProntuarioDialogs. Removing them means removing or rewriting those screens.
+4. **Legacy read-only / old AI off.** `TestesPsicologicosModule` unregistered from AppModule (code kept), its 2 matrix rows removed, the
+   "Testes psicológicos" patient section and its client removed from the web. Prontuário writes and `ia-clinica`: see owner decision (B).
 5. **Dangerous docs fixed.** PRODUCTION-CHECKLIST, GCP-SECRETS-KMS-SETUP, QUICK-START-SECRETS, INVENTARIO-SEGREDOS, PENDENCIAS (#12) and README
    now say: PATIENT_DATA_ENCRYPTION_KEY, PATIENT_DATA_HASH_KEY and PRONTUARIO_SIGNATURE_SECRET of the real Nuvita service are REUSED at cutover
    (copied via Secret Manager), never generated again or rotated; psi-only content is marked [específico do psi]. A jest doc guard
-   (`docs-segredos-migracao.spec.ts`) keeps the instruction from coming back. NOT changed (scripts, not docs — decide before Phase 4):
-   `scripts/rotate-secrets-worker.mjs` still lists `patient-data-encryption-key` and `prontuario-signature-secret` for rotation, and
-   `scripts/gen-production-secrets.mjs` generates new values for the three keys.
+   (`docs-segredos-migracao.spec.ts`) keeps the instruction from coming back. Scripts: see owner decision (C).
 6. **Delivery total recomputed server-side**: sum of quantity × unit price; item or delivery total divergent -> 400, nothing stored; the stored
    total is the recomputed one (the web already computed it the same way).
 7. **E2E in our flow**: `web-e2e.yml` also runs on PRs to `estomaterapia/integracao` and `estomaterapia/**` (harness with mocked API — no DB, no
@@ -118,3 +113,25 @@ Turning the production `nuvita` repo (real patients, GitHub ericolimaeducador-ux
    "CPF". `CreateCaptacaoDto.cpf` now checks the check digits and rejects repeated sequences (patient registration already did). CPF
    placeholder: "Deixe em branco se não souber".
 - **No new index** in R1 (the `versao` field needs none). The Atlas index list above is unchanged.
+
+### R1 — owner decisions (applied in the same PR #32)
+- **(A) Per-module permissions: permissões por módulo desativadas até a etapa de conteúdo redesenhar a lista de módulos da Estomaterapia e
+  aplicar guard no servidor.** The role stays the server-side access control. The web hides the "Módulos liberados" block of the Super Admin
+  user editor and no longer sends `modulosConcedidos`/`modulosRevogados` (the API only changes them when sent, so stored data is untouched).
+  Flag: `apps/web/src/lib/recursos-legado.ts` (`edicaoModulosPorUsuario: false`). Code and data kept.
+- **(B) Legacy prontuário and old AI blocked on the SERVER, routes and screens kept.** `POST /prontuarios`, `PATCH /prontuarios/:id`,
+  `POST /prontuarios/:id/assinar`, `POST /prontuarios/:id/addendums` answer 403 "O prontuário antigo é somente leitura." BEFORE any
+  validation or write, auditing PRONTUARIO_LEGADO_ESCRITA_BLOQUEADA (action + ids only). Reads unchanged; no data touched. Every `ia-clinica`
+  route answers 403 "Recurso desativado." without touching the service or the AI provider. Matrix rows kept (routes exist);
+  `legado-bloqueado.spec.ts` checks 403 for every role (RolesGuard or handler) and that the provider is never accessed. Web: write/AI controls
+  hidden in Atendimento psicológico (Sugerir abordagem, Salvar rascunho / Salvar e assinar, "Prontuário" on the agenda list), Prescrição de
+  cuidados (Gerar com IA), Prontuários (Assinar) and the prontuário dialog (Assinar) — flags `escritaProntuarioAntigo` / `iaClinicaAntiga`.
+  Agenda, telemedicine and the psychology finance on the same screen keep working. The old screen tests switch the flags on locally so the
+  dormant code stays tested; `RecursosLegadoOcultos.test.tsx` checks the defaults hide everything.
+- **(C) Secrets scripts.** `scripts/gen-production-secrets.mjs` no longer generates the three keys (template leaves them empty with a "copy
+  from the real service" note) and `scripts/rotate-secrets-worker.mjs` no longer lists them; both abort via
+  `scripts/lib/segredos-reaproveitados.mjs` if the list or any argument (e.g. `--incluir=PATIENT_DATA_HASH_KEY`) includes them.
+  `scripts-segredos-migracao.spec.ts` is the guard (it also runs the generator with a forbidden flag and checks it exits 1 writing nothing).
+  Known, not changed: `rotate-secrets-worker.mjs` contains TypeScript syntax (`interface`) in an `.mjs`, so Node cannot run it as is;
+  `scripts/init-gcp-secrets.mjs` still prompts for the three secrets (interactive; the docs say to paste the real values).
+- **E2E**: the CI run of PR #32 passed (Web — E2E (Playwright)).

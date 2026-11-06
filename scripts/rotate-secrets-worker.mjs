@@ -29,6 +29,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import chalk from 'chalk';
+import { abortarSeChaveReaproveitada } from './lib/segredos-reaproveitados.mjs';
 
 const secretClient = new SecretManagerServiceClient();
 if (!process.env.GCP_PROJECT_ID) {
@@ -45,6 +46,8 @@ interface SecretRotationPolicy {
 }
 
 const ROTATION_POLICIES: SecretRotationPolicy[] = [
+  // R1: prontuario-signature-secret, patient-data-encryption-key e patient-data-hash-key NUNCA são rotacionadas —
+  // são reaproveitadas do serviço real do Nuvita (ver scripts/lib/segredos-reaproveitados.mjs).
   {
     name: 'jwt-access-secret',
     rotationIntervalDays: 90,
@@ -64,24 +67,15 @@ const ROTATION_POLICIES: SecretRotationPolicy[] = [
     description: 'CLI bootstrap secret',
   },
   {
-    name: 'prontuario-signature-secret',
-    rotationIntervalDays: 180,
-    requiresManualRotation: true,
-    description: 'Prontuário signature secret',
-  },
-  {
-    name: 'patient-data-encryption-key',
-    rotationIntervalDays: 365,
-    requiresManualRotation: true,
-    description: 'Patient data encryption key (annual)',
-  },
-  {
     name: 'document-storage-access-key-id',
     rotationIntervalDays: 180,
     requiresManualRotation: true,
     description: 'Document storage access key',
   },
 ];
+
+// R1: aborta se a lista de rotação ou os argumentos tentarem incluir alguma chave reaproveitada.
+abortarSeChaveReaproveitada([...ROTATION_POLICIES.map((p) => p.name), ...process.argv.slice(2)], 'rotate-secrets-worker');
 
 interface RotationResult {
   secretName: string;
